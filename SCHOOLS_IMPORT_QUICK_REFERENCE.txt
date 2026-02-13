@@ -1,0 +1,111 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                     SCHOOLS IMPORT - QUICK REFERENCE                       ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+CSV FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Code | Name | Ownership | Region Code | District Code
+  ─────┴──────┴───────────┴─────────────┴──────────────
+
+  S0108 | Dar Primary | GOVERNMENT | MO09 | MO0901
+  S0109 | Dar Secondary | GOVERNMENT | MO09 | MO0902
+  S0110 | Iringa School | NON-GOVERNMENT | IR07 | IR0701
+
+
+OWNERSHIP VALUES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✓ GOVERNMENT
+  ✓ NON-GOVERNMENT
+
+
+REGION CODES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  MO09  → MOROGORO
+  DO06  → DODOMA
+  IR07  → IRINGA
+  MT08  → MTWARA
+  LI10  → LINDI
+  TA11  → TABORA
+  TAN12 → TANGA
+  SI13  → SINGIDA
+
+
+HOW TO IMPORT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Create schools.csv with your data
+  2. Run: php artisan tinker
+  3. Paste import code:
+
+php tinker << 'EOF'
+$file = fopen('schools.csv', 'r');
+$header = fgetcsv($file);
+
+while (($row = fgetcsv($file)) !== false) {
+    if (empty(array_filter($row))) continue;
+    
+    $region = App\Models\Region::where('code', $row[3])->first();
+    $district = App\Models\District::where('code', $row[4])->first();
+    
+    if (!$region || !$district) continue;
+    
+    App\Models\School::updateOrCreate(
+        ['registration_number' => $row[0]],
+        [
+            'code' => $row[0],
+            'registration_number' => $row[0],
+            'name' => $row[1],
+            'ownership' => strtoupper($row[2]),
+            'region_id' => $region->id,
+            'district_id' => $district->id,
+            'school_type' => 'SECONDARY',
+            'is_active' => true
+        ]
+    );
+}
+
+echo "Done!\n";
+EOF
+
+
+EXAMPLE CSV:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Code,Name,Ownership,Region Code,District Code
+S0108,Dar Primary School,GOVERNMENT,MO09,MO0901
+S0109,Dar Secondary School,GOVERNMENT,MO09,MO0902
+S0110,Ifakara School,NON-GOVERNMENT,MO09,MO0902
+S0111,Iringa Primary,GOVERNMENT,IR07,IR0701
+S0112,Dodoma School,GOVERNMENT,DO06,DO0601
+
+
+VERIFY IMPORT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  php artisan tinker
+  App\Models\School::count();
+
+
+THEN IMPORT CANDIDATES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Use school codes from CSV (S0108, S0109, etc.)
+  System automatically finds schools by registration_number
+  Example:
+    S0108-0501,AGRIPINA,F,HGL,S0108,ACSEE
+                                ↑
+                           uses S0108 code
+
+
+STATUS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✅ Migration complete
+  ✅ Import endpoint added
+  ✅ Code lookup by region/district codes
+  ✅ Ready to use
+
+
+DOCUMENTATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📖 SCHOOLS_CSV_CORRECT_FORMAT.md          → Format explanation
+  📖 SCHOOLS_IMPORT_FINAL_IMPLEMENTATION.md → Complete guide
+  📖 This file                              → Quick reference
+
+═══════════════════════════════════════════════════════════════════════════════

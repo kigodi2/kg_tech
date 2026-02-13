@@ -1,0 +1,310 @@
+@extends('layout')
+
+@section('content')
+<div class="w-full px-8 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Exam Types Management</h1>
+        <p class="text-gray-600">Manage examination types (PSLE, CSEE, ACSEE) and their configurations</p>
+    </div>
+
+    <!-- Exam Types Component -->
+    <div x-data="examTypesManager()" @init="init()" class="space-y-6">
+        <!-- Toolbar -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <div class="flex gap-4 items-center">
+                <!-- Search Input -->
+                <input 
+                    x-model="search" 
+                    @input="filterExamTypes()"
+                    type="text" 
+                    placeholder="Search exam types..." 
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                
+                <!-- Add Exam Type Button -->
+                <button 
+                    @click="openAddModal()"
+                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
+                >
+                    <i class="fas fa-plus"></i> Add Exam Type
+                </button>
+            </div>
+        </div>
+
+        <!-- Exam Types Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div x-show="loading" class="p-6 text-center text-gray-500">
+                <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
+            </div>
+            <table x-show="!loading" class="w-full">
+                <thead class="bg-gray-100 border-b-2 border-gray-300">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Name</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Code</th>
+                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Level</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Description</th>
+                        <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Candidates</th>
+                        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <template x-for="examType in filteredExamTypes" :key="examType.id">
+                        <tr class="hover:bg-blue-100 transition-colors">
+                            <td class="px-6 py-4 text-sm text-gray-800 font-medium" x-text="examType.name"></td>
+                            <td class="px-6 py-4 text-sm font-mono text-gray-600" x-text="examType.code"></td>
+                            <td class="px-6 py-4 text-sm text-gray-600 text-center" x-text="examType.level || '-'"></td>
+                            <td class="px-6 py-4 text-sm text-gray-600" x-text="examType.description || '-'"></td>
+                            <td class="px-6 py-4 text-sm text-gray-600 text-center" x-text="examType.candidates_count || 0"></td>
+                            <td class="px-6 py-4 text-sm space-x-3">
+                                <button 
+                                    @click="openEditModal(examType)"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
+                                    title="Edit"
+                                >
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
+                                <button 
+                                    @click="deleteExamType(examType.id)"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
+                                    title="Delete"
+                                >
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                    <template x-if="filteredExamTypes.length === 0 && !loading">
+                        <tr>
+                            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                No exam types found.
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Modal (Add/Edit) -->
+        <div 
+            x-show="modalOpen" 
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+            @click.self="modalOpen = false;"
+            x-transition
+            style="display: none;"
+        >
+            <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
+                <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                    <h2 class="text-2xl font-bold text-gray-800">
+                        <span x-show="!editingId">Add New Exam Type</span>
+                        <span x-show="editingId">Edit Exam Type</span>
+                    </h2>
+                    <button 
+                        @click="modalOpen = false;" 
+                        class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <form @submit.prevent="saveExamType()" class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
+                        <input 
+                            x-model="formData.name"
+                            type="text" 
+                            placeholder="e.g., ACSEE"
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Code *</label>
+                        <input 
+                            x-model="formData.code"
+                            type="text" 
+                            placeholder="e.g., ACSEE"
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Level</label>
+                        <select 
+                            x-model="formData.level"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Select Level</option>
+                            <option value="Primary">Primary</option>
+                            <option value="Secondary">Secondary</option>
+                            <option value="Advanced Secondary">Advanced Secondary</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                        <textarea 
+                            x-model="formData.description"
+                            placeholder="Brief description..."
+                            rows="3"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        ></textarea>
+                    </div>
+
+                    <div class="flex gap-3 pt-4">
+                        <button 
+                            type="button" 
+                            @click="modalOpen = false" 
+                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                        >
+                            <span x-show="!editingId">Add</span>
+                            <span x-show="editingId">Update</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function examTypesManager() {
+    return {
+        examTypes: [],
+        filteredExamTypes: [],
+        search: '',
+        loading: false,
+        modalOpen: false,
+        editingId: null,
+        formData: { name: '', code: '', level: '', description: '' },
+
+        async init() {
+            await this.loadExamTypes();
+        },
+
+        async loadExamTypes() {
+            this.loading = true;
+            try {
+                const response = await fetch('/api/exam-types');
+                const data = await response.json();
+                this.examTypes = data.data || [];
+                this.filteredExamTypes = this.examTypes;
+            } catch (error) {
+                console.error('Error loading exam types:', error);
+                this.showMessage('Error loading exam types', 'error');
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        filterExamTypes() {
+            if (!this.search) {
+                this.filteredExamTypes = this.examTypes;
+                return;
+            }
+            
+            const query = this.search.toLowerCase();
+            this.filteredExamTypes = this.examTypes.filter(e => 
+                e.name.toLowerCase().includes(query) ||
+                e.code.toLowerCase().includes(query) ||
+                (e.description && e.description.toLowerCase().includes(query))
+            );
+        },
+
+        openAddModal() {
+            this.editingId = null;
+            this.formData = { name: '', code: '', level: '', description: '' };
+            this.modalOpen = true;
+        },
+
+        openEditModal(examType) {
+            this.editingId = examType.id;
+            this.formData = { 
+                name: examType.name,
+                code: examType.code,
+                level: examType.level || '',
+                description: examType.description || ''
+            };
+            this.modalOpen = true;
+        },
+
+        async saveExamType() {
+            try {
+                const url = this.editingId ? `/api/exam-types/${this.editingId}` : '/api/exam-types';
+                const method = this.editingId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify(this.formData),
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.showMessage(
+                        this.editingId ? 'Exam type updated successfully' : 'Exam type added successfully',
+                        'success'
+                    );
+                    this.modalOpen = false;
+                    await this.loadExamTypes();
+                } else {
+                    this.showMessage(data.message || 'Error saving exam type', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving exam type:', error);
+                this.showMessage('Error saving exam type', 'error');
+            }
+        },
+
+        async deleteExamType(id) {
+            if (!confirm('Are you sure you want to delete this exam type?')) return;
+
+            try {
+                const response = await fetch(`/api/exam-types/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.showMessage('Exam type deleted successfully', 'success');
+                    await this.loadExamTypes();
+                } else {
+                    this.showMessage(data.message || 'Error deleting exam type', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting exam type:', error);
+                this.showMessage('Error deleting exam type', 'error');
+            }
+        },
+
+        showMessage(message, type) {
+            const alertDiv = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-green-100 text-green-700 border-green-300' : 'bg-red-100 text-red-700 border-red-300';
+            
+            alertDiv.className = `fixed top-24 right-8 ${bgClass} p-4 rounded-lg border max-w-sm z-50 shadow-lg`;
+            alertDiv.textContent = message;
+            alertDiv.style.wordWrap = 'break-word';
+            
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 4000);
+        },
+    };
+}
+</script>
+@endsection

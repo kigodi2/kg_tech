@@ -1,0 +1,98 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    IMPORT CSV TODAY - QUICK CHEATSHEET                      ║
+║                         Read in 30 seconds                                  ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+THE PROBLEM:
+  Your CSV has school code: S0108
+  Database doesn't have S0108
+  Import fails ❌
+
+THE SOLUTION (Pick One):
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  OPTION A: Google Sheets (Easiest - 3 min)
+  ─────────────────────────────────────────
+  1. Open CSV in Google Sheets
+  2. Press Ctrl+H (Find & Replace)
+  3. Find: S0108
+     Replace with: DSM001
+  4. Click "Replace All"
+  5. Download as CSV
+  → Then import via IRMS web UI
+
+  OPTION B: Excel (Easy - 3 min)
+  ──────────────────────────────
+  1. Open CSV in Excel
+  2. Press Ctrl+H (Find & Replace)
+  3. Find: S0108
+     Replace with: DSM001
+  4. Click "Replace All"
+  5. Save as CSV
+  → Then import via IRMS web UI
+
+  OPTION C: Terminal (Fastest - 1 min)
+  ────────────────────────────────────
+  $ cd /home/prosmart-technologies/SOL/irms
+  $ php fix_csv.php candidates.csv candidates_fixed.csv
+  → Then import via IRMS web UI
+
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+VALID SCHOOL CODES TO USE:
+  ✅ DSM001  (Dar es Salaam Primary)
+  ✅ DSM002  (Dar Secondary)
+  ✅ MGO001  (Morogoro Primary)
+  ✅ MGO002  (Morogoro Secondary)
+  ✅ MGO003  (Morogoro Combined)
+
+AFTER FIXING CSV:
+
+  1. Open IRMS
+  2. Go: REGISTRATION → Candidates
+  3. Click dropdown next to "+ Register Candidate"
+  4. Select "Import CSV"
+  5. Choose your fixed CSV file
+  6. Click "Import"
+  7. ✅ DONE!
+
+CSV FORMAT (must be exactly 6 columns):
+  Column 1: Index Number (S0108-0501)
+  Column 2: Full Name (AGRIPINA YOHANA MAGANGA)
+  Column 3: Sex (F or M)
+  Column 4: Combination (HGL)
+  Column 5: School Code (DSM001) ← CHANGED FROM S0108
+  Column 6: Exam Type (ACSEE)
+
+EXAMPLE:
+  BEFORE:  S0108-0501,AGRIPINA YOHANA MAGANGA,F,HGL,S0108,ACSEE
+  AFTER:   S0108-0501,AGRIPINA YOHANA MAGANGA,F,HGL,DSM001,ACSEE
+
+TIMELINE:
+  Fix CSV:        2 minutes
+  Go to page:     1 minute
+  Import:         2 minutes
+  ───────────────────────
+  TOTAL:          ~5 minutes
+
+TROUBLESHOOTING:
+  ❌ "School code doesn't exist"
+     → Make sure you changed S0108 to DSM001 (or other valid code)
+
+  ❌ "Missing Full Name"
+     → Check column 2 is not empty for all rows
+
+  ❌ "Insufficient columns"
+     → Verify CSV has exactly 6 columns
+
+SUCCESS:
+  ✅ Green message appears
+  ✅ Shows "X candidates imported"
+  ✅ Data is in system!
+
+NEED DETAILS?
+  Read: FAST_IMPORT_TODAY.md
+  Or:   IMPORT_TODAY_VISUAL_STEPS.md
+  Or:   CSV_IMPORT_DECISION_GUIDE.md
+
+Ready? Pick an option above and start! 🚀

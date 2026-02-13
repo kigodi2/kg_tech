@@ -1,0 +1,4 @@
+region_code,council_code,school_code,school_name,school_type,ownership
+TZ01,DC01,S0001,Dar es Salaam Secondary School,SECONDARY,GOVERNMENT
+TZ01,DC01,S0002,Dar es Salaam Primary School,PRIMARY,GOVERNMENT
+TZ02,DC02,S0003,Arusha Technical School,SECONDARY_SCIENCE,NON-GOVERNMENT

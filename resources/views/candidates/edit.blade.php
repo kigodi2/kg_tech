@@ -1,0 +1,70 @@
+@extends('layout')
+
+@section('content')
+<div class="mt-8 max-w-md">
+    <a href="/candidates" class="text-blue-600 mb-4 block hover:text-blue-800">
+        <i class="fas fa-arrow-left"></i> Back
+    </a>
+    
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-2xl font-bold mb-6">Edit Candidate</h2>
+        
+        <form method="POST" action="/candidates/{{ $candidate->id }}">
+            @csrf
+            @method('PUT')
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">School</label>
+                <select name="school_id" class="w-full border p-2 rounded" required>
+                    @foreach ($schools as $school)
+                        <option value="{{ $school->id }}" {{ $candidate->school_id == $school->id ? 'selected' : '' }}>
+                            {{ $school->name }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('school_id')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">Candidate ID</label>
+                <input type="text" name="candidate_id" value="{{ $candidate->candidate_id }}" class="w-full border p-2 rounded" required>
+                @error('candidate_id')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">First Name</label>
+                <input type="text" name="first_name" value="{{ $candidate->first_name }}" class="w-full border p-2 rounded" required>
+                @error('first_name')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">Last Name</label>
+                <input type="text" name="last_name" value="{{ $candidate->last_name }}" class="w-full border p-2 rounded" required>
+                @error('last_name')<span class="text-red-500 text-sm">{{ $message }}</span>@enderror
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">Gender</label>
+                <select name="gender" class="w-full border p-2 rounded" required>
+                    <option value="M" {{ $candidate->gender == 'M' ? 'selected' : '' }}>Male</option>
+                    <option value="F" {{ $candidate->gender == 'F' ? 'selected' : '' }}>Female</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">Date of Birth</label>
+                <input type="date" name="date_of_birth" value="{{ $candidate->date_of_birth?->format('Y-m-d') }}" class="w-full border p-2 rounded">
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">
+                    <input type="checkbox" name="is_active" value="1" {{ $candidate->is_active ? 'checked' : '' }}>
+                    Active
+                </label>
+            </div>
+            
+            <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded">Update</button>
+        </form>
+    </div>
+</div>
+@endsection

@@ -1,0 +1,72 @@
+================================================================================
+                         ZIP FILE IS MISSING manifest.json
+================================================================================
+
+PROBLEM FOUND:
+  Your ZIP file contains CSV files but is MISSING the manifest.json file!
+  
+  Current ZIP contains:
+  - 111_GENERAL STUDIES.csv
+  - 132_CHEMISTRY.csv
+  - 133_BIOLOGY.csv
+  - 141_BASIC_APPLIED_MATHEMATICS.csv
+  - 161_EDUCATION.csv
+  
+  Missing:
+  - manifest.json (REQUIRED)
+
+SOLUTION:
+  Add a manifest.json file to your ZIP
+
+QUICK FIX (60 seconds):
+
+1. Download manifest template:
+   cp /tmp/manifest.json ./manifest.json
+
+2. Create proper ZIP with manifest:
+   zip KLERRUU_TEACHERS_COLLEGE_ACSEE_2026.zip manifest.json *.csv
+
+3. Use this new ZIP for upload
+
+DETAILED STEPS:
+
+1. Get the manifest template:
+   /tmp/manifest.json
+
+2. Customize it with your details (already filled for KLERUU):
+   - exam_year: "2026"
+   - school_code: "KLERUU"
+   - school_name: "KLERUU TEACHERS COLLEGE"
+   - files list: Add all your CSV files
+
+3. Create ZIP in this order:
+   cd /path/to/marks
+   zip KLERRUU_TEACHERS_COLLEGE_ACSEE_2026.zip manifest.json *.csv
+
+4. Upload the new ZIP
+   - Go to: http://127.0.0.1:8000/mark-entry/acsee
+   - Select year: 2026
+   - Select school: KLERUU TEACHERS COLLEGE
+   - Upload the NEW ZIP (with manifest.json)
+   - Click Preview
+   - Should work now!
+
+WHY THIS WORKS:
+  The system needs manifest.json to know:
+  - Which exam year
+  - Which school
+  - Which CSV files to import
+  - What each CSV represents
+
+MANIFEST.JSON TEMPLATE:
+  Location: /tmp/manifest.json
+  Already configured for KLERUU
+
+DO THIS NOW:
+  1. Create the ZIP with manifest.json inside
+  2. Upload the new ZIP
+  3. It will work perfectly
+
+================================================================================
+EOF
+cat /home/prosmart-technologies/SOL/irms/FIX_ZIP_FILE.txt

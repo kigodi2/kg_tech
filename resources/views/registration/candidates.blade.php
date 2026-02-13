@@ -1,0 +1,1722 @@
+@extends('layout')
+
+@section('content')
+<style>
+    .filter-input {
+        height: 36px;
+        padding: 0.25rem 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        font-size: 14px;
+        width: 100%;
+    }
+    .filter-button {
+        height: 36px;
+        padding: 0 1rem;
+        border-radius: 0.375rem;
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    .filter-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+</style>
+<div class="w-full">
+    <!-- Page Header -->
+    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
+        <h1 class="text-2xl font-bold text-gray-800">Candidates Management</h1>
+    </div>
+
+    <!-- Main Content -->
+    <div class="px-8 py-8">
+
+    <!-- Candidates Component -->
+    <div x-data="candidatesManager()" @init="init()" class="space-y-6">
+         <!-- Filters Section using Reusable Component -->
+         <div class="px-8 py-6 bg-gray-50 border-b border-gray-200">
+             <div class="bg-white p-6 rounded-lg shadow">
+                 <div class="flex gap-4 items-end flex-wrap">
+                     <!-- Region Filter -->
+                     <div class="filter-group">
+                         <label class="filter-label">
+                             <i class="fas fa-map-pin mr-2 text-blue-600"></i>Region
+                         </label>
+                         <select id="region-filter" class="filter-input w-full" @change="filterRegion = $el.value; onRegionChange()">
+                             <option value="">All Regions</option>
+                             <template x-for="region in regions" :key="region.id">
+                                 <option :value="region.id" x-text="region.name"></option>
+                             </template>
+                         </select>
+                     </div>
+                     
+                     <!-- District Filter -->
+                     <div class="filter-group">
+                         <label class="filter-label">
+                             <i class="fas fa-flag mr-2 text-green-600"></i>District
+                         </label>
+                         <select id="district-filter" class="filter-input w-full" @change="filterDistrict = $el.value; onDistrictChange()">
+                             <option value="">All Districts</option>
+                             <template x-for="district in filteredDistricts" :key="district.id">
+                                 <option :value="district.id" x-text="district.name"></option>
+                             </template>
+                         </select>
+                     </div>
+                     
+                     <!-- School Filter -->
+                     <div class="filter-group">
+                         <label class="filter-label">
+                             <i class="fas fa-school mr-2 text-purple-600"></i>School
+                         </label>
+                         <select id="school-filter" class="filter-input w-full" @change="filterSchool = $el.value; onSchoolChange()" :disabled="!filterDistrict">
+                             <option value="">All Schools</option>
+                             <template x-for="school in filteredSchools" :key="school.id">
+                                 <option :value="school.id" x-text="school.code + ' - ' + school.name"></option>
+                             </template>
+                         </select>
+                     </div>
+
+                     <!-- Action Buttons -->
+                     <div class="ml-auto flex gap-2 items-end h-9">
+                         <!-- Tools Dropdown -->
+                         <div class="relative" @click.outside="showToolsMenu = false">
+                             <button @click="showToolsMenu = !showToolsMenu" class="filter-button bg-blue-600 hover:bg-blue-700 text-white">
+                                 <i class="fas fa-wrench"></i> Tools
+                                 <i :class="showToolsMenu ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-xs"></i>
+                             </button>
+                             <div x-show="showToolsMenu" class="absolute top-full right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 min-w-48 pointer-events-auto" @click.stop>
+                                 <button type="button" @click="downloadTemplate(); showToolsMenu = false" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200 pointer-events-auto">
+                                     <i class="fas fa-download text-blue-600"></i> CSV Template
+                                 </button>
+                                 <button type="button" @click="openImportModal(); showToolsMenu = false" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200 pointer-events-auto">
+                                     <i class="fas fa-upload text-blue-600"></i> Import CSV
+                                 </button>
+                                 <button type="button" @click="exportExcel(); showToolsMenu = false" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 pointer-events-auto">
+                                      <i class="fas fa-file-excel text-green-600"></i> Export Excel
+                                    </button>
+                             </div>
+                             <input id="importInput" type="file" accept=".csv" @change="importCSV($event)" class="hidden">
+                             <input id="quickImportInput" type="file" accept=".csv" onchange="handleQuickImport(this)" class="hidden">
+                         </div>
+                         
+                         <!-- Register Candidate Button -->
+                         <button 
+                             @click="openAddModal()"
+                             class="filter-button bg-green-600 hover:bg-green-700 text-white"
+                         >
+                             <i class="fas fa-plus"></i> Register
+                         </button>
+
+                         <!-- Reset Button -->
+                         <button 
+                             @click="resetFilters()"
+                             class="filter-button bg-gray-500 hover:bg-gray-600 text-white"
+                         >
+                             <i class="fas fa-redo"></i> Reset
+                         </button>
+                     </div>
+                 </div>
+             </div>
+         </div>
+
+        <!-- Search Bar (Above Table) -->
+         <div class="bg-gray-50 rounded-lg px-6 py-4">
+             <input 
+                 x-model="search" 
+                 @input="filterCandidates()"
+                 type="text" 
+                 placeholder="Search candidates..." 
+                 class="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 placeholder-gray-400"
+             >
+         </div>
+
+         <!-- Bulk Actions -->
+         <div x-show="selectedItems.size > 0" class="flex gap-2 items-center bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-sm">
+             <span class="text-sm font-medium text-gray-700">
+                 <span x-text="selectedItems.size"></span> candidate(s) selected
+             </span>
+             <button 
+                 @click="bulkDeleteCandidates()"
+                 class="ml-auto bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+             >
+                 <i class="fas fa-trash"></i> Delete Selected
+             </button>
+         </div>
+
+
+
+        <!-- Candidates Table -->
+        <div class="bg-white rounded-lg shadow overflow-x-auto">
+            <div x-show="loading" class="p-6 text-center text-gray-500">
+                <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
+            </div>
+            <table x-show="!loading" class="w-full">
+                <thead class="bg-gray-100 border-b-2 border-gray-300">
+                    <tr>
+                         <th class="px-3 py-2 text-left">
+                             <input 
+                                 type="checkbox" 
+                                 @change="toggleSelectAll()"
+                                 :checked="selectedItems.size === filteredCandidates.length && filteredCandidates.length > 0"
+                                 class="w-4 h-4 cursor-pointer"
+                             >
+                         </th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Index Number</th>
+                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Full Name</th>
+                         <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">Sex</th>
+                         <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">Combination</th>
+                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">School</th>
+                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Exam Type</th>
+                         <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">Exam Year</th>
+                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <template x-for="candidate in filteredCandidates" :key="candidate.id">
+                         <tr class="hover:bg-blue-100 transition-colors" :class="selectedItems.has(candidate.id) ? 'bg-blue-50' : ''">
+                             <td class="px-3 py-2 text-left">
+                                 <input 
+                                     type="checkbox" 
+                                     :checked="selectedItems.has(candidate.id)"
+                                     @change="toggleSelect(candidate.id)"
+                                     class="w-4 h-4 cursor-pointer"
+                                 >
+                             </td>
+                            <td class="px-3 py-2 text-sm font-mono text-gray-800" x-text="candidate.candidate_id || candidate.id"></td>
+                            <td class="px-3 py-2 text-sm text-gray-800 font-medium" x-text="candidate.full_name"></td>
+                            <td class="px-3 py-2 text-sm text-gray-600 text-center" x-text="candidate.gender || '-'"></td>
+                            <td class="px-3 py-2 text-sm text-gray-600 text-center" x-text="candidate.exam_type === 'ACSEE' ? (candidate.combination || '-') : '-'"></td>
+                            <td class="px-3 py-2 text-sm text-gray-600" x-text="candidate.school_name || '-'"></td>
+                            <td class="px-3 py-2 text-sm text-gray-600" x-text="candidate.exam_type || '-'"></td>
+                            <td class="px-3 py-2 text-sm text-gray-600 text-center" x-text="candidate.exam_year || '-'"></td>
+                            <td class="px-3 py-2 text-sm">
+                                <span class="px-2 py-0.5 rounded-full text-sm font-semibold" 
+                                    :class="candidate.status === 'registered' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'"
+                                    x-text="candidate.status || 'pending'">
+                                </span>
+                            </td>
+                            <td class="px-3 py-2 text-sm space-x-2">
+                                <button 
+                                    @click="viewCandidate(candidate)"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
+                                    title="View Candidate"
+                                >
+                                    <i class="fas fa-eye text-sm"></i>
+                                </button>
+                                <button 
+                                    @click="openEditModal(candidate)"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
+                                    title="Edit Candidate"
+                                >
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
+                                <button 
+                                    @click="deleteCandidate(candidate.id)"
+                                    class="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
+                                    title="Delete Candidate"
+                                >
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                    <tr x-show="filteredCandidates.length === 0 && !loading">
+                         <td colspan="11" class="px-6 py-4 text-center text-gray-500 text-sm">
+                             No candidates found. <button @click="openAddModal()" class="text-blue-600 hover:underline">Register one now</button>
+                         </td>
+                     </tr>
+                </tbody>
+            </table>
+            
+            <!-- Pagination -->
+            <div class="px-6 py-4 border-t border-gray-200 space-y-4">
+                <!-- Top Controls: Items per Page and Go to Page -->
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <!-- Items per Page Selector (Searchable) -->
+                    <div class="flex items-center gap-3">
+                        <label class="text-sm font-semibold text-gray-700">Show:</label>
+                        <div class="relative min-w-48" @click.outside="pageSizeOpen = false">
+                            <button 
+                                @click="pageSizeOpen = !pageSizeOpen"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10"
+                            >
+                                <span x-text="pageSize + ' per page'" class="text-gray-700 whitespace-nowrap text-sm"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="pageSizeOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col">
+                                <input 
+                                    x-model="pageSizeSearch"
+                                    type="text"
+                                    placeholder="Search..."
+                                    class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                >
+                                <div class="max-h-48 overflow-y-auto">
+                                    <template x-for="size in [10, 25, 50, 100].filter(s => s.toString().includes(pageSizeSearch))" :key="size">
+                                        <div 
+                                            @click="pageSize = size; pageSizeOpen = false; changePageSize()"
+                                            :class="pageSize == size ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors"
+                                            x-text="size + ' per page'"
+                                        ></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Page Info -->
+                    <div class="text-sm text-gray-600 font-medium">
+                        Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span> | <span x-text="totalCount"></span> total records
+                    </div>
+
+                    <!-- Go to Page -->
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm font-semibold text-gray-700">Go to:</label>
+                        <input 
+                            type="number" 
+                            x-model.number="goToPageNum"
+                            @keydown.enter="goToPageByNumber()"
+                            min="1"
+                            :max="totalPages"
+                            placeholder="Page"
+                            class="w-16 px-2 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                        <button 
+                            @click="goToPageByNumber()"
+                            class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium disabled:opacity-50"
+                            :disabled="!goToPageNum || goToPageNum < 1 || goToPageNum > totalPages"
+                        >
+                            Go
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Page Number Buttons -->
+                <div class="flex items-center justify-center gap-1 flex-wrap">
+                    <button 
+                        @click="previousPage()"
+                        :disabled="currentPage <= 1"
+                        class="px-3 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        title="Previous Page"
+                    >
+                        <i class="fas fa-chevron-left"></i> Prev
+                    </button>
+
+                    <!-- Page Buttons (limited window) -->
+                    <template x-for="page in getPaginatedPageNumbers()" :key="page">
+                        <button 
+                            @click="goToPage(page)"
+                            :class="currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+                            class="px-3 py-2 rounded text-sm font-medium transition-colors min-w-10"
+                            x-text="page"
+                        ></button>
+                    </template>
+
+                    <!-- Ellipsis indicators -->
+                    <template x-if="pageWindowStart > 1">
+                        <span class="text-gray-500 px-2">...</span>
+                    </template>
+                    <template x-if="pageWindowEnd < totalPages">
+                        <span class="text-gray-500 px-2">...</span>
+                    </template>
+
+                    <button 
+                        @click="nextPage()"
+                        :disabled="currentPage >= totalPages"
+                        class="px-3 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        title="Next Page"
+                    >
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal (Add/Edit/View) -->
+         <div 
+             x-show="modalOpen || viewModalOpen" 
+             class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+             @click.self="modalOpen = false; viewModalOpen = false;"
+             x-transition
+         >
+        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition @click.stop>
+            <div class="flex justify-between items-center p-6 border-b border-gray-200">
+                <h2 class="text-2xl font-bold text-gray-800" x-text="viewModalOpen && !editingId ? 'Candidate Details' : (!viewModalOpen && !editingId ? 'Register New Candidate' : 'Edit Candidate')"></h2>
+                <button 
+                    @click="modalOpen = false; viewModalOpen = false;" 
+                    class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                >
+                    &times;
+                </button>
+            </div>
+
+            <!-- View Mode -->
+            <div x-show="viewModalOpen" class="p-4 space-y-2">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Index Number</label>
+                    <input 
+                        type="text" 
+                        readonly
+                        :value="viewingCandidate.candidate_id || '-'"
+                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-100 text-gray-600 font-mono text-center focus:outline-none"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Full Name</label>
+                    <input 
+                        type="text" 
+                        readonly
+                        :value="viewingCandidate.full_name"
+                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Sex</label>
+                    <input 
+                        type="text" 
+                        readonly
+                        :value="viewingCandidate.gender === 'M' ? 'Male' : viewingCandidate.gender === 'F' ? 'Female' : '-'"
+                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Combination</label>
+                    <input 
+                        type="text" 
+                        readonly
+                        :value="viewingCandidate.combination || '-'"
+                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">School</label>
+                    <input 
+                        type="text" 
+                        readonly
+                        :value="viewingCandidate.school_name || '-'"
+                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Exam Type</label>
+                    <input 
+                        type="text" 
+                        readonly
+                        :value="viewingCandidate.exam_type || '-'"
+                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                    >
+                </div>
+                <div class="flex gap-2 pt-3">
+                    <button type="button" @click="modalOpen = false; viewModalOpen = false;" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1.5 rounded text-sm transition-colors font-medium cursor-pointer">
+                        Close
+                    </button>
+                    <button type="button" @click="openEditModal(viewingCandidate); viewModalOpen = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm transition-colors font-medium cursor-pointer">
+                        Edit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Edit/Add Mode -->
+            <form x-show="!viewModalOpen" @submit.prevent="saveCandidate()" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Index Number *</label>
+                    <input 
+                        x-model="formData.candidate_id"
+                        @input="autoSelectSchool()"
+                        type="text" 
+                        placeholder="e.g., S0445-0004"
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                    <p class="text-xs text-gray-500 mt-1">School will auto-detect based on the code before the dash (e.g., S0445 from S0445-0034)</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
+                    <input 
+                        x-model="formData.full_name"
+                        type="text" 
+                        placeholder="e.g., John Doe"
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Sex *</label>
+                        <select 
+                            x-model="formData.gender"
+                            required
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Select Sex</option>
+                            <option value="M">Male (M)</option>
+                            <option value="F">Female (F)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Combination <span x-show="formData.exam_type !== 'ACSEE'" class="text-xs text-gray-500">(ACSEE only)</span></label>
+                        <input 
+                            x-model="formData.combination"
+                            type="text" 
+                            placeholder="e.g., PCM"
+                            :disabled="formData.exam_type !== 'ACSEE'"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        >
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">School *</label>
+                    <select 
+                        x-model="formData.school_id"
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">Select School</option>
+                        <template x-for="school in schools" :key="school.id">
+                            <option :value="school.id" x-text="school.name"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Year <span x-show="formData.exam_type === 'ACSEE'" class="text-red-600">*</span><span x-show="formData.exam_type !== 'ACSEE'" class="text-xs text-gray-500">(for ACSEE)</span></label>
+                    <select 
+                        x-model="formData.exam_year"
+                        :required="formData.exam_type === 'ACSEE'"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">Select Exam Year</option>
+                        <template x-for="year in examYears" :key="year.id">
+                            <option :value="year.year_label" x-text="year.year_label"></option>
+                        </template>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Type *</label>
+                    <select 
+                        x-model="formData.exam_type"
+                        required
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">Select Exam Type</option>
+                        <option value="PSLE">PSLE</option>
+                        <option value="CSEE">CSEE</option>
+                        <option value="ACSEE">ACSEE</option>
+                    </select>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button 
+                        type="button" 
+                        @click="modalOpen = false" 
+                        class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                    >
+                        <span x-show="!editingId">Register Candidate</span>
+                        <span x-show="editingId">Update Candidate</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+function candidatesManager() {
+    return {
+        candidates: [],
+        filteredCandidates: [],
+        schools: [],
+        districts: [],
+        regions: [],
+        search: '',
+        filterSchool: '',
+        filterDistrict: '',
+        filterRegion: '',
+        regionOpen: false,
+        districtOpen: false,
+        schoolOpen: false,
+        pageSizeOpen: false,
+        regionSearch: '',
+        districtSearch: '',
+        schoolSearch: '',
+        pageSizeSearch: '',
+        editingId: null,
+        selectedItems: new Set(),
+        formData: { full_name: '', gender: '', combination: '', school_id: '', exam_type: '', exam_year: '' },
+        loading: false,
+        examYears: [],
+        modalOpen: false,
+        viewModalOpen: false,
+        viewingCandidate: {},
+        showToolsMenu: false,
+        currentPage: 1,
+        pageSize: 10,
+        totalCount: 0,
+        goToPageNum: null,
+        pageWindowStart: 1,
+        pageWindowEnd: 5,
+        showImportModal: false,
+        showImportConflictModal: false,
+        importConflicts: [],
+        importFile: null,
+        importMode: 'skip',
+        importExamYear: '',
+        importExamType: '',
+        showDebugPanel: false,
+        showDataAuditModal: false,
+        auditResults: null,
+        auditLoading: false,
+        schoolDistrictMismatch: [],
+        
+        // Computed - Filtered Districts
+        get filteredDistricts() {
+            if (!this.filterRegion) return this.districts;
+            return this.districts.filter(d => d.region_id == this.filterRegion);
+        },
+        
+        // Computed - Filtered Schools
+        get filteredSchools() {
+            if (!this.filterDistrict) return this.schools;
+            return this.schools.filter(s => s.district_id == this.filterDistrict);
+        },
+        totalPages: 0,
+
+        async init() {
+             // Load page size from localStorage
+             const savedPageSize = localStorage.getItem('candidatesPageSize');
+             if (savedPageSize) {
+                 this.pageSize = parseInt(savedPageSize);
+             }
+             
+             await this.loadRegions();
+             await this.loadDistricts();
+             await this.loadSchools();
+             await this.loadExamYears();
+             await this.setDefaultExamYear();  // Set active year as default
+             await this.loadCandidates();
+         },
+
+        async loadRegions() {
+            try {
+                const response = await fetch('/api/regions');
+                const data = await response.json();
+                this.regions = data.data || [];
+            } catch (error) {
+                console.error('Error loading regions:', error);
+            }
+        },
+
+        async loadDistricts() {
+            try {
+                const response = await fetch('/api/districts?page_size=999');
+                const data = await response.json();
+                this.districts = data.data || [];
+            } catch (error) {
+                console.error('Error loading districts:', error);
+            }
+        },
+
+        async loadSchools(districtId = null) {
+             try {
+                 let url = '/api/schools?page_size=999';
+                 if (districtId) {
+                     url += `&district_id=${districtId}`;
+                 }
+                 const response = await fetch(url);
+                 const data = await response.json();
+                 this.schools = data.data || [];
+             } catch (error) {
+                 console.error('Error loading schools:', error);
+             }
+         },
+
+         async loadExamYears() {
+             try {
+                 const response = await fetch('/api/exam-years');
+                 const data = await response.json();
+                 this.examYears = data.exam_years || [];
+             } catch (error) {
+                 console.error('Error loading exam years:', error);
+             }
+         },
+
+         async setDefaultExamYear() {
+             try {
+                 const response = await fetch('/api/exam-years/active');
+                 const data = await response.json();
+                 if (data.active_year) {
+                     // Set default exam year from active year
+                     this.formData.exam_year = data.active_year.year_label;
+                     this.importExamYear = data.active_year.year_label;
+                     console.log('✓ Default exam year set to:', data.active_year.year_label);
+                 }
+             } catch (error) {
+                 console.error('Error loading active exam year:', error);
+             }
+         },
+
+         async loadCandidates() {
+              this.loading = true;
+              try {
+                  // Build query with filters
+                  let url = `/api/candidates?page=${this.currentPage}&page_size=${this.pageSize}&search=${this.search}`;
+                  
+                  // Add filter parameters to API call (backend filtering)
+                  if (this.filterRegion) {
+                      url += `&region_id=${this.filterRegion}`;
+                  }
+                  if (this.filterDistrict) {
+                      url += `&district_id=${this.filterDistrict}`;
+                  }
+                  if (this.filterSchool) {
+                      url += `&school_id=${this.filterSchool}`;
+                  }
+                  
+                  const response = await fetch(url);
+                  const data = await response.json();
+                  
+                  this.candidates = data.data || [];
+                  this.filteredCandidates = this.candidates;
+                  
+                  // Debug: log first candidate to verify exam_year is present
+                  if (this.candidates.length > 0) {
+                      console.log('First candidate exam_year:', this.candidates[0].exam_year);
+                  }
+                
+                // Handle pagination data
+                if (data.pagination) {
+                    this.totalCount = data.pagination.total_count || 0;
+                    this.totalPages = data.pagination.total_pages || 1;
+                } else {
+                    this.totalCount = this.candidates.length;
+                    this.totalPages = 1;
+                }
+            } catch (error) {
+                console.error('Error loading candidates:', error);
+                this.showMessage('Error loading candidates', 'error');
+                this.totalCount = 0;
+                this.totalPages = 1;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        filterCandidates() {
+            this.currentPage = 1;
+            this.loadCandidates();
+        },
+
+        // Region filter changed
+        onRegionChange() {
+            this.filterDistrict = '';
+            this.filterSchool = '';
+            this.districtSearch = '';
+            this.schoolSearch = '';
+            this.currentPage = 1;
+            this.loadSchools();
+            this.loadCandidates();
+        },
+        
+        // District filter changed
+        onDistrictChange() {
+            this.filterSchool = '';
+            this.schoolSearch = '';
+            this.currentPage = 1;
+            this.loadSchools(this.filterDistrict);
+            this.loadCandidates();
+        },
+        
+        // School filter changed
+        onSchoolChange() {
+            this.currentPage = 1;
+            this.loadCandidates();
+        },
+        
+        // Reset all filters
+        resetFilters() {
+            this.filterRegion = '';
+            this.filterDistrict = '';
+            this.filterSchool = '';
+            this.currentPage = 1;
+            this.loadCandidates();
+        },
+
+        // Change items per page
+        changePageSize() {
+            localStorage.setItem('candidatesPageSize', this.pageSize);
+            this.currentPage = 1;
+            this.goToPageNum = null;
+            this.loadCandidates();
+        },
+
+        // Go to specific page
+        goToPage(pageNumber) {
+            this.currentPage = pageNumber;
+            this.goToPageNum = null;
+            this.loadCandidates();
+        },
+
+        // Go to page by number input
+        goToPageByNumber() {
+            if (this.goToPageNum && this.goToPageNum >= 1 && this.goToPageNum <= this.totalPages) {
+                this.goToPage(this.goToPageNum);
+            }
+        },
+
+        // Previous page
+        previousPage() {
+            if (this.currentPage > 1) {
+                this.currentPage--;
+                this.goToPageNum = null;
+                this.loadCandidates();
+            }
+        },
+
+        // Next page
+        nextPage() {
+            if (this.currentPage < this.totalPages) {
+                this.currentPage++;
+                this.goToPageNum = null;
+                this.loadCandidates();
+            }
+        },
+
+        // Get paginated page numbers (show limited window: 5-7 buttons)
+        getPaginatedPageNumbers() {
+            const windowSize = 5; // Show 5 page buttons at a time
+            const half = Math.floor(windowSize / 2);
+            
+            let start = Math.max(1, this.currentPage - half);
+            let end = Math.min(this.totalPages, start + windowSize - 1);
+            
+            // Adjust start if we're near the end
+            if (end - start + 1 < windowSize) {
+                start = Math.max(1, end - windowSize + 1);
+            }
+            
+            this.pageWindowStart = start;
+            this.pageWindowEnd = end;
+            
+            const pages = [];
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+            return pages;
+        },
+
+        openAddModal() {
+             this.editingId = null;
+             this.viewModalOpen = false;
+             this.formData = { candidate_id: '', full_name: '', gender: '', combination: '', school_id: '', exam_type: '', exam_year: '' };
+             this.modalOpen = true;
+             this.$nextTick(() => {
+                 const firstInput = document.querySelector('input[type="text"][x-model="formData.candidate_id"]');
+                 if (firstInput) firstInput.focus();
+             });
+         },
+
+        openEditModal(candidate) {
+            this.editingId = candidate.id;
+            this.viewModalOpen = false;
+            this.formData = { 
+                candidate_id: candidate.candidate_id || '',
+                full_name: candidate.full_name,
+                gender: candidate.gender || '',
+                combination: candidate.combination || '',
+                school_id: candidate.school_id,
+                exam_type: candidate.exam_type || '',
+                exam_year: candidate.exam_year || ''
+            };
+            this.modalOpen = true;
+        },
+
+        autoSelectSchool() {
+            // Extract school code from index number
+            // School codes can be 5 chars (e.g., S0445) or longer (e.g., MO0901301)
+            const indexNumber = (this.formData.candidate_id || '').trim();
+            
+            console.log('=== autoSelectSchool ===');
+            console.log('Index Number:', indexNumber);
+            console.log('Schools loaded:', this.schools && this.schools.length ? this.schools.length : 0);
+            
+            if (!indexNumber || indexNumber.length === 0) {
+                console.log('No index number provided');
+                return;
+            }
+            
+            if (!this.schools || this.schools.length === 0) {
+                console.log('Schools array is empty');
+                return;
+            }
+            
+            // Try to extract school code - looks for pattern before the dash
+            // E.g., S0445-0034 -> S0445, or could be full code
+            let schoolCode = '';
+            const dashIndex = indexNumber.indexOf('-');
+            
+            if (dashIndex > 0) {
+                // Extract everything before the dash
+                schoolCode = indexNumber.substring(0, dashIndex).trim().toUpperCase();
+            } else {
+                // If no dash, try first 5 characters
+                schoolCode = indexNumber.substring(0, 5).trim().toUpperCase();
+            }
+            
+            console.log('School code to search:', schoolCode);
+            
+            // Find matching school by code (case-insensitive)
+            let matchingSchool = null;
+            for (let i = 0; i < this.schools.length; i++) {
+                const s = this.schools[i];
+                if (s.code && s.code.toUpperCase() === schoolCode) {
+                    matchingSchool = s;
+                    console.log(`Match found at index ${i}: ${s.name} (${s.code})`);
+                    break;
+                }
+            }
+            
+            if (matchingSchool) {
+                console.log('Setting school_id to:', matchingSchool.id);
+                this.formData.school_id = matchingSchool.id;
+                console.log(`✓ Auto-selected: ${matchingSchool.name}`);
+            } else {
+                this.formData.school_id = '';
+                console.log(`✗ No school found for code: ${schoolCode}`);
+                const codes = this.schools.map(s => s.code).slice(0, 5).join(', ');
+                console.log(`Sample available codes: ${codes}...`);
+            }
+        },
+
+        viewCandidate(candidate) {
+            this.viewingCandidate = { ...candidate };
+            this.editingId = null;
+            this.viewModalOpen = true;
+        },
+
+        async saveCandidate() {
+             try {
+                 const url = this.editingId ? `/api/candidates/${this.editingId}` : '/api/candidates';
+                 const method = this.editingId ? 'PUT' : 'POST';
+                 
+                 // Prepare data with school_id as integer
+                 const payload = {
+                     ...this.formData,
+                     school_id: parseInt(this.formData.school_id)
+                 };
+                 
+                 const response = await fetch(url, {
+                     method,
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                     },
+                     body: JSON.stringify(payload),
+                 });
+
+                 const data = await response.json();
+                 
+                 if (response.ok) {
+                     this.showMessage(
+                         this.editingId ? 'Candidate updated successfully' : 'Candidate registered successfully',
+                         'success'
+                     );
+                     this.modalOpen = false;
+                     await this.loadCandidates();
+                 } else {
+                     this.showMessage(data.message || 'Error saving candidate', 'error');
+                 }
+             } catch (error) {
+                 console.error('Error saving candidate:', error);
+                 this.showMessage('Error saving candidate', 'error');
+             }
+         },
+
+        async deleteCandidate(id) {
+             if (!confirm('Are you sure you want to delete this candidate?')) return;
+
+             try {
+                 const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                 const token = csrfToken ? csrfToken.content : '';
+                 
+                 const response = await fetch(`/api/candidates/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': token,
+                    },
+                });
+
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    console.log('Response text:', await response.text());
+                }
+                
+                if (response.ok || response.status === 200) {
+                    this.showMessage('Candidate deleted successfully', 'success');
+                    await this.loadCandidates();
+                } else {
+                    this.showMessage(data.message || `Error deleting candidate (Status: ${response.status})`, 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting candidate:', error);
+                this.showMessage('Error deleting candidate: ' + error.message, 'error');
+            }
+        },
+
+        toggleSelect(id) {
+            if (this.selectedItems.has(id)) {
+                this.selectedItems.delete(id);
+            } else {
+                this.selectedItems.add(id);
+            }
+        },
+
+        toggleSelectAll() {
+            if (this.selectedItems.size === this.filteredCandidates.length) {
+                this.selectedItems.clear();
+            } else {
+                this.filteredCandidates.forEach(candidate => this.selectedItems.add(candidate.id));
+            }
+        },
+
+        async bulkDeleteCandidates() {
+             if (this.selectedItems.size === 0) return;
+             
+             const count = this.selectedItems.size;
+             if (!confirm(`Are you sure you want to delete ${count} candidate(s)? This action cannot be undone.`)) return;
+
+             try {
+                 const ids = Array.from(this.selectedItems);
+                 const response = await fetch('/api/candidates/bulk-delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({ ids }),
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.showMessage(`${data.deleted} candidate(s) deleted successfully`, 'success');
+                    this.selectedItems.clear();
+                    await this.loadCandidates();
+                } else {
+                    this.showMessage(data.message || 'Error deleting candidates', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting candidates:', error);
+                this.showMessage('Error deleting candidates', 'error');
+            }
+        },
+
+        openImportModal() {
+            this.showImportModal = true;
+            this.showToolsMenu = false;
+        },
+
+        downloadTemplate() {
+             const headers = ['candidate_id', 'full_name', 'gender', 'combination', 'school_code', 'exam_type', 'exam_year'].join(',');
+             const row1 = ['S1378-0001', 'John Doe', 'M', 'CBE', 'S1378', 'ACSEE', '2026'];
+             const row2 = ['S1378-0002', 'Jane Smith', 'F', 'HGE', 'S1378', 'ACSEE', '2026'];
+             const row3 = ['', 'Peter Brown', 'M', 'PCB', 'S1378', 'ACSEE', '2026'];
+             const csvContent = [
+                 headers,
+                 row1.map(v => `"${v}"`).join(','),
+                 row2.map(v => `"${v}"`).join(','),
+                 row3.map(v => `"${v}"`).join(',')
+             ].join('\n');
+             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+             const url = window.URL.createObjectURL(blob);
+             const a = document.createElement('a');
+            a.href = url;
+            a.download = `candidates_template_${Date.now()}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            this.showMessage('Template downloaded successfully. Edit the file and upload it. School codes not in the system will be auto-registered. Exam year is optional - if blank, uses exam year from import modal.', 'success');
+        },
+
+         exportExcel() {
+             // Create headers
+             const headers = ['Index Number', 'Full Name', 'Sex', 'Combination', 'School', 'Exam Type'];
+             const rows = this.filteredCandidates.map(c => [
+                 c.candidate_id || '',
+                 c.full_name || '',
+                 c.gender || '',
+                 c.combination || '',
+                 c.school_name || '',
+                 c.exam_type || ''
+             ]);
+             
+             // Create Excel content in CSV format (Excel can open CSV files)
+             const csv = [headers, ...rows].map(row => 
+                 row.map(v => `"${v}"`).join(',')
+             ).join('\n');
+             
+             // Create and download
+             const blob = new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+             const url = window.URL.createObjectURL(blob);
+             const a = document.createElement('a');
+             a.href = url;
+             a.download = `candidates_${Date.now()}.xlsx`;
+             document.body.appendChild(a);
+             a.click();
+             window.URL.revokeObjectURL(url);
+             document.body.removeChild(a);
+             this.showMessage('Exported to Excel successfully', 'success');
+         },
+
+        async importCSV(event) {
+              const file = event.target.files[0];
+              if (!file) return;
+
+              // Store file and check for conflicts immediately
+              this.importFile = file;
+              
+              // Close import modal before checking conflicts
+              this.showImportModal = false;
+              
+              // Use a delay to ensure file picker dialog fully closes
+              setTimeout(() => {
+                  this.checkConflicts();
+              }, 500);
+              
+              // Reset the file input so same file can be selected again
+              event.target.value = '';
+         },
+
+         async checkConflicts() {
+              console.log('checkConflicts called');
+              if (!this.importExamYear) {
+                  this.showMessage('Please select an exam year', 'error');
+                  console.warn('No exam year selected');
+                  return;
+              }
+
+              if (!this.importFile) {
+                  this.showMessage('No file selected', 'error');
+                  console.warn('No file selected');
+                  return;
+              }
+              console.log('Checking conflicts for:', this.importFile.name, 'exam_year:', this.importExamYear);
+
+              try {
+                  const conflictFormData = new FormData();
+                  conflictFormData.append('file', this.importFile);
+                  conflictFormData.append('exam_year', this.importExamYear);
+                  conflictFormData.append('exam_type', this.importExamType);
+
+                  const conflictResponse = await fetch('/api/candidates/import/check', {
+                      method: 'POST',
+                      headers: {
+                          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                      },
+                      body: conflictFormData,
+                  });
+
+                  const conflictData = await conflictResponse.json();
+                  console.log('Conflict check response:', conflictData);
+
+                  if (conflictData.conflicts && conflictData.conflicts.length > 0) {
+                      // Show conflict modal
+                      console.log('Conflicts found:', conflictData.conflicts.length);
+                      console.log('Conflict details:', conflictData.conflicts);
+                      this.importConflicts = conflictData.conflicts;
+                      this.showImportModal = false;
+                      this.importMode = 'skip'; // Set default mode
+                      console.log('Before setting modal - showImportConflictModal:', this.showImportConflictModal);
+                      this.showImportConflictModal = true;
+                      console.log('After setting modal - showImportConflictModal:', this.showImportConflictModal);
+                      
+                      // Force Alpine to detect the change
+                      this.$nextTick(() => {
+                          console.log('NextTick - Modal should be visible now');
+                          const modalTemplate = document.querySelector('template[x-if="showImportConflictModal"]');
+                          console.log('Modal template in DOM:', !!modalTemplate);
+                          
+                          // Try to find modal by checking for text content
+                          const allText = document.body.innerText;
+                          console.log('Contains "Import Conflicts Detected":', allText.includes('Import Conflicts Detected'));
+                      });
+                      return;
+                  }
+
+                  // No conflicts, proceed with import
+                  console.log('No conflicts found, proceeding with import');
+                  this.showImportModal = false;
+                  await this.performImport(this.importFile, 'skip');
+             } catch (error) {
+                 console.error('Error checking conflicts:', error);
+                 this.showMessage('Error checking conflicts', 'error');
+             }
+         },
+
+         async performImport(file, mode) {
+             console.log('performImport called with:', { file, mode, exam_year: this.importExamYear, exam_type: this.importExamType });
+             try {
+                 const formData = new FormData();
+                 formData.append('file', file);
+                 formData.append('mode', mode);
+                 formData.append('exam_year', this.importExamYear);
+                 formData.append('exam_type', this.importExamType);
+
+                 const response = await fetch('/api/candidates/import', {
+                     method: 'POST',
+                     headers: {
+                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                     },
+                     body: formData,
+                 });
+
+                 const data = await response.json();
+                 
+                 if (response.ok) {
+                     this.showMessage(
+                         `Candidates imported successfully (${data.count} records)${data.skipped ? `, ${data.skipped} skipped` : ''}${data.replaced ? `, ${data.replaced} replaced` : ''}`,
+                         'success'
+                     );
+                     this.showImportConflictModal = false;
+                     this.importExamYear = '';
+                     this.importExamType = '';
+                     await this.loadCandidates();
+                 } else {
+                     this.showMessage(data.message || 'Error importing', 'error');
+                 }
+             } catch (error) {
+                 console.error('Error importing candidates:', error);
+                 this.showMessage('Error importing', 'error');
+             }
+         },
+
+        showMessage(message, type) {
+            const alertDiv = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-green-100 text-green-700 border-green-300' : 'bg-red-100 text-red-700 border-red-300';
+            
+            alertDiv.className = `fixed top-24 right-8 ${bgClass} p-4 rounded-lg border max-w-sm z-50 shadow-lg`;
+            alertDiv.textContent = message;
+            alertDiv.style.wordWrap = 'break-word';
+            
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 4000);
+        },
+
+        // ==================== VALIDATION & AUDIT FUNCTIONS ====================
+
+        // Validate school belongs to selected district
+        validateSchoolDistrict() {
+            if (!this.formData.school_id || !this.filterDistrict) return true;
+            
+            const school = this.schools.find(s => s.id == this.formData.school_id);
+            if (!school) return true;
+            
+            const isValid = school.district_id == this.filterDistrict;
+            if (!isValid) {
+                this.showMessage(
+                    `Warning: Selected school is in ${school.district_name || 'another district'}, not in ${this.filteredDistricts.find(d => d.id == this.filterDistrict)?.name}`,
+                    'error'
+                );
+            }
+            return isValid;
+        },
+
+        // Detect all data integrity issues
+        async auditDataIntegrity() {
+            this.auditLoading = true;
+            try {
+                const response = await fetch('/api/audit/candidates', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                });
+
+                const data = await response.json();
+                this.auditResults = data;
+                this.schoolDistrictMismatch = data.mismatches || [];
+                this.showDataAuditModal = true;
+            } catch (error) {
+                console.error('Audit error:', error);
+                this.showMessage('Error running audit', 'error');
+            } finally {
+                this.auditLoading = false;
+            }
+        },
+
+        // Fix school-district mismatches
+        async fixMismatches() {
+            if (this.schoolDistrictMismatch.length === 0) return;
+            
+            try {
+                const response = await fetch('/api/audit/candidates/fix', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({
+                        mismatches: this.schoolDistrictMismatch
+                    }),
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    this.showMessage(`Fixed ${data.fixed} mismatches`, 'success');
+                    await this.auditDataIntegrity();
+                    await this.loadCandidates();
+                } else {
+                    this.showMessage(data.message || 'Error fixing mismatches', 'error');
+                }
+            } catch (error) {
+                console.error('Fix error:', error);
+                this.showMessage('Error fixing mismatches', 'error');
+            }
+        },
+
+        // Get debug info for current filters
+        getDebugInfo() {
+            return {
+                region: {
+                    id: this.filterRegion,
+                    name: this.filterRegion ? this.regions.find(r => r.id == this.filterRegion)?.name : 'None'
+                },
+                district: {
+                    id: this.filterDistrict,
+                    name: this.filterDistrict ? this.filteredDistricts.find(d => d.id == this.filterDistrict)?.name : 'None'
+                },
+                school: {
+                    id: this.filterSchool,
+                    name: this.filterSchool ? this.filteredSchools.find(s => s.id == this.filterSchool)?.name : 'None'
+                },
+                stats: {
+                    totalSchools: this.schools.length,
+                    filteredSchools: this.filteredSchools.length,
+                    totalCandidates: this.candidates.length,
+                    filteredCandidates: this.filteredCandidates.length,
+                    candidatesInFilteredSchools: this.candidates.filter(c => 
+                        this.filteredSchools.some(s => s.id === c.school_id)
+                    ).length
+                }
+            };
+        },
+    };
+}
+
+// Simple quick import handler
+function handleQuickImport(fileInput) {
+    const file = fileInput.files[0];
+    if (!file) return;
+    
+    // Wait for Alpine to initialize if needed
+    setTimeout(() => {
+        let comp = document.querySelector('[x-data="candidatesManager()"]');
+        
+        if (!comp) {
+            alert('Error: Candidates component not found');
+            return;
+        }
+        
+        // Try to get Alpine data
+        let data;
+        
+        // Method 1: Try __x (Alpine 3.x)
+        if (comp.__x && comp.__x.$data) {
+            data = comp.__x.$data;
+        }
+        // Method 2: Try _x_dataStack (Alpine 3.x alternative)
+        else if (comp._x_dataStack) {
+            data = comp._x_dataStack[0];
+        }
+        // Method 3: Last resort - create direct property access
+        else {
+            alert('Alpine component exists but data not accessible. Please try again.');
+            return;
+        }
+        
+        console.log('Component data accessed successfully');
+        
+        const examYearStr = prompt('Enter exam year (e.g., 2026):', '2026');
+        if (!examYearStr) {
+            fileInput.value = '';
+            return;
+        }
+        
+        data.importExamYear = examYearStr;
+        data.importFile = file;
+        data.importMode = 'skip';
+        
+        const modeChoice = prompt('Import mode:\n1 = Skip existing (default)\n2 = Replace existing\n3 = Replace all\n\nEnter choice (1-3):', '1');
+        
+        switch(modeChoice) {
+            case '2':
+                data.importMode = 'replace';
+                break;
+            case '3':
+                data.importMode = 'replace-all';
+                break;
+            default:
+                data.importMode = 'skip';
+        }
+        
+        console.log('Starting import:', {
+            file: file.name,
+            examYear: data.importExamYear,
+            mode: data.importMode
+        });
+        
+        // Call the performImport function
+        if (typeof data.performImport === 'function') {
+            data.performImport(file, data.importMode);
+        } else {
+            alert('Error: performImport function not found');
+        }
+        
+        // Reset file input
+        fileInput.value = '';
+    }, 100);
+}
+</script>
+
+
+
+<!-- Data Audit Modal -->
+<div 
+    x-show="showDataAuditModal" 
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+    @click.self="showDataAuditModal = false;"
+    x-transition
+>
+    <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-96 overflow-y-auto" x-transition @click.stop>
+        <div class="sticky top-0 bg-white flex justify-between items-center p-6 border-b border-gray-200">
+            <h2 class="text-xl font-bold text-gray-800">
+                Data Integrity Audit
+            </h2>
+            <button 
+                @click="showDataAuditModal = false" 
+                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+            >
+                &times;
+            </button>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <template x-if="auditLoading">
+                <div class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-2xl text-blue-600"></i>
+                    <p class="text-gray-600 mt-2">Running audit...</p>
+                </div>
+            </template>
+
+            <template x-if="!auditLoading && auditResults">
+                <div class="space-y-4">
+                    <!-- Summary -->
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h3 class="font-bold text-gray-800 mb-2">Summary</h3>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <div class="text-gray-600">Total Schools:</div>
+                                <div class="font-semibold" x-text="auditResults.total_schools"></div>
+                            </div>
+                            <div>
+                                <div class="text-gray-600">Total Candidates:</div>
+                                <div class="font-semibold" x-text="auditResults.total_candidates"></div>
+                            </div>
+                            <div>
+                                <div class="text-gray-600">Schools Without District:</div>
+                                <div class="font-semibold text-orange-600" x-text="auditResults.schools_without_district"></div>
+                            </div>
+                            <div>
+                                <div class="text-gray-600">Mismatches Found:</div>
+                                <div class="font-semibold text-red-600" x-text="schoolDistrictMismatch.length"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mismatches -->
+                    <template x-if="schoolDistrictMismatch.length > 0">
+                        <div class="bg-red-50 rounded-lg p-4">
+                            <h3 class="font-bold text-red-800 mb-2">School-District Mismatches</h3>
+                            <div class="text-xs text-gray-600 mb-3">
+                                <p>These schools are registered to a different district than their candidates:</p>
+                            </div>
+                            <div class="space-y-2 max-h-48 overflow-y-auto">
+                                <template x-for="(mismatch, idx) in schoolDistrictMismatch.slice(0, 10)" :key="idx">
+                                    <div class="bg-white p-2 rounded border border-red-200 text-sm">
+                                        <div class="font-mono text-gray-700" x-text="mismatch"></div>
+                                    </div>
+                                </template>
+                                <template x-if="schoolDistrictMismatch.length > 10">
+                                    <div class="text-xs text-gray-600 p-2">
+                                        ... and <span x-text="schoolDistrictMismatch.length - 10"></span> more
+                                    </div>
+                                </template>
+                            </div>
+                            
+                            <button 
+                                @click="fixMismatches()"
+                                class="w-full mt-3 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                            >
+                                <i class="fas fa-wrench mr-2"></i>Fix All Mismatches
+                            </button>
+                        </div>
+                    </template>
+
+                    <!-- All Clear -->
+                    <template x-if="schoolDistrictMismatch.length === 0 && auditResults.schools_without_district === 0">
+                        <div class="bg-green-50 rounded-lg p-4">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                                <div>
+                                    <h3 class="font-bold text-green-800">All Clear!</h3>
+                                    <p class="text-sm text-green-700">No data integrity issues detected.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Close Button -->
+            <div class="flex gap-3">
+                <button 
+                    type="button"
+                    @click="auditDataIntegrity()"
+                    class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                >
+                    <i class="fas fa-redo mr-2"></i>Re-run Audit
+                </button>
+                <button 
+                    type="button"
+                    @click="showDataAuditModal = false"
+                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                >
+                    Close
+                </button>
+            </div>
+        </div>
+
+        <!-- Import Modal with x-teleport to body -->
+        <template x-teleport="body">
+            <div x-show="showImportModal" x-transition.opacity class="fixed inset-0 bg-black/50 z-[9998] flex items-center justify-center p-4" @click="if($event.target === $event.currentTarget) showImportModal = false">
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full" @click.stop>
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">Import Candidates</h2>
+                    </div>
+                    <div class="p-6 space-y-4">
+                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                             <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                             <strong>Note:</strong> School codes not in the database will be auto-registered. Upload your CSV and the system will handle missing schools.
+                         </div>
+                         <div>
+                             <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Year *</label>
+                             <select x-model="importExamYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                 <option value="">Select Exam Year</option>
+                                 <template x-for="year in examYears" :key="year.id">
+                                     <option :value="year.year_label" x-text="year.year_label"></option>
+                                 </template>
+                             </select>
+                         </div>
+                         <div>
+                             <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Type (optional)</label>
+                             <select x-model="importExamType" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                 <option value="">Auto-detect from CSV</option>
+                                 <option value="PSLE">PSLE</option>
+                                 <option value="CSEE">CSEE</option>
+                                 <option value="ACSEE">ACSEE</option>
+                             </select>
+                         </div>
+                        <div class="flex gap-3">
+                            <button type="button" @click="showImportModal = false" class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium">
+                                Cancel
+                            </button>
+                            <button type="button" @click="$nextTick(() => document.getElementById('importInput').click())" :disabled="!importExamYear" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium">
+                                Select File
+                            </button>
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                    </template>
+
+        <!-- Import Conflict Modal - Professional Version with x-teleport -->
+        <template x-teleport="body">
+            <div x-show="showImportConflictModal" x-transition.opacity style="display: none;" class="fixed inset-0 z-[9998] flex items-center justify-center p-4" @click.self="showImportConflictModal = false">
+                            <!-- Backdrop -->
+                            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+                            
+                            <!-- Modal -->
+                            <div class="relative z-[9999] bg-white rounded-xl shadow-2xl max-w-3xl w-full flex flex-col max-h-[90vh] pointer-events-auto" @click.stop>
+                                <!-- Header -->
+                                <div class="bg-gradient-to-r from-orange-50 to-yellow-50 px-8 py-6 border-b border-gray-200 flex-shrink-0 rounded-t-xl">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="bg-orange-100 p-3 rounded-lg">
+                                                <i class="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
+                                            </div>
+                                            <div>
+                                                <h2 class="text-2xl font-bold text-gray-800">Import Conflicts Detected</h2>
+                                                <p class="text-sm text-gray-600 mt-1"><span x-text="importConflicts.length"></span> candidate(s) already exist in the system</p>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            type="button"
+                                            @click.stop="showImportConflictModal = false" 
+                                            class="text-gray-400 hover:text-gray-600 transition text-2xl"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Content -->
+                                <div class="p-8 overflow-y-auto flex-1 space-y-6" @click.stop>
+                                    <!-- Summary -->
+                                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <p class="text-sm text-blue-900">
+                                            <i class="fas fa-info-circle mr-2"></i>
+                                            <strong>Info:</strong> These candidates will not be imported unless you select an action below
+                                        </p>
+                                    </div>
+
+                                    <!-- Conflicts Table -->
+                                    <div class="space-y-3">
+                                        <h3 class="font-semibold text-gray-800 text-sm uppercase tracking-wide">Conflicting Candidates</h3>
+                                        <div class="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden max-h-64 overflow-y-auto">
+                                            <table class="w-full text-sm">
+                                                <thead class="bg-gray-100 sticky top-0">
+                                                    <tr class="border-b border-gray-200">
+                                                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Candidate ID</th>
+                                                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Full Name</th>
+                                                        <th class="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-gray-200">
+                                                    <template x-for="(conflict, idx) in importConflicts.slice(0, 15)" :key="idx">
+                                                        <tr class="hover:bg-gray-100 transition">
+                                                            <td class="px-4 py-3 font-mono text-gray-800" x-text="conflict.candidate_id"></td>
+                                                            <td class="px-4 py-3 text-gray-700" x-text="conflict.full_name"></td>
+                                                            <td class="px-4 py-3">
+                                                                <span class="inline-block bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium">Exists</span>
+                                                            </td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <template x-if="importConflicts.length > 15">
+                                            <p class="text-xs text-gray-500 px-4">... and <span x-text="importConflicts.length - 15"></span> more conflicts</p>
+                                        </template>
+                                    </div>
+
+                                    <!-- Actions -->
+                                    <div class="space-y-3">
+                                        <h3 class="font-semibold text-gray-800 text-sm uppercase tracking-wide">Choose Action</h3>
+                                        
+                                        <!-- Skip Option -->
+                                        <label class="flex items-start gap-4 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition" :class="importMode === 'skip' ? 'border-blue-500 bg-blue-50' : ''">
+                                            <input 
+                                                type="radio" 
+                                                name="import-mode" 
+                                                value="skip"
+                                                x-model="importMode"
+                                                class="w-5 h-5 mt-0.5 cursor-pointer accent-blue-600"
+                                            >
+                                            <div class="flex-1">
+                                                <p class="font-semibold text-gray-800">Skip Existing Records</p>
+                                                <p class="text-xs text-gray-600 mt-1">Only import new candidates, leave existing ones unchanged</p>
+                                                <div class="mt-2 flex gap-2">
+                                                    <span class="inline-block bg-green-100 text-green-700 px-2 py-1 rounded text-xs">✓ Safe</span>
+                                                    <span class="inline-block bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">Recommended</span>
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        <!-- Replace Option -->
+                                        <label class="flex items-start gap-4 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-orange-300 hover:bg-orange-50 transition" :class="importMode === 'replace' ? 'border-orange-500 bg-orange-50' : ''">
+                                            <input 
+                                                type="radio" 
+                                                name="import-mode" 
+                                                value="replace"
+                                                x-model="importMode"
+                                                class="w-5 h-5 mt-0.5 cursor-pointer accent-orange-600"
+                                            >
+                                            <div class="flex-1">
+                                                <p class="font-semibold text-gray-800">Replace Existing Records</p>
+                                                <p class="text-xs text-gray-600 mt-1">Update conflicting candidates with new data from the CSV file</p>
+                                                <div class="mt-2">
+                                                    <span class="inline-block bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">⚠ Use with caution</span>
+                                                </div>
+                                            </div>
+                                        </label>
+
+                                        <!-- Replace All Option -->
+                                        <label class="flex items-start gap-4 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-red-300 hover:bg-red-50 transition" :class="importMode === 'replace-all' ? 'border-red-500 bg-red-50' : ''">
+                                            <input 
+                                                type="radio" 
+                                                name="import-mode" 
+                                                value="replace-all"
+                                                x-model="importMode"
+                                                class="w-5 h-5 mt-0.5 cursor-pointer accent-red-600"
+                                            >
+                                            <div class="flex-1">
+                                                <p class="font-semibold text-gray-800">Replace All Records</p>
+                                                <p class="text-xs text-gray-600 mt-1">Delete all existing candidates and import fresh batch. This action cannot be undone</p>
+                                                <div class="mt-2">
+                                                    <span class="inline-block bg-red-100 text-red-700 px-2 py-1 rounded text-xs">🚫 Dangerous</span>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Footer -->
+                                <div class="border-t border-gray-200 bg-gray-50 px-8 py-4 flex gap-3 flex-shrink-0 rounded-b-xl" @click.stop>
+                                    <button 
+                                        type="button"
+                                        @click="showImportConflictModal = false"
+                                        class="flex-1 px-4 py-3 bg-white border border-gray-300 hover:bg-gray-100 text-gray-800 rounded-lg transition font-medium text-sm cursor-pointer"
+                                    >
+                                        <i class="fas fa-times mr-2"></i>Cancel Import
+                                    </button>
+                                    <button 
+                                        type="button"
+                                        @click="
+                                          if (importFile && importMode) {
+                                            performImport(importFile, importMode);
+                                          }
+                                        "
+                                        class="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-lg transition font-medium text-sm cursor-pointer shadow-lg"
+                                    >
+                                        <i class="fas fa-check mr-2"></i>Proceed with Import
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </template>
+    </div>
+</div>
+
+@endsection

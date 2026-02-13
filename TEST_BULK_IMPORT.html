@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Bulk Import</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .test { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #e8f5e9; }
+        .error { background: #ffebee; }
+        button { padding: 10px 20px; cursor: pointer; }
+        #result { white-space: pre-wrap; font-family: monospace; }
+    </style>
+</head>
+<body>
+
+<h1>Bulk Import API Test</h1>
+
+<div class="test">
+    <h2>Test 1: API Endpoint Check</h2>
+    <button onclick="testApiEndpoint()">Test Endpoint</button>
+    <div id="test1"></div>
+</div>
+
+<div class="test">
+    <h2>Test 2: Preview Upload (with file)</h2>
+    <input type="file" id="zipFile" accept=".zip" />
+    <button onclick="testPreview()">Test Preview</button>
+    <div id="test2"></div>
+</div>
+
+<h2>Result:</h2>
+<div id="result"></div>
+
+<script>
+function log(msg) {
+    document.getElementById('result').innerHTML += msg + '\n';
+}
+
+function testApiEndpoint() {
+    log('--- Testing API Endpoint ---');
+    log('Endpoint: /api/bulk-import/preview');
+    log('Method: POST');
+    log('Status: Testing...\n');
+    
+    // Try to check if route exists
+    fetch('/api/bulk-import/preview', { method: 'OPTIONS' })
+        .then(r => {
+            log('Route accessible: YES');
+        })
+        .catch(e => {
+            log('Route check: ' + e.message);
+        });
+}
+
+async function testPreview() {
+    const file = document.getElementById('zipFile').files[0];
+    if (!file) {
+        log('ERROR: No file selected');
+        return;
+    }
+
+    log('--- Testing Preview Upload ---');
+    log('File: ' + file.name);
+    log('Size: ' + file.size + ' bytes');
+    log('Uploading...\n');
+
+    const formData = new FormData();
+    formData.append('zip_file', file);
+
+    // Get CSRF token
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    let csrf = csrfMeta ? csrfMeta.getAttribute('content') : 'NOT FOUND';
+    log('CSRF Token: ' + (csrf !== 'NOT FOUND' ? 'Found' : 'NOT FOUND') + '\n');
+
+    try {
+        const response = await fetch('/api/bulk-import/preview', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-TOKEN': csrf
+            }
+        });
+
+        log('Response Status: ' + response.status + ' ' + response.statusText);
+        
+        const data = await response.json();
+        log('Response:\n' + JSON.stringify(data, null, 2));
+
+        if (response.ok && data.success) {
+            document.getElementById('test2').className = 'success';
+            log('\n✓ SUCCESS');
+        } else {
+            document.getElementById('test2').className = 'error';
+            log('\n✗ FAILED');
+        }
+    } catch (error) {
+        log('ERROR: ' + error.message);
+        document.getElementById('test2').className = 'error';
+    }
+}
+</script>
+
+</body>
+</html>

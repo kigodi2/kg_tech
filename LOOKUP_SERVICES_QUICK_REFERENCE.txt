@@ -1,0 +1,152 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    LOOKUP SERVICES - QUICK REFERENCE                       ║
+║                           February 9, 2026                                 ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+THREE MAIN LOOKUP SERVICES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. AverageMarksService
+   For calculating and looking up average marks and grades
+   
+2. GradeLookupService
+   For looking up division, GPA, competence, and other grade info
+   
+3. NectaGradingService (Existing)
+   The underlying service with NECTA grading rules
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SERVICE 1: AverageMarksService
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: app/Services/Results/AverageMarksService.php
+
+Main Methods:
+  ✓ calculateAverage(float, Subject)
+    Returns: float (the average mark)
+  
+  ✓ getAverageAndGrade(SubjectMarks, Subject)  ⭐ MAIN
+    Returns: ['average' => 38.33, 'grade' => 'F']
+  
+  ✓ calculateTotalFromAverages($marks, $configs)
+    Returns: float (sum of all averages)
+
+Usage:
+  $result = $averageMarksService->getAverageAndGrade($mark, $subject);
+  $average = $result['average'];    // 38.33
+  $grade = $result['grade'];        // 'F'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SERVICE 2: GradeLookupService
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+File: app/Services/Results/GradeLookupService.php
+
+Main Lookup Methods:
+  ✓ getGradeFromMarks(85)
+    Returns: 'A'
+  
+  ✓ getCompetenceLevel('A')
+    Returns: 'Excellent'
+  
+  ✓ getGradePoints('A')
+    Returns: 1
+  
+  ✓ getDivisionFromPoints(8)  ⭐ FOR DIVISION
+    Returns: ['division' => 1, 'name' => 'I', 'competence' => 'Excellent']
+  
+  ✓ getGPA(10, 5)  ⭐ FOR GPA
+    Returns: 2.0
+  
+  ✓ formatDivision(1)  ⭐ FOR DISPLAY
+    Returns: 'I'
+  
+  ✓ getGradeColor('A')
+    Returns: '#00AA7A'
+  
+  ✓ getCompleteGradeInfo(...)
+    Returns: Complete array with all info
+
+Usage Examples:
+  // Get division
+  $div = $gradeLookupService->getDivisionFromPoints(8);
+  echo "Division: {$div['name']}";  // "Division: I"
+  
+  // Get GPA
+  $gpa = $gradeLookupService->getGPA(10, 5);
+  echo "GPA: {$gpa}";  // "GPA: 2.0"
+  
+  // Get competence level
+  $competence = $gradeLookupService->getCompetenceLevel('A');
+  echo "Competence: {$competence}";  // "Competence: Excellent"
+  
+  // Format division for display
+  $display = $gradeLookupService->formatDivision(3);
+  echo "Division: {$display}";  // "Division: III"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMMON WORKFLOWS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Get Average + Grade + Competence + Points + GPA:
+  // 1. Get average and grade
+  $result = $averageMarksService->getAverageAndGrade($mark, $subject);
+  
+  // 2. Look up additional info
+  $competence = $gradeLookupService->getCompetenceLevel($result['grade']);
+  $points = $gradeLookupService->getGradePoints($result['grade']);
+  $gpa = $gradeLookupService->getGPA($totalPoints, $subjectCount);
+  
+  // 3. Use the data
+  echo "{$result['average']} '{$result['grade']}' ({$competence}) - {$points}pts";
+
+Get Division from Points:
+  $division = $gradeLookupService->getDivisionFromPoints($totalPoints);
+  echo "Division: {$division['name']}";  // "Division: I"
+  echo "Competence: {$division['competence']}";  // "Competence: Excellent"
+
+Format Division for Display:
+  $displayDiv = $gradeLookupService->formatDivision($division);
+  // 1 → 'I', 2 → 'II', 3 → 'III', 4 → 'IV', 0 → '0'
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INSTANTIATION IN VIEW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+@php
+use App\Services\Results\NectaGradingService;
+use App\Services\Results\AverageMarksService;
+use App\Services\Results\GradeLookupService;
+
+$gradingService = new NectaGradingService();
+$averageMarksService = new AverageMarksService($gradingService);
+$gradeLookupService = new GradeLookupService($gradingService);
+@endphp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY POINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ USE AverageMarksService for:
+  - Calculating average from marks
+  - Getting grade from average
+  - Calculating total from all averages
+
+✓ USE GradeLookupService for:
+  - Looking up division from points
+  - Calculating GPA from points
+  - Getting competence level from grade
+  - Formatting division for display
+  - Getting grade color
+  - Getting grade points
+
+✓ Benefits:
+  - No inline calculations in views
+  - Reusable in controllers, commands, APIs
+  - Consistent logic everywhere
+  - Easy to test
+  - Easy to maintain
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STATUS: ✓ IMPLEMENTED AND READY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

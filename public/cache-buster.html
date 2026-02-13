@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Cache & Fix 422 Error</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2e7d32;
+            margin-bottom: 20px;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f5e9;
+            border-left: 4px solid #2e7d32;
+        }
+        .step-number {
+            font-weight: bold;
+            color: #2e7d32;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 20px 0;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1b5e20;
+        }
+        .info {
+            background: #fff3e0;
+            border-left: 4px solid #f57c00;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #e8f5e9;
+            border-left: 4px solid #2e7d32;
+            padding: 15px;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>✓ Fix 422 Error - Cache Clear</h1>
+
+    <div class="info">
+        <strong>What's happening:</strong> Your browser is using old cached JavaScript code. This page will help you clear it.
+    </div>
+
+    <div class="step">
+        <div class="step-number">Step 1: Clear Browser Cache</div>
+        <button onclick="clearCache()">Click Here to Clear Cache Instructions</button>
+        <div id="cacheInstructions" style="display: none; margin-top: 15px; padding: 10px; background: white; border-radius: 4px;">
+            <p><strong>Windows / Linux:</strong></p>
+            <ol>
+                <li>Press <code>Ctrl+Shift+Delete</code></li>
+                <li>Select "Cached images and files"</li>
+                <li>Click "All time"</li>
+                <li>Click "Clear data"</li>
+            </ol>
+            
+            <p><strong>Mac:</strong></p>
+            <ol>
+                <li>Press <code>Cmd+Shift+Delete</code></li>
+                <li>Select "Cached images and files"</li>
+                <li>Click "All time"</li>
+                <li>Click "Clear data"</li>
+            </ol>
+            
+            <p style="margin-top: 15px; font-weight: bold;">⚠️ Then close the browser completely and reopen it!</p>
+        </div>
+    </div>
+
+    <div class="step">
+        <div class="step-number">Step 2: Wait for Cache Clear</div>
+        <p>After clearing cache, wait 3 seconds and close browser.</p>
+    </div>
+
+    <div class="step">
+        <div class="step-number">Step 3: Reopen Browser</div>
+        <button onclick="redirectToApp()">Click to Go to Mark Entry Page (After cache clear)</button>
+    </div>
+
+    <div class="success" id="successMessage">
+        <strong>✓ Success!</strong> Browser cache cleared. Click the button below to go to the app.
+    </div>
+
+    <div class="info">
+        <strong>Having trouble?</strong> Open your browser's developer tools (F12), go to Application tab, and manually delete all storage for this site.
+    </div>
+</div>
+
+<script>
+function clearCache() {
+    const instructions = document.getElementById('cacheInstructions');
+    if (instructions.style.display === 'none') {
+        instructions.style.display = 'block';
+    } else {
+        instructions.style.display = 'none';
+    }
+}
+
+function redirectToApp() {
+    window.location.href = '/mark-entry/acsee';
+}
+
+// Try to clear cache programmatically if supported
+if ('caches' in window) {
+    caches.keys().then(names => {
+        names.forEach(name => {
+            caches.delete(name);
+        });
+    });
+}
+
+// Prevent browser from caching this page
+document.addEventListener('DOMContentLoaded', function() {
+    // This page should not be cached
+    const noCacheHeaders = new Headers();
+    noCacheHeaders.append('Cache-Control', 'no-cache, no-store, must-revalidate');
+    noCacheHeaders.append('Pragma', 'no-cache');
+    noCacheHeaders.append('Expires', '0');
+});
+</script>
+
+</body>
+</html>

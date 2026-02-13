@@ -1,0 +1,78 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                  CANDIDATES IMPORT - QUICK START                           ║
+║                          School S0108 is Ready!                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+
+SITUATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Your CSV references school S0108
+  School S0108 has been created ✅
+  You can now import candidates
+
+
+CSV FORMAT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Index Number | Full Name | Sex | Combination | School ID | Exam Type
+  S0108-0501   | AGRIPINA  | F   | HGL        | S0108    | ACSEE
+
+
+IMPORT STEPS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Open IRMS System
+  2. Go: REGISTRATION → Candidates
+  3. Click: Tools (blue button)
+  4. Select: Import CSV
+  5. Choose: Your candidates CSV file
+  6. Click: Import
+  7. ✅ Done! All 363 candidates will import
+
+
+EXPECTED RESULT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Success message: "363 candidate(s) imported successfully"
+  Candidates visible in list
+  All linked to school S0108
+
+
+SCHOOL DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Registration Number: S0108
+  Status: Active ✅
+  School Type: SECONDARY
+  Ownership: GOVERNMENT
+  Region: MOROGORO
+  District: GAIRO DC
+
+
+REQUIRED FIELDS IN CSV:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ✅ Full Name (must not be empty)
+  ✅ Sex (F or M)
+  ✅ School ID (must be S0108)
+  ✅ Exam Type (ACSEE, CSEE, PSLE)
+
+  Optional:
+  ⚪ Index Number (auto-generated if missing)
+  ⚪ Combination (can be empty)
+
+
+IF IMPORT FAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Check error message
+  2. Most common: Missing required field in CSV
+  3. Fix CSV and retry
+  4. Or contact support with error message
+
+
+VERIFY IMPORT:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  After import, go to Candidates Management
+  You should see 363 candidates listed
+  Filter by School: S0108
+  Should show all imported candidates
+
+
+STATUS: ✅ READY TO IMPORT NOW!
+
+═══════════════════════════════════════════════════════════════════════════════

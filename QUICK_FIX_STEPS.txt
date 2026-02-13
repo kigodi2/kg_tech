@@ -1,0 +1,59 @@
+================================================================================
+MODAL STUCK? QUICK FIX IN 3 STEPS
+================================================================================
+
+STEP 1: CLEAR CACHE (Most Important!)
+  Windows/Linux: Ctrl + Shift + Delete → Select "All time" → Clear
+  Mac: Cmd + Shift + Delete → Select "All time" → Clear
+
+STEP 2: CLOSE ALL TABS
+  Close every tab/window with the candidates page open
+
+STEP 3: HARD REFRESH
+  Windows: Ctrl + F5
+  Mac: Cmd + Shift + R
+
+WAIT 5 SECONDS for page to fully load, then test again.
+
+================================================================================
+IF STILL STUCK:
+================================================================================
+
+1. Open Developer Tools: F12
+2. Go to: Console tab
+3. Look for RED error messages
+4. Copy any red errors
+5. Report to system administrator with the errors
+
+================================================================================
+WHAT TO REPORT:
+================================================================================
+
+Browser: [e.g., Chrome 120]
+OS: [e.g., Windows 11]
+Error Text: [Copy from console if any]
+Screenshot: [If possible]
+
+================================================================================
+CODE CHANGES COMPLETED:
+================================================================================
+
+✅ Removed console.log() from button handlers
+✅ Fixed modal layout to show buttons properly
+✅ Added type="button" to all modal buttons
+✅ All file syntax validated
+
+Cache clearing is ESSENTIAL for changes to take effect.
+
+================================================================================
+TESTING AFTER CACHE CLEAR:
+================================================================================
+
+1. Registration → Candidates
+2. Click blue "Tools" button
+3. Click "Import CSV"
+4. Try clicking buttons in modal
+
+All should respond immediately.
+
+================================================================================
