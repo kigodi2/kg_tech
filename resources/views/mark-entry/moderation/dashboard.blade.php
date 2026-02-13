@@ -1,4 +1,4 @@
-@extends('layout')
+@extends('layouts.mark-entry')
 
 @section('content')
 <div class="w-full">
