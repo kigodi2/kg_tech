@@ -26,6 +26,7 @@ class CandidateImportController extends Controller
      * Validate CSV file and preview results (Phase 1: Dry-run)
      * 
      * Returns validation results without committing changes
+     * Supports on_exists_mode: 'skip' (default) or 'replace'
      */
     public function validateImport(Request $request)
     {
@@ -33,15 +34,17 @@ class CandidateImportController extends Controller
             $request->validate([
                 'file' => 'required|file|mimes:csv,txt',
                 'exam_year' => 'nullable|string|regex:/^\d{4}$/',
-                'exam_type' => 'nullable|in:PSLE,CSEE,ACSEE'
+                'exam_type' => 'nullable|in:PSLE,CSEE,ACSEE',
+                'on_exists_mode' => 'nullable|in:skip,replace'
             ]);
 
             $file = $request->file('file');
             $examYear = $request->input('exam_year');
             $examType = $request->input('exam_type');
+            $mode = $request->input('on_exists_mode', 'skip');
 
             // Parse and validate CSV
-            $result = $this->importService->validateCSV($file, $examYear, $examType);
+            $result = $this->importService->validateCSV($file, $examYear, $examType, $mode);
 
             return response()->json($result, 200);
 
@@ -69,6 +72,7 @@ class CandidateImportController extends Controller
      * Commit the import (Phase 2: Actual write)
      * 
      * Uses validated data from Phase 1
+     * Supports on_exists_mode: 'skip' (default) or 'replace'
      */
     public function commitImport(Request $request)
     {
@@ -80,13 +84,13 @@ class CandidateImportController extends Controller
                 'file' => 'required|file|mimes:csv,txt',
                 'exam_year' => 'nullable|string|regex:/^\d{4}$/',
                 'exam_type' => 'nullable|in:PSLE,CSEE,ACSEE',
-                'mode' => 'nullable|in:skip,replace'
+                'on_exists_mode' => 'nullable|in:skip,replace'
             ]);
 
             $file = $request->file('file');
             $examYear = $request->input('exam_year');
             $examType = $request->input('exam_type');
-            $mode = $request->input('mode', 'skip');
+            $mode = $request->input('on_exists_mode', 'skip');
 
             // Re-validate and commit
             $result = $this->importService->commitImport($file, $examYear, $examType, $mode);
@@ -125,8 +129,10 @@ class CandidateImportController extends Controller
                 'candidate_id',
                 'full_name',
                 'gender',    // M or F
-                'combination', // For ACSEE only (e.g., "Physics,Chemistry,Math")
                 'school_code',
+                'candidate_type', // SCHOOL or PRIVATE
+                'combination', // For SCHOOL candidates: e.g., "PCM" or "HGE"
+                'subjects', // For PRIVATE candidates: pipe-delimited codes e.g., "111|102|103|121"
                 'exam_type', // Optional: PSLE, CSEE, ACSEE (default from UI)
                 'exam_year'  // Optional: 4-digit year
             ];
@@ -135,13 +141,27 @@ class CandidateImportController extends Controller
             $csv = fopen('php://memory', 'w');
             fputcsv($csv, $headers);
             
-            // Add example row
+            // Add example rows (SCHOOL and PRIVATE)
             fputcsv($csv, [
-                '0001',
-                'John Doe',
+                'S0001-0001',
+                'John School',
                 'M',
-                'Physics,Chemistry,Biology',
                 'SCH001',
+                'SCHOOL',
+                'PCM', // For SCHOOL: combination code
+                '', // Leave blank for SCHOOL
+                'ACSEE',
+                '2026'
+            ]);
+            
+            fputcsv($csv, [
+                'P0001-0001',
+                'John Private',
+                'M',
+                'SCH001',
+                'PRIVATE',
+                '', // Leave blank for PRIVATE
+                '111|102|103|121', // For PRIVATE: subject codes (GS + 3 principals)
                 'ACSEE',
                 '2026'
             ]);
@@ -169,6 +189,7 @@ class CandidateImportController extends Controller
      * Async bulk import - dispatch to queue for large files
      * 
      * Returns immediately and processes in background
+     * Supports on_exists_mode: 'skip' (default) or 'replace'
      */
     public function asyncBulkImport(Request $request)
     {
@@ -177,13 +198,13 @@ class CandidateImportController extends Controller
                 'file' => 'required|file|mimes:csv,txt|max:52428800', // 50MB max
                 'exam_year' => 'nullable|string|regex:/^\d{4}$/',
                 'exam_type' => 'nullable|in:PSLE,CSEE,ACSEE',
-                'mode' => 'nullable|in:skip,replace'
+                'on_exists_mode' => 'nullable|in:skip,replace'
             ]);
 
             $file = $request->file('file');
             $examYear = $request->input('exam_year', '2026');
             $examType = $request->input('exam_type', 'ACSEE');
-            $mode = $request->input('mode', 'skip');
+            $mode = $request->input('on_exists_mode', 'skip');
 
             // Store file temporarily
             $tempPath = Storage::disk('local')->putFile('imports', $file);
