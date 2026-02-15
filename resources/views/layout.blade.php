@@ -300,6 +300,42 @@
             padding-top: 0;
         }
 
+        /* Sidebar Styling */
+        .sidebar-link {
+            display: inline-block;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.2s ease;
+            padding: 0.25rem 0;
+        }
+
+        .sidebar-link:hover {
+            text-decoration: none;
+            padding-left: 0.5rem;
+        }
+
+        /* Mark Entry Sidebar */
+        aside {
+            box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.1);
+        }
+
+        aside::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        aside::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+
+        aside::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+
+        aside::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding-top: 130px;
@@ -338,6 +374,11 @@
             .navbar-user {
                 order: 2;
                 margin-left: auto;
+            }
+
+            /* Hide sidebar on mobile */
+            aside {
+                display: none;
             }
         }
     </style>

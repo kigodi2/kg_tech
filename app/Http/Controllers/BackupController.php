@@ -172,7 +172,7 @@ class BackupController extends Controller
      * POST /api/backups/validate
      * Validate a backup file before restore
      */
-    public function validate(Request $request): JsonResponse
+    public function validateBackup(Request $request): JsonResponse
     {
         $this->authorize('restore', 'App\Models\Backup');
 

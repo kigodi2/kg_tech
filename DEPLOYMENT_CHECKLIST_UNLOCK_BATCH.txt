@@ -1,0 +1,294 @@
+================================================================================
+DEPLOYMENT CHECKLIST: UNLOCK BATCH MODAL FIX
+================================================================================
+Date: February 14, 2026
+Items: 2 files changed, ~80 lines modified
+Risk Level: LOW
+Estimated Time: 15 minutes
+
+================================================================================
+PRE-DEPLOYMENT VERIFICATION
+================================================================================
+
+[ ] Code Changes Reviewed
+    Location: routes/mark-entry.php (Line 65)
+    Change: ['auth'] → ['web', 'auth']
+    Verified: YES / NO
+
+[ ] JavaScript Changes Reviewed
+    Location: resources/views/mark-entry/index.blade.php (Lines 3516-3630)
+    Changes: Rewrote unlockBatchConfirm() function
+    Verified: YES / NO
+
+[ ] No Unintended Changes
+    [ ] Run: git diff
+    [ ] Review: Only 2 files changed
+    [ ] Verify: No unexpected modifications
+
+[ ] Syntax Validation
+    [ ] PHP syntax valid (routes/mark-entry.php)
+    [ ] JavaScript syntax valid (index.blade.php)
+    [ ] No parse errors
+
+[ ] Database Migrations
+    [ ] Check: No migrations needed
+    [ ] Status: Not required for this fix
+
+[ ] Configuration Changes
+    [ ] Check: No config changes needed
+    [ ] Status: Not required for this fix
+
+[ ] Backward Compatibility
+    [ ] Existing features unaffected: YES / NO
+    [ ] API responses unchanged: YES / NO
+    [ ] Database schema unchanged: YES / NO
+
+[ ] Security Review
+    [ ] CSRF protection properly enabled: YES / NO
+    [ ] No new vulnerabilities introduced: YES / NO
+    [ ] Admin authorization still enforced: YES / NO
+
+================================================================================
+LOCAL TESTING
+================================================================================
+
+[ ] Environment Setup
+    [ ] Laravel server running: php artisan serve
+    [ ] Vite dev server running (if needed): npm run dev
+    [ ] Database has test data
+
+[ ] Cache Clearing
+    [ ] Caches cleared: php artisan cache:clear
+    [ ] Views cleared: php artisan view:clear
+    [ ] Routes cached: php artisan route:cache --force
+    [ ] Config cleared: php artisan config:clear
+
+[ ] Basic Functionality
+    [ ] Page loads: http://127.0.0.1:8000/mark-entry/acsee
+    [ ] Admin user logged in: YES / NO
+    [ ] Unlock buttons visible: YES / NO
+    [ ] Modal opens on click: YES / NO
+
+[ ] Core Unlock Test
+    [ ] Modal appears: YES / NO
+    [ ] Reason field accepts input: YES / NO
+    [ ] Character counter works: YES / NO
+    [ ] Button disabled for short input: YES / NO
+    [ ] Button enabled for valid input: YES / NO
+    [ ] Submit button works: YES / NO
+    [ ] Request completes (not stuck): YES / NO
+    [ ] Response status 200: YES / NO
+    [ ] Modal closes: YES / NO
+    [ ] Success message shows: YES / NO
+
+[ ] Browser DevTools Verification
+    [ ] F12 → Network → See POST request
+    [ ] Request to: /api/mark-entry/submission/unlock/{id}
+    [ ] Request headers include X-CSRF-TOKEN
+    [ ] Response status: 200 OK (not 419)
+    [ ] Response content-type: application/json
+    [ ] Response body has success: true
+
+[ ] Browser Console Verification
+    [ ] F12 → Console → Clear
+    [ ] Perform unlock action
+    [ ] Look for logs like:
+        "Unlock batch request: {...}"
+        "Response received: {...}"
+        "API response data: {...}"
+    [ ] No errors in console: YES / NO
+
+[ ] Server Logs Verification
+    [ ] Terminal: tail -f storage/logs/laravel.log
+    [ ] Perform unlock action
+    [ ] Check logs for unlock entries: YES / NO
+    [ ] No CSRF errors: YES / NO
+    [ ] No auth errors: YES / NO
+
+[ ] Error Cases
+    [ ] Invalid reason (< 10 chars) shows error: YES / NO
+    [ ] Network error handling works: YES / NO
+    [ ] Timeout handling works: YES / NO
+
+[ ] Database State
+    [ ] Batch status changed to "unlocked": YES / NO
+    [ ] Audit trail recorded action: YES / NO
+
+================================================================================
+STAGING DEPLOYMENT (If Available)
+================================================================================
+
+[ ] Code Merged to Staging Branch
+    [ ] git branch: staging
+    [ ] git pull: latest code
+    [ ] git log: verify commits
+
+[ ] Staging Caches Cleared
+    [ ] php artisan cache:clear
+    [ ] php artisan view:clear
+    [ ] php artisan route:cache --force
+
+[ ] Staging Testing
+    [ ] Access staging URL: http://staging.domain/mark-entry/acsee
+    [ ] Unlock batch functionality works: YES / NO
+    [ ] Success message appears: YES / NO
+    [ ] No errors in logs: YES / NO
+
+[ ] Staging Monitoring
+    [ ] Watch logs for 30+ minutes
+    [ ] No unexpected errors: YES / NO
+    [ ] Monitor for CSRF/auth issues: YES / NO
+
+================================================================================
+PRODUCTION DEPLOYMENT
+================================================================================
+
+DEPLOYMENT METHOD: ___________________
+TIME WINDOW: ___________________
+MAINTENANCE WINDOW NEEDED: YES / NO
+
+[ ] Pre-Deployment Backup
+    [ ] Database backup created: YES / NO
+    [ ] Code backup (git tag): YES / NO
+    [ ] Rollback plan documented: YES / NO
+
+[ ] Deploy Code Changes
+    [ ] Method: (git pull / CI-CD pipeline / manual)
+    [ ] Verify: Files changed in production
+    [ ] Verify: No merge conflicts
+    [ ] Status: ___________________
+
+[ ] Production Cache Clearing
+    [ ] php artisan cache:clear
+    [ ] php artisan view:clear  
+    [ ] php artisan route:cache --force
+    [ ] php artisan config:clear
+    [ ] Web server restarted (if needed)
+
+[ ] Verify in Production
+    [ ] Access production: http://domain/mark-entry/acsee
+    [ ] Unlock button works: YES / NO
+    [ ] Modal opens: YES / NO
+    [ ] Unlock completes successfully: YES / NO
+    [ ] Success message shows: YES / NO
+    [ ] Modal closes: YES / NO
+
+[ ] Monitor Logs Immediately
+    [ ] tail -f storage/logs/laravel.log
+    [ ] Watch for 5-10 minutes
+    [ ] Check for CSRF errors: YES / NO
+    [ ] Check for auth errors: YES / NO
+    [ ] Check for general errors: YES / NO
+
+[ ] User Communication (If Needed)
+    [ ] Notify admins: "Unlock batch now works"
+    [ ] Ask for feedback: Email/Slack message sent
+
+[ ] Document Deployment
+    [ ] Record deployment time: ___________________
+    [ ] Record deployed by: ___________________
+    [ ] Document any issues: ___________________
+
+================================================================================
+POST-DEPLOYMENT MONITORING (24 Hours)
+================================================================================
+
+[ ] Daily Log Check
+    [ ] Check for CSRF-related errors
+    [ ] Check for unlock-related errors
+    [ ] Monitor for 419 status codes
+    [ ] Monitor for 403 (auth) errors
+
+[ ] Functionality Monitoring
+    [ ] Admins report feature works: YES / NO
+    [ ] No regression reports: YES / NO
+    [ ] Batch unlock successful count: _______
+
+[ ] Performance Monitoring
+    [ ] Unlock request times: < 2 seconds
+    [ ] Modal close time: < 1 second
+    [ ] No timeout issues reported: YES / NO
+
+[ ] Error Monitoring
+    [ ] Zero CSRF validation failures: YES / NO
+    [ ] Zero auth failures: YES / NO
+    [ ] Zero API errors: YES / NO
+
+================================================================================
+ISSUE DETECTION & RESPONSE
+================================================================================
+
+IF 419 ERRORS APPEAR:
+  [ ] Check route middleware includes 'web'
+  [ ] Verify cache was cleared
+  [ ] Check CSRF token in HTML: grep csrf-token resources/views/layout.blade.php
+  [ ] Restart web server if needed
+  [ ] Action taken: ___________________
+
+IF 403 ERRORS APPEAR:
+  [ ] Verify user has admin role
+  [ ] Check permission setup
+  [ ] Action taken: ___________________
+
+IF MODAL STUCK:
+  [ ] Check console for JavaScript errors
+  [ ] Check server logs for exceptions
+  [ ] Verify network request completed
+  [ ] Action taken: ___________________
+
+IF OTHER ERRORS:
+  [ ] Collect error logs
+  [ ] Note exact error message
+  [ ] Contact development team
+  [ ] Action taken: ___________________
+
+ROLLBACK IF NEEDED:
+  [ ] git revert HEAD
+  [ ] php artisan cache:clear && php artisan view:clear
+  [ ] Verify issue resolved
+  [ ] Notify team of rollback
+
+================================================================================
+SIGN-OFF
+================================================================================
+
+Deployed By: _____________________________
+Deployment Date: _____________________________
+Deployment Time: _____________________________
+Deployment Status: [ ] SUCCESS  [ ] ROLLBACK  [ ] ISSUES
+
+Issues Encountered (if any):
+_______________________________________________________________________________
+_______________________________________________________________________________
+
+Resolution:
+_______________________________________________________________________________
+_______________________________________________________________________________
+
+Approved By: _____________________________
+Date: _____________________________
+
+Notes:
+_______________________________________________________________________________
+_______________________________________________________________________________
+
+Next Steps:
+_______________________________________________________________________________
+_______________________________________________________________________________
+
+================================================================================
+CONTACT INFORMATION
+================================================================================
+
+Primary Developer: [Your Name]
+Email: [Your Email]
+Phone: [Your Phone]
+
+Secondary Developer: [Backup Name]
+Email: [Backup Email]
+Phone: [Backup Phone]
+
+Team Lead: [Lead Name]
+Email: [Lead Email]
+
+================================================================================

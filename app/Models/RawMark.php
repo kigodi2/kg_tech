@@ -63,6 +63,11 @@ class RawMark extends Model
         return $this->belongsTo(User::class, 'locked_by');
     }
 
+    public function changes()
+    {
+        return $this->hasMany(MarkEntryChange::class, 'raw_mark_id');
+    }
+
     // ==================== SCOPES ====================
 
     public function scopeWithErrors($query)

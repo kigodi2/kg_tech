@@ -1,0 +1,73 @@
+================================================================================
+EXACT CHANGES FOR UNLOCK BATCH MODAL FIX
+================================================================================
+
+This file shows the exact diff of all changes made.
+You can apply this entire patch with: git apply EXACT_CHANGES_DIFF.patch
+
+================================================================================
+CHANGE #1: routes/mark-entry.php (Line 65)
+================================================================================
+
+INDEX: routes/mark-entry.php
+--- Original
++++ Fixed
+@@ -62,1 +62,1 @@
+ // ==================== LIFECYCLE API ENDPOINTS ====================
+ // These endpoints power the sidebar dashboard sections
+-Route::middleware(['auth'])->prefix('api/mark-entry')->group(function () {
++Route::middleware(['web', 'auth'])->prefix('api/mark-entry')->group(function () {
+
+REASONING:
+  The 'web' middleware includes CSRF token validation needed for POST requests.
+  Without it, the API endpoint rejects requests with 419 status code.
+
+================================================================================
+CHANGE #2: resources/views/mark-entry/index.blade.php (Lines 3516-3630)
+================================================================================
+
+Replace the entire unlockBatchConfirm() function with improved version.
+
+SUMMARY OF IMPROVEMENTS:
+  1. Added CSRF token retrieval with fallback logic
+  2. Added validation error messages to user
+  3. Added CSRF token verification before sending
+  4. Added X-Requested-With and Accept headers
+  5. Added credentials: 'same-origin' for cookies
+  6. Added content-type validation
+  7. Better error handling with specific messages
+  8. Guaranteed modal closing with timeout
+  9. Improved console logging for debugging
+ 10. Better timeout and network error handling
+
+KEY DIFF SECTIONS:
+  - Check CSRF token exists, if not show error
+  - Validate response content-type is JSON
+  - Show user validation errors
+  - Close modal after success with timeout
+  - Proper error messages for different scenarios
+
+================================================================================
+TESTING THE CHANGES
+================================================================================
+
+Before applying:
+  1. git diff routes/mark-entry.php
+  2. git diff resources/views/mark-entry/index.blade.php
+
+After applying:
+  1. git status  (should show 2 modified files)
+  2. php artisan route:list | grep unlock  (should find the route)
+  3. Clear caches: php artisan cache:clear && php artisan view:clear
+  4. Test in browser
+
+================================================================================
+ROLLING BACK
+================================================================================
+
+If needed:
+  1. git checkout routes/mark-entry.php
+  2. git checkout resources/views/mark-entry/index.blade.php
+  3. Clear caches: php artisan cache:clear && php artisan view:clear
+
+================================================================================

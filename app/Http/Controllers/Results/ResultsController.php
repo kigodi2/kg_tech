@@ -12,6 +12,7 @@ use App\Models\ResultProcess;
 use App\Models\GradingProfile;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * ResultsController
@@ -79,13 +80,21 @@ class ResultsController extends Controller
             ->limit(5)
             ->get();
 
-        // Get recent audit logs
-        $recentAuditLogs = AuditLog::where('module', 'results')
-            ->where('exam_year_id', $examYear->id)
-            ->with('user')
-            ->latest()
-            ->limit(5)
-            ->get();
+        // Get recent audit logs (if table exists)
+        $recentAuditLogs = [];
+        try {
+            if (Schema::hasTable('audit_logs')) {
+                $recentAuditLogs = AuditLog::where('module', 'results')
+                    ->where('exam_year_id', $examYear->id)
+                    ->with('user')
+                    ->latest()
+                    ->limit(5)
+                    ->get();
+            }
+        } catch (\Exception $e) {
+            // Table doesn't exist or is inaccessible, continue without audit logs
+            $recentAuditLogs = [];
+        }
 
         return view('results.acsee.dashboard', [
             'exam_year' => $examYear->year_label,

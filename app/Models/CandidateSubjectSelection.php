@@ -18,10 +18,15 @@ class CandidateSubjectSelection extends Model
         'subject_id',
         'year',
         'is_active',
+        'is_principal',
+        'source',
+        'created_by',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_principal' => 'boolean',
+        'source' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -44,6 +49,11 @@ class CandidateSubjectSelection extends Model
     public function examYear()
     {
         return $this->belongsTo(ExamYear::class);
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function marks()

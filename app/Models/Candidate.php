@@ -16,12 +16,15 @@ class Candidate extends Model
         'gender',
         'exam_type',
         'combination',
+        'combination_id',
+        'candidate_type',
         'status',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'candidate_type' => 'string',
         'date_of_birth' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -40,6 +43,14 @@ class Candidate extends Model
     public function combination()
     {
         return $this->belongsTo(Combination::class, 'combination', 'code');
+    }
+
+    /**
+     * Relational combination lookup via combination_id FK (NECTA-aligned)
+     */
+    public function combinationTemplate()
+    {
+        return $this->belongsTo(Combination::class, 'combination_id');
     }
 
     public function examRegistrations()

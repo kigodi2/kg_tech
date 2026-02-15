@@ -1,0 +1,68 @@
+================================================================================
+CRITICAL FIX APPLIED: Unlock Batch Modal
+================================================================================
+Date: February 14, 2026
+
+ISSUE IDENTIFIED:
+The unlock batch request was timing out because of a model binding issue.
+
+ROOT CAUSE:
+The route parameter was {batch} which required Laravel's implicit model binding.
+This binding was either failing to find the model or taking too long.
+
+SOLUTION APPLIED:
+Changed route parameter from {batch} to {batchId} (simple integer parameter)
+Updated controller to handle the parameter directly
+
+CHANGES MADE:
+1. routes/mark-entry.php (Lines 81-82):
+   Changed: Route::post('unlock/{batch}', ...)
+   To:      Route::post('unlock/{batchId}', ...)
+   Also:    Route::post('lock/{batch}', ...)
+   To:      Route::post('lock/{batchId}', ...)
+
+2. app/Http/Controllers/MarkEntry/Api/MarkLifecycleApiController.php (Line 357):
+   Changed: public function unlockBatchAction(Request $request, $batchId)
+   To:      public function unlockBatchAction(Request $request, $batchId = null)
+   Added:   Fallback parameter handling
+
+3. BONUS FIX: Fixed duplicate route name error
+   web.php: Renamed 'backups.create' to 'backup.manual-create' to avoid conflict
+
+DEPLOYMENT STATUS:
+✅ Routes cached successfully
+✅ Unlock route now: POST api/mark-entry/submission/unlock/{batchId}
+✅ Lock route now: POST api/mark-entry/submission/lock/{batchId}
+✅ All caches rebuilt
+✅ Ready for testing
+
+HOW TO TEST:
+1. Hard refresh browser: Ctrl+Shift+R (or Cmd+Shift+R on Mac)
+2. Go to http://127.0.0.1:8000/mark-entry/acsee
+3. Click "Unlock Batch" button
+4. Enter unlock reason (> 10 characters)
+5. Click "Unlock Batch"
+6. Modal should close within 1-2 seconds with success message
+
+EXPECTED RESULTS:
+✅ No more "Processing..." stuck state
+✅ Modal closes with success message
+✅ Batch status changes to "unlocked"
+✅ Success notification appears
+✅ Browser console shows "Response received: 200 OK"
+✅ No 419 errors
+
+If still not working:
+1. Check browser console (F12 → Console)
+2. Check network tab (F12 → Network)
+3. Verify response status code
+4. Check server logs: tail -50 storage/logs/laravel.log | grep unlock
+
+SUCCESS INDICATORS:
+- Request completes: 1-2 seconds
+- Response status: 200 OK
+- Modal closes automatically
+- Success message displays
+- Batch status updates
+
+================================================================================

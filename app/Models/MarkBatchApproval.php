@@ -11,8 +11,11 @@ class MarkBatchApproval extends Model {
     protected $fillable = [
         'mark_import_batch_id',
         'approval_level',
+        'approval_type',
+        'status',
         'approved_by',
         'approved_at',
+        'approval_notes',
         'signature',
     ];
 

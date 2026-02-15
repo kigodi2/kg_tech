@@ -143,6 +143,7 @@
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Combination</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Allocated Subjects</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">School</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -156,13 +157,22 @@
                                     <span x-text="candidate.allocated_subjects.length > 0 ? candidate.allocated_subjects.map(s => s.code).join(', ') : '-'"></span>
                                 </td>
                                 <td class="px-6 py-4 text-sm text-gray-600" x-text="candidate.school_name || '-'"></td>
+                                <td class="px-6 py-4 text-sm space-x-2">
+                                    <button 
+                                        @click="openAllocationModal(candidate)"
+                                        class="inline-flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-900 hover:bg-green-50 rounded transition-colors"
+                                        title="Allocate Subjects"
+                                    >
+                                        <i class="fas fa-plus text-sm"></i>
+                                    </button>
+                                </td>
                             </tr>
                         </template>
                         <tr x-show="acseeCandicates.length === 0 && !loadingAcseeCandicates">
-                            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                                No ACSEE candidates found. Candidates are managed in <a href="/registration/candidates" class="text-blue-600 hover:underline">registration/candidates</a>
-                            </td>
-                        </tr>
+                             <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                                 No ACSEE candidates found. Candidates are managed in <a href="/registration/candidates" class="text-blue-600 hover:underline">registration/candidates</a>
+                             </td>
+                         </tr>
                     </tbody>
                 </table>
             </div>
@@ -283,6 +293,164 @@
                     </div>
                 </form>
             </div>
+        <!-- ALLOCATION MODAL -->
+        <div x-show="allocationModalOpen" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @click.self="closeAllocationModal()" x-transition style="display: none;">
+            <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" x-transition>
+                <div class="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Allocate Subjects</h2>
+                        <p class="text-sm text-gray-600 mt-1" x-text="allocationCandidate ? `${allocationCandidate.full_name} (${allocationCandidate.candidate_id})` : ''"></p>
+                    </div>
+                    <button @click="closeAllocationModal()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <!-- Mode Selector -->
+                    <div class="flex gap-4 border-b border-gray-200 pb-4">
+                        <button 
+                            @click="setAllocationMode('template')"
+                            :class="allocationMode === 'template' ? 'border-b-2 border-blue-600 text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-800'"
+                            class="pb-2 transition-colors"
+                        >
+                            Apply Combination Template
+                        </button>
+                        <button 
+                            @click="setAllocationMode('manual')"
+                            :class="allocationMode === 'manual' ? 'border-b-2 border-blue-600 text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-800'"
+                            class="pb-2 transition-colors"
+                        >
+                            Manual Subject Selection
+                        </button>
+                    </div>
+
+                    <!-- Exam Year Selection (Common) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Year *</label>
+                        <select x-model="allocationExamYearId" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select Exam Year</option>
+                            <template x-for="year in allocationExamYears" :key="year.id">
+                                <option :value="year.id" x-text="year.year_label"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Mode A: Apply Combination Template -->
+                    <div x-show="allocationMode === 'template'" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Combination Template *</label>
+                            <select x-model="allocationCombinationId" @change="loadCombinationSubjectsPreview()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Combination</option>
+                                <template x-for="combo in allocationCombinations" :key="combo.id">
+                                    <option :value="combo.id" x-text="`${combo.code} - ${combo.subject_codes}`"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <!-- Preview Subjects -->
+                        <div x-show="allocationPreviewSubjects.length > 0">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Subjects in Template:</label>
+                            <div class="bg-gray-50 rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
+                                <template x-for="subject in allocationPreviewSubjects" :key="subject.id">
+                                    <div class="flex items-center gap-2 p-2 bg-white rounded border border-gray-200">
+                                        <span class="font-mono font-semibold text-blue-600" x-text="subject.code"></span>
+                                        <span class="text-gray-800" x-text="subject.name"></span>
+                                        <span x-show="subject.code === '111'" class="ml-auto text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">General Studies</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mode B: Manual Subject Selection -->
+                    <div x-show="allocationMode === 'manual'" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Select Subjects *</label>
+                            <div class="text-sm text-gray-600 mb-3">
+                                <p><strong>Required:</strong> General Studies + at least 3 other subjects</p>
+                            </div>
+                            <div class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                                <template x-for="subject in allocationAllSubjects" :key="subject.id">
+                                    <div class="flex items-center gap-2">
+                                        <input 
+                                            type="checkbox" 
+                                            :id="`subject-${subject.id}`"
+                                            :value="subject.id"
+                                            x-model.number="allocationSubjectIds"
+                                            class="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                        >
+                                        <label :for="`subject-${subject.id}`" class="flex-1 cursor-pointer">
+                                            <span class="font-mono font-semibold text-blue-600" x-text="subject.code"></span>
+                                            <span class="text-gray-800" x-text="subject.name"></span>
+                                            <span x-show="subject.code === '111'" class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Mandatory</span>
+                                        </label>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Allocation Options (Common) -->
+                    <div class="border-t border-gray-200 pt-4 space-y-4">
+                        <div class="flex items-center gap-2">
+                            <input 
+                                type="checkbox"
+                                id="replaceAllocations"
+                                x-model="allocationReplace"
+                                class="w-4 h-4 rounded border-gray-300 text-blue-600"
+                            >
+                            <label for="replaceAllocations" class="text-sm font-medium text-gray-700 cursor-pointer">
+                                Replace existing allocations (instead of adding missing only)
+                            </label>
+                        </div>
+                        <div x-show="allocationReplace" class="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                            <p class="text-sm text-orange-800">
+                                <strong>⚠ Warning:</strong> This will remove all existing subject allocations for this exam year and replace them with the selected subjects.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Validation Messages -->
+                    <div x-show="allocationValidationMessages.errors.length > 0" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p class="font-semibold text-red-800 mb-2">Validation Errors:</p>
+                        <ul class="space-y-1">
+                            <template x-for="error in allocationValidationMessages.errors" :key="error">
+                                <li class="text-sm text-red-700" x-text="error"></li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <div x-show="allocationValidationMessages.warnings.length > 0" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p class="font-semibold text-yellow-800 mb-2">Warnings:</p>
+                        <ul class="space-y-1">
+                            <template x-for="warning in allocationValidationMessages.warnings" :key="warning">
+                                <li class="text-sm text-yellow-700" x-text="warning"></li>
+                            </template>
+                        </ul>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4 border-t border-gray-200">
+                        <button 
+                            type="button" 
+                            @click="closeAllocationModal()"
+                            class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="button"
+                            @click="saveAllocation()"
+                            :disabled="allocationProcessing || !allocationExamYearId"
+                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            <span x-show="!allocationProcessing">Save Allocation</span>
+                            <span x-show="allocationProcessing" class="flex items-center gap-2">
+                                <i class="fas fa-spinner animate-spin"></i> Processing...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -328,6 +496,21 @@ function acseeManager() {
         acseeCurrentPage: 1,
         acseetotalPages: 1,
         acseetotalCount: 0,
+
+        // Allocation Modal
+        allocationModalOpen: false,
+        allocationCandidate: null,
+        allocationMode: 'template',
+        allocationExamYearId: '',
+        allocationCombinationId: '',
+        allocationSubjectIds: [],
+        allocationReplace: false,
+        allocationProcessing: false,
+        allocationExamYears: [],
+        allocationCombinations: [],
+        allocationAllSubjects: [],
+        allocationPreviewSubjects: [],
+        allocationValidationMessages: { errors: [], warnings: [] },
 
         async init() {
             console.log('=== ACSEE Manager Initialized ===');
@@ -755,6 +938,190 @@ function acseeManager() {
             document.body.removeChild(a);
             
             this.showMessage('Exported to Excel successfully', 'success');
+        },
+
+        // ==================== ALLOCATION FUNCTIONS ====================
+
+        async openAllocationModal(candidate) {
+            this.allocationCandidate = candidate;
+            this.allocationModalOpen = true;
+            this.allocationMode = 'template';
+            this.allocationExamYearId = '';
+            this.allocationCombinationId = '';
+            this.allocationSubjectIds = [];
+            this.allocationReplace = false;
+            this.allocationValidationMessages = { errors: [], warnings: [] };
+            
+            await this.loadAllocationContexts();
+        },
+
+        closeAllocationModal() {
+            this.allocationModalOpen = false;
+            this.allocationCandidate = null;
+            this.allocationSubjectIds = [];
+            this.allocationValidationMessages = { errors: [], warnings: [] };
+        },
+
+        setAllocationMode(mode) {
+            this.allocationMode = mode;
+            this.allocationSubjectIds = [];
+            this.allocationCombinationId = '';
+            this.allocationPreviewSubjects = [];
+            this.allocationValidationMessages = { errors: [], warnings: [] };
+        },
+
+        async loadAllocationContexts() {
+            try {
+                // Load exam years
+                const yearsResponse = await fetch('/api/exam-years');
+                const yearsData = await yearsResponse.json();
+                this.allocationExamYears = yearsData.data || [];
+
+                // Load combinations for ACSEE
+                const combosResponse = await fetch('/api/exam-types/ACSEE/combinations');
+                const combosData = await combosResponse.json();
+                this.allocationCombinations = combosData.data || [];
+
+                // Load all subjects for ACSEE
+                const subjectsResponse = await fetch('/api/exam-types/ACSEE/subjects');
+                const subjectsData = await subjectsResponse.json();
+                this.allocationAllSubjects = subjectsData.data || [];
+            } catch (error) {
+                console.error('Error loading allocation contexts:', error);
+                this.showMessage('Error loading data for allocation', 'error');
+            }
+        },
+
+        async loadCombinationSubjectsPreview() {
+            if (!this.allocationCombinationId) {
+                this.allocationPreviewSubjects = [];
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/combinations/${this.allocationCombinationId}/subjects`);
+                const data = await response.json();
+                this.allocationPreviewSubjects = data.data || [];
+
+                // Auto-select subjects from combination
+                this.allocationSubjectIds = this.allocationPreviewSubjects.map(s => s.id);
+            } catch (error) {
+                console.error('Error loading combination subjects:', error);
+                this.showMessage('Error loading combination subjects', 'error');
+            }
+        },
+
+        async saveAllocation() {
+            if (!this.allocationExamYearId) {
+                this.showMessage('Please select an exam year', 'error');
+                return;
+            }
+
+            if (!this.allocationCandidate) {
+                this.showMessage('No candidate selected', 'error');
+                return;
+            }
+
+            let subjectIds = [];
+
+            if (this.allocationMode === 'template') {
+                if (!this.allocationCombinationId) {
+                    this.showMessage('Please select a combination template', 'error');
+                    return;
+                }
+                subjectIds = this.allocationSubjectIds;
+            } else {
+                // Manual mode
+                subjectIds = this.allocationSubjectIds;
+                if (subjectIds.length === 0) {
+                    this.showMessage('Please select at least one subject', 'error');
+                    return;
+                }
+            }
+
+            // Confirmation dialog for destructive operation
+            if (this.allocationReplace) {
+                const candidateName = this.allocationCandidate?.full_name || 'Unknown';
+                const examYearLabel = this.allocationExamYears.find(y => y.id == this.allocationExamYearId)?.year_label || this.allocationExamYearId;
+                
+                const confirmed = confirm(
+                    `CONFIRM DELETE & REPLACE\n\n` +
+                    `Candidate: ${candidateName}\n` +
+                    `Exam Year: ${examYearLabel}\n\n` +
+                    `This will PERMANENTLY DELETE all existing subject allocations ` +
+                    `for this exam year and replace them with the selected subjects.\n\n` +
+                    `This action CANNOT be undone.\n\n` +
+                    `Continue?`
+                );
+                
+                if (!confirmed) {
+                    this.showMessage('Operation cancelled', 'info');
+                    return;
+                }
+            }
+
+            this.allocationProcessing = true;
+
+            try {
+                // Prepare is_principal map (all except code 111 are principal)
+                const isPrincipalMap = {};
+                this.allocationAllSubjects.forEach(subject => {
+                    if (subjectIds.includes(subject.id)) {
+                        isPrincipalMap[subject.id] = subject.code !== '111';
+                    }
+                });
+
+                const response = await fetch('/api/exam-types/acsee/allocate-subjects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({
+                        candidate_id: this.allocationCandidate.id,
+                        exam_year_id: parseInt(this.allocationExamYearId),
+                        subject_ids: subjectIds.map(id => parseInt(id)),
+                        is_principal_map: isPrincipalMap,
+                        replace_allocations: this.allocationReplace,
+                        source: this.allocationMode === 'template' ? 'template' : 'manual',
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    this.showMessage(data.message || 'Subjects allocated successfully', 'success');
+                    this.closeAllocationModal();
+                    await this.loadAcseeCandicates();
+                } else {
+                    this.allocationValidationMessages = {
+                        errors: data.errors || [],
+                        warnings: data.warnings || [],
+                    };
+                    if (data.errors && data.errors.length > 0) {
+                        this.showMessage('Allocation validation failed', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error saving allocation:', error);
+                this.allocationValidationMessages = {
+                    errors: ['An error occurred while saving allocation: ' + error.message],
+                    warnings: [],
+                };
+                this.showMessage('Error saving allocation', 'error');
+            } finally {
+                this.allocationProcessing = false;
+            }
+        },
+
+        showMessage(message, type) {
+            // Use the existing message system if available
+            // This assumes there's a message display mechanism in the component
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            // Add toast/alert if your system has one
+            if (type === 'error') {
+                alert(message); // Simple fallback
+            }
         }
     };
 }

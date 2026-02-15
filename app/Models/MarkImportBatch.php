@@ -33,6 +33,13 @@ class MarkImportBatch extends Model
         'processed_by',
         'processed_at',
         'notes',
+        'lifecycle_state',
+        'lifecycle_history',
+        'rejection_reason',
+        'requires_resubmission',
+        'resubmitted_from_batch_id',
+        'latest_review_id',
+        'batch_hash',
     ];
 
     protected $casts = [
@@ -90,6 +97,26 @@ class MarkImportBatch extends Model
     public function checksum()
     {
         return $this->hasOne(MarkImportChecksum::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(MarkModerationReview::class, 'mark_import_batch_id');
+    }
+
+    public function latestReview()
+    {
+        return $this->belongsTo(MarkModerationReview::class, 'latest_review_id');
+    }
+
+    public function approvals()
+    {
+        return $this->hasMany(MarkBatchApproval::class, 'mark_import_batch_id');
+    }
+
+    public function lifecycleStates()
+    {
+        return $this->hasMany(MarkEntryLifecycleState::class, 'mark_import_batch_id');
     }
 
     // ==================== SCOPES ====================

@@ -59,3 +59,44 @@ Route::middleware(['auth'])->prefix('mark-entry')->group(function () {
         });
     });
 });
+
+// ==================== LIFECYCLE API ENDPOINTS ====================
+// These endpoints power the sidebar dashboard sections
+Route::middleware(['web', 'auth'])->prefix('api/mark-entry')->group(function () {
+    // Moderation endpoints
+    Route::prefix('moderation')->name('moderation-api.')->middleware('can:mark-entry.moderate')->group(function () {
+        Route::get('pending', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getPendingBatches']);
+        Route::get('batch/{batch}', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getBatchModeration']);
+        Route::get('search', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'searchPending']);
+        Route::get('stats', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getModeratorStats']);
+        Route::post('batch/{batch}/approve', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'approveBatchAction']);
+        Route::post('batch/{batch}/reject', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'rejectBatchAction']);
+    });
+
+    // Submission endpoints
+    Route::prefix('submission')->name('submission-api.')->middleware('can:mark-entry.lock')->group(function () {
+        Route::get('ready', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getReadyForSubmission']);
+        Route::get('submitted', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getSubmitted']);
+        Route::get('batch/{batch}/history', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getSubmissionHistory']);
+        Route::post('lock/{batchId}', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'lockBatchAction']);
+        Route::post('unlock/{batchId}', [\App\Http\Controllers\MarkEntry\Api\UnlockBatchController::class, 'unlock']);
+    });
+
+    // Analytics endpoints
+    Route::prefix('analytics')->name('analytics-api.')->group(function () {
+        Route::get('overview', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getAnalytics']);
+        Route::get('by-year', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getAnalyticsByYear']);
+        Route::get('by-subject', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getAnalyticsBySubject']);
+        Route::get('by-school', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getAnalyticsBySchool']);
+        Route::get('errors', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getErrorStats']);
+        Route::get('batch/{batch}/timeline', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getBatchTimeline']);
+    });
+
+    // Audit endpoints
+    Route::prefix('audit')->name('audit-api.')->middleware('can:mark-entry.audit')->group(function () {
+        Route::get('batch/{batch}', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getBatchAuditTrail']);
+        Route::get('user/{userId}', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getUserActivity']);
+        Route::get('batch/{batch}/summary', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getBatchActivitySummary']);
+        Route::get('batch/{batch}/modifications', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getBatchModifications']);
+    });
+});

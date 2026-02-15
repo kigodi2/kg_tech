@@ -102,17 +102,16 @@
                              <i :class="showToolsMenu ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-xs"></i>
                          </button>
                          <div x-show="showToolsMenu" class="absolute top-full right-0 mt-2 bg-white border border-gray-300 rounded shadow-lg z-10 min-w-48" @click="showToolsMenu = false">
+                             <button @click="openImportModal()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200">
+                                 <i class="fas fa-upload text-blue-600"></i> Import Schools
+                             </button>
                              <button @click="downloadTemplate()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200">
                                  <i class="fas fa-download text-blue-600"></i> CSV Template
-                             </button>
-                             <button @click="document.getElementById('importInput').click()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200">
-                                 <i class="fas fa-upload text-blue-600"></i> Import CSV
                              </button>
                              <button @click="exportCSV()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
                                  <i class="fas fa-file-csv text-blue-600"></i> Export CSV
                              </button>
                          </div>
-                         <input id="importInput" type="file" accept=".csv" @change="importCSV($event)" class="hidden">
                      </div>
                      </div>
                      
@@ -247,6 +246,195 @@
                         title="Next"
                     >
                         <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import Modal -->
+        <div 
+            x-show="importModalOpen" 
+            class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+            style="display: none;"
+            @click.self="importModalOpen = false;"
+            x-transition
+        >
+            <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" x-transition>
+                <div class="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
+                    <h2 class="text-2xl font-bold text-gray-800">Import Schools</h2>
+                    <button 
+                        @click="importModalOpen = false" 
+                        class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <!-- Import Form (Upload State) -->
+                <div x-show="importState === 'idle' || importState === 'uploading'" class="p-6 space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-blue-800">
+                        <strong>Instructions:</strong> Upload a CSV file with school data. Click "Download Template" to see the required format.
+                    </div>
+
+                    <!-- File Upload Area -->
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">
+                        <div x-show="!importFile" class="cursor-pointer" @click="document.getElementById('importFileInput').click()">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-3"></i>
+                            <p class="text-gray-700 font-medium">Click to upload or drag and drop</p>
+                            <p class="text-xs text-gray-500 mt-1">CSV files up to 10MB</p>
+                        </div>
+                        <div x-show="importFile" class="text-green-600">
+                            <i class="fas fa-check-circle text-4xl mb-3"></i>
+                            <p class="font-medium" x-text="importFile?.name"></p>
+                            <p class="text-xs text-gray-500 mt-1" x-text="'Size: ' + (importFile?.size ? (importFile.size / 1024 / 1024).toFixed(2) + ' MB' : '')"></p>
+                        </div>
+                    </div>
+
+                    <input 
+                        id="importFileInput" 
+                        type="file" 
+                        accept=".csv,.txt" 
+                        @change="importFile = $event.target.files[0]"
+                        class="hidden"
+                    >
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4">
+                        <button 
+                            @click="downloadImportTemplate()"
+                            class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                            :disabled="importState === 'uploading' || importState === 'validating'"
+                        >
+                            <i class="fas fa-download"></i> Download Template
+                        </button>
+                        <button 
+                            @click="importModalOpen = false" 
+                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                            :disabled="importState === 'uploading' || importState === 'validating'"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            @click="validateImport()"
+                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                            :disabled="!importFile || importState === 'uploading' || importState === 'validating'"
+                        >
+                            <span x-show="importState === 'idle'"><i class="fas fa-check"></i> Upload & Validate</span>
+                            <span x-show="importState === 'uploading' || importState === 'validating'"><i class="fas fa-spinner animate-spin"></i> Processing...</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Validation Report (Report State) -->
+                <div x-show="importState === 'report'" class="p-6 space-y-4">
+                    <!-- Summary Stats -->
+                    <div class="grid grid-cols-4 gap-4">
+                        <div class="bg-blue-50 border border-blue-200 rounded p-3 text-center">
+                            <div class="text-2xl font-bold text-blue-700" x-text="importReport.total_rows || 0"></div>
+                            <div class="text-xs text-gray-600 mt-1">Total Rows</div>
+                        </div>
+                        <div class="bg-green-50 border border-green-200 rounded p-3 text-center">
+                            <div class="text-2xl font-bold text-green-700" x-text="importReport.valid_count || 0"></div>
+                            <div class="text-xs text-gray-600 mt-1">Valid</div>
+                        </div>
+                        <div class="bg-red-50 border border-red-200 rounded p-3 text-center">
+                            <div class="text-2xl font-bold text-red-700" x-text="importReport.invalid_count || 0"></div>
+                            <div class="text-xs text-gray-600 mt-1">Failed</div>
+                        </div>
+                        <div class="bg-purple-50 border border-purple-200 rounded p-3 text-center">
+                            <div class="text-2xl font-bold text-purple-700" x-text="importReport.can_import ? 'Ready' : 'Fix Required'"></div>
+                            <div class="text-xs text-gray-600 mt-1">Status</div>
+                        </div>
+                    </div>
+
+                    <!-- Error Summary -->
+                    <div x-show="importReport.invalid_count > 0" class="bg-yellow-50 border border-yellow-200 rounded p-4">
+                        <h3 class="font-semibold text-gray-800 mb-2">Error Summary</h3>
+                        <div class="space-y-1 text-sm">
+                            <template x-for="(count, error) in importReport.summary" :key="error">
+                                <div class="text-gray-700">
+                                    <span x-text="count + 'x '"></span>
+                                    <span x-text="error.replace(/_/g, ' ').charAt(0).toUpperCase() + error.replace(/_/g, ' ').slice(1)"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Error Table -->
+                    <div x-show="importReport.errors && importReport.errors.length > 0" class="border rounded">
+                        <div class="bg-gray-100 px-4 py-3 border-b font-semibold text-gray-800">
+                            Failed Rows (<span x-text="importReport.total_errors || 0"></span> total)
+                        </div>
+                        <div class="max-h-64 overflow-y-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50 border-b">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Row</th>
+                                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Code</th>
+                                        <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700">Errors</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <template x-for="(error, idx) in importReport.errors" :key="idx">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-4 py-2 text-gray-600 font-mono text-xs" x-text="error.row_number"></td>
+                                            <td class="px-4 py-2 text-gray-700 font-mono" x-text="error.normalized_row?.code || '(empty)'"></td>
+                                            <td class="px-4 py-2">
+                                                <div class="text-xs text-red-600">
+                                                    <template x-for="msg in error.error_messages || []" :key="msg">
+                                                        <div class="mb-1">• <span x-text="msg"></span></div>
+                                                    </template>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-3 pt-4 border-t">
+                        <button 
+                            @click="downloadImportErrors()"
+                            class="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                            x-show="importReport.errors && importReport.errors.length > 0"
+                        >
+                            <i class="fas fa-download"></i> Download Errors
+                        </button>
+                        <button 
+                            @click="resetImportModal()"
+                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                        >
+                            Back to Upload
+                        </button>
+                        <button 
+                            @click="commitImport()"
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                            :disabled="!importReport.can_import || importState === 'committing'"
+                            x-show="importReport.can_import"
+                        >
+                            <span x-show="importState !== 'committing'"><i class="fas fa-check"></i> Import Now</span>
+                            <span x-show="importState === 'committing'"><i class="fas fa-spinner animate-spin"></i> Importing...</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Success State -->
+                <div x-show="importState === 'done'" class="p-6 text-center space-y-4">
+                    <i class="fas fa-check-circle text-green-500 text-6xl"></i>
+                    <h3 class="text-xl font-bold text-gray-800">Import Successful!</h3>
+                    <p class="text-gray-600">
+                        <span x-text="importResult.imported_count || 0"></span> school(s) have been imported successfully.
+                    </p>
+                    <div class="bg-green-50 border border-green-200 rounded p-3 text-sm text-green-800" x-show="importResult.imported_count > 0">
+                        Schools will be visible in the table below.
+                    </div>
+                    <button 
+                        @click="importModalOpen = false; loadSchools();"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                    >
+                        Close and Refresh
                     </button>
                 </div>
             </div>
@@ -451,6 +639,13 @@ function schoolManager() {
         currentPage: 1,
         pageSize: 10,
         totalCount: 0,
+        
+        // Import modal state
+        importModalOpen: false,
+        importState: 'idle', // idle, uploading, validating, report, committing, done
+        importFile: null,
+        importReport: {},
+        importResult: {},
         
         // Computed - Filtered Districts
         get filteredDistricts() {
@@ -773,6 +968,142 @@ function schoolManager() {
             } catch (error) {
                 console.error('Error:', error);
                 this.showMessage('Error importing: ' + error.message, 'error');
+            }
+        },
+
+        // Import Modal Methods
+        openImportModal() {
+            this.importModalOpen = true;
+            this.resetImportModal();
+        },
+
+        resetImportModal() {
+            this.importState = 'idle';
+            this.importFile = null;
+            this.importReport = {};
+            this.importResult = {};
+        },
+
+        async validateImport() {
+            if (!this.importFile) {
+                this.showMessage('Please select a file', 'error');
+                return;
+            }
+
+            this.importState = 'validating';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+
+                const response = await fetch('/api/schools/import/validate', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.importReport = data;
+                    this.importState = 'report';
+                } else {
+                    this.showMessage(data.message || 'Validation failed', 'error');
+                    this.importState = 'idle';
+                }
+            } catch (error) {
+                console.error('Validation error:', error);
+                this.showMessage('Error during validation: ' + error.message, 'error');
+                this.importState = 'idle';
+            }
+        },
+
+        async commitImport() {
+            if (!this.importFile) {
+                this.showMessage('File lost, please upload again', 'error');
+                return;
+            }
+
+            this.importState = 'committing';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+
+                const response = await fetch('/api/schools/import/commit', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    this.importResult = data;
+                    this.importState = 'done';
+                    this.showMessage(`${data.imported_count} school(s) imported successfully!`, 'success');
+                } else {
+                    this.showMessage(data.message || 'Import failed', 'error');
+                    this.importState = 'report';
+                }
+            } catch (error) {
+                console.error('Commit error:', error);
+                this.showMessage('Error during import: ' + error.message, 'error');
+                this.importState = 'report';
+            }
+        },
+
+        async downloadImportTemplate() {
+            try {
+                const response = await fetch('/api/schools/import/template');
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'schools-import-template.csv';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                this.showMessage('Template downloaded', 'success');
+            } catch (error) {
+                console.error('Template download error:', error);
+                this.showMessage('Error downloading template', 'error');
+            }
+        },
+
+        async downloadImportErrors() {
+            try {
+                const response = await fetch('/api/schools/import/download-errors', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({ errors: this.importReport.errors || [] }),
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'schools-import-errors.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    this.showMessage('Error report downloaded', 'success');
+                } else {
+                    this.showMessage('Error downloading error report', 'error');
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                this.showMessage('Error downloading error report: ' + error.message, 'error');
             }
         },
 

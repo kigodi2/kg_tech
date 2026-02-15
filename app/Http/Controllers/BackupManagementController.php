@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BackupLog;
 use App\Services\SQLiteBackupService;
+use App\Services\BackupStatisticsService;
 use Illuminate\Http\Request;
 use Filament\Notifications\Notification;
 
@@ -22,6 +23,9 @@ class BackupManagementController extends Controller
             $result = $service->createFullBackup(auth()->user());
 
             if ($result['success']) {
+                // Clear backup statistics cache since we added a new backup
+                BackupStatisticsService::clearCache();
+                
                 return redirect()->back()->with('success', 'Backup ' . $result['backup_id'] . ' created successfully.');
             } else {
                 return redirect()->back()->with('error', $result['error'] ?? 'Backup failed.');
@@ -53,6 +57,10 @@ class BackupManagementController extends Controller
 
             // Delete the log record
             $backup->delete();
+            
+            // Clear backup statistics cache since we deleted a backup
+            BackupStatisticsService::clearCache();
+            
             return redirect()->back()->with('success', 'Backup deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to delete backup: ' . $e->getMessage());

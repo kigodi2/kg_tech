@@ -31,8 +31,7 @@ return new class extends Migration
                 // Processing type & status
                 $table->enum('type', ['draft', 'final'])->comment('Draft: safe testing, Final: locked');
                 $table->enum('status', ['pending', 'in_progress', 'completed', 'failed', 'rolled_back'])
-                    ->default('pending')
-                    ->index();
+                    ->default('pending');
                 
                 // Processing metrics
                 $table->integer('total_candidates')->default(0);

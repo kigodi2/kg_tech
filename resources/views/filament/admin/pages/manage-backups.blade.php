@@ -48,25 +48,14 @@
 
             <!-- Storage Used -->
             @php
-                $totalSize = 0;
-                foreach (glob(storage_path('backups/sqlite/*.enc')) as $file) {
-                    $totalSize += filesize($file);
-                }
+                use App\Services\BackupStatisticsService;
+                $totalSize = BackupStatisticsService::getTotalBackupSize();
+                $formattedSize = BackupStatisticsService::formatBytes($totalSize);
             @endphp
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-sm font-semibold text-gray-600 uppercase">Storage Used</h3>
-                <p class="mt-2 text-2xl font-bold text-gray-900">
-                    @php
-                        if ($totalSize >= 1073741824) {
-                            echo number_format($totalSize / 1073741824, 2) . ' GB';
-                        } elseif ($totalSize >= 1048576) {
-                            echo number_format($totalSize / 1048576, 2) . ' MB';
-                        } else {
-                            echo number_format($totalSize / 1024, 2) . ' KB';
-                        }
-                    @endphp
-                </p>
-                <p class="mt-1 text-xs text-gray-500">Encrypted backups</p>
+                <p class="mt-2 text-2xl font-bold text-gray-900">{{ $formattedSize }}</p>
+                <p class="mt-1 text-xs text-gray-500">Encrypted backups (cached, updates hourly)</p>
             </div>
         </div>
 

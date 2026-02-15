@@ -1,18 +1,108 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full">
-    <!-- Page Header -->
-    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
-        <h1 class="text-2xl font-bold text-gray-800">ACSEE Mark Entry</h1>
-    </div>
+<div class="w-full flex gap-0" x-data="markEntryManager()" @init="init()">
+    <!-- SIDEBAR MENU -->
+    <aside class="w-64 bg-gray-900 text-gray-100 min-h-screen sticky top-[140px] overflow-y-auto">
+        <div class="p-6">
+            <h2 class="text-lg font-bold text-white mb-6">Mark Entry Lifecycle</h2>
+            
+            <!-- 1. ENTRY & VALIDATION -->
+            <div class="mb-8">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-chart-bar"></i> Entry & Validation
+                </h3>
+                <ul class="space-y-2">
+                    <li><a href="#upload" @click.prevent="smoothScroll('#upload')" class="sidebar-link text-sm hover:text-blue-400 transition cursor-pointer">📤 Upload Marks</a></li>
+                    <li><a href="#csv-tab" @click.prevent="importMode = 'single'; $nextTick(() => smoothScroll('#csv-tab'))" class="sidebar-link text-sm hover:text-blue-400 transition cursor-pointer">📊 Single Subject CSV</a></li>
+                    <li><a href="#school-bulk" @click.prevent="importMode = 'schoolBulk'; $nextTick(() => smoothScroll('#school-bulk'))" class="sidebar-link text-sm hover:text-blue-400 transition cursor-pointer">📦 School Bulk ZIP</a></li>
+                    <li><a href="#district-bulk" @click.prevent="importMode = 'district'; $nextTick(() => smoothScroll('#district-bulk'))" class="sidebar-link text-sm hover:text-blue-400 transition cursor-pointer">📋 District Bulk ZIP</a></li>
+                </ul>
+            </div>
 
-    <!-- Main Content -->
-    <div class="px-8 py-8">
-        <div x-data="markEntryManager()" @init="init()" class="space-y-6">
+            <!-- 2. MODERATION & REVIEW -->
+            <div class="mb-8">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-search"></i> Moderation & Review
+                </h3>
+                <ul class="space-y-2">
+                    <li><a href="#moderation-dashboard" @click.prevent="smoothScroll('#moderation-dashboard')" class="sidebar-link text-sm hover:text-yellow-400 transition cursor-pointer">📋 Review Dashboard</a></li>
+                    <li><a href="#pending-review" @click.prevent="smoothScroll('#pending-review')" class="sidebar-link text-sm hover:text-yellow-400 transition cursor-pointer">⏳ Pending Review</a></li>
+                    <li><a href="#approve-marks" @click.prevent="smoothScroll('#approve-marks')" class="sidebar-link text-sm hover:text-yellow-400 transition cursor-pointer">✅ Approve Marks</a></li>
+                    <li><a href="#reject-feedback" @click.prevent="smoothScroll('#reject-feedback')" class="sidebar-link text-sm hover:text-yellow-400 transition cursor-pointer">❌ Reject & Feedback</a></li>
+                </ul>
+            </div>
 
-            <!-- Context Selection Section -->
-            <div class="bg-white rounded-lg shadow p-6">
+            <!-- 3. SUBMISSION & LOCKING -->
+            <div class="mb-8">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-lock"></i> Submission & Locking
+                </h3>
+                <ul class="space-y-2">
+                    <li><a href="#lock-status" @click.prevent="smoothScroll('#lock-status')" class="sidebar-link text-sm hover:text-green-400 transition cursor-pointer">🔒 Lock Status</a></li>
+                    <li><a href="#submit-marks" @click.prevent="smoothScroll('#submit-marks')" class="sidebar-link text-sm hover:text-green-400 transition cursor-pointer">📤 Submit Marks</a></li>
+                    <li><a href="#unlock-admin" @click.prevent="smoothScroll('#unlock-admin')" class="sidebar-link text-sm hover:text-green-400 transition cursor-pointer">(Admin) Unlock</a></li>
+                    <li><a href="#submission-history" @click.prevent="smoothScroll('#submission-history')" class="sidebar-link text-sm hover:text-green-400 transition cursor-pointer">📜 History</a></li>
+                </ul>
+            </div>
+
+            <!-- 4. REPORTS & EXPORTS -->
+            <div class="mb-8">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-file-alt"></i> Reports & Exports
+                </h3>
+                <ul class="space-y-2">
+                    <li><a href="#scoresheets" @click.prevent="smoothScroll('#scoresheets')" class="sidebar-link text-sm hover:text-purple-400 transition cursor-pointer">📄 Scoresheets (PDF)</a></li>
+                    <li><a href="#csv-export" @click.prevent="smoothScroll('#csv-export')" class="sidebar-link text-sm hover:text-purple-400 transition cursor-pointer">📊 CSV Export</a></li>
+                    <li><a href="#analytics" @click.prevent="smoothScroll('#analytics')" class="sidebar-link text-sm hover:text-purple-400 transition cursor-pointer">📈 Analytics</a></li>
+                    <li><a href="#summary-report" @click.prevent="smoothScroll('#summary-report')" class="sidebar-link text-sm hover:text-purple-400 transition cursor-pointer">📋 Summary Report</a></li>
+                </ul>
+            </div>
+
+            <!-- 5. MONITORING & AUDIT -->
+            <div class="mb-8">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-clock"></i> Monitoring & Audit
+                </h3>
+                <ul class="space-y-2">
+                    <li><a href="#lifecycle-dashboard" @click.prevent="smoothScroll('#lifecycle-dashboard')" class="sidebar-link text-sm hover:text-blue-300 transition cursor-pointer">📊 Lifecycle Dashboard</a></li>
+                    <li><a href="#change-log" @click.prevent="smoothScroll('#change-log')" class="sidebar-link text-sm hover:text-blue-300 transition cursor-pointer">📝 Change Log</a></li>
+                    <li><a href="#audit-trail" @click.prevent="smoothScroll('#audit-trail')" class="sidebar-link text-sm hover:text-blue-300 transition cursor-pointer">🔍 Audit Trail</a></li>
+                    <li><a href="#activity-log" @click.prevent="smoothScroll('#activity-log')" class="sidebar-link text-sm hover:text-blue-300 transition cursor-pointer">👥 Activity Log</a></li>
+                </ul>
+            </div>
+
+            <!-- 6. ADMINISTRATION -->
+            <div class="mb-8">
+                <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-cog"></i> Administration
+                </h3>
+                <ul class="space-y-2">
+                    <li><a href="#configuration" @click.prevent="smoothScroll('#configuration')" class="sidebar-link text-sm hover:text-indigo-400 transition cursor-pointer">⚙️ Configuration</a></li>
+                    <li><a href="#permissions" @click.prevent="smoothScroll('#permissions')" class="sidebar-link text-sm hover:text-indigo-400 transition cursor-pointer">🔐 Permissions</a></li>
+                    <li><a href="#batch-management" @click.prevent="smoothScroll('#batch-management')" class="sidebar-link text-sm hover:text-indigo-400 transition cursor-pointer">📦 Batch Management</a></li>
+                    <li><a href="#system-logs" @click.prevent="smoothScroll('#system-logs')" class="sidebar-link text-sm hover:text-indigo-400 transition cursor-pointer">🖥️ System Logs</a></li>
+                </ul>
+            </div>
+
+            <hr class="my-6 border-gray-700">
+            <p class="text-xs text-gray-500 text-center">ACSEE Mark Entry v1.0</p>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col">
+        <!-- Page Header -->
+        <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-[140px] z-40 shadow-sm">
+            <h1 class="text-2xl font-bold text-gray-800">ACSEE Mark Entry</h1>
+        </div>
+
+        <!-- Main Content -->
+        <div class="px-8 py-8 flex-1 overflow-y-auto">
+            <div class="space-y-6">
+
+            <!-- UPLOAD SECTION -->
+            <div id="upload" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">1. Select Context</h2>
                 
                 <div class="grid grid-cols-12 gap-3 items-start">
@@ -207,7 +297,7 @@
 
                     <!-- Reset Button -->
                     <div class="col-span-1 flex items-end h-full">
-                        <button 
+                        <button type="button"
                             @click="resetContext()"
                             class="w-full px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium text-sm rounded-lg transition-colors h-10"
                         >
@@ -218,15 +308,15 @@
             </div>
 
             <!-- Tabs Navigation -->
-            <div class="bg-white rounded-lg shadow border-b border-gray-200">
+            <div id="csv-tab" class="bg-white rounded-lg shadow border-b border-gray-200 scroll-mt-32">
                 <div class="flex gap-8 px-6">
-                    <button @click="importMode = 'single'" :class="importMode === 'single' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+                    <button type="button" @click="importMode = 'single'" :class="importMode === 'single' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
                         <i class="fas fa-file-csv mr-2"></i>Single Subject CSV
                     </button>
-                    <button @click="importMode = 'schoolBulk'" :class="importMode === 'schoolBulk' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+                    <button type="button" @click="importMode = 'schoolBulk'" :class="importMode === 'schoolBulk' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
                         <i class="fas fa-box mr-2"></i>School Bulk ZIP
                     </button>
-                    <button @click="importMode = 'district'" :class="importMode === 'district' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+                    <button type="button" @click="importMode = 'district'" :class="importMode === 'district' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
                         <i class="fas fa-archive mr-2"></i>District Bulk ZIP
                     </button>
                 </div>
@@ -236,7 +326,7 @@
 
             <!-- Upload Section (Single Subject) -->
             <template x-if="importMode === 'single'">
-            <div class="bg-white rounded-lg shadow p-6">
+            <div id="csv-upload" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-lg font-bold text-gray-800 mb-4">2. Single Subject Mark Upload</h2>
                 
                 <div class="space-y-4">
@@ -259,66 +349,66 @@
                     <!-- Download Template, Print Scoresheet, Bulk Export Buttons -->
                     <div class="flex gap-2 flex-wrap">
                         <!-- Single Subject Mark Template -->
-                        <button 
-                            @click="downloadTemplate()"
-                            :disabled="!selectedSubject"
-                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            <i class="fas fa-download"></i> Mark Template (CSV)
-                        </button>
+                         <button type="button"
+                             @click="downloadTemplate()"
+                             :disabled="!selectedSubject"
+                             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                         >
+                             <i class="fas fa-download"></i> Mark Template (CSV)
+                         </button>
 
-                        <!-- Single Subject Scoresheet -->
-                        <button 
-                            @click="printScoresheet()"
-                            :disabled="!selectedSubject"
-                            class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            <i class="fas fa-file-pdf"></i> Single Scoresheet (PDF)
-                        </button>
+                         <!-- Single Subject Scoresheet -->
+                         <button type="button"
+                             @click="printScoresheet()"
+                             :disabled="!selectedSubject"
+                             class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                         >
+                             <i class="fas fa-file-pdf"></i> Single Scoresheet (PDF)
+                         </button>
 
-                        <!-- School Scoresheets -->
-                        <button 
-                            @click="bulkExport()"
-                            :disabled="!selectedSchool || !examYear"
-                            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            <i class="fas fa-file-pdf"></i> School Scoresheets (ZIP)
-                        </button>
+                         <!-- School Scoresheets -->
+                         <button type="button"
+                             @click="bulkExport()"
+                             :disabled="!selectedSchool || !examYear"
+                             class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                         >
+                             <i class="fas fa-file-pdf"></i> School Scoresheets (ZIP)
+                         </button>
 
-                        <!-- School Mark Templates -->
-                        <button 
-                            @click="downloadBulkCsv()"
-                            :disabled="!selectedSchool || !examYear || !filteredSubjects.length"
-                            :class="bulkCsvLoading ? 'opacity-75 cursor-wait' : ''"
-                            class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                            <i :class="bulkCsvLoading ? 'fas fa-spinner fa-spin' : 'fas fa-download'"></i>
-                            <span x-text="bulkCsvLoading ? 'Preparing...' : 'School Mark Templates (ZIP)'"></span>
-                        </button>
+                         <!-- School Mark Templates -->
+                         <button type="button"
+                             @click="downloadBulkCsv()"
+                             :disabled="!selectedSchool || !examYear || !filteredSubjects.length"
+                             :class="bulkCsvLoading ? 'opacity-75 cursor-wait' : ''"
+                             class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                         >
+                             <i :class="bulkCsvLoading ? 'fas fa-spinner fa-spin' : 'fas fa-download'"></i>
+                             <span x-text="bulkCsvLoading ? 'Preparing...' : 'School Mark Templates (ZIP)'"></span>
+                         </button>
 
-                        <!-- District Mark Templates -->
-                        <button 
-                            @click="downloadDistrictBulkCsv()"
-                            :disabled="!selectedDistrict || selectedDistrict === '' || !examYear"
-                            :class="districtBulkCsvLoading ? 'opacity-75 cursor-wait' : ''"
-                            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            :title="!selectedDistrict || selectedDistrict === '' ? 'Select a specific district (not All Districts)' : ''"
-                        >
-                            <i :class="districtBulkCsvLoading ? 'fas fa-spinner fa-spin' : 'fas fa-download'"></i>
-                            <span x-text="districtBulkCsvLoading ? 'Preparing...' : 'District Mark Templates (ZIP)'"></span>
-                        </button>
+                         <!-- District Mark Templates -->
+                         <button type="button"
+                             @click="downloadDistrictBulkCsv()"
+                             :disabled="!selectedDistrict || selectedDistrict === '' || !examYear"
+                             :class="districtBulkCsvLoading ? 'opacity-75 cursor-wait' : ''"
+                             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                             :title="!selectedDistrict || selectedDistrict === '' ? 'Select a specific district (not All Districts)' : ''"
+                         >
+                             <i :class="districtBulkCsvLoading ? 'fas fa-spinner fa-spin' : 'fas fa-download'"></i>
+                             <span x-text="districtBulkCsvLoading ? 'Preparing...' : 'District Mark Templates (ZIP)'"></span>
+                         </button>
 
-                        <!-- District Scoresheets -->
-                        <button 
-                            @click="downloadDistrictBulkScoresheet()"
-                            :disabled="!selectedDistrict || selectedDistrict === '' || !examYear"
-                            :class="districtBulkScoresheetLoading ? 'opacity-75 cursor-wait' : ''"
-                            class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                            :title="!selectedDistrict || selectedDistrict === '' ? 'Select a specific district (not All Districts)' : ''"
-                        >
-                            <i :class="districtBulkScoresheetLoading ? 'fas fa-spinner fa-spin' : 'fas fa-file-pdf'"></i>
-                            <span x-text="districtBulkScoresheetLoading ? 'Preparing...' : 'District Scoresheets (ZIP)'"></span>
-                        </button>
+                         <!-- District Scoresheets -->
+                         <button type="button"
+                             @click="downloadDistrictBulkScoresheet()"
+                             :disabled="!selectedDistrict || selectedDistrict === '' || !examYear"
+                             :class="districtBulkScoresheetLoading ? 'opacity-75 cursor-wait' : ''"
+                             class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                             :title="!selectedDistrict || selectedDistrict === '' ? 'Select a specific district (not All Districts)' : ''"
+                         >
+                             <i :class="districtBulkScoresheetLoading ? 'fas fa-spinner fa-spin' : 'fas fa-file-pdf'"></i>
+                             <span x-text="districtBulkScoresheetLoading ? 'Preparing...' : 'District Scoresheets (ZIP)'"></span>
+                         </button>
 
                         <span class="text-xs text-gray-500 flex items-center" x-show="!selectedSubject && !selectedSchool">
                             Select subject for single scoresheet, or school + year for bulk export
@@ -345,7 +435,7 @@
                             <p class="text-sm text-gray-700 mb-3">
                                 <strong>Selected file:</strong> <span x-text="selectedFile?.name" class="text-blue-600 font-semibold"></span>
                             </p>
-                            <button 
+                            <button type="button"
                                 @click="uploadFile()"
                                 :disabled="uploading"
                                 class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -555,7 +645,7 @@
 
                     <!-- Error Report Download -->
                     <div x-show="importResult?.batch?.error_records > 0" class="flex gap-2">
-                        <button 
+                        <button type="button"
                             @click="downloadErrorReport()"
                             class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium text-sm rounded-lg transition-colors flex items-center gap-2"
                         >
@@ -567,13 +657,13 @@
                     </div>
 
                     <!-- Lock Batch Button -->
-                    <div x-show="importResult?.batch?.error_records === 0" class="flex gap-2">
-                        <button 
-                            @click="lockBatch()"
-                            class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-medium text-sm rounded-lg transition-colors flex items-center gap-2"
-                        >
-                            <i class="fas fa-lock"></i> Lock Batch (No Changes Allowed)
-                        </button>
+                     <div x-show="importResult?.batch?.error_records === 0" class="flex gap-2">
+                         <button type="button"
+                             @click="lockBatch()"
+                             class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white font-medium text-sm rounded-lg transition-colors flex items-center gap-2"
+                         >
+                             <i class="fas fa-lock"></i> Lock Batch (No Changes Allowed)
+                         </button>
                         <p class="text-sm text-gray-600 flex items-center">
                             Lock batch to prevent further modifications
                         </p>
@@ -583,7 +673,7 @@
             </template>
 
             <!-- School Bulk ZIP Section -->
-            <div x-show="importMode === 'schoolBulk'" class="space-y-6">
+            <div id="school-bulk" x-show="importMode === 'schoolBulk'" class="space-y-6 scroll-mt-32">
                 <!-- Upload Section -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">📦 Upload School Bulk Marks ZIP</h2>
@@ -659,14 +749,14 @@
                     </div>
 
                     <!-- Actions -->
-                    <div class="mt-6 flex gap-3">
-                        <button @click="previewSchoolZip()" :disabled="!selectedSchoolZipFile || !schoolBulkExamYear || !schoolBulkId" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
-                            <i class="fas fa-eye"></i> Preview
-                        </button>
-                        <button @click="startSchoolBulkImport()" :disabled="!selectedSchoolZipFile || !schoolBulkExamYear || !schoolBulkId || !schoolBulkPreviewLoaded" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
-                            <i class="fas fa-play"></i> Start Import
-                        </button>
-                    </div>
+                     <div class="mt-6 flex gap-3">
+                         <button type="button" @click="previewSchoolZip()" :disabled="!selectedSchoolZipFile || !schoolBulkExamYear || !schoolBulkId" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
+                             <i class="fas fa-eye"></i> Preview
+                         </button>
+                         <button type="button" @click="startSchoolBulkImport()" :disabled="!selectedSchoolZipFile || !schoolBulkExamYear || !schoolBulkId || !schoolBulkPreviewLoaded" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
+                             <i class="fas fa-play"></i> Start Import
+                         </button>
+                     </div>
                 </div>
 
                 <!-- Preview Section -->
@@ -778,15 +868,15 @@
                             </div>
                         </div>
 
-                        <button @click="resetSchoolBulkImport()" class="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors font-medium">
-                            Import Another ZIP
-                        </button>
+                        <button type="button" @click="resetSchoolBulkImport()" class="mt-6 w-full bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors font-medium">
+                             Import Another ZIP
+                         </button>
                     </div>
                 </template>
             </div>
 
             <!-- District Bulk Import Section -->
-            <div x-show="importMode === 'district'" class="space-y-6">
+            <div id="district-bulk" x-show="importMode === 'district'" class="space-y-6 scroll-mt-32">
                     <!-- Upload Section -->
                     <div class="bg-white rounded-lg shadow p-6">
                         <h2 class="text-lg font-bold text-gray-800 mb-4">📦 Upload District Marks ZIP</h2>
@@ -992,6 +1082,881 @@
                 </div>
             </div>
 
+            <!-- ===== MODERATION & REVIEW SECTIONS ===== -->
+
+            <!-- Review Dashboard Section -->
+            <section id="moderation-dashboard" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">📋 Moderation Dashboard</h2>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <div class="inline-block animate-spin">
+                        <i class="fas fa-spinner text-blue-500 text-2xl"></i>
+                    </div>
+                    <p class="text-gray-600 mt-2">Loading pending batches...</p>
+                </div>
+                
+                <!-- Error State -->
+                <div x-show="error && !loading" class="bg-red-50 border border-red-200 rounded p-4 mb-4">
+                    <p class="text-red-700">⚠️ <span x-text="error"></span></p>
+                </div>
+                
+                <!-- Content -->
+                <div x-show="!loading && !error" @click="loadModerationDashboard()">
+                    <!-- Stats Bar -->
+                    <div class="grid grid-cols-4 gap-4 mb-6">
+                        <div class="bg-yellow-50 rounded p-4">
+                            <p class="text-xs text-gray-600 mb-1">Total Pending</p>
+                            <p class="text-2xl font-bold text-yellow-600" x-text="totalBatches"></p>
+                        </div>
+                        <div class="bg-blue-50 rounded p-4">
+                            <p class="text-xs text-gray-600 mb-1">Current Page</p>
+                            <p class="text-2xl font-bold text-blue-600" x-text="currentPage"></p>
+                        </div>
+                        <div class="bg-green-50 rounded p-4">
+                            <p class="text-xs text-gray-600 mb-1">Per Page</p>
+                            <p class="text-2xl font-bold text-green-600" x-text="perPage"></p>
+                        </div>
+                        <div class="bg-purple-50 rounded p-4">
+                            <p class="text-xs text-gray-600 mb-1">Showing</p>
+                            <p class="text-2xl font-bold text-purple-600" x-text="moderationBatches.length"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 border-b">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">Batch Code</th>
+                                    <th class="px-4 py-2 text-left">School</th>
+                                    <th class="px-4 py-2 text-left">Subject</th>
+                                    <th class="px-4 py-2 text-center">Marks</th>
+                                    <th class="px-4 py-2 text-center">Created</th>
+                                    <th class="px-4 py-2 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="batch in moderationBatches" :key="batch.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-2 font-mono text-xs" x-text="batch.batch_code"></td>
+                                        <td class="px-4 py-2 text-xs" x-text="batch.school?.name || 'N/A'"></td>
+                                        <td class="px-4 py-2 text-xs" x-text="batch.subject?.name || 'N/A'"></td>
+                                        <td class="px-4 py-2 text-center text-xs" x-text="batch.total_records"></td>
+                                        <td class="px-4 py-2 text-center text-xs" x-text="formatDate(batch.created_at)"></td>
+                                        <td class="px-4 py-2 text-center">
+                                            <button class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
+                                                View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div x-show="moderationBatches.length === 0 && !loading" class="text-center py-8 text-gray-500">
+                        <p>No batches awaiting moderation</p>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    <div x-show="moderationBatches.length > 0" class="flex items-center justify-between mt-4">
+                        <button @click="if(currentPage > 1) loadModerationDashboard(currentPage - 1)" 
+                                class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
+                            ← Previous
+                        </button>
+                        <span class="text-gray-600" x-text="`Page ${currentPage}`"></span>
+                        <button @click="loadModerationDashboard(currentPage + 1)" 
+                                class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Pending Review Section -->
+            <section id="pending-review" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">⏳ Pending Review</h2>
+                <p class="text-sm text-gray-600 mb-4">Batches currently awaiting moderation review. Click on a batch to view details and take action.</p>
+                
+                <!-- Info Alert -->
+                <div class="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
+                    <p class="text-blue-800 text-sm">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Same data as Review Dashboard above. Click a batch to review details and approve/reject.
+                    </p>
+                </div>
+                
+                <!-- Load Button -->
+                <div x-show="!loading && moderationBatches.length === 0" class="text-center py-4">
+                    <button @click="loadModerationDashboard()" 
+                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                        Load Pending Batches
+                    </button>
+                </div>
+                
+                <!-- Batch List -->
+                <div x-show="!loading && moderationBatches.length > 0" class="space-y-3">
+                    <template x-for="batch in moderationBatches" :key="batch.id">
+                        <div class="border rounded p-4 hover:bg-gray-50 cursor-pointer transition">
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <p class="text-xs text-gray-600">Batch Code</p>
+                                    <p class="font-mono font-semibold text-sm" x-text="batch.batch_code"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-600">School</p>
+                                    <p class="text-sm" x-text="batch.school?.name || 'N/A'"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-600">Subject</p>
+                                    <p class="text-sm" x-text="batch.subject?.name || 'N/A'"></p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4 mt-2 pt-2 border-t">
+                                <div>
+                                    <p class="text-xs text-gray-600">Total Marks</p>
+                                    <p class="text-sm font-semibold" x-text="batch.total_records"></p>
+                                </div>
+                                <div>
+                                    <p class="text-xs text-gray-600">Created</p>
+                                    <p class="text-xs text-gray-700" x-text="formatDate(batch.created_at)"></p>
+                                </div>
+                                <div class="text-right">
+                                    <button class="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600">
+                                        Review & Moderate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Loading pending batches...</p>
+                </div>
+            </section>
+
+            <!-- Approve Marks Section -->
+            <section id="approve-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">✅ Approve Marks</h3>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                    <p class="text-green-900 font-semibold">Approve Mark Batches</p>
+                    <p class="text-sm text-green-700 mt-2">Review validated marks and approve for processing</p>
+                    <p class="text-xs text-green-600 mt-4">Coming in Phase 3C - Week 2</p>
+                </div>
+            </section>
+
+            <!-- Reject & Feedback Section -->
+            <section id="reject-feedback" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">❌ Reject & Feedback</h3>
+                <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                    <p class="text-red-900 font-semibold">Return Batches with Feedback</p>
+                    <p class="text-sm text-red-700 mt-2">Reject batches and provide feedback for corrections</p>
+                    <p class="text-xs text-red-600 mt-4">Coming in Phase 3C - Week 2</p>
+                </div>
+            </section>
+
+            <!-- ===== SUBMISSION & LOCKING SECTIONS ===== -->
+
+            <!-- Lock Status Section -->
+            <section id="lock-status" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">🔒 Lock Status</h2>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Loading batches ready for submission...</p>
+                </div>
+                
+                <!-- Error State -->
+                <div x-show="error && !loading" class="bg-red-50 border border-red-200 rounded p-4 mb-4">
+                    <p class="text-red-700">⚠️ <span x-text="error"></span></p>
+                </div>
+                
+                <!-- Content -->
+                <div x-show="!loading && !error" @click="loadLockStatus()">
+                    <!-- Ready Count Badge -->
+                    <div class="mb-6 inline-block bg-green-50 border border-green-200 rounded px-4 py-2">
+                        <p class="text-sm text-gray-600">Batches Ready to Lock</p>
+                        <p class="text-3xl font-bold text-green-600" x-text="readyBatches.length"></p>
+                    </div>
+                    
+                    <!-- Table -->
+                    <div class="overflow-x-auto mt-4">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 border-b">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">Batch Code</th>
+                                    <th class="px-4 py-2 text-left">School</th>
+                                    <th class="px-4 py-2 text-left">Subject</th>
+                                    <th class="px-4 py-2 text-center">Status</th>
+                                    <th class="px-4 py-2 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="batch in readyBatches" :key="batch.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-2 font-mono text-xs" x-text="batch.batch_code"></td>
+                                        <td class="px-4 py-2 text-xs" x-text="batch.school?.name"></td>
+                                        <td class="px-4 py-2 text-xs" x-text="batch.subject?.name"></td>
+                                        <td class="px-4 py-2 text-center">
+                                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Approved</span>
+                                        </td>
+                                        <td class="px-4 py-2 text-center">
+                                            <button class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600">
+                                                Lock & Submit
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div x-show="readyBatches.length === 0" class="text-center py-8 text-gray-500 mt-4">
+                        <p>No batches ready for locking</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Submit Marks Section -->
+            <section id="submit-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📤 Submit Marks</h3>
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-6 text-center">
+                    <p class="text-indigo-900 font-semibold">Submit Approved Marks</p>
+                    <p class="text-sm text-indigo-700 mt-2">Submit locked batches to examination authority</p>
+                    <p class="text-xs text-indigo-600 mt-4">Coming in Phase 3C - Week 3</p>
+                </div>
+            </section>
+
+            <!-- Unlock Admin Section -->
+            <section id="unlock-admin" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">🔓 (Admin) Unlock Batches</h3>
+                <p class="text-sm text-gray-600 mb-4">Select a submitted batch to unlock for resubmission (admin only)</p>
+                
+                <!-- Batch Selector -->
+                <div class="mb-6 p-4 bg-purple-50 rounded">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Submitted Batch to Unlock</label>
+                    <div class="flex gap-2">
+                        <input type="number" class="border rounded px-3 py-2 flex-1" 
+                               placeholder="Enter batch ID"
+                               x-model.number="selectedBatchId">
+                        <button @click="if(selectedBatchId) { console.log('Unlock batch:', selectedBatchId); openUnlockBatchModal(selectedBatchId); }" 
+                                :disabled="!selectedBatchId"
+                                class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            Unlock Batch
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div x-show="!submittedBatches || submittedBatches.length === 0" class="bg-gray-50 rounded-lg p-6 text-center">
+                    <p class="text-gray-600">No submitted batches available for unlock</p>
+                </div>
+
+                <!-- List of Submitted Batches -->
+                <div x-show="submittedBatches && submittedBatches.length > 0" class="space-y-3">
+                    <div class="text-sm text-gray-600 mb-3">
+                        <strong x-text="submittedBatches.length"></strong> submitted batch(es) available:
+                    </div>
+                    <template x-for="batch in submittedBatches" :key="batch.id">
+                        <div class="border rounded-lg p-4 hover:bg-gray-50 transition">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-semibold text-gray-800">
+                                        <span x-text="`Batch #${batch.id}`"></span>
+                                    </p>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        <span x-text="`School: ${batch.school?.name || 'Unknown'}`"></span>
+                                    </p>
+                                    <p class="text-sm text-gray-600">
+                                        <span x-text="`Subject: ${batch.subject?.code || 'Unknown'}`"></span>
+                                    </p>
+                                </div>
+                                <button @click="openUnlockBatchModal(batch.id)"
+                                        class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition">
+                                    🔓 Unlock
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </section>
+
+            <!-- Submission History Section -->
+            <section id="submission-history" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">📜 Submission History</h2>
+                
+                <!-- Batch Selector -->
+                <div class="mb-4 p-4 bg-blue-50 rounded">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Batch to View Submission History</label>
+                    <div class="flex gap-2">
+                        <input type="number" class="border rounded px-3 py-2 flex-1" 
+                               placeholder="Enter batch ID" @input="selectedBatchId = $el.value">
+                        <button @click="if(selectedBatchId) loadSubmissionHistory(selectedBatchId)" 
+                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Load History
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Loading submission history...</p>
+                </div>
+                
+                <!-- Timeline View -->
+                <div x-show="!loading && currentBatch && currentBatch.history.length > 0" class="space-y-4">
+                    <div class="text-sm text-gray-600 mb-4">
+                        <p><strong>Batch ID:</strong> <span x-text="currentBatch.id" class="font-mono"></span></p>
+                    </div>
+                    <div class="relative">
+                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-green-500"></div>
+                        <div class="ml-6 space-y-4">
+                            <template x-for="(entry, index) in currentBatch.history" :key="index">
+                                <div class="relative pb-4">
+                                    <div class="absolute -left-6 top-2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></div>
+                                    <div class="bg-gray-50 rounded p-4">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <p class="font-semibold text-gray-800" x-text="entry.approval_type || 'Approval'"></p>
+                                                <p class="text-sm text-gray-600 mt-1">
+                                                    <span x-text="entry.approvedByUser?.name || 'System'"></span>
+                                                </p>
+                                            </div>
+                                            <span class="text-xs px-2 py-1 rounded" :class="entry.status === 'locked' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" x-text="entry.status"></span>
+                                        </div>
+                                        <p class="text-xs text-gray-500 mt-2" x-text="formatDate(entry.approved_at)"></p>
+                                        <p class="text-sm text-gray-700 mt-2" x-show="entry.approval_notes" x-text="entry.approval_notes"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Empty State -->
+                <div x-show="!loading && (!currentBatch || currentBatch.history.length === 0)" class="text-center py-8 text-gray-500">
+                    <p>No submission history found. Select a batch to view approval timeline.</p>
+                </div>
+            </section>
+
+            <!-- ===== REPORTS & EXPORTS SECTIONS ===== -->
+
+            <!-- Scoresheets Section -->
+            <section id="scoresheets" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📄 Scoresheets (PDF)</h3>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                    <p class="text-blue-900 font-semibold">Generate Scoresheet PDFs</p>
+                    <p class="text-sm text-blue-700 mt-2">Create and download PDF scoresheets for students</p>
+                    <p class="text-xs text-blue-600 mt-4">Coming in Phase 3C - Week 3</p>
+                </div>
+            </section>
+
+            <!-- CSV Export Section -->
+            <section id="csv-export" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📊 CSV Export</h3>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                    <p class="text-green-900 font-semibold">Export Marks to CSV</p>
+                    <p class="text-sm text-green-700 mt-2">Download marks data in CSV format for analysis</p>
+                    <p class="text-xs text-green-600 mt-4">Coming in Phase 3C - Week 3</p>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section id="analytics" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-6">📈 Analytics</h2>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Loading analytics...</p>
+                </div>
+                
+                <!-- Error State -->
+                <div x-show="error && !loading" class="bg-red-50 border border-red-200 rounded p-4 mb-4">
+                    <p class="text-red-700">⚠️ <span x-text="error"></span></p>
+                </div>
+                
+                <!-- Content -->
+                <div x-show="!loading && analyticsData" @click="loadAnalytics()">
+                    <!-- Summary Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-blue-50 rounded p-4">
+                            <p class="text-xs text-gray-600 mb-2">Total Batches</p>
+                            <p class="text-2xl font-bold text-blue-600" 
+                               x-text="analyticsData.overview.total_batches"></p>
+                        </div>
+                        <div class="bg-yellow-50 rounded p-4">
+                            <p class="text-xs text-gray-600 mb-2">Pending Moderation</p>
+                            <p class="text-2xl font-bold text-yellow-600" 
+                               x-text="analyticsData.overview.pending_moderation"></p>
+                        </div>
+                        <div class="bg-green-50 rounded p-4">
+                            <p class="text-xs text-gray-600 mb-2">Approved</p>
+                            <p class="text-2xl font-bold text-green-600" 
+                               x-text="analyticsData.overview.approved_batches"></p>
+                        </div>
+                        <div class="bg-purple-50 rounded p-4">
+                            <p class="text-xs text-gray-600 mb-2">Submitted</p>
+                            <p class="text-2xl font-bold text-purple-600" 
+                               x-text="analyticsData.overview.submitted_batches"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Error Statistics -->
+                    <div class="bg-red-50 rounded p-4 mb-6">
+                        <h3 class="font-semibold text-gray-800 mb-3">Error Statistics</h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-600">Total Marks</p>
+                                <p class="text-lg font-bold" 
+                                   x-text="analyticsData.overview.total_marks_imported"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-600">With Errors</p>
+                                <p class="text-lg font-bold text-red-600" 
+                                   x-text="analyticsData.overview.marks_with_errors"></p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-600">Error Rate</p>
+                                <p class="text-lg font-bold" x-show="analyticsData.overview.total_marks_imported > 0"
+                                   x-text="`${((analyticsData.overview.marks_with_errors / analyticsData.overview.total_marks_imported) * 100).toFixed(2)}%`"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- By Subject Table -->
+                    <div class="mb-6">
+                        <h3 class="font-semibold text-gray-800 mb-3">Performance by Subject</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left">Subject</th>
+                                        <th class="px-4 py-2 text-center">Batches</th>
+                                        <th class="px-4 py-2 text-center">Errors</th>
+                                        <th class="px-4 py-2 text-center">Error Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="item in analyticsData.bySubject.slice(0, 5)" :key="item.subject">
+                                        <tr class="border-b">
+                                            <td class="px-4 py-2" x-text="item.subject"></td>
+                                            <td class="px-4 py-2 text-center" x-text="item.total_batches"></td>
+                                            <td class="px-4 py-2 text-center" x-text="item.error_records"></td>
+                                            <td class="px-4 py-2 text-center">
+                                                <span x-text="`${item.error_rate}%`"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Summary Report Section -->
+            <section id="summary-report" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-6">📋 Summary Report</h2>
+                
+                <!-- Load Button -->
+                <div x-show="!loading && !analyticsData" class="text-center py-4">
+                    <button @click="loadAnalytics()" 
+                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                        Generate Report
+                    </button>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Generating summary report...</p>
+                </div>
+                
+                <!-- Executive Summary -->
+                <div x-show="!loading && analyticsData" class="space-y-6">
+                    <div class="border-b pb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Executive Overview</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="bg-blue-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Total Batches</p>
+                                <p class="text-xl font-bold text-blue-600" x-text="analyticsData.overview.total_batches"></p>
+                            </div>
+                            <div class="bg-yellow-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Pending</p>
+                                <p class="text-xl font-bold text-yellow-600" x-text="analyticsData.overview.pending_moderation"></p>
+                            </div>
+                            <div class="bg-green-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Approved</p>
+                                <p class="text-xl font-bold text-green-600" x-text="analyticsData.overview.approved_batches"></p>
+                            </div>
+                            <div class="bg-purple-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Submitted</p>
+                                <p class="text-xl font-bold text-purple-600" x-text="analyticsData.overview.submitted_batches"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-b pb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Data Quality Metrics</h3>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600">Total Marks Imported</p>
+                                <p class="text-2xl font-bold text-blue-600" x-text="analyticsData.overview.total_marks_imported"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Marks with Errors</p>
+                                <p class="text-2xl font-bold text-red-600" x-text="analyticsData.overview.marks_with_errors"></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Error Rate</p>
+                                <p class="text-2xl font-bold text-orange-600" x-show="analyticsData.overview.total_marks_imported > 0"
+                                   x-text="`${((analyticsData.overview.marks_with_errors / analyticsData.overview.total_marks_imported) * 100).toFixed(2)}%`"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top Subjects by Batch Volume</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left">Subject</th>
+                                        <th class="px-4 py-2 text-center">Batches</th>
+                                        <th class="px-4 py-2 text-center">Error Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <template x-for="item in analyticsData.bySubject.slice(0, 10)" :key="item.subject">
+                                        <tr class="border-b">
+                                            <td class="px-4 py-2" x-text="item.subject"></td>
+                                            <td class="px-4 py-2 text-center font-semibold" x-text="item.total_batches"></td>
+                                            <td class="px-4 py-2 text-center">
+                                                <span x-text="`${item.error_rate}%`" :class="item.error_rate > 5 ? 'text-red-600 font-semibold' : 'text-green-600'"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== MONITORING & AUDIT SECTIONS ===== -->
+
+            <!-- Lifecycle Dashboard Section -->
+            <section id="lifecycle-dashboard" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-6">📊 Lifecycle Dashboard</h2>
+                
+                <!-- Load Button -->
+                <div x-show="!loading && !analyticsData" class="text-center py-4">
+                    <button @click="loadAnalytics()" 
+                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                        Load Dashboard
+                    </button>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Loading lifecycle dashboard...</p>
+                </div>
+                
+                <!-- Status Distribution -->
+                <div x-show="!loading && analyticsData" class="space-y-6">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Batch Status Distribution</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                            <div class="bg-gray-50 rounded p-3 text-center">
+                                <p class="text-xs text-gray-600">Draft</p>
+                                <p class="text-xl font-bold text-gray-600" x-text="analyticsData.overview.draft_batches || 0"></p>
+                            </div>
+                            <div class="bg-blue-50 rounded p-3 text-center">
+                                <p class="text-xs text-gray-600">Validated</p>
+                                <p class="text-xl font-bold text-blue-600" x-text="analyticsData.overview.validated_batches || 0"></p>
+                            </div>
+                            <div class="bg-yellow-50 rounded p-3 text-center">
+                                <p class="text-xs text-gray-600">Pending</p>
+                                <p class="text-xl font-bold text-yellow-600" x-text="analyticsData.overview.pending_moderation"></p>
+                            </div>
+                            <div class="bg-orange-50 rounded p-3 text-center">
+                                <p class="text-xs text-gray-600">Rejected</p>
+                                <p class="text-xl font-bold text-orange-600" x-text="analyticsData.overview.rejected_batches || 0"></p>
+                            </div>
+                            <div class="bg-green-50 rounded p-3 text-center">
+                                <p class="text-xs text-gray-600">Approved</p>
+                                <p class="text-xl font-bold text-green-600" x-text="analyticsData.overview.approved_batches"></p>
+                            </div>
+                            <div class="bg-purple-50 rounded p-3 text-center">
+                                <p class="text-xs text-gray-600">Submitted</p>
+                                <p class="text-xl font-bold text-purple-600" x-text="analyticsData.overview.submitted_batches"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-blue-50 rounded p-4">
+                        <h3 class="font-semibold text-gray-800 mb-3">Progress Summary</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-700">Processing Rate</span>
+                                <span class="font-semibold" 
+                                      x-text="`${(((analyticsData.overview.submitted_batches + analyticsData.overview.approved_batches) / analyticsData.overview.total_batches) * 100).toFixed(1)}%`"></span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded h-2">
+                                <div class="bg-green-500 h-2 rounded" 
+                                     :style="`width: ${(((analyticsData.overview.submitted_batches + analyticsData.overview.approved_batches) / analyticsData.overview.total_batches) * 100).toFixed(1)}%`"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Change Log Section -->
+            <section id="change-log" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">📝 Change Log</h2>
+                
+                <!-- Info -->
+                <div class="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
+                    <p class="text-blue-800 text-sm">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Summary of all modifications made to marks in a batch. Same data as Audit Trail below with summary view.
+                    </p>
+                </div>
+                
+                <!-- Batch Selector -->
+                <div class="mb-4 p-4 bg-blue-50 rounded">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Batch to View Changes</label>
+                    <div class="flex gap-2">
+                        <input type="number" class="border rounded px-3 py-2 flex-1" 
+                               placeholder="Enter batch ID" @input="selectedBatchId = $el.value">
+                        <button @click="if(selectedBatchId) loadAuditTrail(selectedBatchId)" 
+                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Load Changes
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Summary Stats -->
+                <div x-show="!loading && auditTrail.length > 0" class="grid grid-cols-3 gap-4 mb-6">
+                    <div class="bg-blue-50 rounded p-4">
+                        <p class="text-xs text-gray-600">Total Changes</p>
+                        <p class="text-2xl font-bold text-blue-600" x-text="auditTrail.length"></p>
+                    </div>
+                    <div class="bg-green-50 rounded p-4">
+                        <p class="text-xs text-gray-600">Fields Modified</p>
+                        <p class="text-2xl font-bold text-green-600" 
+                           x-text="[...new Set(auditTrail.map(c => c.field_name))].length"></p>
+                    </div>
+                    <div class="bg-purple-50 rounded p-4">
+                        <p class="text-xs text-gray-600">Users</p>
+                        <p class="text-2xl font-bold text-purple-600" 
+                           x-text="[...new Set(auditTrail.map(c => c.changed_by))].length"></p>
+                    </div>
+                </div>
+                
+                <!-- Changes Table -->
+                <div x-show="!loading && auditTrail.length > 0" class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100 border-b">
+                            <tr>
+                                <th class="px-4 py-2 text-left">Field</th>
+                                <th class="px-4 py-2 text-center">Type</th>
+                                <th class="px-4 py-2 text-center">Changed By</th>
+                                <th class="px-4 py-2 text-left">Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="change in auditTrail.slice(0, 20)" :key="change.id">
+                                <tr class="border-b hover:bg-gray-50">
+                                    <td class="px-4 py-2 text-xs font-semibold" x-text="change.field_name"></td>
+                                    <td class="px-4 py-2 text-center">
+                                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded" 
+                                              x-text="change.change_type"></span>
+                                    </td>
+                                    <td class="px-4 py-2 text-center text-xs" x-text="change.changedByUser?.name || 'System'"></td>
+                                    <td class="px-4 py-2 text-xs" x-text="formatDate(change.changed_at)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Loading & Empty -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Loading change log...</p>
+                </div>
+                <div x-show="!loading && auditTrail.length === 0" class="text-center py-8 text-gray-500">
+                    <p>No changes found. Select a batch to view change history.</p>
+                </div>
+            </section>
+
+            <!-- Audit Trail Section -->
+            <section id="audit-trail" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">🔍 Audit Trail</h2>
+                
+                <!-- Batch Selector -->
+                <div class="mb-4 p-4 bg-blue-50 rounded">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Batch to View Changes</label>
+                    <div class="flex gap-2">
+                        <input type="number" class="border rounded px-3 py-2 flex-1" 
+                               placeholder="Enter batch ID" @input="selectedBatchId = $el.value">
+                        <button @click="if(selectedBatchId) loadAuditTrail(selectedBatchId)" 
+                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Load Trail
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Loading audit trail...</p>
+                </div>
+                
+                <!-- Audit Trail Timeline -->
+                <div x-show="!loading && auditTrail.length > 0" class="space-y-4">
+                    <template x-for="change in auditTrail" :key="change.id">
+                        <div class="border-l-4 border-blue-500 pl-4 py-2">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-semibold text-gray-800">
+                                        <span x-text="change.field_name"></span>
+                                        <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2" 
+                                              x-text="change.change_type"></span>
+                                    </p>
+                                    <p class="text-sm text-gray-600 mt-1">
+                                        <span x-text="change.changedByUser?.name || 'System'"></span>
+                                        <span class="text-xs text-gray-500" x-text="`• ${formatDate(change.changed_at)}`"></span>
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-sm">
+                                <p class="text-gray-600">
+                                    <span class="line-through text-red-600" x-text="change.old_value"></span>
+                                    <span class="ml-2 text-green-600" x-text="change.new_value"></span>
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1" x-show="change.reason" x-text="`Reason: ${change.reason}`"></p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                
+                <!-- Empty State -->
+                <div x-show="!loading && auditTrail.length === 0" class="text-center py-8 text-gray-500">
+                    <p>No audit trail entries found. Select a batch to view changes.</p>
+                </div>
+            </section>
+
+            <!-- Activity Log Section -->
+            <section id="activity-log" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">👥 Activity Log</h2>
+                
+                <!-- User Selector -->
+                <div class="mb-4 p-4 bg-blue-50 rounded">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">View Activity For User ID</label>
+                    <div class="flex gap-2">
+                        <input type="number" class="border rounded px-3 py-2 flex-1" 
+                               placeholder="Enter user ID" @input="selectedBatchId = $el.value">
+                        <button @click="if(selectedBatchId) loadActivityLog(selectedBatchId)" 
+                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Load Activity
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div x-show="loading" class="text-center py-8">
+                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                    <p class="text-gray-600 mt-2">Loading activity log...</p>
+                </div>
+                
+                <!-- Activity List -->
+                <div x-show="!loading && activityLog.length > 0">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 border-b">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">Timestamp</th>
+                                    <th class="px-4 py-2 text-left">Batch</th>
+                                    <th class="px-4 py-2 text-left">Field</th>
+                                    <th class="px-4 py-2 text-left">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="entry in activityLog" :key="entry.id">
+                                    <tr class="border-b hover:bg-gray-50">
+                                        <td class="px-4 py-2 text-xs" x-text="formatDate(entry.changed_at)"></td>
+                                        <td class="px-4 py-2 text-xs font-mono" x-text="entry.raw_mark_id || 'N/A'"></td>
+                                        <td class="px-4 py-2 text-xs" x-text="entry.field_name"></td>
+                                        <td class="px-4 py-2 text-xs">
+                                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded" x-text="entry.change_type"></span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Empty State -->
+                <div x-show="!loading && activityLog.length === 0" class="text-center py-8 text-gray-500">
+                    <p>No activity found. Enter a user ID to view their actions.</p>
+                </div>
+            </section>
+
+            <!-- ===== ADMINISTRATION SECTIONS ===== -->
+
+            <!-- Configuration Section -->
+            <section id="configuration" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">⚙️ Configuration</h3>
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                    <p class="text-blue-900 font-semibold">System Configuration</p>
+                    <p class="text-sm text-blue-700 mt-2">Configure mark entry system settings</p>
+                    <p class="text-xs text-blue-600 mt-4">Coming in Phase 3C - Week 4</p>
+                </div>
+            </section>
+
+            <!-- Permissions Section -->
+            <section id="permissions" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">🔐 Permissions</h3>
+                <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                    <p class="text-green-900 font-semibold">Role & Permission Management</p>
+                    <p class="text-sm text-green-700 mt-2">Manage user roles and access permissions</p>
+                    <p class="text-xs text-green-600 mt-4">Coming in Phase 3C - Week 4</p>
+                </div>
+            </section>
+
+            <!-- Batch Management Section -->
+            <section id="batch-management" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">📦 Batch Management</h3>
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
+                    <p class="text-purple-900 font-semibold">Batch Administration</p>
+                    <p class="text-sm text-purple-700 mt-2">Manage and archive mark import batches</p>
+                    <p class="text-xs text-purple-600 mt-4">Coming in Phase 3C - Week 4</p>
+                </div>
+            </section>
+
+            <!-- System Logs Section -->
+            <section id="system-logs" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">🖥️ System Logs</h3>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                    <p class="text-gray-900 font-semibold">System Event Logs</p>
+                    <p class="text-sm text-gray-700 mt-2">View application logs and error tracking</p>
+                    <p class="text-xs text-gray-600 mt-4">Coming in Phase 3C - Week 4</p>
+                </div>
+            </section>
+
         </div>
     </div>
 </div>
@@ -1047,19 +2012,96 @@ function markEntryManager() {
         },
         
         // Computed - Filtered Schools
-        get filteredSchools() {
-            if (!this.selectedDistrict) return this.schools;
-            return this.schools.filter(s => s.district_id == this.selectedDistrict);
-        },
-
-        async init() {
-             await this.loadRegions();
-             // Don't load districts/schools upfront - will load on user selection
-             // This significantly improves initial page load time
-             await this.loadSubjects();
-             await this.loadExamYears();
-             await this.setDefaultExamYear();  // Set active year as default
+         get filteredSchools() {
+             if (!this.selectedDistrict) return this.schools;
+             return this.schools.filter(s => s.district_id == this.selectedDistrict);
          },
+
+         // ========== LOCALSTORAGE PERSISTENCE ==========
+         saveContext() {
+             const context = {
+                 examYear: this.examYear,
+                 selectedRegion: this.selectedRegion,
+                 selectedDistrict: this.selectedDistrict,
+                 selectedSchool: this.selectedSchool,
+                 selectedSubject: this.selectedSubject,
+                 timestamp: Date.now()
+             };
+             try {
+                 localStorage.setItem('irms_mark_entry_context', JSON.stringify(context));
+             } catch (e) {
+                 console.warn('Failed to save context to localStorage:', e);
+             }
+         },
+
+         restoreContext() {
+             try {
+                 const stored = localStorage.getItem('irms_mark_entry_context');
+                 if (stored) {
+                     const context = JSON.parse(stored);
+                     this.examYear = context.examYear || new Date().getFullYear();
+                     this.selectedRegion = context.selectedRegion || '';
+                     this.selectedDistrict = context.selectedDistrict || '';
+                     this.selectedSchool = context.selectedSchool || '';
+                     this.selectedSubject = context.selectedSubject || '';
+                     console.log('✓ Context restored from localStorage');
+                 }
+             } catch (e) {
+                 console.warn('Failed to restore context from localStorage:', e);
+             }
+         },
+
+         clearStoredContext() {
+             try {
+                 localStorage.removeItem('irms_mark_entry_context');
+             } catch (e) {
+                 console.warn('Failed to clear localStorage:', e);
+             }
+         },
+
+         async init() {
+              // Restore context from localStorage if available
+              this.restoreContext();
+              
+              await this.loadRegions();
+              // Don't load districts/schools upfront - will load on user selection
+              // This significantly improves initial page load time
+              await this.loadSubjects();
+              await this.loadExamYears();
+              
+              // Only set default exam year if not restored from localStorage
+              if (!this.examYear || this.examYear === new Date().getFullYear()) {
+                  await this.setDefaultExamYear();
+              }
+              
+              // Load districts and schools if context was restored
+              if (this.selectedRegion) {
+                  await this.loadDistricts();
+              }
+              if (this.selectedDistrict) {
+                  await this.loadSchools();
+              }
+              if (this.selectedSchool) {
+                  await this.loadFilteredSubjects();
+              }
+              
+              // Set up watchers to auto-save context on changes
+              this.$watch('examYear', () => this.saveContext());
+              this.$watch('selectedRegion', () => this.saveContext());
+              this.$watch('selectedDistrict', () => this.saveContext());
+              this.$watch('selectedSchool', () => this.saveContext());
+              this.$watch('selectedSubject', () => this.saveContext());
+              },
+
+              smoothScroll(selector) {
+              const element = document.querySelector(selector);
+              if (element) {
+                  element.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'start'
+                  });
+              }
+          },
 
         async loadRegions() {
             try {
@@ -1283,6 +2325,7 @@ function markEntryManager() {
             this.candidateCount = 0;
             this.selectedFile = null;
             this.importResult = null;
+            this.clearStoredContext();
         },
 
         downloadTemplate() {
@@ -2157,7 +3200,494 @@ function markEntryManager() {
                     }
                 }, timeout);
             },
-        };
-        }
+
+            // ===================== PHASE 3C-3: DATA FETCHING =====================
+            
+            // State for Phase 3C-3
+            loading: false,
+            error: null,
+            currentBatch: {
+                id: null,
+                history: [],
+                school: {},
+                subject: {},
+                examType: {}
+            },
+            moderationBatches: [],
+            readyBatches: [],
+            submittedBatches: [],
+            analyticsData: {
+                overview: {
+                    submitted_batches: 0,
+                    approved_batches: 0,
+                    total_batches: 0
+                },
+                bySubject: [],
+                errorStats: {}
+            },
+            auditTrail: [],
+            activityLog: [],
+            selectedBatchId: null,
+            currentPage: 1,
+            perPage: 20,
+            totalBatches: 0,
+            error: null,
+            loading: false,
+            
+            // Initialize Phase 3C-3
+            init3C3() {
+            console.log('Phase 3C-3 Data Fetching Initialized');
+            },
+            
+            // Utility: Fetch from API
+            async fetchApi(endpoint, options = {}) {
+            try {
+                this.loading = true;
+                this.error = null;
+                
+                const response = await fetch(endpoint, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                this.loading = false;
+                return data;
+            } catch (err) {
+                this.error = err.message;
+                this.loading = false;
+                console.error('API Error:', err);
+                this.showMessage(`⚠️ ${err.message}`, 'error');
+                throw err;
+            }
+            },
+            
+            // Format date utility
+            formatDate(date) {
+            if (!date) return 'N/A';
+            return new Date(date).toLocaleDateString() + ' ' + 
+                   new Date(date).toLocaleTimeString();
+            },
+            
+            // =========== MODERATION DASHBOARD ===========
+            async loadModerationDashboard(page = 1) {
+            try {
+                this.loading = true;
+                const response = await this.fetchApi(
+                    `/api/mark-entry/moderation/pending?page=${page}&per_page=${this.perPage}`
+                );
+                
+                this.moderationBatches = response.data;
+                this.totalBatches = response.pagination.total;
+                this.currentPage = page;
+                
+                console.log(`✓ Loaded ${this.moderationBatches.length} pending batches`);
+            } catch (err) {
+                this.error = 'Failed to load moderation dashboard';
+            }
+            },
+            
+            // =========== LOCK STATUS ===========
+            async loadLockStatus(page = 1) {
+            try {
+                this.loading = true;
+                const response = await this.fetchApi(
+                    `/api/mark-entry/submission/ready?page=${page}&per_page=${this.perPage}`
+                );
+                
+                this.readyBatches = response.data;
+                console.log(`✓ Loaded ${this.readyBatches.length} batches ready for locking`);
+            } catch (err) {
+                this.error = 'Failed to load lock status';
+            }
+            },
+            
+            // =========== SUBMISSION HISTORY ===========
+            async loadSubmissionHistory(batchId) {
+            try {
+                this.loading = true;
+                const response = await this.fetchApi(
+                    `/api/mark-entry/submission/batch/${batchId}/history`
+                );
+                
+                this.currentBatch = {
+                    id: batchId,
+                    history: response.data
+                };
+                
+                console.log(`✓ Loaded submission history for batch ${batchId}`);
+            } catch (err) {
+                this.error = 'Failed to load submission history';
+            }
+            },
+            
+            // =========== ANALYTICS ===========
+            async loadAnalytics() {
+            try {
+                this.loading = true;
+                
+                // Load all analytics in parallel
+                const [overview, bySubject, errorStats] = await Promise.all([
+                    this.fetchApi('/api/mark-entry/analytics/overview'),
+                    this.fetchApi('/api/mark-entry/analytics/by-subject'),
+                    this.fetchApi('/api/mark-entry/analytics/errors')
+                ]);
+                
+                this.analyticsData = {
+                    overview: overview.data,
+                    bySubject: bySubject.data,
+                    errorStats: errorStats.data
+                };
+                
+                console.log('✓ Loaded analytics data');
+            } catch (err) {
+                this.error = 'Failed to load analytics';
+            }
+            },
+            
+            // =========== AUDIT TRAIL ===========
+            async loadAuditTrail(batchId, page = 1) {
+            try {
+                this.loading = true;
+                const response = await this.fetchApi(
+                    `/api/mark-entry/audit/batch/${batchId}?page=${page}&per_page=${this.perPage}`
+                );
+                
+                this.auditTrail = response.data;
+                console.log(`✓ Loaded ${this.auditTrail.length} audit entries`);
+            } catch (err) {
+                this.error = 'Failed to load audit trail';
+            }
+            },
+            
+            // =========== ACTIVITY LOG ===========
+            async loadActivityLog(userId, page = 1) {
+            try {
+                this.loading = true;
+                const response = await this.fetchApi(
+                    `/api/mark-entry/audit/user/${userId}?page=${page}&per_page=${this.perPage}`
+                );
+                
+                this.activityLog = response.data;
+                console.log(`✓ Loaded ${this.activityLog.length} activity entries`);
+            } catch (err) {
+                this.error = 'Failed to load activity log';
+            }
+            },
+
+            // =========== MODERATION WORKFLOW ===========
+            // State variables for moderation
+            showApproveBatchModal: false,
+            showRejectBatchModal: false,
+            selectedBatchId: null,
+            approveFeedback: '',
+            rejectReason: '',
+            isApproving: false,
+            isRejecting: false,
+            
+            // Open approve modal
+            openApproveBatchModal(batchId) {
+                this.selectedBatchId = batchId;
+                this.approveFeedback = '';
+                this.showApproveBatchModal = true;
+            },
+            
+            // Confirm and submit approval
+            async approveBatchConfirm() {
+                if (!this.selectedBatchId) return;
+                this.isApproving = true;
+                
+                try {
+                    // Add 30-second timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000);
+                    
+                    const response = await fetch(`/api/mark-entry/moderation/batch/${this.selectedBatchId}/approve`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            feedback: this.approveFeedback || null
+                        }),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showMessage('Batch approved successfully', 'success');
+                        this.showApproveBatchModal = false;
+                        this.approveFeedback = '';
+                        // Refresh the moderation dashboard
+                        await this.loadPendingReview();
+                    } else {
+                        this.showMessage(data.message || 'Failed to approve batch', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error approving batch:', error);
+                    if (error.name === 'AbortError') {
+                        this.showMessage('Request timeout. Server may be busy. Please try again.', 'error');
+                    } else {
+                        this.showMessage('Error: ' + error.message, 'error');
+                    }
+                } finally {
+                    this.isApproving = false;
+                }
+            },
+            
+            // Open reject modal
+            openRejectBatchModal(batchId) {
+                this.selectedBatchId = batchId;
+                this.rejectReason = '';
+                this.showRejectBatchModal = true;
+            },
+            
+            // Confirm and submit rejection
+            async rejectBatchConfirm() {
+                if (!this.selectedBatchId || (this.rejectReason || '').length < 10) return;
+                this.isRejecting = true;
+                
+                try {
+                    // Add 30-second timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000);
+                    
+                    const response = await fetch(`/api/mark-entry/moderation/batch/${this.selectedBatchId}/reject`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            reason: this.rejectReason
+                        }),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showMessage('Batch rejected successfully. Submitter will be notified.', 'success');
+                        this.showRejectBatchModal = false;
+                        this.rejectReason = '';
+                        // Refresh the moderation dashboard
+                        await this.loadPendingReview();
+                    } else {
+                        this.showMessage(data.message || 'Failed to reject batch', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error rejecting batch:', error);
+                    if (error.name === 'AbortError') {
+                        this.showMessage('Request timeout. Server may be busy. Please try again.', 'error');
+                    } else {
+                        this.showMessage('Error: ' + error.message, 'error');
+                    }
+                } finally {
+                    this.isRejecting = false;
+                }
+            },
+
+            // =========== SUBMISSION WORKFLOW ===========
+            // State variables for submission
+            showLockBatchModal: false,
+            showUnlockBatchModal: false,
+            lockConfirmText: '',
+            unlockReason: '',
+            isLocking: false,
+            isUnlocking: false,
+            
+            // Open lock modal
+            openLockBatchModal(batchId) {
+                this.selectedBatchId = batchId;
+                this.lockConfirmText = '';
+                this.showLockBatchModal = true;
+            },
+            
+            // Confirm and submit lock
+            async lockBatchConfirm() {
+                if (!this.selectedBatchId || this.lockConfirmText.toUpperCase() !== 'LOCK') return;
+                this.isLocking = true;
+                
+                try {
+                    // Add 30-second timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 30000);
+                    
+                    const response = await fetch(`/api/mark-entry/submission/lock/${this.selectedBatchId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showMessage('Batch locked and submitted successfully', 'success');
+                        this.showLockBatchModal = false;
+                        this.lockConfirmText = '';
+                        // Refresh the submission dashboard
+                        await this.loadLockStatus();
+                    } else {
+                        this.showMessage(data.message || 'Failed to lock batch', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error locking batch:', error);
+                    if (error.name === 'AbortError') {
+                        this.showMessage('Request timeout. Server may be busy. Please try again.', 'error');
+                    } else {
+                        this.showMessage('Error: ' + error.message, 'error');
+                    }
+                } finally {
+                    this.isLocking = false;
+                }
+            },
+            
+            // Open unlock modal (admin only)
+            openUnlockBatchModal(batchId) {
+                this.selectedBatchId = batchId;
+                this.unlockReason = '';
+                this.showUnlockBatchModal = true;
+            },
+            
+            // Close unlock modal
+            closeUnlockModal() {
+                this.showUnlockBatchModal = false;
+                this.unlockReason = '';
+                this.selectedBatchId = null;
+                this.isUnlocking = false;
+            },
+            
+            // Confirm and submit unlock
+            async unlockBatchConfirm() {
+                if (!this.selectedBatchId || (this.unlockReason || '').length < 10) {
+                    this.showMessage('Please enter at least 10 characters for the unlock reason.', 'error');
+                    return;
+                }
+                
+                this.isUnlocking = true;
+                let success = false;
+                
+                try {
+                    const batchId = parseInt(this.selectedBatchId);
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                    
+                    // Create abort controller with 10 second timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+                    
+                    const response = await fetch(`/api/mark-entry/submission/unlock/${batchId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            reason: this.unlockReason
+                        }),
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.message || `HTTP ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    success = true;
+                    this.showMessage('Batch unlocked successfully!', 'success');
+                    
+                } catch (error) {
+                    console.error('Unlock error:', error);
+                    if (error.name === 'AbortError') {
+                        this.showMessage('Request timeout - server took too long to respond', 'error');
+                    } else {
+                        this.showMessage(`Failed to unlock batch: ${error.message}`, 'error');
+                    }
+                } finally {
+                    // ALWAYS reset state - THIS IS GUARANTEED TO RUN
+                    this.isUnlocking = false;
+                    this.showUnlockBatchModal = false;
+                    this.unlockReason = '';
+                    this.selectedBatchId = null;
+                    
+                    // Refresh if success
+                    if (success && this.loadSubmittedBatches) {
+                        setTimeout(() => this.loadSubmittedBatches(), 500);
+                    }
+                }
+            },
+
+            // =========== TOAST NOTIFICATION SYSTEM ===========
+            toastMessage: '',
+            toastType: 'info', // 'success', 'error', 'info', 'warning'
+            toastDetails: '',
+            toastTimeout: null,
+            
+            showMessage(message, type = 'info', details = '') {
+                this.toastMessage = message;
+                this.toastType = type;
+                this.toastDetails = details;
+                
+                // Auto-hide after 5 seconds
+                clearTimeout(this.toastTimeout);
+                this.toastTimeout = setTimeout(() => {
+                    this.closeToast();
+                }, 5000);
+            },
+            
+            closeToast() {
+                this.toastMessage = '';
+                this.toastType = 'info';
+                this.toastDetails = '';
+                clearTimeout(this.toastTimeout);
+            },
+
+            };
+            }
 </script>
-@endsection
+
+        <!-- MODALS AND NOTIFICATIONS -->
+         {{-- @include('mark-entry.components._approve_batch_modal') --}} <!-- TODO: Implement approve modal later -->
+         {{-- @include('mark-entry.components._reject_batch_modal') --}} <!-- TODO: Implement reject modal later -->
+         {{-- @include('mark-entry.components._lock_batch_modal') --}} <!-- TODO: Implement lock modal later -->
+         {{-- @include('mark-entry.components._unlock_batch_modal') --}} <!-- TODO: Implement unlock modal later -->
+         @include('mark-entry.components._toast_notification')
+        </div>
+        </div>
+        </div>
+        </div>
+        @endsection

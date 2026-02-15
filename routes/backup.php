@@ -26,7 +26,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         ->name('backups.logs');
 
     // Restore operations
-    Route::post('/validate', [BackupController::class, 'validate'])
+    Route::post('/validate', [BackupController::class, 'validateBackup'])
         ->name('backups.validate');
 
     Route::post('/simulate-restore', [BackupController::class, 'simulateRestore'])

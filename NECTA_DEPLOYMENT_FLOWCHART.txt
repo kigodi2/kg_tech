@@ -1,0 +1,371 @@
+================================================================================
+NECTA PHASE 2 DEPLOYMENT FLOWCHART
+Generated: 2026-02-15
+================================================================================
+
+START
+  |
+  v
+┌─────────────────────────────────────────┐
+│ DECISION: Deployment Method             │
+└─────────────────────────────────────────┘
+  |
+  +─────────────────────────────────────┐
+  |                                     |
+  v                                     v
+[A] AUTOMATED                      [B] MANUAL
+  |                                     |
+  |                                     v
+  |                              ┌─────────────────────────────────────┐
+  |                              │ Read documentation:                 │
+  |                              │ - PHASE2_DEPLOYMENT_READY           │
+  |                              │ - DEPLOYMENT_CHECKLIST              │
+  |                              └─────────────────────────────────────┘
+  |                                     |
+  |                                     v
+  |                              ┌─────────────────────────────────────┐
+  |                              │ PRE-DEPLOYMENT (4 steps)             │
+  |                              │ • Backup database                    │
+  |                              │ • Verify migrations                  │
+  |                              │ • Code review                        │
+  |                              │ • Cache & dependencies               │
+  |                              └─────────────────────────────────────┘
+  |                                     |
+  |                                     v
+  |                              ┌─────────────────────────────────────┐
+  |                              │ DEPLOYMENT (2 steps)                │
+  |                              │ • Code push (git pull)              │
+  |                              │ • Production cache clear            │
+  |                              └─────────────────────────────────────┘
+  |                                     |
+  +─────────────────────────────────────┤
+  |                                     |
+  v                                     v
+┌──────────────────────────────────────────────────────────────────┐
+│ SMOKE TESTS                                                      │
+│ Run: php NECTA_SMOKE_TESTS_2026_02_15.php                        │
+│                                                                  │
+│ Tests:                                                           │
+│ • Database schema verification (5 tests)                         │
+│ • Validation service functionality (4 tests)                     │
+│ • API endpoint behavior (2 tests)                                │
+│ • Data integrity checks (3 tests)                                │
+└──────────────────────────────────────────────────────────────────┘
+  |
+  v
+┌─────────────────────────────────────────┐
+│ Tests Passed?                           │
+└─────────────────────────────────────────┘
+  |
+  +─── NO ───> ┌─────────────────────────────────────┐
+  |            │ FAILED                              │
+  |            │                                     │
+  |            │ • Review error messages             │
+  |            │ • Check logs                        │
+  |            │ • Fix issues                        │
+  |            │ • Retest or ROLLBACK                │
+  |            │                                     │
+  |            │ Continue to ROLLBACK section below  │
+  |            └─────────────────────────────────────┘
+  |
+  +─── YES ──> ┌──────────────────────────────────────────────────┐
+               │ POST-DEPLOYMENT TESTS (6 manual steps)            │
+               │                                                  │
+               │ 1. System health check                           │
+               │    curl https://irms-domain.com/               │
+               │                                                  │
+               │ 2. SCHOOL candidate test                         │
+               │    • Register SCHOOL candidate with combination │
+               │    • Verify subjects auto-allocated              │
+               │                                                  │
+               │ 3. PRIVATE candidate test                        │
+               │    • Register PRIVATE candidate (no combination) │
+               │    • Allocate subjects manually                  │
+               │                                                  │
+               │ 4. Subject allocation API test                   │
+               │    • POST /api/exam-types/acsee/allocate-subjects
+               │    • Verify response < 500ms                     │
+               │                                                  │
+               │ 5. Data integrity test                           │
+               │    • Existing candidates unchanged               │
+               │    • No duplicate allocations                    │
+               │    • GS 111 present in all                       │
+               │    • 3+ principals in all                        │
+               │                                                  │
+               │ 6. Performance check                             │
+               │    • Page loads < 2s                             │
+               │    • No query timeouts                           │
+               │    • Memory usage stable                         │
+               └──────────────────────────────────────────────────┘
+                 |
+                 v
+               ┌─────────────────────────────────────┐
+               │ All manual tests passed?             │
+               └─────────────────────────────────────┘
+                 |
+                 +─── NO ───> [INVESTIGATE & FIX]
+                 |                    |
+                 |                    v
+                 |            ┌──────────────────┐
+                 |            │ Issues resolved? │
+                 |            └──────────────────┘
+                 |              |
+                 |              +─── NO ───> [ROLLBACK]
+                 |              |
+                 |              +─── YES ──> [Re-test]
+                 |
+                 +─── YES ──> ┌──────────────────────────────────────┐
+                              │ POST-DEPLOYMENT (3 steps)            │
+                              │                                      │
+                              │ 1. Logging & Monitoring              │
+                              │    • Set up alerts                   │
+                              │    • Monitor endpoint                │
+                              │    • Check logs                      │
+                              │                                      │
+                              │ 2. Operator Notification             │
+                              │    • Email operators                 │
+                              │    • Share quick guide               │
+                              │    • Confirm understanding           │
+                              │                                      │
+                              │ 3. Documentation                     │
+                              │    • Update admin manual             │
+                              │    • Document SCHOOL vs PRIVATE      │
+                              │    • Archive checklist               │
+                              └──────────────────────────────────────┘
+                                |
+                                v
+                              ┌──────────────────────────────────────┐
+                              │ DEPLOYMENT COMPLETE ✓                │
+                              │                                      │
+                              │ • Sign-off obtained                  │
+                              │ • Documentation archived             │
+                              │ • Monitoring active                  │
+                              │ • Team trained                       │
+                              └──────────────────────────────────────┘
+                                |
+                                v
+                              ┌──────────────────────────────────────┐
+                              │ MONITOR (24 hours)                   │
+                              │                                      │
+                              │ Watch for:                           │
+                              │ • Application errors                 │
+                              │ • API timeouts                       │
+                              │ • Database issues                    │
+                              │ • User reports                       │
+                              └──────────────────────────────────────┘
+                                |
+                                v
+                              ┌──────────────────────────────────────┐
+                              │ Monitoring period passed?            │
+                              └──────────────────────────────────────┘
+                                |
+                                +─── NO ───> [Address issues]
+                                |                    |
+                                |                    v
+                                |         [Are they critical?]
+                                |           |
+                                |           +─── NO ──> Continue monitoring
+                                |           +─── YES ──> Evaluate rollback
+                                |
+                                +─── YES ──> ┌──────────────────────────────────┐
+                                             │ DEPLOYMENT SUCCESSFUL            │
+                                             │                                  │
+                                             │ ✓ Phase 2 complete               │
+                                             │ ✓ SCHOOL candidates working      │
+                                             │ ✓ PRIVATE candidates working     │
+                                             │ ✓ NECTA rules enforced           │
+                                             │ ✓ Data integrity maintained      │
+                                             │                                  │
+                                             │ Ready for next phase             │
+                                             └──────────────────────────────────┘
+                                                       |
+                                                       v
+                                                    [END]
+
+
+================================================================================
+ROLLBACK DECISION TREE
+================================================================================
+
+[Issue Detected During/After Deployment]
+  |
+  v
+┌─────────────────────────────────────────┐
+│ Issue Severity Assessment               │
+└─────────────────────────────────────────┘
+  |
+  +─────────────────────────────────┐
+  |                                 |
+  v                                 v
+[MINOR]                          [CRITICAL]
+• Cosmetic                        • Data loss risk
+• Feature incomplete              • All users affected
+• Single user affected            • Application down
+• Easily fixable                  • Security issue
+  |                                 |
+  v                                 v
+[FIX IN PLACE]              [QUICK ROLLBACK]
+  |                                 |
+  | • Deploy hotfix               | 1. Revert code:
+  | • Test fix                    |    git revert <hash>
+  | • Verify                      |
+  |                              | 2. Clear caches:
+  v                              |    php artisan cache:clear
+[Continue Monitoring]            |
+                                | 3. Verify:
+                                |    Check logs
+                                |    Test basic functions
+                                |
+                                v
+                            [System Restored]
+                                |
+                                v
+                            [INVESTIGATE]
+                            What went wrong?
+                                |
+                                v
+                            [FIX ROOT CAUSE]
+                            Prepare for retry
+                                |
+                                v
+                            [RETRY DEPLOYMENT]
+                            Start from beginning
+
+
+================================================================================
+SUCCESS CHECKLIST
+================================================================================
+
+Before marking deployment complete:
+
+TECHNICAL:
+  [ ] All smoke tests: PASSED (green output)
+  [ ] Manual tests: All PASSED
+  [ ] No errors in logs (grep -i error logs/)
+  [ ] Application loads: < 2 seconds
+  [ ] SCHOOL candidate: Works end-to-end
+  [ ] PRIVATE candidate: Works end-to-end
+  [ ] Allocation API: Responds correctly
+  [ ] Database: No integrity issues
+
+PROCESS:
+  [ ] All 15 checklist items: COMPLETED
+  [ ] Sign-off obtained: Tech Lead, Ops Manager, DBA
+  [ ] Operator guide: Distributed
+  [ ] Monitoring: Activated
+  [ ] Rollback plan: Documented & tested
+
+COMMUNICATION:
+  [ ] Team notified: Deployment complete
+  [ ] Operators trained: On new features
+  [ ] Management informed: Status report
+  [ ] Support ready: For user questions
+
+DOCUMENTATION:
+  [ ] Checklist signed: All stakeholders
+  [ ] Deployment log: Archived
+  [ ] Issues (if any): Documented
+  [ ] Timeline: Recorded (start/end times)
+
+
+================================================================================
+KEY DECISION POINTS
+================================================================================
+
+Decision 1: Deployment Method
+→ Automated (recommended): bash deploy-necta-phase2.sh production
+→ Manual: Follow NECTA_DEPLOYMENT_CHECKLIST_2026_02_15.md
+
+Decision 2: Rollback Trigger
+→ Smoke tests fail: STOP, investigate, fix before continuing
+→ Manual tests fail: Fix issues, retest
+→ Critical issue post-deployment: Execute quick rollback
+
+Decision 3: Post-Deployment
+→ Monitoring indicates issue: Decide between fix-in-place vs rollback
+→ All green: Archive documentation, close deployment
+
+================================================================================
+TIMELINE ESTIMATE
+================================================================================
+
+[A] Automated Deployment:
+  - Database backup:           ~2 min
+  - Code deployment:           ~2 min
+  - Migrations:               ~1 min
+  - Cache clearing:           ~1 min
+  - Smoke tests:              ~5 min
+  - Manual verification:      ~10 min
+  ─────────────────────────────────────
+  TOTAL:                      ~21 minutes
+
+[B] Manual Deployment:
+  - Pre-deployment checks:    ~10 min
+  - Deployment steps:         ~5 min
+  - Cache clearing:           ~2 min
+  - Smoke tests:              ~5 min
+  - Manual verification:      ~10 min
+  ─────────────────────────────────────
+  TOTAL:                      ~32 minutes
+
+Plus 24-hour monitoring window.
+
+================================================================================
+COMMON ISSUES & SOLUTIONS
+================================================================================
+
+Issue: "Database migration failed"
+→ Check: mysql connection, permissions
+→ Solution: Verify DB user has ALTER TABLE permission
+
+Issue: "Smoke tests fail: Column not found"
+→ Check: Migrations actually ran
+→ Solution: Run php artisan migrate:status
+
+Issue: "PRIVATE candidate cannot allocate subjects"
+→ Check: Modal appears? JavaScript errors?
+→ Solution: Check browser console, restart PHP-FPM
+
+Issue: "Existing candidates missing subjects"
+→ Expected: Pre-deployment data unaffected
+→ Solution: No action needed, data integrity is correct
+
+Issue: "API endpoint returns 404"
+→ Check: Routes cached?
+→ Solution: php artisan route:cache --clear
+
+Issue: "Application won't start after deployment"
+→ Check: PHP syntax errors
+→ Solution: php artisan tinker (will show errors)
+
+================================================================================
+CONTACTS & ESCALATION
+================================================================================
+
+Level 1 (Operator): NECTA_OPERATOR_QUICK_GUIDE_2026_02_15.md
+Level 2 (Tech Support): Review logs, check database
+Level 3 (Tech Lead): Coordinate rollback or hotfix
+Level 4 (Management): Escalate if major incident
+
+================================================================================
+DOCUMENT LOCATION & COPIES
+================================================================================
+
+Primary location: /home/prosmart-technologies/SOL/irms/
+
+Keep copies at:
+☐ Operations desk
+☐ Tech lead's workstation
+☐ Database admin's workstation
+☐ Management shared folder
+☐ Disaster recovery location
+
+Print these documents:
+☐ NECTA_DEPLOYMENT_CHECKLIST_2026_02_15.md
+☐ NECTA_DEPLOYMENT_COMMANDS.txt
+☐ NECTA_OPERATOR_QUICK_GUIDE_2026_02_15.md
+☐ NECTA_DEPLOYMENT_FLOWCHART.txt (this file)
+
+================================================================================
+END OF FLOWCHART
+================================================================================

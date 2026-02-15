@@ -16,6 +16,7 @@ use App\Http\Controllers\Results\AcseeResultsController;
 use App\Http\Controllers\HierarchyController;
 use App\Http\Controllers\PublicResultsController;
 use App\Http\Controllers\DistrictCandidateImportController;
+use App\Http\Controllers\CandidateImportController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -673,7 +674,9 @@ Route::middleware('auth')->group(function () {
             'full_name' => 'required|string|max:255',
             'gender' => 'required|in:M,F',
             'combination' => 'nullable|string|max:255',
+            'combination_id' => 'nullable|exists:combinations,id',
             'exam_type' => 'required|in:PSLE,CSEE,ACSEE',
+            'candidate_type' => 'nullable|in:SCHOOL,PRIVATE',
             'status' => 'nullable|string|max:255',
         ]);
         
@@ -697,7 +700,9 @@ Route::middleware('auth')->group(function () {
             'full_name' => 'required|string|max:255',
             'gender' => 'required|in:M,F',
             'combination' => 'nullable|string|max:255',
+            'combination_id' => 'nullable|exists:combinations,id',
             'exam_type' => 'required|in:PSLE,CSEE,ACSEE',
+            'candidate_type' => 'nullable|in:SCHOOL,PRIVATE',
             'status' => 'nullable|string|max:255',
         ]);
         
@@ -1071,7 +1076,15 @@ Route::middleware('auth')->group(function () {
          ]);
      });
 
-     Route::post('/api/candidates/bulk-delete', function (\Illuminate\Http\Request $request) {
+    // New Structured Candidate Import API (two-phase)
+    Route::post('/api/candidates/import/validate', [CandidateImportController::class, 'validateImport']);
+    Route::post('/api/candidates/import/commit', [CandidateImportController::class, 'commitImport']);
+    Route::post('/api/candidates/import/async', [CandidateImportController::class, 'asyncBulkImport']);
+    Route::get('/api/candidates/import/template', [CandidateImportController::class, 'downloadTemplate']);
+    Route::post('/api/candidates/import/download-errors', [CandidateImportController::class, 'downloadErrorReport']);
+
+    // Bulk delete
+    Route::post('/api/candidates/bulk-delete', function (\Illuminate\Http\Request $request) {
          $validated = $request->validate([
              'ids' => 'required|array',
              'ids.*' => 'integer|exists:candidates,id'
@@ -1347,6 +1360,135 @@ Route::middleware('auth')->group(function () {
       Route::post('/api/exam-types/{code}/combinations', [ExamTypeController::class, 'createCombination']);
       Route::put('/api/exam-types/{code}/combinations/{id}', [ExamTypeController::class, 'updateCombination']);
       Route::delete('/api/exam-types/{code}/combinations/{id}', [ExamTypeController::class, 'deleteCombination']);
+
+      // Subject Allocation for ACSEE
+      Route::post('/api/exam-types/acsee/allocate-subjects', function (\Illuminate\Http\Request $request) {
+          // Validate input
+          $validated = $request->validate([
+              'candidate_id' => 'required|exists:candidates,id',
+              'exam_year_id' => 'required|exists:exam_years,id',
+              'subject_ids' => 'required|array|min:1',
+              'subject_ids.*' => 'integer|exists:subjects,id',
+              'is_principal_map' => 'required|array',
+              'replace_allocations' => 'boolean|default:false',
+              'source' => 'required|in:manual,template',
+          ]);
+
+          try {
+              // Load candidate with exam registration context
+              $candidate = \App\Models\Candidate::findOrFail($validated['candidate_id']);
+              
+              // Get exam_type_id from candidate
+              $examRegistration = $candidate->examRegistrations()->first();
+              if (!$examRegistration) {
+                  return response()->json([
+                      'ok' => false,
+                      'errors' => ['Candidate does not have an exam registration'],
+                      'warnings' => [],
+                  ], 422);
+              }
+
+              // Run validator
+              $validator = new \App\Services\AcseeAllocationValidator();
+              $validation = $validator->validate(
+                  $candidate,
+                  $examRegistration->exam_type_id,
+                  $validated['exam_year_id'],
+                  $validated['subject_ids']
+              );
+
+              if (!$validation['ok']) {
+                  return response()->json([
+                      'ok' => false,
+                      'errors' => $validation['errors'],
+                      'warnings' => $validation['warnings'],
+                      'allocated_subjects' => [],
+                  ], 422);
+              }
+
+              // Transactional allocation commit
+              \Illuminate\Support\Facades\DB::transaction(function () use ($candidate, $validated, $validation, $examRegistration) {
+                  if ($validated['replace_allocations'] ?? false) {
+                      // Delete existing allocations for this exam_year
+                      $candidate->subjectSelections()
+                          ->where('exam_year_id', $validated['exam_year_id'])
+                          ->delete();
+                  }
+
+                  // Create new allocations
+                  foreach ($validation['all_subject_ids'] as $subjectId) {
+                      $isPrincipal = in_array($subjectId, $validation['principal_subject_ids']);
+                      
+                      \App\Models\CandidateSubjectSelection::updateOrCreate(
+                          [
+                              'candidate_id' => $candidate->id,
+                              'exam_type_id' => $examRegistration->exam_type_id,
+                              'exam_year_id' => $validated['exam_year_id'],
+                              'subject_id' => $subjectId,
+                              'year' => \App\Models\ExamYear::find($validated['exam_year_id'])->year ?? date('Y'),
+                          ],
+                          [
+                              'is_principal' => $isPrincipal,
+                              'source' => $validated['source'],
+                              'created_by' => auth()->id(),
+                              'is_active' => true,
+                          ]
+                      );
+                  }
+              });
+
+              // Return allocated subjects
+              $allocated = $candidate->subjectSelections()
+                  ->with('subject')
+                  ->where('exam_year_id', $validated['exam_year_id'])
+                  ->get();
+
+              return response()->json([
+                  'ok' => true,
+                  'message' => 'Subjects allocated successfully',
+                  'allocated_subjects' => $allocated->map(fn($s) => [
+                      'id' => $s->subject_id,
+                      'code' => $s->subject->code,
+                      'name' => $s->subject->name,
+                      'is_principal' => $s->is_principal,
+                  ]),
+                  'created_count' => count($validation['all_subject_ids']),
+                  'skipped_count' => 0,
+              ]);
+          } catch (\Exception $e) {
+              \Log::error('Allocation error: ' . $e->getMessage(), ['exception' => $e]);
+              
+              // Sanitize error message for production
+              $errorMessage = env('APP_ENV') === 'production'
+                  ? 'An error occurred while allocating subjects. Please try again.'
+                  : 'Database error: ' . $e->getMessage();
+              
+              return response()->json([
+                  'ok' => false,
+                  'errors' => [$errorMessage],
+                  'warnings' => [],
+                  'allocated_subjects' => [],
+              ], 500);
+          }
+      });
+
+      // Get combination subjects for preview
+      Route::get('/api/combinations/{id}/subjects', function ($id) {
+          try {
+              $combination = \App\Models\Combination::findOrFail($id);
+              $subjects = $combination->subjects()->select('subjects.id', 'subjects.code', 'subjects.name')->get();
+              
+              return response()->json([
+                  'ok' => true,
+                  'data' => $subjects,
+              ]);
+          } catch (\Exception $e) {
+              return response()->json([
+                  'ok' => false,
+                  'errors' => ['Combination not found'],
+              ], 404);
+          }
+      });
 
       // Mark Entry Module Routes (ACSEE)
       Route::get('/mark-entry/acsee', [MarkEntryController::class, 'index']);

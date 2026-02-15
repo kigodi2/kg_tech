@@ -515,6 +515,22 @@ Route::prefix('exam-types/{code}')->group(function () {
     });
 });
 
+// ==================== SCHOOL IMPORT API ====================
+Route::prefix('schools/import')->group(function () {
+    Route::post('validate', [\App\Http\Controllers\SchoolImportController::class, 'validateImport']);
+    Route::post('commit', [\App\Http\Controllers\SchoolImportController::class, 'commit']);
+    Route::post('download-errors', [\App\Http\Controllers\SchoolImportController::class, 'downloadErrors']);
+    Route::get('template', [\App\Http\Controllers\SchoolImportController::class, 'downloadTemplate']);
+});
+
+// ==================== DISTRICT IMPORT API ====================
+Route::prefix('districts/import')->group(function () {
+    Route::post('validate', [\App\Http\Controllers\DistrictImportController::class, 'validateImportDistrict']);
+    Route::post('commit', [\App\Http\Controllers\DistrictImportController::class, 'commitImportDistrict']);
+    Route::post('download-errors', [\App\Http\Controllers\DistrictImportController::class, 'downloadErrors']);
+    Route::get('template', [\App\Http\Controllers\DistrictImportController::class, 'downloadTemplate']);
+});
+
 // ==================== DAILY MARKS ENTRY REPORT API ====================
 Route::get('/daily-marks-entry-report', [DailyMarksEntryReportController::class, 'getReport'])->middleware(['auth', 'admin']);
 

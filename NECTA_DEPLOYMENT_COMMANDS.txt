@@ -1,0 +1,198 @@
+================================================================================
+NECTA PHASE 2 DEPLOYMENT - COMMAND REFERENCE CARD
+Date: 2026-02-15
+================================================================================
+
+QUICK START
+-----------
+# Automated deployment (recommended)
+bash deploy-necta-phase2.sh production
+
+# OR manual steps below...
+
+================================================================================
+STEP 1: DATABASE BACKUP
+================================================================================
+
+php artisan backup:run --only=database
+
+# Verify backup created
+ls -lh storage/backups/
+
+================================================================================
+STEP 2: VERIFY MIGRATIONS
+================================================================================
+
+# Check migration status
+php artisan migrate:status
+
+# Verify columns exist
+mysql -u root -p irms -e "DESCRIBE candidates;" | grep -E 'candidate_type|combination_id'
+mysql -u root -p irms -e "DESCRIBE candidate_subject_selections;" | grep -E 'is_principal|source|created_by'
+
+================================================================================
+STEP 3: DEPLOY CODE
+================================================================================
+
+# Update code from main branch
+git pull origin main
+
+# Run migrations
+php artisan migrate --force
+
+================================================================================
+STEP 4: CLEAR CACHES
+================================================================================
+
+php artisan cache:clear
+php artisan config:cache
+php artisan view:clear
+php artisan route:cache
+
+================================================================================
+STEP 5: RESTART WORKERS
+================================================================================
+
+php artisan queue:restart
+
+================================================================================
+STEP 6: RUN SMOKE TESTS
+================================================================================
+
+php NECTA_SMOKE_TESTS_2026_02_15.php
+
+# Expected output: "✓ All tests passed! Ready for production."
+
+================================================================================
+STEP 7: MANUAL VERIFICATION
+================================================================================
+
+# Check application loads
+curl https://irms-domain.com/ | grep -q "DOCTYPE" && echo "OK" || echo "FAILED"
+
+# Check logs for errors
+tail -f storage/logs/laravel.log
+
+================================================================================
+ROLLBACK PROCEDURES
+================================================================================
+
+# Quick rollback (code only)
+git revert <commit-hash>
+php artisan cache:clear
+
+# Full rollback (database + code)
+php artisan backup:restore --from=storage/backups/irms-backup-YYYYMMDD-HHMMSS.sql
+git revert <commit-hash>
+php artisan cache:clear
+
+================================================================================
+TESTING WORKFLOWS
+================================================================================
+
+# Test SCHOOL candidate
+1. Candidates > Add Candidate
+2. Select: SCHOOL candidate type
+3. Choose: A combination (e.g., Science)
+4. Save
+5. Verify: Subjects auto-allocated from combination
+
+# Test PRIVATE candidate
+1. Candidates > Add Candidate
+2. Select: PRIVATE candidate type
+3. Leave: Combination blank
+4. Save
+5. Click: Allocate Subjects button
+6. Manually: Select subjects (GS 111 required, 3+ principals)
+7. Verify: Allocation applied
+
+================================================================================
+QUICK DIAGNOSTIC COMMANDS
+================================================================================
+
+# Check candidate types exist
+mysql -u root -p irms -e "SELECT DISTINCT candidate_type FROM candidates LIMIT 10;"
+
+# Check allocations with sources
+mysql -u root -p irms -e "SELECT source, COUNT(*) FROM candidate_subject_selections WHERE source IS NOT NULL GROUP BY source;"
+
+# Check candidates missing General Studies
+mysql -u root -p irms -e "SELECT c.id FROM candidates c WHERE c.id NOT IN (SELECT DISTINCT css.candidate_id FROM candidate_subject_selections css JOIN subjects s ON s.id = css.subject_id WHERE s.code = '111');"
+
+# Check for duplicate allocations
+mysql -u root -p irms -e "SELECT candidate_id, subject_id, COUNT(*) FROM candidate_subject_selections GROUP BY candidate_id, subject_id HAVING COUNT(*) > 1;"
+
+# Check database health
+php artisan db:show
+
+================================================================================
+MONITORING
+================================================================================
+
+# Watch logs in real-time
+tail -f storage/logs/laravel.log
+
+# Check error logs specifically
+grep -i error storage/logs/laravel.log | tail -20
+
+# Monitor API endpoint
+grep -i "allocate-subjects" storage/logs/laravel.log | tail -20
+
+================================================================================
+FILE LOCATIONS
+================================================================================
+
+Database backup:           storage/backups/
+Deployment logs:           storage/logs/
+Deployment checklist:      NECTA_DEPLOYMENT_CHECKLIST_2026_02_15.md
+Smoke test script:         NECTA_SMOKE_TESTS_2026_02_15.php
+Deployment script:         deploy-necta-phase2.sh
+Operator guide:            NECTA_OPERATOR_QUICK_GUIDE_2026_02_15.md
+Status/overview:           NECTA_PHASE2_DEPLOYMENT_READY_2026_02_15.md
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+# Application won't start
+php artisan tinker
+exit
+
+# Check artisan works
+php artisan list
+
+# Verify database connection
+php artisan db:monitor
+
+# Check file permissions
+ls -la storage/ logs/ bootstrap/cache/
+chmod -R 775 storage/ bootstrap/cache/
+
+# Clear everything and start fresh
+php artisan cache:clear
+php artisan config:clear
+php artisan view:clear
+php artisan route:clear
+php artisan optimize:clear
+
+================================================================================
+IMPORTANT DATES & CONTACTS
+================================================================================
+
+Deployment Date:    2026-02-15
+Last Updated:       2026-02-15
+Support Contact:    [IT Support]
+Database Admin:     [DBA Name]
+Tech Lead:          [Lead Name]
+
+================================================================================
+SIGN-OFF
+================================================================================
+
+Deployed By:        _____________________
+Date/Time:          _____________________
+Environment:        [ ] Staging  [ ] Production
+All Tests Passed:   [ ] Yes  [ ] No
+Issues Found:       None / [describe] ___________________
+
+================================================================================

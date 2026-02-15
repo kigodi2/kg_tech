@@ -170,7 +170,8 @@
                              <input 
                                  type="checkbox" 
                                  @change="toggleSelectAll()"
-                                 :checked="selectedItems.size === filteredCandidates.length && filteredCandidates.length > 0"
+                                 :checked="selectedItems.size === candidates.length && candidates.length > 0"
+                                 :indeterminate="selectedItems.size > 0 && selectedItems.size < candidates.length"
                                  class="w-4 h-4 cursor-pointer"
                              >
                          </th>
@@ -517,6 +518,20 @@
                         <option value="ACSEE">ACSEE</option>
                     </select>
                 </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Candidate Type <span class="text-xs text-gray-500">(ACSEE only)</span></label>
+                    <select 
+                        x-model="formData.candidate_type"
+                        :disabled="formData.exam_type !== 'ACSEE'"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                        <option value="SCHOOL">SCHOOL (Default)</option>
+                        <option value="PRIVATE">PRIVATE</option>
+                    </select>
+                    <p class="text-xs text-gray-500 mt-1" x-show="formData.candidate_type === 'PRIVATE'">
+                        Private candidates can allocate subjects individually without a school affiliation.
+                    </p>
+                </div>
                 <div class="flex gap-3 pt-4">
                     <button 
                         type="button" 
@@ -559,7 +574,7 @@ function candidatesManager() {
         pageSizeSearch: '',
         editingId: null,
         selectedItems: new Set(),
-        formData: { full_name: '', gender: '', combination: '', school_id: '', exam_type: '', exam_year: '' },
+        formData: { full_name: '', gender: '', combination: '', school_id: '', exam_type: '', exam_year: '', candidate_type: 'SCHOOL' },
         loading: false,
         examYears: [],
         modalOpen: false,
@@ -579,6 +594,12 @@ function candidatesManager() {
         importMode: 'skip',
         importExamYear: '',
         importExamType: '',
+        // New import modal state
+        importPhase: 'upload', // 'upload', 'report', 'processing'
+        importReport: {},
+        importProcessing: false,
+        importProcessingMessage: '',
+        importDragActive: false,
         showDebugPanel: false,
         showDataAuditModal: false,
         auditResults: null,
@@ -991,10 +1012,12 @@ function candidatesManager() {
         },
 
         toggleSelectAll() {
-            if (this.selectedItems.size === this.filteredCandidates.length) {
+            if (this.selectedItems.size === this.candidates.length) {
+                // Deselect all
                 this.selectedItems.clear();
             } else {
-                this.filteredCandidates.forEach(candidate => this.selectedItems.add(candidate.id));
+                // Select ALL candidates (across all pages, not just current page)
+                this.candidates.forEach(candidate => this.selectedItems.add(candidate.id));
             }
         },
 
@@ -1031,8 +1054,204 @@ function candidatesManager() {
         },
 
         openImportModal() {
+            // Reset import state for new modal
+            this.importPhase = 'upload';
+            this.importFile = null;
+            this.importExamType = '';
+            this.importExamYear = '2026';
+            this.importReport = {};
+            this.importProcessing = false;
+            this.importProcessingMessage = '';
+            this.importDragActive = false;
             this.showImportModal = true;
             this.showToolsMenu = false;
+        },
+
+        // New import modal handlers
+        handleImportFileSelect(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                this.importFile = files[0];
+            }
+        },
+
+        handleImportDrop(event) {
+            this.importDragActive = false;
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                this.importFile = files[0];
+            }
+        },
+
+        async validateImportFile() {
+            if (!this.importFile) {
+                this.showMessage('Please select a file', 'error');
+                return;
+            }
+
+            this.importProcessing = true;
+            this.importPhase = 'processing';
+            this.importProcessingMessage = 'Validating your file...';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                if (this.importExamYear) {
+                    formData.append('exam_year', this.importExamYear);
+                }
+                if (this.importExamType) {
+                    formData.append('exam_type', this.importExamType);
+                }
+
+                const response = await fetch('/api/candidates/import/validate', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: formData,
+                });
+
+                const data = await response.json();
+                
+                this.importReport = data;
+                this.importPhase = 'report';
+                this.importProcessing = false;
+
+                if (!data.success && data.invalid_count > 0) {
+                    this.showMessage(`Validation complete: ${data.invalid_count} error(s) found`, 'error');
+                } else if (data.can_import) {
+                    this.showMessage(`Validation complete: ${data.valid_count} record(s) ready to import`, 'success');
+                } else {
+                    this.showMessage('Validation complete: No valid records to import', 'error');
+                }
+
+            } catch (error) {
+                console.error('Validation error:', error);
+                this.importProcessing = false;
+                this.importPhase = 'upload';
+                this.showMessage('Error validating file: ' + error.message, 'error');
+            }
+        },
+
+        async commitImportFile() {
+            if (!this.importFile || !this.importReport.can_import) {
+                this.showMessage('Cannot proceed: invalid file or no valid records', 'error');
+                return;
+            }
+
+            this.importProcessing = true;
+            this.importPhase = 'processing';
+            this.importProcessingMessage = 'Importing candidates...';
+
+            try {
+                const formData = new FormData();
+                formData.append('file', this.importFile);
+                if (this.importExamYear) {
+                    formData.append('exam_year', this.importExamYear);
+                }
+                if (this.importExamType) {
+                    formData.append('exam_type', this.importExamType);
+                }
+                formData.append('mode', 'skip');
+
+                const response = await fetch('/api/candidates/import/commit', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    this.showMessage(
+                        `Import successful: ${data.imported_count} new candidate(s)${data.updated_count > 0 ? ', ' + data.updated_count + ' updated' : ''}${data.skipped_count > 0 ? ', ' + data.skipped_count + ' skipped' : ''}`,
+                        'success'
+                    );
+                    this.showImportModal = false;
+                    await this.loadCandidates();
+                } else {
+                    this.showMessage('Import error: ' + (data.message || 'Unknown error'), 'error');
+                    this.importPhase = 'report';
+                }
+
+            } catch (error) {
+                console.error('Import error:', error);
+                this.showMessage('Error committing import: ' + error.message, 'error');
+                this.importPhase = 'report';
+            } finally {
+                this.importProcessing = false;
+            }
+        },
+
+        async downloadImportTemplate() {
+            try {
+                const response = await fetch('/api/candidates/import/template', {
+                    method: 'GET',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to download template');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'candidates-import-template-' + new Date().toISOString().split('T')[0] + '.csv';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                this.showMessage('Template downloaded successfully', 'success');
+            } catch (error) {
+                console.error('Template download error:', error);
+                this.showMessage('Error downloading template: ' + error.message, 'error');
+            }
+        },
+
+        async downloadImportErrors() {
+            try {
+                if (!this.importReport.errors || this.importReport.errors.length === 0) {
+                    this.showMessage('No errors to download', 'error');
+                    return;
+                }
+
+                const response = await fetch('/api/candidates/import/download-errors', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({
+                        errors: this.importReport.errors
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to download errors');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'candidate-import-errors-' + new Date().toISOString().replace(/:/g, '-').split('.')[0] + '.csv';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                this.showMessage('Error report downloaded', 'success');
+            } catch (error) {
+                console.error('Error download error:', error);
+                this.showMessage('Error downloading report: ' + error.message, 'error');
+            }
         },
 
         downloadTemplate() {
@@ -1399,6 +1618,254 @@ function handleQuickImport(fileInput) {
 </script>
 
 
+<!-- New Import Candidates Modal (Two-Phase) -->
+<div 
+    x-show="showImportModal" 
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+    @click.self="showImportModal = false;"
+    x-transition
+    style="display: none;"
+>
+    <div class="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col" x-transition @click.stop>
+        <!-- Header -->
+        <div class="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
+            <h2 class="text-xl font-bold text-gray-800">Import Candidates</h2>
+            <button 
+                @click="showImportModal = false" 
+                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                :disabled="importProcessing"
+            >
+                &times;
+            </button>
+        </div>
+
+        <!-- Content (Scrollable) -->
+        <div class="overflow-y-auto flex-1 p-6 space-y-6">
+            <!-- Phase 1: Upload & Validation -->
+            <div x-show="importPhase === 'upload'">
+                <div class="space-y-4">
+                    <!-- Download Template Button -->
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-700">Step 1: Prepare File</h3>
+                        <button
+                            @click="downloadImportTemplate()"
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                            :disabled="importProcessing"
+                        >
+                            <i class="fas fa-download"></i> Download Template
+                        </button>
+                    </div>
+
+                    <!-- File Upload Area -->
+                    <div 
+                        @drop.prevent="handleImportDrop($event)"
+                        @dragover.prevent="importDragActive = true"
+                        @dragleave.prevent="importDragActive = false"
+                        :class="importDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'"
+                        class="border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer"
+                    >
+                        <input 
+                            type="file"
+                            id="import-file-input"
+                            @change="handleImportFileSelect($event)"
+                            accept=".csv,.txt"
+                            class="hidden"
+                            :disabled="importProcessing"
+                        >
+                        <label for="import-file-input" class="cursor-pointer block">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-blue-600 mb-2"></i>
+                            <p class="text-lg font-semibold text-gray-700">Drop CSV file here or click to select</p>
+                            <p class="text-sm text-gray-500 mt-1">Accepts .csv and .txt files</p>
+                        </label>
+                    </div>
+
+                    <!-- File Info -->
+                    <div x-show="importFile" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-sm text-gray-700">
+                            <strong>Selected file:</strong> <span x-text="importFile ? importFile.name : ''"></span>
+                            <span class="text-gray-500" x-text="importFile ? '(' + (importFile.size / 1024).toFixed(1) + ' KB)' : ''"></span>
+                        </p>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Type (Optional)</label>
+                            <select 
+                                x-model="importExamType"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                :disabled="importProcessing"
+                            >
+                                <option value="">Default (ACSEE)</option>
+                                <option value="PSLE">PSLE</option>
+                                <option value="CSEE">CSEE</option>
+                                <option value="ACSEE">ACSEE</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Year (Optional)</label>
+                            <select 
+                                x-model="importExamYear"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                :disabled="importProcessing"
+                            >
+                                <option value="">Select Exam Year</option>
+                                <template x-for="year in examYears" :key="year.id">
+                                    <option :value="year.year_label" x-text="year.year_label"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2: Validation Report -->
+            <div x-show="importPhase === 'report'" class="space-y-4">
+                <h3 class="text-lg font-semibold text-gray-700">Step 2: Review Results</h3>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="text-xs font-semibold text-gray-600 uppercase">Total Rows</p>
+                        <p class="text-3xl font-bold text-gray-800 mt-2" x-text="importReport.total_rows || 0"></p>
+                    </div>
+
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p class="text-xs font-semibold text-green-600 uppercase">Valid</p>
+                        <p class="text-3xl font-bold text-green-800 mt-2" x-text="importReport.valid_count || 0"></p>
+                    </div>
+
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p class="text-xs font-semibold text-red-600 uppercase">Errors</p>
+                        <p class="text-3xl font-bold text-red-800 mt-2" x-text="importReport.invalid_count || 0"></p>
+                    </div>
+
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <p class="text-xs font-semibold text-yellow-600 uppercase">Can Import</p>
+                        <p class="text-3xl font-bold text-yellow-800 mt-2" x-text="importReport.can_import ? 'Yes' : 'No'"></p>
+                    </div>
+                </div>
+
+                <!-- Error Table (if any) -->
+                <div x-show="importReport.invalid_count > 0">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-gray-700">Errors Found</h4>
+                        <button
+                            @click="downloadImportErrors()"
+                            class="inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 transition-colors"
+                            :disabled="importReport.invalid_count === 0"
+                        >
+                            <i class="fas fa-download text-xs"></i> Download Errors
+                        </button>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Row</th>
+                                        <th class="px-4 py-2 text-left font-semibold text-gray-700">ID</th>
+                                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Name</th>
+                                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Error(s)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <template x-for="(error, idx) in importReport.errors.slice(0, 10)" :key="idx">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-4 py-2 text-gray-600" x-text="error.row_number"></td>
+                                            <td class="px-4 py-2 text-gray-600 font-mono text-xs" x-text="error.candidate_id || '-'"></td>
+                                            <td class="px-4 py-2 text-gray-600" x-text="error.full_name || '-'"></td>
+                                            <td class="px-4 py-2">
+                                                <span class="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium" x-text="error.primary_error"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination hint -->
+                        <div x-show="importReport.total_errors > 10" class="bg-gray-50 px-4 py-2 text-xs text-gray-600 border-t border-gray-200">
+                            Showing 10 of <span x-text="importReport.total_errors"></span> errors (download file to see all)
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 3: Processing -->
+            <div x-show="importPhase === 'processing'" class="flex flex-col items-center justify-center py-12">
+                <i class="fas fa-spinner animate-spin text-4xl text-blue-600 mb-4"></i>
+                <p class="text-lg font-semibold text-gray-700" x-text="importPhase === 'processing' ? 'Processing Import...' : 'Validating File...'"></p>
+                <p class="text-sm text-gray-500 mt-2" x-text="importProcessingMessage"></p>
+            </div>
+        </div>
+
+        <!-- Footer (Sticky) -->
+        <div class="flex gap-3 justify-end p-6 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+            <!-- Phase 1: Upload -->
+            <template x-if="importPhase === 'upload'">
+                <div class="flex gap-3 w-full">
+                    <button 
+                        @click="showImportModal = false"
+                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                        :disabled="importProcessing"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        @click="validateImportFile()"
+                        class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                        :disabled="!importFile || importProcessing"
+                    >
+                        <i class="fas fa-check mr-2"></i> Validate
+                    </button>
+                </div>
+            </template>
+
+            <!-- Phase 2: Report -->
+            <template x-if="importPhase === 'report'">
+                <div class="flex gap-3 w-full">
+                    <button 
+                        @click="importPhase = 'upload'; importFile = null; importReport = {}"
+                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                        :disabled="importProcessing"
+                    >
+                        <i class="fas fa-arrow-left mr-2"></i> Back
+                    </button>
+                    <button 
+                        @click="showImportModal = false"
+                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                        :disabled="importProcessing"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        @click="commitImportFile()"
+                        class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+                        :disabled="!importReport.can_import || importProcessing"
+                    >
+                        <i class="fas fa-upload mr-2"></i> Import <span x-text="importReport.valid_count"></span> Records
+                    </button>
+                </div>
+            </template>
+
+            <!-- Phase 3: Processing -->
+            <template x-if="importPhase === 'processing'">
+                <div class="flex gap-3 w-full">
+                    <button 
+                        @click="showImportModal = false"
+                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                        disabled
+                    >
+                        Processing...
+                    </button>
+                </div>
+            </template>
+        </div>
+    </div>
+</div>
 
 <!-- Data Audit Modal -->
 <div 
