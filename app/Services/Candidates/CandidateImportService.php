@@ -915,6 +915,9 @@ class CandidateImportService
                     if ($candidateType === 'SCHOOL' && $record['combination']) {
                         $this->registerForACSEEBatch($candidate, $record['combination'], $acseeType, $examYear);
                     } elseif ($candidateType === 'PRIVATE' && $record['subjects']) {
+                        // First create exam registration, then allocate subjects
+                        $this->createExamRegistrationIfNotExists($candidate, $acseeType, $examYear);
+                        
                         // Allocate specific subjects for PRIVATE candidates
                         $allocationErrors = [];
                         $allocCount = $this->allocateSubjectsForPrivateCandidate($candidate, $record['subjects'], $acseeType, $examYear, $allocationErrors);
@@ -993,6 +996,32 @@ class CandidateImportService
         if (!empty($subjectSelections)) {
             CandidateSubjectSelection::insert($subjectSelections);
         }
+    }
+
+    /**
+     * Create exam registration if it doesn't exist
+     */
+    private function createExamRegistrationIfNotExists(Candidate $candidate, ExamType $examType, ExamYear $examYear): void
+    {
+        $existing = CandidateExamRegistration::where('candidate_id', $candidate->id)
+            ->where('exam_type_id', $examType->id)
+            ->where('exam_year_id', $examYear->id)
+            ->first();
+
+        if ($existing) {
+            return; // Already registered
+        }
+
+        // Create registration
+        CandidateExamRegistration::create([
+            'candidate_id' => $candidate->id,
+            'exam_type_id' => $examType->id,
+            'exam_year_id' => $examYear->id,
+            'year' => (int)$examYear->year_label,
+            'registration_number' => 'REG-' . uniqid(),
+            'is_active' => true,
+            'is_verified' => false,
+        ]);
     }
 
     /**
