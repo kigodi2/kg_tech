@@ -4,31 +4,45 @@ namespace App\Services\Candidates;
 
 use App\Models\Candidate;
 use App\Models\School;
+use App\Models\District;
 use App\Models\ExamYear;
 use App\Models\ExamType;
 use App\Models\CandidateExamRegistration;
 use App\Models\CandidateSubjectSelection;
 use App\Models\Subject;
+use App\Models\Combination;
+use App\Services\AcseeAllocationValidator;
+use App\Services\IndexNumber\IndexNumberValidator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CandidateImportService
 {
     /**
      * Validate CSV file and return preview (Phase 1: Dry-run)
+     * Supports skip/replace mode for handling existing candidates
      * 
      * Returns:
      * - success (bool)
      * - total_rows (int)
-     * - valid_count (int)
-     * - invalid_count (int)
+     * - create_count (int) - new candidates
+     * - update_count (int) - candidates that will be updated (replace mode)
+     * - skip_count (int) - candidates that exist and will be skipped
+     * - error_count (int) - genuine validation errors
      * - errors (array) - details per failed row
+     * - rows (array) - detailed row status for preview table
      * - summary (array) - counts by error type
+     * - can_import (bool)
      */
-    public function validateCSV(UploadedFile $file, ?string $examYear = null, ?string $examType = null): array
-    {
+    public function validateCSV(
+        UploadedFile $file,
+        ?string $examYear = null,
+        ?string $examType = null,
+        string $mode = 'skip'
+    ): array {
         $handle = fopen($file->getRealPath(), 'r');
         $header = fgetcsv($handle);
         
@@ -38,10 +52,14 @@ class CandidateImportService
                 'success' => false,
                 'message' => 'CSV file is empty',
                 'total_rows' => 0,
-                'valid_count' => 0,
-                'invalid_count' => 0,
+                'create_count' => 0,
+                'update_count' => 0,
+                'skip_count' => 0,
+                'error_count' => 0,
                 'errors' => [],
-                'summary' => []
+                'rows' => [],
+                'summary' => [],
+                'can_import' => false
             ];
         }
 
@@ -50,9 +68,12 @@ class CandidateImportService
         $header = array_map('trim', $header);
 
         $rowNumber = 0;
-        $validCount = 0;
+        $createCount = 0;
+        $updateCount = 0;
+        $skipCount = 0;
         $errorRows = [];
         $errorSummary = [];
+        $rowDetails = [];
         $seenCandidates = []; // Track duplicates within file
 
         while (($row = fgetcsv($handle)) !== false) {
@@ -66,17 +87,33 @@ class CandidateImportService
             // Map row to columns
             $record = $this->mapRowToRecord($row, $header);
             $rowErrors = [];
+            $rowStatus = 'NEW';
 
             // Validate each field
             $this->validateCandidateId($record['candidate_id'] ?? null, $rowErrors, $seenCandidates, $rowNumber);
             $this->validateFullName($record['full_name'] ?? null, $rowErrors);
             $this->validateGender($record['gender'] ?? null, $rowErrors);
-            $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
 
-            // If exam_type is ACSEE, validate combination
+            // NECTA Phase 2: Validate candidate type (SCHOOL or PRIVATE)
+            $candidateType = strtoupper($record['candidate_type'] ?? 'SCHOOL');
+            $this->validateCandidateType($candidateType, $rowErrors);
+
+            // If exam_type is ACSEE, validate combination or subjects based on type
             $finalExamType = $record['exam_type'] ?? $examType ?? 'ACSEE';
             if (strtoupper($finalExamType) === 'ACSEE') {
-                $this->validateCombination($record['combination'] ?? null, $rowErrors);
+                if ($candidateType === 'SCHOOL') {
+                    $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                    $this->validateCombination($record['combination'] ?? null, $rowErrors, 'SCHOOL');
+                } else {
+                    // PRIVATE candidate: school_code is still required (for centre affiliation)
+                    $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                }
+            } else {
+                // Non-ACSEE: validate school code
+                $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                if ($record['combination'] ?? null) {
+                    $this->validateCombination($record['combination'] ?? null, $rowErrors, 'SCHOOL');
+                }
             }
 
             // Validate exam year if provided
@@ -85,20 +122,31 @@ class CandidateImportService
                 $this->validateExamYear($finalExamYear, $rowErrors);
             }
 
-            // Check for duplicates in DB
+            // Check for duplicates in DB - KEY CHANGE: handle via skip/replace mode
+            $existingCandidate = null;
             if ($record['candidate_id']) {
-                $existing = Candidate::where('candidate_id', $record['candidate_id'])->first();
-                if ($existing) {
-                    $rowErrors[] = 'Candidate ID already exists in database';
-                    $errorSummary['duplicate_in_db'] = ($errorSummary['duplicate_in_db'] ?? 0) + 1;
+                $existingCandidate = Candidate::where('candidate_id', $record['candidate_id'])->first();
+                if ($existingCandidate) {
+                    if ($mode === 'replace') {
+                        $rowStatus = 'REPLACE';
+                        $updateCount++;
+                    } else {
+                        // mode === 'skip'
+                        $rowStatus = 'SKIP';
+                        $skipCount++;
+                    }
                 }
             }
 
-            // Collect results
+            // Only mark as error if validation failed
             if (empty($rowErrors)) {
-                $validCount++;
+                if ($rowStatus !== 'SKIP' && $rowStatus !== 'REPLACE') {
+                    $createCount++;
+                }
                 $seenCandidates[$record['candidate_id']] = true;
             } else {
+                // Real validation error
+                $rowStatus = 'ERROR';
                 $errorRows[] = [
                     'row_number' => $rowNumber,
                     'candidate_id' => $record['candidate_id'] ?? '',
@@ -117,6 +165,15 @@ class CandidateImportService
                     $errorSummary[$key] = ($errorSummary[$key] ?? 0) + 1;
                 }
             }
+
+            // Store detailed row info for preview table
+            $rowDetails[] = [
+                'row_number' => $rowNumber,
+                'candidate_id' => $record['candidate_id'] ?? '',
+                'full_name' => $record['full_name'] ?? '',
+                'status' => $rowStatus,
+                'messages' => $rowErrors
+            ];
         }
 
         fclose($handle);
@@ -125,12 +182,15 @@ class CandidateImportService
             'success' => count($errorRows) === 0,
             'message' => count($errorRows) === 0 ? 'All rows valid' : count($errorRows) . ' row(s) have errors',
             'total_rows' => $rowNumber,
-            'valid_count' => $validCount,
-            'invalid_count' => count($errorRows),
+            'create_count' => $createCount,
+            'update_count' => $updateCount,
+            'skip_count' => $skipCount,
+            'error_count' => count($errorRows),
             'errors' => array_slice($errorRows, 0, 100), // Limit to first 100 for display
             'total_errors' => count($errorRows),
+            'rows' => $rowDetails,
             'summary' => $errorSummary,
-            'can_import' => $validCount > 0
+            'can_import' => ($createCount + $updateCount) > 0 && count($errorRows) === 0
         ];
     }
 
@@ -185,6 +245,9 @@ class CandidateImportService
             $importedCount = 0;
             $skippedCount = 0;
             $updatedCount = 0;
+            $allocationsCreated = 0;
+            $allocationsUpdated = 0;
+            $allocationErrors = [];
             $errors = [];
             $chunk = []; // Batch records
             $chunkSize = 100; // Process in batches of 100
@@ -200,16 +263,22 @@ class CandidateImportService
                     $record = $this->mapRowToRecord($row, $header);
                     
                     // Re-validate
-                    $rowErrors = [];
-                    $this->validateCandidateId($record['candidate_id'] ?? null, $rowErrors, [], $rowNumber);
-                    $this->validateFullName($record['full_name'] ?? null, $rowErrors);
-                    $this->validateGender($record['gender'] ?? null, $rowErrors);
-                    $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                     $rowErrors = [];
+                     $this->validateCandidateId($record['candidate_id'] ?? null, $rowErrors, [], $rowNumber);
+                     $this->validateFullName($record['full_name'] ?? null, $rowErrors);
+                     $this->validateGender($record['gender'] ?? null, $rowErrors);
+                     $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
 
-                    $finalExamType = $record['exam_type'] ?? $examType ?? 'ACSEE';
-                    if (strtoupper($finalExamType) === 'ACSEE') {
-                        $this->validateCombination($record['combination'] ?? null, $rowErrors);
-                    }
+                     // Determine candidate type for validation
+                     $candidateType = strtoupper($record['candidate_type'] ?? 'SCHOOL');
+
+                     $finalExamType = $record['exam_type'] ?? $examType ?? 'ACSEE';
+                     if (strtoupper($finalExamType) === 'ACSEE') {
+                         // Only require combination for SCHOOL candidates
+                         if ($candidateType === 'SCHOOL') {
+                             $this->validateCombination($record['combination'] ?? null, $rowErrors, 'SCHOOL');
+                         }
+                     }
 
                     if (!empty($rowErrors)) {
                         $errors[] = [
@@ -246,7 +315,9 @@ class CandidateImportService
 
                     // Process chunk when it reaches batch size
                     if (count($chunk) >= $chunkSize) {
-                        $importedCount += $this->processBatch($chunk);
+                        $result = $this->processBatch($chunk);
+                        $importedCount += $result['imported'];
+                        $allocationsCreated += $result['allocations'];
                         $chunk = [];
                     }
 
@@ -262,20 +333,30 @@ class CandidateImportService
 
             // Process remaining chunk
             if (!empty($chunk)) {
-                $importedCount += $this->processBatch($chunk);
+                $result = $this->processBatch($chunk);
+                $importedCount += $result['imported'];
+                $allocationsCreated += $result['allocations'];
             }
 
             fclose($handle);
 
             DB::commit();
 
+            $message = "Imported $importedCount candidates" 
+                . ($updatedCount > 0 ? ", updated $updatedCount" : '') 
+                . ($skippedCount > 0 ? ", skipped $skippedCount" : '')
+                . ($allocationsCreated > 0 ? ", allocated subjects for $allocationsCreated" : '');
+
             return [
-                'success' => true,
-                'message' => "Imported $importedCount candidates" . ($updatedCount > 0 ? ", updated $updatedCount" : '') . ($skippedCount > 0 ? ", skipped $skippedCount" : ''),
+                'success' => count($errors) === 0,
+                'message' => $message,
                 'imported_count' => $importedCount,
                 'skipped_count' => $skippedCount,
                 'updated_count' => $updatedCount,
-                'errors' => array_slice($errors, 0, 100)
+                'allocations_created_count' => $allocationsCreated,
+                'allocations_updated_count' => $allocationsUpdated,
+                'errors' => array_slice($errors, 0, 100),
+                'allocation_errors' => array_slice($allocationErrors, 0, 50)
             ];
 
         } catch (\Exception $e) {
@@ -375,12 +456,19 @@ class CandidateImportService
     }
 
     /**
-     * Validate combination for ACSEE
+     * Validate combination for ACSEE SCHOOL candidates
+     * Private candidates don't use combinations - they use manual subject selection
      */
-    private function validateCombination(?string $combination, array &$errors): void
+    private function validateCombination(?string $combination, array &$errors, string $candidateType = 'SCHOOL'): void
     {
+        // Private candidates don't require combination
+        if ($candidateType === 'PRIVATE') {
+            return;
+        }
+
+        // SCHOOL candidates require combination
         if (empty($combination)) {
-            $errors[] = 'combination is required for ACSEE candidates';
+            $errors[] = 'combination is required for ACSEE SCHOOL candidates';
             return;
         }
 
@@ -448,50 +536,77 @@ class CandidateImportService
     }
 
     /**
-     * Create a new candidate
+     * Create a new candidate - NECTA Phase 2 support (SCHOOL + PRIVATE)
      */
     private function createCandidate(array $record, ?string $examYear = null, ?string $examType = null): Candidate
     {
-        $school = School::where('code', $record['school_code'])->firstOrFail();
+        $candidateType = strtoupper($record['candidate_type'] ?? 'SCHOOL');
+        $finalExamType = strtoupper($record['exam_type'] ?? $examType ?? 'ACSEE');
 
-        $candidate = Candidate::create([
-            'school_id' => $school->id,
+        $candidateData = [
             'candidate_id' => $record['candidate_id'],
             'full_name' => $record['full_name'],
-            'gender' => strtoupper($record['gender'][0]),
-            'exam_type' => $record['exam_type'] ?? $examType ?? 'ACSEE',
-            'combination' => $record['combination'] ?? null,
+            'gender' => strtoupper($record['gender'][0] ?? 'M'),
+            'exam_type' => $finalExamType,
+            'candidate_type' => $candidateType,  // NECTA Phase 2
             'status' => 'registered',
             'is_active' => true,
-        ]);
+        ];
+
+        if ($candidateType === 'SCHOOL') {
+            // SCHOOL candidate: requires school_code and combination
+            $school = School::where('code', $record['school_code'])->firstOrFail();
+            $candidateData['school_id'] = $school->id;
+            $candidateData['combination_id'] = $this->getCombinationId($record['combination'] ?? null);
+        } else {
+            // PRIVATE candidate: requires district
+            $district = District::where('name', 'like', "%{$record['district']}%")->firstOrFail();
+            $candidateData['district_id'] = $district->id;
+        }
+
+        $candidate = Candidate::create($candidateData);
 
         // Register for ACSEE if needed
-        if ((strtoupper($record['exam_type'] ?? $examType ?? 'ACSEE') === 'ACSEE') && $record['combination']) {
-            $this->registerForACSEE($candidate, $record['combination'], $examYear);
+        if ($finalExamType === 'ACSEE') {
+            if ($candidateType === 'SCHOOL' && $record['combination']) {
+                $this->registerForACSEE($candidate, $record['combination'], $examYear);
+            } elseif ($candidateType === 'PRIVATE' && $record['subjects']) {
+                $this->registerForACSEEPrivate($candidate, $record['subjects'], $examYear);
+            }
         }
 
         return $candidate;
     }
 
     /**
-     * Update an existing candidate
+     * Update an existing candidate (REPLACE mode in import)
+     * 
+     * Safe update: only changes name, gender, school_id
+     * Does NOT change candidate_id, exam_type, combination to prevent exam allocation issues
      */
     private function updateCandidate(Candidate $candidate, array $record, ?string $examYear = null, ?string $examType = null): void
     {
-        $school = School::where('code', $record['school_code'])->firstOrFail();
+        $school = School::where('code', $record['school_code'])->first();
+        
+        if (!$school) {
+            Log::warning("Cannot update candidate {$candidate->candidate_id}: school {$record['school_code']} not found");
+            return;
+        }
 
+        // Safe update: name, gender, school only
+        // Immutable: candidate_id, exam_type, combination (to protect exam allocations)
         $candidate->update([
             'school_id' => $school->id,
             'full_name' => $record['full_name'],
-            'gender' => strtoupper($record['gender'][0]),
-            'exam_type' => $record['exam_type'] ?? $examType ?? $candidate->exam_type,
-            'combination' => $record['combination'] ?? $candidate->combination,
+            'gender' => strtoupper($record['gender'][0] ?? 'M'),
         ]);
 
-        // Re-register for ACSEE if combination changed
-        if ((strtoupper($record['exam_type'] ?? $examType ?? 'ACSEE') === 'ACSEE') && $record['combination']) {
-            $this->registerForACSEE($candidate, $record['combination'], $examYear);
-        }
+        Log::info("Updated candidate via import", [
+            'candidate_id' => $candidate->candidate_id,
+            'full_name' => $record['full_name'],
+            'school_id' => $school->id,
+            'mode' => 'replace'
+        ]);
     }
 
     /**
@@ -580,11 +695,187 @@ class CandidateImportService
     }
 
     /**
-     * Process a batch of candidate records
+     * Validate candidate type (SCHOOL or PRIVATE) - NECTA Phase 2
      */
-    private function processBatch(array $batch): int
+    private function validateCandidateType(string $type, &$errors): void
     {
-        $count = 0;
+        if (empty($type)) {
+            $errors[] = 'candidate_type is required (SCHOOL or PRIVATE)';
+            return;
+        }
+
+        if (!in_array(strtoupper($type), ['SCHOOL', 'PRIVATE'])) {
+            $errors[] = 'candidate_type must be SCHOOL or PRIVATE';
+        }
+    }
+
+    /**
+     * Validate district exists - NECTA Phase 2 (PRIVATE candidates)
+     */
+    private function validateDistrict(?string $districtName, &$errors): void
+    {
+        if (empty($districtName)) {
+            $errors[] = 'district is required for PRIVATE candidates';
+            return;
+        }
+
+        $district = District::where('name', 'like', "%$districtName%")->first();
+        if (!$district) {
+            $errors[] = "district not found: $districtName";
+        }
+    }
+
+    /**
+     * Validate subjects format and content - NECTA Phase 2 (PRIVATE candidates)
+     * Format: "111|102|103|104" (pipe-separated subject IDs)
+     */
+    private function validateSubjects(?string $subjectsStr, &$errors): void
+    {
+        if (empty($subjectsStr)) {
+            $errors[] = 'subjects are required for PRIVATE candidates (format: 111|102|103|104)';
+            return;
+        }
+
+        // Parse subject IDs
+        $subjectIds = array_map('intval', explode('|', $subjectsStr));
+        $subjectIds = array_filter($subjectIds);
+
+        if (empty($subjectIds)) {
+            $errors[] = 'Invalid subject format. Use pipe-separated IDs: 111|102|103|104';
+            return;
+        }
+
+        // Check for General Studies (111)
+        if (!in_array(111, $subjectIds)) {
+            $errors[] = 'General Studies (code 111) is mandatory for ACSEE candidates';
+        }
+
+        // Check minimum subjects (GS + 3 principals)
+        if (count($subjectIds) < 4) {
+            $errors[] = 'Minimum 4 subjects required (GS + 3 principals), found: ' . count($subjectIds);
+        }
+
+        // Verify all subjects exist
+        $missingIds = [];
+        foreach ($subjectIds as $id) {
+            if (!Subject::find($id)) {
+                $missingIds[] = $id;
+            }
+        }
+
+        if (!empty($missingIds)) {
+            $errors[] = 'Subject(s) not found: ' . implode(', ', $missingIds);
+        }
+    }
+
+    /**
+     * Get combination ID by code or name - NECTA Phase 2
+     */
+    private function getCombinationId(?string $combination): ?int
+    {
+        if (!$combination) {
+            return null;
+        }
+
+        $combo = Combination::where('code', strtoupper($combination))
+            ->orWhere('name', $combination)
+            ->first();
+
+        return $combo ? $combo->id : null;
+    }
+
+    /**
+     * Register PRIVATE candidate for ACSEE with specific subjects - NECTA Phase 2
+     */
+    private function registerForACSEEPrivate(Candidate $candidate, string $subjectsStr, ?string $examYearStr = null): void
+    {
+        $examType = ExamType::where('code', 'ACSEE')->first();
+        if (!$examType) {
+            throw new \Exception('ACSEE exam type not found');
+        }
+
+        // Resolve exam year
+        $examYear = null;
+        if ($examYearStr) {
+            $examYear = ExamYear::where('year_label', $examYearStr)->first();
+        }
+        if (!$examYear) {
+            $examYear = ExamYear::active()->first();
+        }
+        if (!$examYear) {
+            throw new \Exception('No active exam year found');
+        }
+
+        // Parse subject IDs
+        $subjectIds = array_map('intval', array_filter(explode('|', $subjectsStr)));
+
+        // Check if already registered
+        $existing = CandidateExamRegistration::where('candidate_id', $candidate->id)
+            ->where('exam_type_id', $examType->id)
+            ->where('exam_year_id', $examYear->id)
+            ->first();
+
+        if ($existing) {
+            return;
+        }
+
+        // Create registration
+        CandidateExamRegistration::create([
+            'candidate_id' => $candidate->id,
+            'exam_type_id' => $examType->id,
+            'exam_year_id' => $examYear->id,
+            'year' => (int)$examYear->year_label,
+            'registration_number' => 'REG-' . uniqid(),
+            'is_active' => true,
+            'is_verified' => false,
+        ]);
+
+        // Allocate specified subjects with NECTA validation
+        $validator = new AcseeAllocationValidator();
+        $result = $validator->validate($candidate, $examType->id, $examYear->id, $subjectIds);
+
+        if ($result['ok']) {
+            // Batch insert subject selections
+            $now = now();
+            $subjectSelections = [];
+
+            foreach ($result['all_subject_ids'] as $subjectId) {
+                $subjectSelections[] = [
+                    'candidate_id' => $candidate->id,
+                    'subject_id' => $subjectId,
+                    'exam_year_id' => $examYear->id,
+                    'is_principal' => in_array($subjectId, $result['principal_subject_ids']),
+                    'source' => 'import',
+                    'created_by' => Auth::id() ?? 1,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            if (!empty($subjectSelections)) {
+                CandidateSubjectSelection::insert($subjectSelections);
+            }
+        } else {
+            Log::warning('ACSEE subject allocation failed for PRIVATE candidate', [
+                'candidate_id' => $candidate->id,
+                'errors' => $result['errors']
+            ]);
+            throw new \Exception('Subject allocation failed: ' . implode('; ', $result['errors']));
+        }
+    }
+
+
+
+    /**
+     * Process a batch of candidate records
+     * 
+     * @param array $batch
+     * @return array {imported: int, allocations: int}
+     */
+    private function processBatch(array $batch): array
+    {
+        $imported = 0;
+        $allocations = 0;
 
         foreach ($batch as $item) {
             try {
@@ -601,24 +892,41 @@ class CandidateImportService
                     continue;
                 }
 
-                // Create candidate
-                $candidate = Candidate::create([
-                    'school_id' => $school->id,
-                    'candidate_id' => $record['candidate_id'],
-                    'full_name' => $record['full_name'],
-                    'gender' => strtoupper($record['gender'][0] ?? 'M'),
-                    'exam_type' => $examType,
-                    'combination' => $record['combination'] ?? null,
-                    'status' => 'registered',
-                    'is_active' => true,
-                ]);
+                // Auto-detect candidate type from index number prefix
+                 $validator = new IndexNumberValidator();
+                 $parsed = $validator->parse($record['candidate_id']);
+                 $candidateType = $parsed?->candidate_type ?? 'SCHOOL'; // Default to SCHOOL if parsing fails
+
+                  // Create candidate
+                  $candidate = Candidate::create([
+                      'school_id' => $school->id,
+                      'candidate_id' => $record['candidate_id'],
+                      'full_name' => $record['full_name'],
+                      'gender' => strtoupper($record['gender'][0] ?? 'M'),
+                      'exam_type' => $examType,
+                      'combination' => $record['combination'] ?? null,
+                      'candidate_type' => $candidateType,
+                      'status' => 'registered',
+                      'is_active' => true,
+                  ]);
 
                 // Register for ACSEE if needed
-                if (strtoupper($examType) === 'ACSEE' && $record['combination'] && $acseeType && $examYear) {
-                    $this->registerForACSEEBatch($candidate, $record['combination'], $acseeType, $examYear);
+                if (strtoupper($examType) === 'ACSEE' && $acseeType && $examYear) {
+                    if ($candidateType === 'SCHOOL' && $record['combination']) {
+                        $this->registerForACSEEBatch($candidate, $record['combination'], $acseeType, $examYear);
+                    } elseif ($candidateType === 'PRIVATE' && $record['subjects']) {
+                        // Allocate specific subjects for PRIVATE candidates
+                        $allocationErrors = [];
+                        $allocCount = $this->allocateSubjectsForPrivateCandidate($candidate, $record['subjects'], $acseeType, $examYear, $allocationErrors);
+                        $allocations += $allocCount;
+                        // Note: allocation errors are logged but don't fail the import
+                        if (!empty($allocationErrors)) {
+                            Log::warning("Allocation errors for {$candidate->candidate_id}", $allocationErrors);
+                        }
+                    }
                 }
 
-                $count++;
+                $imported++;
 
             } catch (\Exception $e) {
                 Log::error("Batch process error: " . $e->getMessage(), [
@@ -627,7 +935,7 @@ class CandidateImportService
             }
         }
 
-        return $count;
+        return ['imported' => $imported, 'allocations' => $allocations];
     }
 
     /**
@@ -684,6 +992,126 @@ class CandidateImportService
 
         if (!empty($subjectSelections)) {
             CandidateSubjectSelection::insert($subjectSelections);
+        }
+    }
+
+    /**
+     * Allocate subjects for PRIVATE candidates from CSV import
+     * Uses AcseeAllocationValidator to ensure NECTA compliance
+     * 
+     * @param Candidate $candidate - The candidate to allocate subjects for
+     * @param string $subjectsStr - Pipe-delimited subject IDs or codes (e.g., "111|102|103|121")
+     * @param ExamType $examType - ACSEE exam type
+     * @param ExamYear $examYear - The exam year
+     * @param array &$errors - Reference to collect allocation errors
+     * @return int - Number of allocations created/updated (0 if errors)
+     */
+    private function allocateSubjectsForPrivateCandidate(
+        Candidate $candidate,
+        string $subjectsStr,
+        ExamType $examType,
+        ExamYear $examYear,
+        &$errors = []
+    ): int {
+        try {
+            if (empty($subjectsStr)) {
+                return 0;
+            }
+
+            // Parse subject identifiers (can be IDs or codes)
+            $subjectIdentifiers = array_filter(
+                array_map('trim', explode('|', $subjectsStr)),
+                fn($s) => !empty($s)
+            );
+
+            if (empty($subjectIdentifiers)) {
+                return 0;
+            }
+
+            // Resolve subject IDs from identifiers (codes or numeric IDs)
+            $subjectIds = [];
+            foreach ($subjectIdentifiers as $identifier) {
+                $subject = is_numeric($identifier)
+                    ? Subject::find((int)$identifier)
+                    : Subject::where('code', strtoupper($identifier))->first();
+
+                if ($subject) {
+                    $subjectIds[] = $subject->id;
+                }
+            }
+
+            if (empty($subjectIds)) {
+                $errors[] = "No valid subjects found for candidate {$candidate->candidate_id}";
+                return 0;
+            }
+
+            // Validate using AcseeAllocationValidator
+            $validator = new AcseeAllocationValidator();
+            $validation = $validator->validate($candidate, $examType->id, $examYear->id, $subjectIds);
+
+            if (!$validation['ok']) {
+                foreach ($validation['errors'] as $error) {
+                    $errors[] = "Candidate {$candidate->candidate_id}: $error";
+                }
+                return 0;
+            }
+
+            // Delete existing allocations for this candidate+exam type+exam year (replace mode)
+            CandidateSubjectSelection::where('candidate_id', $candidate->id)
+                ->where('exam_type_id', $examType->id)
+                ->where('exam_year_id', $examYear->id)
+                ->delete();
+
+            // Build allocations using validator results
+            $now = now();
+            $allocations = [];
+
+            // Add General Studies (is_principal=false as it's mandatory)
+            $generalStudies = Subject::where('code', '111')->first();
+            if ($generalStudies) {
+                $allocations[] = [
+                    'candidate_id' => $candidate->id,
+                    'exam_type_id' => $examType->id,
+                    'exam_year_id' => $examYear->id,
+                    'subject_id' => $generalStudies->id,
+                    'year' => (int)$examYear->year_label,
+                    'is_principal' => false,
+                    'source' => 'import',
+                    'created_by' => Auth::id() ?? 1,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            // Add principal subjects (is_principal=true)
+            foreach ($validation['principal_subject_ids'] as $subjectId) {
+                $allocations[] = [
+                    'candidate_id' => $candidate->id,
+                    'exam_type_id' => $examType->id,
+                    'exam_year_id' => $examYear->id,
+                    'subject_id' => $subjectId,
+                    'year' => (int)$examYear->year_label,
+                    'is_principal' => true,
+                    'source' => 'import',
+                    'created_by' => Auth::id() ?? 1,
+                    'is_active' => true,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            // Insert allocations
+            if (!empty($allocations)) {
+                CandidateSubjectSelection::insert($allocations);
+                return count($allocations);
+            }
+
+            return 0;
+
+        } catch (\Exception $e) {
+            $errors[] = "Candidate {$candidate->candidate_id}: " . $e->getMessage();
+            return 0;
         }
     }
 }
