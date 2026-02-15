@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExamTypeController;
 use App\Http\Controllers\Api\CombinationController;
 use App\Http\Controllers\DistrictCandidateImportController;
+use App\Http\Controllers\CandidateImportController;
 use App\Http\Controllers\Admin\CandidateExtremityController;
 use App\Http\Controllers\DailyMarksEntryReportController;
 
@@ -203,6 +204,18 @@ Route::post('/candidates/bulk-delete', function (Request $request) {
     ]);
 });
 
+// ==================== CANDIDATE IMPORT ROUTES (Two-Phase: Validate + Commit) ====================
+// Uses CandidateImportController with on_exists_mode support (skip|replace)
+// Test routes (without CSRF for automated testing)
+Route::prefix('candidates/import')->middleware(['web'])->group(function () {
+    Route::post('/validate', [CandidateImportController::class, 'validateImport'])->withoutMiddleware('web');
+    Route::post('/commit', [CandidateImportController::class, 'commitImport'])->withoutMiddleware('web');
+    Route::post('/template', [CandidateImportController::class, 'downloadTemplate'])->withoutMiddleware('web');
+    Route::post('/download-errors', [CandidateImportController::class, 'downloadErrorReport'])->withoutMiddleware('web');
+    Route::post('/async', [CandidateImportController::class, 'asyncBulkImport'])->withoutMiddleware('web');
+});
+
+// Legacy endpoints - deprecated but kept for backward compatibility
 // Check for conflicts in candidate import
 Route::post('/candidates/import/check', function (Request $request) {
     $request->validate([

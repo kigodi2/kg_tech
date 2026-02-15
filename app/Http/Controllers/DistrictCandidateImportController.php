@@ -9,6 +9,7 @@ use App\Models\ExamType;
 use App\Models\ExamYear;
 use App\Models\CandidateExamRegistration;
 use App\Models\CandidateSubjectSelection;
+use App\Services\IndexNumber\IndexNumberValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -97,21 +98,26 @@ class DistrictCandidateImportController extends Controller
                     }
 
                     // Check if candidate already exists
-                    $candidate = Candidate::where('candidate_id', $candidateId)->first();
-                    
-                    if ($candidate) {
-                        $stats['candidates_skipped']++;
-                        continue;
-                    }
+                     $candidate = Candidate::where('candidate_id', $candidateId)->first();
+                     
+                     if ($candidate) {
+                         $stats['candidates_skipped']++;
+                         continue;
+                     }
 
-                    // Create candidate
-                    $candidate = Candidate::create([
-                        'school_id' => $school->id,
-                        'candidate_id' => $candidateId,
-                        'full_name' => $fullName,
-                        'gender' => strtoupper($gender[0]),
-                        'date_of_birth' => null,
-                    ]);
+                     // Auto-detect candidate type from index number prefix
+                     $validator = new IndexNumberValidator();
+                     $parsed = $validator->parse($candidateId);
+                     $candidateType = $parsed?->candidate_type ?? 'SCHOOL'; // Default to SCHOOL if parsing fails
+
+                     // Create candidate
+                     $candidate = Candidate::create([
+                         'school_id' => $school->id,
+                         'candidate_id' => $candidateId,
+                         'full_name' => $fullName,
+                         'gender' => strtoupper($gender[0]),
+                         'candidate_type' => $candidateType,
+                     ]);
 
                     // Register for ACSEE if specified
                     if (strtoupper($examType) === 'ACSEE') {

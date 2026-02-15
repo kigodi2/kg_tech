@@ -17,6 +17,7 @@ use App\Http\Controllers\HierarchyController;
 use App\Http\Controllers\PublicResultsController;
 use App\Http\Controllers\DistrictCandidateImportController;
 use App\Http\Controllers\CandidateImportController;
+use App\Http\Controllers\AcseeAllocationController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -53,6 +54,25 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 
 // Protected routes
+// Test Seeding API (for E2E tests only - disabled in production)
+if (config('app.env') === 'testing' || config('app.debug')) {
+    Route::post('/api/test-seed/user', function (\Illuminate\Http\Request $request) {
+        $email = $request->input('email', 'admin@test.com');
+        $password = $request->input('password', 'password');
+        
+        \App\Models\User::firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'Test User',
+                'password' => \Illuminate\Support\Facades\Hash::make($password),
+                'status' => 'active',
+            ]
+        );
+        
+        return response()->json(['message' => 'User seeded']);
+    });
+}
+
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     
@@ -77,6 +97,10 @@ Route::middleware('auth')->group(function () {
     });
     Route::get('/exam-types', function () { 
         return view('exam-types.index'); 
+    });
+    // Dedicated ACSEE route
+    Route::get('/exam-types/acsee', function () { 
+        return view('exam-types.acsee'); 
     });
     Route::get('/exam-types/{code}', function ($code) { 
         return view('exam-types.show', ['code' => $code]); 
@@ -652,6 +676,7 @@ Route::middleware('auth')->group(function () {
                 'school_name' => $c->school->name ?? null,
                 'exam_type' => $c->exam_type,
                 'exam_year' => $c->exam_year,
+                'candidate_type' => $c->candidate_type ?? 'SCHOOL',
                 'status' => $c->status ?? 'registered'
             ];
         });
@@ -1489,6 +1514,14 @@ Route::middleware('auth')->group(function () {
               ], 404);
           }
       });
+
+      // ACSEE Allocation CSV Import Routes
+      Route::get('/api/exam-types/acsee/templates/school-allocation.csv', [AcseeAllocationController::class, 'getSchoolTemplate']);
+      Route::get('/api/exam-types/acsee/templates/private-allocation.csv', [AcseeAllocationController::class, 'getPrivateTemplate']);
+      Route::post('/api/exam-types/acsee/allocate-from-csv/validate', [AcseeAllocationController::class, 'validateAllocationImport']);
+      Route::post('/api/exam-types/acsee/allocate-from-csv/commit', [AcseeAllocationController::class, 'commitAllocationImport']);
+      Route::post('/api/exam-types/acsee/allocate-from-csv', [AcseeAllocationController::class, 'importAllocations']);
+      Route::post('/api/exam-types/acsee/allocate-from-csv/download-errors', [AcseeAllocationController::class, 'downloadErrorReport']);
 
       // Mark Entry Module Routes (ACSEE)
       Route::get('/mark-entry/acsee', [MarkEntryController::class, 'index']);

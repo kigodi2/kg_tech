@@ -17,7 +17,7 @@
             <div class="flex border-b border-gray-200">
                 <button @click="activeTab = 'subjects'" :class="activeTab === 'subjects' ? 'bg-blue-50 border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="flex-1 py-4 px-6 font-medium transition-colors">Subjects</button>
                 <button @click="activeTab = 'combinations'" :class="activeTab === 'combinations' ? 'bg-blue-50 border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="flex-1 py-4 px-6 font-medium transition-colors">Combinations</button>
-                <button @click="activeTab = 'candidates'" :class="activeTab === 'candidates' ? 'bg-blue-50 border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="flex-1 py-4 px-6 font-medium transition-colors">Candidates</button>
+                <button @click="activeTab = 'candidates'" :class="activeTab === 'candidates' ? 'bg-blue-50 border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="flex-1 py-4 px-6 font-medium transition-colors" data-testid="candidates-tab">Candidates</button>
             </div>
         </div>
 
@@ -121,16 +121,27 @@
 
         <!-- CANDIDATES TAB (READ-ONLY) -->
          <div x-show="activeTab === 'candidates'" class="space-y-6">
-             <!-- Search Section -->
-             <div class="bg-gray-50 rounded-lg px-6 py-4 flex gap-4 items-center">
-                 <input x-model="candidateSearch" @input="filterAcseeCandicates()" type="text" placeholder="Search candidates..." class="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 placeholder-gray-400">
+             <!-- Search and Filter Section -->
+             <div class="bg-gray-50 rounded-lg px-6 py-4 flex gap-4 items-center flex-wrap">
+                 <input x-model="candidateSearch" @input="filterAcseeCandicates()" type="text" placeholder="Search candidates..." class="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 placeholder-gray-400 min-w-64">
+                 <div class="flex gap-2 items-center">
+                     <label class="text-sm font-medium text-gray-700">Candidate Type:</label>
+                     <select x-model="candidateTypeFilter" @change="applyCandidateTypeFilter()" class="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                         <option value="ALL">All</option>
+                         <option value="SCHOOL">School</option>
+                         <option value="PRIVATE">Private</option>
+                     </select>
+                 </div>
                  <button @click="exportAcseeCandicates()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors text-sm whitespace-nowrap">
                      <i class="fas fa-download"></i> Export Excel
+                 </button>
+                 <button @click="openBulkImportModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors text-sm whitespace-nowrap" data-testid="bulk-import-button">
+                     <i class="fas fa-upload"></i> Bulk Import CSV
                  </button>
              </div>
 
             <!-- Candidates Table (Read-Only) -->
-            <div class="bg-white rounded-lg shadow overflow-x-auto">
+            <div class="bg-white rounded-lg shadow overflow-x-auto" data-testid="candidates-table">
                 <div x-show="loadingAcseeCandicates" class="p-6 text-center text-gray-500">
                     <i class="fas fa-spinner animate-spin text-2xl"></i> Loading candidates...
                 </div>
@@ -151,7 +162,7 @@
                             <tr class="hover:bg-blue-100 transition-colors">
                                  <td class="px-6 py-4 text-sm font-mono text-gray-800" x-text="candidate.candidate_id || candidate.id"></td>
                                 <td class="px-6 py-4 text-sm text-gray-800 font-medium" x-text="candidate.full_name"></td>
-                                <td class="px-6 py-4 text-sm text-gray-600 text-center" x-text="candidate.gender === 'M' ? '♂ Male' : candidate.gender === 'F' ? '♀ Female' : '-'"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600 text-center" x-text="candidate.gender === 'M' ? 'M' : candidate.gender === 'F' ? 'F' : '-'"></td>
                                 <td class="px-6 py-4 text-sm text-gray-600 font-mono" x-text="candidate.combination || '-'"></td>
                                 <td class="px-6 py-4 text-sm text-gray-600">
                                     <span x-text="candidate.allocated_subjects.length > 0 ? candidate.allocated_subjects.map(s => s.code).join(', ') : '-'"></span>
@@ -293,20 +304,44 @@
                     </div>
                 </form>
             </div>
-        <!-- ALLOCATION MODAL -->
-        <div x-show="allocationModalOpen" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @click.self="closeAllocationModal()" x-transition style="display: none;">
-            <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" x-transition>
-                <div class="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
-                    <div>
-                        <h2 class="text-2xl font-bold text-gray-800">Allocate Subjects</h2>
-                        <p class="text-sm text-gray-600 mt-1" x-text="allocationCandidate ? `${allocationCandidate.full_name} (${allocationCandidate.candidate_id})` : ''"></p>
-                    </div>
-                    <button @click="closeAllocationModal()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
-                </div>
+        <!-- ALLOCATION MODAL - TELEPORTED TO BODY TO ESCAPE HIDDEN TAB CONTAINER -->
+        <template x-teleport="body">
+         <div 
+               x-cloak 
+               @click.self="closeAllocationModal()" 
+               :style="(allocationModalOpen || bulkImportModalOpen) 
+                   ? 'display: flex; position: fixed; inset: 0; z-index: 9999;' 
+                   : 'display: none;'"
+               class="bg-black/50 items-center justify-center p-4" 
+               data-testid="bulk-import-modal"
+          >
+              <div class="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" x-transition>
+                 <div class="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
+                     <div>
+                         <h2 class="text-2xl font-bold text-gray-800" x-text="bulkImportModalOpen ? 'Bulk Import Allocations' : 'Allocate Subjects'"></h2>
+                         <p class="text-sm text-gray-600 mt-1" x-show="!bulkImportModalOpen" x-text="allocationCandidate ? `${allocationCandidate.full_name} (${allocationCandidate.candidate_id})` : ''"></p>
+                     </div>
+                     <button @click="closeAllocationModal()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none" data-testid="modal-close-button">&times;</button>
+                 </div>
 
-                <div class="p-6 space-y-6">
-                    <!-- Mode Selector -->
-                    <div class="flex gap-4 border-b border-gray-200 pb-4">
+                 <!-- Tab Switcher (for bulk import) -->
+                 <div x-show="bulkImportModalOpen" class="flex border-b border-gray-200 px-6 pt-6">
+                     <button @click="bulkPhase = 'idle'" :class="bulkPhase === 'idle' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="pb-3 px-4 font-medium transition-colors">Import CSV</button>
+                 </div>
+
+                 <div class="p-6 space-y-6">
+                     <!-- PHASE 2b: Bulk CSV import UI integrated with Phase 2a backend endpoints:
+                         - GET /api/exam-types/acsee/templates/school-allocation.csv
+                         - GET /api/exam-types/acsee/templates/private-allocation.csv
+                         - POST /api/exam-types/acsee/allocate-from-csv/validate
+                         - POST /api/exam-types/acsee/allocate-from-csv/commit
+                         - POST /api/exam-types/acsee/allocate-from-csv/download-errors
+                     -->
+
+                     <!-- Single Candidate Allocation (shown when allocationModalOpen) -->
+                     <div x-show="!bulkImportModalOpen">
+                     <!-- Mode Selector -->
+                     <div class="flex gap-4 border-b border-gray-200 pb-4">
                         <button 
                             @click="setAllocationMode('template')"
                             :class="allocationMode === 'template' ? 'border-b-2 border-blue-600 text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-800'"
@@ -449,9 +484,280 @@
                             </span>
                         </button>
                     </div>
+                    </div> <!-- End of single-candidate allocation section -->
+
+                    <!-- BULK IMPORT LOADING SPINNER -->
+                     <div x-show="bulkLoadingContexts" class="bg-blue-50 border border-blue-200 rounded-lg p-6 flex items-center gap-3">
+                         <i class="fas fa-spinner animate-spin text-blue-600 text-lg"></i>
+                         <span class="text-sm font-medium text-blue-900">Loading exam years…</span>
+                     </div>
+
+                    <!-- BULK IMPORT ERROR MESSAGE -->
+                     <div x-show="bulkErrorMessage && !bulkLoadingContexts" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                         <p class="text-sm text-red-800" x-text="bulkErrorMessage"></p>
+                     </div>
+
+                    <!-- BULK IMPORT SECTION (shown when bulkImportModalOpen) -->
+                     <div x-show="bulkImportModalOpen" class="space-y-6">
+                        <!-- Template Download Section -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <h3 class="font-semibold text-blue-900 mb-3">1. Download Template</h3>
+                            <div class="flex gap-3">
+                                <button 
+                                    @click="downloadTemplate('SCHOOL')"
+                                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                                    data-testid="download-school-template"
+                                >
+                                    <i class="fas fa-download"></i> School Template
+                                </button>
+                                <button 
+                                    @click="downloadTemplate('PRIVATE')"
+                                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                                    data-testid="download-private-template"
+                                >
+                                    <i class="fas fa-download"></i> Private Template
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Import Mode Selection -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">2. Select Import Mode</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" x-model="bulkImportMode" value="SCHOOL" class="w-4 h-4 rounded">
+                                    <span class="text-sm text-gray-700">School (Combination-based)</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" x-model="bulkImportMode" value="PRIVATE" class="w-4 h-4 rounded">
+                                    <span class="text-sm text-gray-700">Private (Subject Codes)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- File Upload -->
+                         <div>
+                             <label class="block text-sm font-semibold text-gray-700 mb-2">3. Upload CSV File</label>
+                             <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                 <input 
+                                     type="file" 
+                                     accept=".csv"
+                                     @change="handleBulkFileUpload($event)"
+                                     class="hidden"
+                                     x-ref="bulkFileInput"
+                                     id="bulkCsvFile"
+                                     data-testid="bulk-csv-file"
+                                     :disabled="bulkLoadingContexts"
+                                 >
+                                 <button 
+                                     @click="$refs.bulkFileInput.click()"
+                                     :disabled="bulkLoadingContexts"
+                                     class="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                 >
+                                    <i class="fas fa-folder-open"></i> Select CSV File
+                                </button>
+                                <p class="text-sm text-gray-600 mt-2" x-text="bulkUploadedFileName ? `Selected: ${bulkUploadedFileName} (${(bulkUploadedFileSize / 1024).toFixed(2)} KB)` : 'No file selected'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Exam Year Selection -->
+                         <div>
+                             <label class="block text-sm font-semibold text-gray-700 mb-2">4. Select Exam Year *</label>
+                             <select 
+                                 x-model="bulkExamYearId" 
+                                 @change.prevent="bulkExamYearId = String(bulkExamYearId)"
+                                 :disabled="bulkLoadingContexts || !allocationExamYears || allocationExamYears.length === 0"
+                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed" 
+                                 data-testid="bulk-exam-year-select"
+                             >
+                                 <option value="">-- Select Exam Year --</option>
+                                 <template x-for="year in allocationExamYears || []" :key="year.id">
+                                     <option :value="String(year.id)" x-text="year.year_label"></option>
+                                 </template>
+                             </select>
+                             <p x-show="!allocationExamYears || allocationExamYears.length === 0" class="text-sm text-red-600 mt-2">
+                                 No exam years found. Please create an exam year first.
+                             </p>
+                         </div>
+
+                        <!-- Candidate Type Filter (for bulk import context) -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">5. Candidate Type Filter</label>
+                            <select x-model="bulkCandidateTypeFilter" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="ALL">All Candidates</option>
+                                <option value="SCHOOL">School Only</option>
+                                <option value="PRIVATE">Private Only</option>
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">Filter will be applied during import validation</p>
+                        </div>
+
+                        <!-- Replace Allocations Checkbox -->
+                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                            <div class="flex items-start gap-3">
+                                <input 
+                                    type="checkbox" 
+                                    id="bulkReplace"
+                                    x-model="bulkReplaceAllocations"
+                                    class="w-4 h-4 rounded mt-1"
+                                    data-testid="bulk-replace-checkbox"
+                                >
+                                <div class="flex-1">
+                                    <label for="bulkReplace" class="text-sm font-medium text-gray-700 cursor-pointer">Replace existing allocations</label>
+                                    <p class="text-xs text-orange-700 mt-1" data-testid="replace-warning">
+                                        <strong>⚠ Warning:</strong> If checked, ALL existing allocations for the selected exam year will be deleted and replaced with data from this import.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Validation Phase UI -->
+                         <div x-show="bulkPhase !== 'idle'" class="space-y-4" data-testid="validation-phase">
+                             <!-- Validation Report -->
+                             <div x-show="bulkValidationReport" class="bg-gray-50 border border-gray-200 rounded-lg p-4" data-testid="validation-report">
+                                <h3 class="font-semibold text-gray-800 mb-3">Validation Report</h3>
+                                <div class="grid grid-cols-3 gap-4 mb-4">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-blue-600" x-text="(bulkValidationReport && bulkValidationReport.total_rows) || 0"></div>
+                                        <div class="text-xs text-gray-600">Total Rows</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-green-600" x-text="(bulkValidationReport && bulkValidationReport.valid_count) || 0"></div>
+                                        <div class="text-xs text-gray-600">Valid</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-red-600" x-text="(bulkValidationReport && bulkValidationReport.invalid_count) || 0"></div>
+                                        <div class="text-xs text-gray-600">Invalid</div>
+                                    </div>
+                                </div>
+
+                                <!-- Error List -->
+                                <div x-show="bulkValidationReport && bulkValidationReport.invalid_count > 0" class="mt-4">
+                                    <h4 class="font-semibold text-sm text-red-800 mb-2">Errors (<span x-text="bulkLastErrors.length"></span>)</h4>
+                                    <div class="max-h-64 overflow-y-auto space-y-2">
+                                        <template x-for="(error, idx) in bulkLastErrors.slice(0, 10)" :key="idx">
+                                            <div class="bg-white p-3 rounded border border-red-200 text-xs">
+                                                <div class="font-semibold text-red-700" x-text="`Row ${error.row_number}: ${error.index_number}`"></div>
+                                                <div class="text-gray-700 mt-1">
+                                                    <template x-for="msg in error.error_messages" :key="msg">
+                                                        <div>• <span x-text="msg"></span></div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <p x-show="bulkLastErrors.length > 10" class="text-xs text-gray-600 mt-2" x-text="`And ${bulkLastErrors.length - 10} more errors...`"></p>
+                                </div>
+                            </div>
+
+                            <!-- Commit Report (after commit) -->
+                            <div x-show="bulkCommitReport" class="bg-gray-50 border border-gray-200 rounded-lg p-4" data-testid="commit-report">
+                                <h3 class="font-semibold text-gray-800 mb-3">Import Complete</h3>
+                                <div class="grid grid-cols-3 gap-4 mb-4">
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-green-600" x-text="(bulkCommitReport && bulkCommitReport.success_count) || 0"></div>
+                                        <div class="text-xs text-gray-600">Successful</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-yellow-600" x-text="(bulkCommitReport && bulkCommitReport.skipped_count) || 0"></div>
+                                        <div class="text-xs text-gray-600">Skipped</div>
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="text-2xl font-bold text-red-600" x-text="(bulkCommitReport && bulkCommitReport.failed_count) || 0"></div>
+                                        <div class="text-xs text-gray-600">Failed</div>
+                                    </div>
+                                </div>
+
+                                <!-- Affected Candidates -->
+                                <div x-show="bulkCommitReport && bulkCommitReport.affected_candidates && bulkCommitReport.affected_candidates.length > 0" class="mt-4">
+                                    <h4 class="font-semibold text-sm text-gray-800 mb-2">Affected Candidates</h4>
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <template x-for="candidate in (bulkCommitReport && bulkCommitReport.affected_candidates) || []" :key="candidate.id">
+                                            <div class="text-xs p-2 bg-white rounded border border-gray-200">
+                                                <span class="font-mono text-blue-600" x-text="candidate.index_number"></span>
+                                                <span class="text-gray-700" x-text="`(${candidate.full_name})`"></span>
+                                                <span class="text-gray-600" x-text="`${candidate.allocation_count} subject(s)`"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+
+                                <!-- Commit Errors -->
+                                <div x-show="bulkCommitReport && bulkCommitReport.failed_count > 0" class="mt-4">
+                                    <h4 class="font-semibold text-sm text-red-800 mb-2">Errors</h4>
+                                    <div class="max-h-40 overflow-y-auto space-y-2">
+                                        <template x-for="(error, idx) in bulkLastErrors.slice(0, 5)" :key="idx">
+                                            <div class="bg-white p-2 rounded border border-red-200 text-xs">
+                                                <div class="font-semibold text-red-700" x-text="`Row ${error.row_number}`"></div>
+                                                <div class="text-gray-700">
+                                                    <template x-for="msg in error.error_messages" :key="msg">
+                                                        <div>• <span x-text="msg"></span></div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Error Messages -->
+                            <div x-show="bulkErrorMessage" class="bg-red-50 border border-red-200 rounded-lg p-4" data-testid="error-message">
+                                <p class="text-sm text-red-800" x-text="bulkErrorMessage"></p>
+                            </div>
+                            <div x-show="bulkSuccessMessage" class="bg-green-50 border border-green-200 rounded-lg p-4">
+                                <p class="text-sm text-green-800" x-text="bulkSuccessMessage"></p>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-3 pt-4 border-t border-gray-200">
+                            <button 
+                                type="button"
+                                @click="closeAllocationModal()"
+                                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                            <button 
+                                type="button"
+                                @click="downloadBulkErrorReport()"
+                                x-show="bulkPhase !== 'idle' && bulkLastErrors.length > 0"
+                                class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
+                                data-testid="download-error-rows-button"
+                            >
+                                <i class="fas fa-download"></i> Error Rows CSV
+                            </button>
+                            <button 
+                                type="button"
+                                @click="validateBulkCSV()"
+                                x-show="bulkPhase === 'idle'"
+                                :disabled="!bulkUploadedFile || !bulkExamYearId || bulkProcessing || bulkLoadingContexts"
+                                class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                data-testid="validate-button"
+                            >
+                                <span x-show="!bulkProcessing">Validate CSV</span>
+                                <span x-show="bulkProcessing" class="flex items-center gap-2">
+                                    <i class="fas fa-spinner animate-spin"></i> Validating...
+                                </span>
+                            </button>
+                            <button 
+                                type="button"
+                                @click="commitBulkCSV()"
+                                x-show="bulkPhase === 'reviewing' && bulkValidationReport && bulkValidationReport.invalid_count === 0"
+                                :disabled="bulkProcessing || bulkLoadingContexts"
+                                class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                data-testid="commit-button"
+                            >
+                                <span x-show="!bulkProcessing">Commit Import</span>
+                                <span x-show="bulkProcessing" class="flex items-center gap-2">
+                                    <i class="fas fa-spinner animate-spin"></i> Committing...
+                                </span>
+                            </button>
+                        </div>
+                    </div> <!-- End of bulk import section -->
                 </div>
             </div>
         </div>
+        </template> <!-- End of x-teleport -->
     </div>
 </div>
 
@@ -499,6 +805,7 @@ function acseeManager() {
 
         // Allocation Modal
         allocationModalOpen: false,
+        bulkImportModalOpen: false,
         allocationCandidate: null,
         allocationMode: 'template',
         allocationExamYearId: '',
@@ -511,6 +818,32 @@ function acseeManager() {
         allocationAllSubjects: [],
         allocationPreviewSubjects: [],
         allocationValidationMessages: { errors: [], warnings: [] },
+
+        // Candidate Type Filter
+        candidateTypeFilter: 'ALL', // ALL|SCHOOL|PRIVATE
+
+        // Bulk Import State
+        bulkImportMode: 'SCHOOL', // SCHOOL|PRIVATE
+        bulkExamYearId: '',
+        bulkCandidateTypeFilter: 'ALL', // Filter for bulk import
+        bulkReplaceAllocations: false,
+        bulkProcessing: false,
+        bulkLoadingContexts: false,  // Loading state while fetching exam years, combinations, subjects
+
+        // File Upload
+        bulkUploadedFile: null,
+        bulkUploadedFileName: '',
+        bulkUploadedFileSize: 0,
+
+        // Two-phase Import State
+        bulkPhase: 'idle', // idle|validating|reviewing|committing|complete
+        bulkValidationReport: null,
+        bulkCommitReport: null,
+        bulkLastErrors: [], // Store errors for download
+
+        // UI Messaging
+        bulkErrorMessage: '',
+        bulkSuccessMessage: '',
 
         async init() {
             console.log('=== ACSEE Manager Initialized ===');
@@ -957,9 +1290,11 @@ function acseeManager() {
 
         closeAllocationModal() {
             this.allocationModalOpen = false;
+            this.bulkImportModalOpen = false;
             this.allocationCandidate = null;
             this.allocationSubjectIds = [];
             this.allocationValidationMessages = { errors: [], warnings: [] };
+            this.resetBulkState();
         },
 
         setAllocationMode(mode) {
@@ -971,24 +1306,48 @@ function acseeManager() {
         },
 
         async loadAllocationContexts() {
+            this.bulkErrorMessage = '';
+            this.bulkLoadingContexts = true;
             try {
                 // Load exam years
-                const yearsResponse = await fetch('/api/exam-years');
+                const yearsResponse = await fetch('/api/exam-years', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!yearsResponse.ok) {
+                    throw new Error(`Failed to load exam years (HTTP ${yearsResponse.status})`);
+                }
                 const yearsData = await yearsResponse.json();
-                this.allocationExamYears = yearsData.data || [];
+                // API returns { exam_years: [...], active_year: ... }
+                this.allocationExamYears = Array.isArray(yearsData) ? yearsData : (yearsData.exam_years || yearsData.data || []);
 
                 // Load combinations for ACSEE
-                const combosResponse = await fetch('/api/exam-types/ACSEE/combinations');
+                const combosResponse = await fetch('/api/exam-types/ACSEE/combinations', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!combosResponse.ok) {
+                    throw new Error(`Failed to load combinations (HTTP ${combosResponse.status})`);
+                }
                 const combosData = await combosResponse.json();
-                this.allocationCombinations = combosData.data || [];
+                this.allocationCombinations = Array.isArray(combosData) ? combosData : (combosData.data || []);
 
                 // Load all subjects for ACSEE
-                const subjectsResponse = await fetch('/api/exam-types/ACSEE/subjects');
+                const subjectsResponse = await fetch('/api/exam-types/ACSEE/subjects', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (!subjectsResponse.ok) {
+                    throw new Error(`Failed to load subjects (HTTP ${subjectsResponse.status})`);
+                }
                 const subjectsData = await subjectsResponse.json();
-                this.allocationAllSubjects = subjectsData.data || [];
+                this.allocationAllSubjects = Array.isArray(subjectsData) ? subjectsData : (subjectsData.data || []);
             } catch (error) {
                 console.error('Error loading allocation contexts:', error);
-                this.showMessage('Error loading data for allocation', 'error');
+                this.bulkErrorMessage = 'Unable to load exam years. Please refresh the page or try again.';
+                // Keep stable - preserve existing data or set to empty
+                this.allocationExamYears = this.allocationExamYears || [];
+                this.allocationCombinations = this.allocationCombinations || [];
+                this.allocationAllSubjects = this.allocationAllSubjects || [];
+            } finally {
+                this.bulkLoadingContexts = false;
             }
         },
 
@@ -1112,6 +1471,270 @@ function acseeManager() {
             } finally {
                 this.allocationProcessing = false;
             }
+        },
+
+        // ==================== BULK CSV IMPORT FUNCTIONS ====================
+
+        applyCandidateTypeFilter() {
+            // Filter the candidate list based on selected type
+            if (this.candidateTypeFilter === 'ALL') {
+                this.acseeCandicates = this.acseeCandicates; // No filter
+                this.bulkImportMode = 'SCHOOL'; // Default
+            } else if (this.candidateTypeFilter === 'SCHOOL') {
+                // Filter to show only SCHOOL candidates
+                this.acseeCandicates = this.acseeCandicates.filter(c => c.candidate_type === 'SCHOOL');
+                this.bulkImportMode = 'SCHOOL';
+            } else if (this.candidateTypeFilter === 'PRIVATE') {
+                // Filter to show only PRIVATE candidates
+                this.acseeCandicates = this.acseeCandicates.filter(c => c.candidate_type === 'PRIVATE');
+                this.bulkImportMode = 'PRIVATE';
+            }
+            // Reload to ensure filters are applied
+            this.acseeCurrentPage = 1;
+            this.loadAcseeCandicates();
+        },
+
+        downloadTemplate(type) {
+            const filename = type === 'SCHOOL' 
+                ? 'school_allocation.csv' 
+                : 'private_allocation.csv';
+            
+            const endpoint = type === 'SCHOOL'
+                ? '/api/exam-types/acsee/templates/school-allocation.csv'
+                : '/api/exam-types/acsee/templates/private-allocation.csv';
+            
+            try {
+                fetch(endpoint)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Template download failed');
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        this.showMessage(`Downloaded ${type} template`, 'success');
+                    });
+            } catch (error) {
+                console.error('Error downloading template:', error);
+                this.showMessage(`Error downloading ${type} template`, 'error');
+            }
+        },
+
+        handleBulkFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validate file type
+            if (!file.name.endsWith('.csv')) {
+                this.showMessage('Please select a CSV file', 'error');
+                event.target.value = '';
+                return;
+            }
+            
+            this.bulkUploadedFile = file;
+            this.bulkUploadedFileName = file.name;
+            this.bulkUploadedFileSize = file.size;
+            this.bulkPhase = 'idle';
+            this.bulkValidationReport = null;
+            this.bulkCommitReport = null;
+            this.bulkLastErrors = [];
+            this.bulkErrorMessage = '';
+            this.bulkSuccessMessage = '';
+            
+            this.showMessage(`File "${file.name}" selected`, 'success');
+        },
+
+        async validateBulkCSV() {
+            if (!this.bulkUploadedFile) {
+                this.bulkErrorMessage = 'Please select a CSV file';
+                return;
+            }
+            
+            if (!this.bulkExamYearId) {
+                this.bulkErrorMessage = 'Please select an exam year';
+                return;
+            }
+            
+            this.bulkPhase = 'validating';
+            this.bulkErrorMessage = '';
+            this.bulkSuccessMessage = '';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', this.bulkUploadedFile);
+                formData.append('exam_year_id', this.bulkExamYearId);
+                formData.append('mode', this.bulkImportMode);
+                formData.append('replace_allocations', this.bulkReplaceAllocations ? 'true' : 'false');
+                
+                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/validate', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: formData,
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.bulkValidationReport = data.report;
+                    this.bulkLastErrors = data.errors || [];
+                    this.bulkPhase = 'reviewing';
+                    this.bulkSuccessMessage = `Validation complete: ${data.report.total} rows scanned, ${data.report.valid} valid`;
+                    this.showMessage(this.bulkSuccessMessage, 'success');
+                } else {
+                    this.bulkPhase = 'idle';
+                    this.bulkErrorMessage = data.message || 'Validation failed';
+                    this.bulkLastErrors = data.errors || [];
+                    this.showMessage(this.bulkErrorMessage, 'error');
+                }
+            } catch (error) {
+                console.error('Error validating CSV:', error);
+                this.bulkPhase = 'idle';
+                this.bulkErrorMessage = 'Error validating CSV: ' + error.message;
+                this.showMessage(this.bulkErrorMessage, 'error');
+            }
+        },
+
+        async commitBulkCSV() {
+            if (!this.bulkValidationReport) {
+                this.bulkErrorMessage = 'Please validate the CSV first';
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to commit this import? This action cannot be undone.')) {
+                return;
+            }
+            
+            this.bulkPhase = 'committing';
+            this.bulkErrorMessage = '';
+            this.bulkSuccessMessage = '';
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', this.bulkUploadedFile);
+                formData.append('exam_year_id', this.bulkExamYearId);
+                formData.append('mode', this.bulkImportMode);
+                formData.append('replace_allocations', this.bulkReplaceAllocations ? 'true' : 'false');
+                
+                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/commit', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: formData,
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    this.bulkCommitReport = data.report;
+                    this.bulkLastErrors = data.errors || [];
+                    this.bulkPhase = 'complete';
+                    this.bulkSuccessMessage = `Import completed: ${data.report.imported} rows imported`;
+                    this.showMessage(this.bulkSuccessMessage, 'success');
+                    
+                    // Reload ACSEE candidates after successful import
+                    await this.loadAcseeCandicates();
+                } else {
+                    this.bulkPhase = 'reviewing';
+                    this.bulkErrorMessage = data.message || 'Commit failed';
+                    this.bulkLastErrors = data.errors || [];
+                    this.showMessage(this.bulkErrorMessage, 'error');
+                }
+            } catch (error) {
+                console.error('Error committing CSV:', error);
+                this.bulkPhase = 'reviewing';
+                this.bulkErrorMessage = 'Error committing CSV: ' + error.message;
+                this.showMessage(this.bulkErrorMessage, 'error');
+            }
+        },
+
+        async downloadBulkErrorReport() {
+            if (!this.bulkLastErrors || this.bulkLastErrors.length === 0) {
+                this.showMessage('No errors to download', 'info');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/download-errors', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({ errors: this.bulkLastErrors }),
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `acsee_import_errors_${Date.now()}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    this.showMessage('Error report downloaded', 'success');
+                } else {
+                    this.showMessage('Error downloading error report', 'error');
+                }
+            } catch (error) {
+                console.error('Error downloading error report:', error);
+                this.showMessage('Error downloading error report: ' + error.message, 'error');
+            }
+        },
+
+        resetBulkState() {
+            this.bulkPhase = 'idle';
+            this.bulkValidationReport = null;
+            this.bulkCommitReport = null;
+            this.bulkLastErrors = [];
+            this.bulkErrorMessage = '';
+            this.bulkSuccessMessage = '';
+            this.bulkUploadedFile = null;
+            this.bulkExamYearId = '';
+            this.bulkImportMode = 'SCHOOL';
+            this.bulkReplaceAllocations = false;
+            
+            // Reset file input
+            const fileInput = document.querySelector('input[type="file"]#bulkCsvFile');
+            if (fileInput) {
+                fileInput.value = '';
+            }
+        },
+
+        async openBulkImportModal() {
+            this.bulkImportModalOpen = true;
+            this.resetBulkState();
+            this.bulkErrorMessage = '';
+            
+            // Always load exam years to ensure data is fresh
+            await this.loadAllocationContexts();
+            
+            // Auto-select the active exam year if available and not already selected
+            // Only if data loaded successfully (no error)
+            if (!this.bulkErrorMessage && !this.bulkExamYearId && this.allocationExamYears.length > 0) {
+                const activeYear = this.allocationExamYears.find(y => y.is_active);
+                if (activeYear) {
+                    this.bulkExamYearId = String(activeYear.id);
+                } else {
+                    // Fallback to first exam year if no active year
+                    this.bulkExamYearId = String(this.allocationExamYears[0].id);
+                }
+            }
+        },
+
+        closeBulkImportModal() {
+            this.bulkImportModalOpen = false;
+            this.resetBulkState();
         },
 
         showMessage(message, type) {

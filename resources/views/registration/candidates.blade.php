@@ -164,32 +164,51 @@
                 <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
             </div>
             <table x-show="!loading" class="w-full">
-                <thead class="bg-gray-100 border-b-2 border-gray-300">
+                <thead class="bg-gradient-to-r from-gray-100 to-gray-50 border-b-2 border-gray-300 sticky top-0 z-10">
                     <tr>
-                         <th class="px-3 py-2 text-left">
+                         <th class="px-3 py-3 text-left">
                              <input 
                                  type="checkbox" 
                                  @change="toggleSelectAll()"
-                                 :checked="selectedItems.size === candidates.length && candidates.length > 0"
-                                 :indeterminate="selectedItems.size > 0 && selectedItems.size < candidates.length"
+                                 :checked="selectedItems.size > 0"
+                                 :title="selectedItems.size > 0 ? `${selectedItems.size} selected - click to deselect all` : 'Click to select all candidates'"
                                  class="w-4 h-4 cursor-pointer"
                              >
                          </th>
-                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Index Number</th>
-                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Full Name</th>
-                         <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">Sex</th>
-                         <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">Combination</th>
-                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">School</th>
-                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Exam Type</th>
-                         <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">Exam Year</th>
-                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
-                         <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
+                        <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            <i class="fas fa-barcode mr-1 text-blue-600"></i>Index #
+                        </th>
+                         <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                             <i class="fas fa-user mr-1 text-gray-600"></i>Full Name
+                         </th>
+                         <th class="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                             <i class="fas fa-venus-mars mr-1"></i>Sex
+                         </th>
+                         <th class="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                             <i class="fas fa-book mr-1"></i>Type
+                         </th>
+                         <th class="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                             <i class="fas fa-list mr-1"></i>Combination
+                         </th>
+                         <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                             <i class="fas fa-school mr-1 text-purple-600"></i>School
+                         </th>
+                         <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                             <i class="fas fa-graduation-cap mr-1"></i>Exam Type
+                         </th>
+                         <th class="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                             <i class="fas fa-calendar mr-1"></i>Year
+                         </th>
+                         <th class="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                             <i class="fas fa-info-circle mr-1"></i>Status
+                         </th>
+                         <th class="px-3 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     <template x-for="candidate in filteredCandidates" :key="candidate.id">
-                         <tr class="hover:bg-blue-100 transition-colors" :class="selectedItems.has(candidate.id) ? 'bg-blue-50' : ''">
-                             <td class="px-3 py-2 text-left">
+                         <tr class="hover:bg-blue-50 transition-colors" :class="selectedItems.has(candidate.id) ? 'bg-blue-100' : ''">
+                             <td class="px-3 py-3 text-left">
                                  <input 
                                      type="checkbox" 
                                      :checked="selectedItems.has(candidate.id)"
@@ -197,20 +216,26 @@
                                      class="w-4 h-4 cursor-pointer"
                                  >
                              </td>
-                            <td class="px-3 py-2 text-sm font-mono text-gray-800" x-text="candidate.candidate_id || candidate.id"></td>
-                            <td class="px-3 py-2 text-sm text-gray-800 font-medium" x-text="candidate.full_name"></td>
-                            <td class="px-3 py-2 text-sm text-gray-600 text-center" x-text="candidate.gender || '-'"></td>
-                            <td class="px-3 py-2 text-sm text-gray-600 text-center" x-text="candidate.exam_type === 'ACSEE' ? (candidate.combination || '-') : '-'"></td>
-                            <td class="px-3 py-2 text-sm text-gray-600" x-text="candidate.school_name || '-'"></td>
-                            <td class="px-3 py-2 text-sm text-gray-600" x-text="candidate.exam_type || '-'"></td>
-                            <td class="px-3 py-2 text-sm text-gray-600 text-center" x-text="candidate.exam_year || '-'"></td>
-                            <td class="px-3 py-2 text-sm">
-                                <span class="px-2 py-0.5 rounded-full text-sm font-semibold" 
+                            <td class="px-3 py-3 text-sm font-mono font-semibold text-blue-700 bg-blue-50 rounded" x-text="candidate.candidate_id || candidate.id"></td>
+                            <td class="px-3 py-3 text-sm text-gray-800 font-medium" x-text="candidate.full_name"></td>
+                            <td class="px-3 py-3 text-sm text-gray-600 text-center font-medium" x-text="candidate.gender === 'M' ? '♂ M' : (candidate.gender === 'F' ? '♀ F' : '-')"></td>
+                            <td class="px-3 py-3 text-sm text-center">
+                                <span class="inline-block px-2 py-0.5 rounded text-xs font-semibold" 
+                                    :class="candidate.candidate_type === 'SCHOOL' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'"
+                                    x-text="candidate.candidate_type || 'SCHOOL'">
+                                </span>
+                            </td>
+                            <td class="px-3 py-3 text-sm text-gray-600 text-center" x-text="candidate.exam_type === 'ACSEE' ? (candidate.combination || '-') : '-'"></td>
+                            <td class="px-3 py-3 text-sm text-gray-600" x-text="candidate.school_name || '-'"></td>
+                            <td class="px-3 py-3 text-sm text-gray-600 font-medium" x-text="candidate.exam_type || '-'"></td>
+                            <td class="px-3 py-3 text-sm text-gray-600 text-center font-semibold" x-text="candidate.exam_year || '-'"></td>
+                            <td class="px-3 py-3 text-sm">
+                                <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold" 
                                     :class="candidate.status === 'registered' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'"
                                     x-text="candidate.status || 'pending'">
                                 </span>
                             </td>
-                            <td class="px-3 py-2 text-sm space-x-2">
+                            <td class="px-3 py-3 text-sm space-x-2 flex items-center justify-center">
                                 <button 
                                     @click="viewCandidate(candidate)"
                                     class="inline-flex items-center justify-center w-8 h-8 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors"
@@ -354,97 +379,171 @@
              @click.self="modalOpen = false; viewModalOpen = false;"
              x-transition
          >
-        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition @click.stop>
-            <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                <h2 class="text-2xl font-bold text-gray-800" x-text="viewModalOpen && !editingId ? 'Candidate Details' : (!viewModalOpen && !editingId ? 'Register New Candidate' : 'Edit Candidate')"></h2>
-                <button 
-                    @click="modalOpen = false; viewModalOpen = false;" 
-                    class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                >
-                    &times;
-                </button>
-            </div>
+         <div class="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" x-transition @click.stop>
+             <div class="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
+                 <div>
+                     <h2 class="text-2xl font-bold text-gray-800" x-text="viewModalOpen && !editingId ? 'Candidate Details' : (!viewModalOpen && !editingId ? 'Register New Candidate' : 'Edit Candidate')"></h2>
+                     <p class="text-xs text-gray-500 mt-1" x-show="!viewModalOpen && formData.exam_type === 'ACSEE'">
+                         Index format: <span class="font-mono font-semibold">CCCC-SSSS</span> (e.g., <span class="font-mono">S0445-0001</span>)
+                     </p>
+                 </div>
+                 <button 
+                     @click="modalOpen = false; viewModalOpen = false;" 
+                     class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                 >
+                     &times;
+                 </button>
+             </div>
 
-            <!-- View Mode -->
-            <div x-show="viewModalOpen" class="p-4 space-y-2">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Index Number</label>
-                    <input 
-                        type="text" 
-                        readonly
-                        :value="viewingCandidate.candidate_id || '-'"
-                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-100 text-gray-600 font-mono text-center focus:outline-none"
-                    >
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Full Name</label>
-                    <input 
-                        type="text" 
-                        readonly
-                        :value="viewingCandidate.full_name"
-                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
-                    >
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Sex</label>
-                    <input 
-                        type="text" 
-                        readonly
-                        :value="viewingCandidate.gender === 'M' ? 'Male' : viewingCandidate.gender === 'F' ? 'Female' : '-'"
-                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
-                    >
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Combination</label>
-                    <input 
-                        type="text" 
-                        readonly
-                        :value="viewingCandidate.combination || '-'"
-                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
-                    >
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">School</label>
-                    <input 
-                        type="text" 
-                        readonly
-                        :value="viewingCandidate.school_name || '-'"
-                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
-                    >
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Exam Type</label>
-                    <input 
-                        type="text" 
-                        readonly
-                        :value="viewingCandidate.exam_type || '-'"
-                        class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
-                    >
-                </div>
-                <div class="flex gap-2 pt-3">
-                    <button type="button" @click="modalOpen = false; viewModalOpen = false;" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1.5 rounded text-sm transition-colors font-medium cursor-pointer">
-                        Close
-                    </button>
-                    <button type="button" @click="openEditModal(viewingCandidate); viewModalOpen = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm transition-colors font-medium cursor-pointer">
-                        Edit
-                    </button>
-                </div>
-            </div>
+             <!-- View Mode -->
+             <div x-show="viewModalOpen" class="p-6 space-y-3">
+                 <div>
+                     <label class="block text-xs font-semibold text-gray-700 mb-1">Index Number</label>
+                     <div class="flex items-center gap-2">
+                         <input 
+                             type="text" 
+                             readonly
+                             :value="viewingCandidate.candidate_id || '-'"
+                             class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm bg-gray-100 text-gray-600 font-mono font-semibold focus:outline-none"
+                         >
+                         <span class="px-2 py-1 rounded text-xs font-semibold" 
+                             :class="viewingCandidate.candidate_type === 'SCHOOL' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'"
+                             x-text="viewingCandidate.candidate_type || 'SCHOOL'">
+                         </span>
+                     </div>
+                 </div>
+                 <div>
+                     <label class="block text-xs font-semibold text-gray-700 mb-1">Full Name</label>
+                     <input 
+                         type="text" 
+                         readonly
+                         :value="viewingCandidate.full_name"
+                         class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                     >
+                 </div>
+                 <div class="grid grid-cols-2 gap-3">
+                     <div>
+                         <label class="block text-xs font-semibold text-gray-700 mb-1">Sex</label>
+                         <input 
+                             type="text" 
+                             readonly
+                             :value="viewingCandidate.gender === 'M' ? 'Male' : viewingCandidate.gender === 'F' ? 'Female' : '-'"
+                             class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                         >
+                     </div>
+                     <div>
+                         <label class="block text-xs font-semibold text-gray-700 mb-1">Candidate Type</label>
+                         <input 
+                             type="text" 
+                             readonly
+                             :value="viewingCandidate.candidate_type || '-'"
+                             class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                         >
+                     </div>
+                 </div>
+                 <div>
+                     <label class="block text-xs font-semibold text-gray-700 mb-1">Combination</label>
+                     <input 
+                         type="text" 
+                         readonly
+                         :value="viewingCandidate.combination || '-'"
+                         class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                     >
+                 </div>
+                 <div>
+                     <label class="block text-xs font-semibold text-gray-700 mb-1">School</label>
+                     <input 
+                         type="text" 
+                         readonly
+                         :value="viewingCandidate.school_name || '-'"
+                         class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                     >
+                 </div>
+                 <div class="grid grid-cols-2 gap-3">
+                     <div>
+                         <label class="block text-xs font-semibold text-gray-700 mb-1">Exam Type</label>
+                         <input 
+                             type="text" 
+                             readonly
+                             :value="viewingCandidate.exam_type || '-'"
+                             class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                         >
+                     </div>
+                     <div>
+                         <label class="block text-xs font-semibold text-gray-700 mb-1">Exam Year</label>
+                         <input 
+                             type="text" 
+                             readonly
+                             :value="viewingCandidate.exam_year || '-'"
+                             class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                         >
+                     </div>
+                 </div>
+                 <div class="flex gap-2 pt-3">
+                     <button type="button" @click="modalOpen = false; viewModalOpen = false;" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-2 rounded text-sm transition-colors font-medium cursor-pointer">
+                         Close
+                     </button>
+                     <button type="button" @click="openEditModal(viewingCandidate); viewModalOpen = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors font-medium cursor-pointer">
+                         Edit
+                     </button>
+                 </div>
+             </div>
 
-            <!-- Edit/Add Mode -->
-            <form x-show="!viewModalOpen" @submit.prevent="saveCandidate()" class="p-6 space-y-4">
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Index Number *</label>
-                    <input 
-                        x-model="formData.candidate_id"
-                        @input="autoSelectSchool()"
-                        type="text" 
-                        placeholder="e.g., S0445-0004"
-                        required
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                    <p class="text-xs text-gray-500 mt-1">School will auto-detect based on the code before the dash (e.g., S0445 from S0445-0034)</p>
-                </div>
+             <!-- Edit/Add Mode -->
+             <form x-show="!viewModalOpen" @submit.prevent="saveCandidate()" class="p-6 space-y-4">
+                 <div>
+                     <label class="block text-sm font-semibold text-gray-700 mb-2">
+                         Index Number <span class="text-red-600">*</span>
+                         <span class="text-xs font-normal text-gray-500 ml-2" x-show="formData.exam_type === 'ACSEE'">
+                             (NECTA format required)
+                         </span>
+                     </label>
+                     <div class="relative">
+                         <input 
+                             x-model="formData.candidate_id"
+                             @input="validateIndexNumber()"
+                             type="text" 
+                             placeholder="e.g., S0445-0001"
+                             required
+                             class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 transition-all"
+                             :class="indexValidation.ok ? 'border-green-300 focus:ring-green-500' : (formData.candidate_id && !indexValidation.ok ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500')"
+                         >
+                         <span x-show="indexValidation.ok && formData.candidate_id" class="absolute right-3 top-2.5 text-green-600">
+                             <i class="fas fa-check-circle text-lg"></i>
+                         </span>
+                     </div>
+                     <!-- Index Number Help Text -->
+                     <p class="text-xs text-gray-500 mt-1" x-show="formData.exam_type === 'ACSEE'">
+                         Format: <span class="font-mono font-semibold text-gray-700">CCCC-SSSS</span><br>
+                         • First char: <span class="font-mono">S</span> (School) or <span class="font-mono">P</span> (Private)<br>
+                         • Digits: 4-digit centre code and 4-digit serial (e.g., <span class="font-mono">S0445-0001</span>)
+                     </p>
+                     <!-- Validation Errors/Info -->
+                     <div x-show="formData.exam_type === 'ACSEE' && formData.candidate_id" class="mt-2 space-y-1">
+                         <!-- Success Message -->
+                         <div x-show="indexValidation.ok" class="p-2 rounded bg-green-50 border border-green-200">
+                             <p class="text-xs text-green-700 font-medium">
+                                 <i class="fas fa-check-circle mr-1"></i>
+                                 Valid index number
+                                 <span x-show="indexValidation.parsed">
+                                     • Type: <span class="font-mono font-semibold" x-text="indexValidation.parsed.candidate_type"></span>
+                                 </span>
+                                 <span x-show="indexValidation.resolved?.school_id">
+                                     • Centre found
+                                 </span>
+                             </p>
+                         </div>
+                         <!-- Error Messages -->
+                         <template x-for="error in indexValidation.errors" :key="error.code">
+                             <div class="p-2 rounded bg-red-50 border border-red-200">
+                                 <p class="text-xs text-red-700 font-medium">
+                                     <i class="fas fa-exclamation-circle mr-1"></i>
+                                     <span x-text="error.message"></span>
+                                 </p>
+                             </div>
+                         </template>
+                     </div>
+                 </div>
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
                     <input 
@@ -581,6 +680,7 @@ function candidatesManager() {
         viewModalOpen: false,
         viewingCandidate: {},
         showToolsMenu: false,
+        indexValidation: { ok: false, errors: [], parsed: null, resolved: {} },
         currentPage: 1,
         pageSize: 10,
         totalCount: 0,
@@ -596,10 +696,24 @@ function candidatesManager() {
         importExamType: '',
         // New import modal state
         importPhase: 'upload', // 'upload', 'report', 'processing'
-        importReport: {},
+        importReport: {
+            errors: [],
+            total_rows: 0,
+            create_count: 0,
+            update_count: 0,
+            skip_count: 0,
+            error_count: 0,
+            can_import: false,
+            rows: [],
+            summary: {},
+            message: '',
+            success: false
+        },
         importProcessing: false,
         importProcessingMessage: '',
         importDragActive: false,
+        onExistsMode: 'skip', // 'skip' or 'replace' for existing candidates
+        showReplaceConfirmation: false,
         showDebugPanel: false,
         showDataAuditModal: false,
         auditResults: null,
@@ -925,6 +1039,120 @@ function candidatesManager() {
             }
         },
 
+        async validateIndexNumber() {
+            // Only validate for ACSEE candidates
+            if (this.formData.exam_type !== 'ACSEE') {
+                this.indexValidation = { ok: false, errors: [], parsed: null, resolved: {} };
+                return;
+            }
+
+            const indexNumber = (this.formData.candidate_id || '').trim();
+
+            // Empty check
+            if (!indexNumber) {
+                this.indexValidation = {
+                    ok: false,
+                    errors: [{ code: 'INDEX_EMPTY', message: 'Index number cannot be empty' }],
+                    parsed: null,
+                    resolved: {}
+                };
+                return;
+            }
+
+            try {
+                // For now, validate locally based on NECTA format
+                // NECTA format: CCCC-SSSS where C is centre code, S is serial
+                const pattern = /^[SP][0-9]{4}-[0-9]{4}$/i;
+                const normalized = indexNumber.toUpperCase().trim();
+
+                if (!pattern.test(normalized)) {
+                    // Provide specific error
+                    let errorCode = 'INDEX_FORMAT_INVALID';
+                    let errorMessage = 'Invalid format. Use CCCC-SSSS (e.g., S0445-0001)';
+
+                    if (!normalized.includes('-')) {
+                        errorCode = 'INDEX_FORMAT_INVALID';
+                        errorMessage = 'Missing hyphen. Format: S0445-0001';
+                    } else if (!/^[SP]/i.test(normalized)) {
+                        errorCode = 'CENTRE_PREFIX_UNKNOWN';
+                        errorMessage = 'Centre prefix must be S (School) or P (Private)';
+                    }
+
+                    this.indexValidation = {
+                        ok: false,
+                        errors: [{ code: errorCode, message: errorMessage }],
+                        parsed: null,
+                        resolved: {}
+                    };
+                    return;
+                }
+
+                // Parse the index number
+                const [centreCode, serial] = normalized.split('-');
+                const prefix = centreCode[0];
+                const candidateType = prefix === 'S' ? 'SCHOOL' : 'PRIVATE';
+
+                // Auto-set candidate type
+                this.formData.candidate_type = candidateType;
+
+                // Try to resolve centre (for SCHOOL candidates, check if centre exists)
+                let resolved = { school_id: null, private_centre_id: null };
+
+                if (candidateType === 'SCHOOL') {
+                    // Find school by registration_number
+                    const school = this.schools.find(s => 
+                        (s.registration_number && s.registration_number.toUpperCase() === centreCode) ||
+                        (s.code && s.code.toUpperCase() === centreCode)
+                    );
+
+                    if (school) {
+                        resolved.school_id = school.id;
+                        this.formData.school_id = school.id;
+                    } else {
+                        // Centre not found
+                        this.indexValidation = {
+                            ok: false,
+                            errors: [{ code: 'CENTRE_NOT_FOUND', message: 'Centre not found in system' }],
+                            parsed: {
+                                raw: indexNumber,
+                                normalized: normalized,
+                                centre_code: centreCode,
+                                prefix: prefix,
+                                serial: serial,
+                                candidate_type: candidateType
+                            },
+                            resolved: {}
+                        };
+                        return;
+                    }
+                }
+
+                // Success
+                this.indexValidation = {
+                    ok: true,
+                    errors: [],
+                    parsed: {
+                        raw: indexNumber,
+                        normalized: normalized,
+                        centre_code: centreCode,
+                        prefix: prefix,
+                        serial: serial,
+                        candidate_type: candidateType
+                    },
+                    resolved: resolved
+                };
+
+            } catch (error) {
+                console.error('Index validation error:', error);
+                this.indexValidation = {
+                    ok: false,
+                    errors: [{ code: 'VALIDATION_ERROR', message: 'Validation error: ' + error.message }],
+                    parsed: null,
+                    resolved: {}
+                };
+            }
+        },
+
         viewCandidate(candidate) {
             this.viewingCandidate = { ...candidate };
             this.editingId = null;
@@ -1011,13 +1239,49 @@ function candidatesManager() {
             }
         },
 
-        toggleSelectAll() {
-            if (this.selectedItems.size === this.candidates.length) {
+        async toggleSelectAll() {
+            if (this.selectedItems.size > 0) {
                 // Deselect all
                 this.selectedItems.clear();
             } else {
                 // Select ALL candidates (across all pages, not just current page)
-                this.candidates.forEach(candidate => this.selectedItems.add(candidate.id));
+                this.loading = true;
+                try {
+                    // Fetch all candidate IDs from the API (with applied filters)
+                    let url = '/api/candidates?page_size=99999';
+                    
+                    // Apply same filters that are currently active
+                    if (this.filterRegion) {
+                        url += `&region_id=${this.filterRegion}`;
+                    }
+                    if (this.filterDistrict) {
+                        url += `&district_id=${this.filterDistrict}`;
+                    }
+                    if (this.filterSchool) {
+                        url += `&school_id=${this.filterSchool}`;
+                    }
+                    if (this.search) {
+                        url += `&search=${this.search}`;
+                    }
+                    
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (response.ok && data.data) {
+                        // Add all candidate IDs to selectedItems
+                        data.data.forEach(candidate => {
+                            this.selectedItems.add(candidate.id);
+                        });
+                        this.showMessage(`${data.data.length} candidate(s) selected`, 'success');
+                    } else {
+                        this.showMessage('Error loading candidates', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error loading candidates for bulk select:', error);
+                    this.showMessage('Error loading candidates', 'error');
+                } finally {
+                    this.loading = false;
+                }
             }
         },
 
@@ -1063,6 +1327,8 @@ function candidatesManager() {
             this.importProcessing = false;
             this.importProcessingMessage = '';
             this.importDragActive = false;
+            this.onExistsMode = 'skip';
+            this.showReplaceConfirmation = false;
             this.showImportModal = true;
             this.showToolsMenu = false;
         },
@@ -1102,6 +1368,7 @@ function candidatesManager() {
                 if (this.importExamType) {
                     formData.append('exam_type', this.importExamType);
                 }
+                formData.append('on_exists_mode', this.onExistsMode);
 
                 const response = await fetch('/api/candidates/import/validate', {
                     method: 'POST',
@@ -1117,10 +1384,11 @@ function candidatesManager() {
                 this.importPhase = 'report';
                 this.importProcessing = false;
 
-                if (!data.success && data.invalid_count > 0) {
-                    this.showMessage(`Validation complete: ${data.invalid_count} error(s) found`, 'error');
+                if (!data.success && data.error_count > 0) {
+                    this.showMessage(`Validation complete: ${data.error_count} error(s) found`, 'error');
                 } else if (data.can_import) {
-                    this.showMessage(`Validation complete: ${data.valid_count} record(s) ready to import`, 'success');
+                    const total = data.create_count + data.update_count;
+                    this.showMessage(`Validation complete: ${total} record(s) ready to import`, 'success');
                 } else {
                     this.showMessage('Validation complete: No valid records to import', 'error');
                 }
@@ -1152,7 +1420,7 @@ function candidatesManager() {
                 if (this.importExamType) {
                     formData.append('exam_type', this.importExamType);
                 }
-                formData.append('mode', 'skip');
+                formData.append('on_exists_mode', this.onExistsMode);
 
                 const response = await fetch('/api/candidates/import/commit', {
                     method: 'POST',
@@ -1183,6 +1451,52 @@ function candidatesManager() {
             } finally {
                 this.importProcessing = false;
             }
+        },
+
+        downloadSchoolTemplate() {
+            const headers = ['candidate_id', 'full_name', 'gender', 'exam_type', 'exam_year', 'school_code', 'combination', 'candidate_type'].join(',');
+            const row1 = ['S0754-0501', 'AISHA KHALID KASIM', 'F', 'ACSEE', '2026', 'S0754', 'PCM', 'SCHOOL'];
+            const row2 = ['S0754-0502', 'JOHN PETER MWANGA', 'M', 'ACSEE', '2026', 'S0754', 'HGE', 'SCHOOL'];
+            const row3 = ['S0754-0503', 'MARY JANE OCHIENG', 'F', 'ACSEE', '2026', 'S0754', 'PCB', 'SCHOOL'];
+            const csvContent = [
+                headers,
+                row1.map(v => `"${v}"`).join(','),
+                row2.map(v => `"${v}"`).join(','),
+                row3.map(v => `"${v}"`).join(',')
+            ].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ACSEE_SCHOOL_CANDIDATES_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            this.showMessage('School template downloaded. Use "combination" column with codes like PCM, HGE, PCB, etc.', 'success');
+        },
+
+        downloadPrivateTemplate() {
+            const headers = ['candidate_id', 'full_name', 'gender', 'exam_type', 'exam_year', 'school_code', 'subjects', 'candidate_type'].join(',');
+            const row1 = ['P0652-0501', 'DORICAS GIBSON MWILONGO', 'M', 'ACSEE', '2026', 'P0652', '111|001|002|003', 'PRIVATE'];
+            const row2 = ['P0652-0502', 'KELVIN ABINEL CHAVALA', 'M', 'ACSEE', '2026', 'P0652', '111|005|006|007', 'PRIVATE'];
+            const row3 = ['P0652-0503', 'JANE SMITH MUTUA', 'F', 'ACSEE', '2026', 'P0652', '111|008|009|010', 'PRIVATE'];
+            const csvContent = [
+                headers,
+                row1.map(v => `"${v}"`).join(','),
+                row2.map(v => `"${v}"`).join(','),
+                row3.map(v => `"${v}"`).join(',')
+            ].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ACSEE_PRIVATE_CANDIDATES_${new Date().toISOString().split('T')[0]}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            this.showMessage('Private template downloaded. Use "subjects" column with pipe-separated IDs (e.g., 111|001|002|003). Must include 111 (General Studies) + 3+ more subjects.', 'success');
         },
 
         async downloadImportTemplate() {
@@ -1647,13 +1961,24 @@ function handleQuickImport(fileInput) {
                     <!-- Download Template Button -->
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-semibold text-gray-700">Step 1: Prepare File</h3>
-                        <button
-                            @click="downloadImportTemplate()"
-                            class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                            :disabled="importProcessing"
-                        >
-                            <i class="fas fa-download"></i> Download Template
-                        </button>
+                        <div class="flex gap-2">
+                            <button
+                                @click="downloadSchoolTemplate()"
+                                class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                :disabled="importProcessing"
+                                title="Download template for SCHOOL candidates"
+                            >
+                                <i class="fas fa-download"></i> School Template
+                            </button>
+                            <button
+                                @click="downloadPrivateTemplate()"
+                                class="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                                :disabled="importProcessing"
+                                title="Download template for PRIVATE candidates"
+                            >
+                                <i class="fas fa-download"></i> Private Template
+                            </button>
+                        </div>
                     </div>
 
                     <!-- File Upload Area -->
@@ -1717,6 +2042,37 @@ function handleQuickImport(fileInput) {
                             </select>
                         </div>
                     </div>
+
+                    <!-- If Existing Candidate Option -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p class="text-sm font-semibold text-gray-700 mb-3">If candidate already exists:</p>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    x-model="onExistsMode" 
+                                    value="skip"
+                                    class="w-4 h-4 cursor-pointer"
+                                >
+                                <span class="text-sm text-gray-700">
+                                    <strong>Skip existing</strong>
+                                    <span class="text-gray-500 block text-xs">Safe option: don't overwrite, just skip the row</span>
+                                </span>
+                            </label>
+                            <label class="flex items-center gap-3 cursor-pointer">
+                                <input 
+                                    type="radio" 
+                                    x-model="onExistsMode" 
+                                    value="replace"
+                                    class="w-4 h-4 cursor-pointer"
+                                >
+                                <span class="text-sm text-gray-700">
+                                    <strong>Replace existing</strong>
+                                    <span class="text-gray-500 block text-xs">Update candidate name, gender, and school</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1725,36 +2081,46 @@ function handleQuickImport(fileInput) {
                 <h3 class="text-lg font-semibold text-gray-700">Step 2: Review Results</h3>
 
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-4 gap-4">
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
                         <p class="text-xs font-semibold text-gray-600 uppercase">Total Rows</p>
-                        <p class="text-3xl font-bold text-gray-800 mt-2" x-text="importReport.total_rows || 0"></p>
+                        <p class="text-2xl font-bold text-gray-800 mt-1" x-text="importReport.total_rows || 0"></p>
                     </div>
 
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-                        <p class="text-xs font-semibold text-green-600 uppercase">Valid</p>
-                        <p class="text-3xl font-bold text-green-800 mt-2" x-text="importReport.valid_count || 0"></p>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p class="text-xs font-semibold text-blue-600 uppercase">New</p>
+                        <p class="text-2xl font-bold text-blue-800 mt-1" x-text="importReport.create_count || 0"></p>
                     </div>
 
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div x-show="onExistsMode === 'replace'" class="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                        <p class="text-xs font-semibold text-purple-600 uppercase">Will Update</p>
+                        <p class="text-2xl font-bold text-purple-800 mt-1" x-text="importReport.update_count || 0"></p>
+                    </div>
+
+                    <div x-show="onExistsMode === 'skip'" class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                        <p class="text-xs font-semibold text-amber-600 uppercase">Will Skip</p>
+                        <p class="text-2xl font-bold text-amber-800 mt-1" x-text="importReport.skip_count || 0"></p>
+                    </div>
+
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
                         <p class="text-xs font-semibold text-red-600 uppercase">Errors</p>
-                        <p class="text-3xl font-bold text-red-800 mt-2" x-text="importReport.invalid_count || 0"></p>
+                        <p class="text-2xl font-bold text-red-800 mt-1" x-text="importReport.error_count || 0"></p>
                     </div>
 
-                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                        <p class="text-xs font-semibold text-yellow-600 uppercase">Can Import</p>
-                        <p class="text-3xl font-bold text-yellow-800 mt-2" x-text="importReport.can_import ? 'Yes' : 'No'"></p>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                        <p class="text-xs font-semibold text-green-600 uppercase">Can Import</p>
+                        <p class="text-2xl font-bold text-green-800 mt-1" x-text="importReport.can_import ? 'Yes ✓' : 'No ✗'"></p>
                     </div>
                 </div>
 
                 <!-- Error Table (if any) -->
-                <div x-show="importReport.invalid_count > 0">
+                <div x-show="importReport.error_count > 0">
                     <div class="flex justify-between items-center mb-2">
                         <h4 class="font-semibold text-gray-700">Errors Found</h4>
                         <button
                             @click="downloadImportErrors()"
                             class="inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 transition-colors"
-                            :disabled="importReport.invalid_count === 0"
+                            :disabled="importReport.error_count === 0"
                         >
                             <i class="fas fa-download text-xs"></i> Download Errors
                         </button>
@@ -1765,19 +2131,19 @@ function handleQuickImport(fileInput) {
                             <table class="w-full text-sm">
                                 <thead class="bg-gray-100 border-b border-gray-200">
                                     <tr>
-                                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Row</th>
-                                        <th class="px-4 py-2 text-left font-semibold text-gray-700">ID</th>
-                                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Name</th>
-                                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Error(s)</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Name</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Error(s)</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
                                     <template x-for="(error, idx) in importReport.errors.slice(0, 10)" :key="idx">
                                         <tr class="hover:bg-gray-50">
-                                            <td class="px-4 py-2 text-gray-600" x-text="error.row_number"></td>
-                                            <td class="px-4 py-2 text-gray-600 font-mono text-xs" x-text="error.candidate_id || '-'"></td>
-                                            <td class="px-4 py-2 text-gray-600" x-text="error.full_name || '-'"></td>
-                                            <td class="px-4 py-2">
+                                            <td class="px-3 py-2 text-gray-600 text-xs" x-text="error.row_number"></td>
+                                            <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="error.candidate_id || '-'"></td>
+                                            <td class="px-3 py-2 text-gray-600 text-xs" x-text="error.full_name || '-'"></td>
+                                            <td class="px-3 py-2">
                                                 <span class="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium" x-text="error.primary_error"></span>
                                             </td>
                                         </tr>
@@ -1789,6 +2155,53 @@ function handleQuickImport(fileInput) {
                         <!-- Pagination hint -->
                         <div x-show="importReport.total_errors > 10" class="bg-gray-50 px-4 py-2 text-xs text-gray-600 border-t border-gray-200">
                             Showing 10 of <span x-text="importReport.total_errors"></span> errors (download file to see all)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row Status Preview (if rows detail available) -->
+                <div x-show="importReport.rows && importReport.rows.length > 0" class="mt-4">
+                    <h4 class="font-semibold text-gray-700 mb-2">Import Plan</h4>
+                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Name</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <template x-for="(row, idx) in importReport.rows.slice(0, 20)" :key="idx">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-3 py-2 text-gray-600 text-xs" x-text="row.row_number"></td>
+                                            <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="row.candidate_id || '-'"></td>
+                                            <td class="px-3 py-2 text-gray-600 text-xs" x-text="row.full_name || '-'"></td>
+                                            <td class="px-3 py-2">
+                                                <template x-if="row.status === 'NEW'">
+                                                    <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">✓ NEW</span>
+                                                </template>
+                                                <template x-if="row.status === 'SKIP'">
+                                                    <span class="inline-block bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-semibold">⊘ SKIP</span>
+                                                </template>
+                                                <template x-if="row.status === 'REPLACE'">
+                                                    <span class="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold">↻ UPDATE</span>
+                                                </template>
+                                                <template x-if="row.status === 'ERROR'">
+                                                    <span class="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">✗ ERROR</span>
+                                                </template>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination hint -->
+                        <div x-show="importReport.rows.length > 20" class="bg-gray-50 px-4 py-2 text-xs text-gray-600 border-t border-gray-200">
+                            Showing 20 of <span x-text="importReport.rows.length"></span> rows
                         </div>
                     </div>
                 </div>
@@ -1826,28 +2239,44 @@ function handleQuickImport(fileInput) {
 
             <!-- Phase 2: Report -->
             <template x-if="importPhase === 'report'">
-                <div class="flex gap-3 w-full">
-                    <button 
-                        @click="importPhase = 'upload'; importFile = null; importReport = {}"
-                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
-                        :disabled="importProcessing"
-                    >
-                        <i class="fas fa-arrow-left mr-2"></i> Back
-                    </button>
-                    <button 
-                        @click="showImportModal = false"
-                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
-                        :disabled="importProcessing"
-                    >
-                        Cancel
-                    </button>
-                    <button 
-                        @click="commitImportFile()"
-                        class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
-                        :disabled="!importReport.can_import || importProcessing"
-                    >
-                        <i class="fas fa-upload mr-2"></i> Import <span x-text="importReport.valid_count"></span> Records
-                    </button>
+                <div class="space-y-3">
+                    <!-- Warning if Replace mode selected -->
+                    <div x-show="onExistsMode === 'replace' && importReport.update_count > 0" class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-exclamation-triangle text-orange-600 mt-0.5"></i>
+                            <div>
+                                <p class="font-semibold text-orange-800 text-sm">Replace Mode Active</p>
+                                <p class="text-orange-700 text-xs mt-1">
+                                    <span x-text="importReport.update_count"></span> existing candidate(s) will be updated with new names, genders, and schools.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action buttons -->
+                    <div class="flex gap-3 w-full">
+                        <button 
+                            @click="importPhase = 'upload'; importFile = null; importReport = {}"
+                            class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                            :disabled="importProcessing"
+                        >
+                            <i class="fas fa-arrow-left mr-2"></i> Back
+                        </button>
+                        <button 
+                            @click="showImportModal = false"
+                            class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                            :disabled="importProcessing"
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            @click="commitImportFile()"
+                            class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+                            :disabled="!importReport.can_import || importProcessing"
+                        >
+                            <i class="fas fa-upload mr-2"></i> Import <span x-text="(importReport.create_count || 0) + (importReport.update_count || 0)"></span> Records
+                        </button>
+                    </div>
                 </div>
             </template>
 

@@ -387,9 +387,30 @@ class ExamTypeController extends Controller
                 });
             }
 
+            // Eager load subject allocations for all candidates
+            $query->with(['subjectSelections' => function ($q) {
+                $q->with('subject');
+            }]);
+            
             $candidates = $query->paginate($pageSize);
 
             $data = $candidates->map(function ($candidate) {
+                // For PRIVATE candidates, use actual allocations from database
+                // For SCHOOL candidates, fall back to combination-based subjects
+                if ($candidate->candidate_type === 'PRIVATE' && $candidate->subjectSelections->count() > 0) {
+                    // Use actual allocations for PRIVATE candidates
+                    $allocated = $candidate->subjectSelections->map(function ($selection) {
+                        return [
+                            'id' => $selection->subject_id,
+                            'code' => $selection->subject->code,
+                            'name' => $selection->subject->name,
+                        ];
+                    })->toArray();
+                } else {
+                    // Use combination-based for SCHOOL candidates
+                    $allocated = $this->getCombinationSubjectsForExam($candidate->combination);
+                }
+                
                 return [
                     'id' => $candidate->id,
                     'candidate_id' => $candidate->candidate_id,
@@ -398,7 +419,7 @@ class ExamTypeController extends Controller
                     'combination' => $candidate->combination,
                     'school_id' => $candidate->school_id,
                     'school_name' => $candidate->school?->name ?? '-',
-                    'allocated_subjects' => $this->getCombinationSubjectsForExam($candidate->combination),
+                    'allocated_subjects' => $allocated,
                     'exam_type' => $candidate->exam_type,
                     'status' => $candidate->status ?? 'registered',
                 ];

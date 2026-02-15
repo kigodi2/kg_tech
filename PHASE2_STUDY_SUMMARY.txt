@@ -1,0 +1,318 @@
+================================================================================
+PHASE 2 STUDY COMPLETE: ACSEE PRIVATE vs SCHOOL CSV IMPORT + TEMPLATE GENERATOR
+================================================================================
+
+DATE: 2026-02-15
+STATUS: STUDY COMPLETE — Ready for implementation
+ROLE: Senior Laravel 10 + Alpine.js engineer
+
+================================================================================
+DELIVERABLES (STUDY PHASE)
+================================================================================
+
+✅ docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md
+   - Complete analysis of existing import/allocation system
+   - Database schema documentation
+   - Validation rules and workflows
+   - Integration points for Phase 2
+
+✅ PHASE2_IMPLEMENTATION_PLAN.md
+   - Detailed implementation specification
+   - CSV format definitions (SCHOOL vs PRIVATE)
+   - Backend endpoints to create
+   - Modal UI enhancements
+   - Service layer architecture
+   - Implementation steps (3-4 days estimate)
+   - Test cases
+
+✅ PHASE2_QUICK_REFERENCE.md
+   - Key findings at a glance
+   - CSV formats (final)
+   - Database relationships
+   - Validation rules (reusable)
+   - Existing endpoints (integration points)
+   - Common gotchas
+   - Files to create/modify
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+EXISTING SYSTEM STRENGTHS:
+✅ Two-phase import (validate + commit) — non-destructive design
+✅ AcseeAllocationValidator — reusable for PRIVATE/SCHOOL rules
+✅ CandidateSubjectSelection with unique constraint — idempotent allocations
+✅ Combination pivot relationships — automatic subject resolution
+✅ updateOrCreate() pattern — prevents duplicates
+✅ candidate_type column — already distinguishes SCHOOL vs PRIVATE
+✅ Allocation modal — can be extended with bulk import
+
+WHAT'S MISSING:
+❌ CSV allocation import (only single-candidate modal exists)
+❌ Candidate type filter in allocation modal
+❌ Bulk CSV allocation templates
+❌ CSV parsing for PRIVATE (subject codes vs combination)
+❌ Import report display in modal
+
+CRITICAL CONSTRAINTS:
+- No data deletion (except optional replace mode)
+- Idempotent operations (re-import = safe)
+- Validation before commit (two-phase)
+- Backward compatible (no breaking changes)
+
+================================================================================
+CSV FORMATS (FINAL SPECIFICATION)
+================================================================================
+
+SCHOOL CANDIDATE ALLOCATION CSV:
+────────────────────────────────
+exam_year,index_number,combination_code,replace_allocations
+2026,S0445-0001,PCB,NO
+2026,S0445-0002,HGL,NO
+
+- Uses COMBINATION (not subject codes)
+- Subjects auto-resolved from combination_subject pivot
+- Validation: GS mandatory + ≥3 principals (AcseeAllocationValidator)
+- Candidate type must be SCHOOL or index prefix 'S'
+
+
+PRIVATE CANDIDATE ALLOCATION CSV:
+──────────────────────────────────
+exam_year,index_number,subject_codes,replace_allocations
+2026,P0652-0501,111|112|123|145,NO
+2026,P0652-0502,111|001|002|003,NO
+
+- Uses SUBJECT CODES (pipe-separated)
+- Must include 111 (General Studies)
+- Must include ≥3 principal subjects
+- Candidate type must be PRIVATE or index prefix 'P'
+- Validation: Same rules as SCHOOL (AcseeAllocationValidator)
+
+================================================================================
+INTEGRATION POINTS (REUSE EXISTING)
+================================================================================
+
+VALIDATOR:
+- app/Services/AcseeAllocationValidator::validate()
+- Checks GS mandatory + ≥3 principals + no duplicates
+- Returns: {ok, errors, warnings, principal_ids, all_ids}
+
+MODELS:
+- Candidate (candidate_type, candidate_id columns already exist)
+- Subject (code is lookup key)
+- Combination (pivot relationship to subjects)
+- CandidateSubjectSelection (truth table with unique constraint)
+- ExamYear (year resolution)
+
+ENDPOINTS (EXISTING):
+- GET /api/exam-types/{code}/candidates — list with allocations
+- GET /api/combinations/{id}/subjects — pivot lookup
+- POST /api/exam-types/acsee/allocate-subjects — single allocation (reusable logic)
+
+PATTERNS (EXISTING):
+- updateOrCreate() — idempotency
+- Two-phase import (validate + commit)
+- Error reporting with row numbers
+
+================================================================================
+PHASE 2 DELIVERABLES (IMPLEMENTATION)
+================================================================================
+
+BACKEND ENDPOINTS (New):
+
+1. GET /api/exam-types/acsee/templates/school-allocation.csv
+   - Returns: CSV with headers + example + instructions
+
+2. GET /api/exam-types/acsee/templates/private-allocation.csv
+   - Returns: CSV with headers + example + instructions
+
+3. POST /api/exam-types/acsee/allocate-from-csv
+   - Params: file, exam_year_id, candidate_type_filter, replace_allocations_default
+   - Returns: Import report (successes/failures/errors)
+
+SERVICES (New):
+
+1. AcseeAllocationTemplateService
+   - generateSchoolTemplate(): string
+   - generatePrivateTemplate(): string
+
+2. AcseeAllocationCSVImporter
+   - validateCSV(file, examYearId, candidateTypeFilter): array
+   - commitImport(file, examYearId, candidateTypeFilter, replaceDefault): array
+   - matchCandidate(indexNumber, examYearId): ?Candidate
+   - allocateSubjectsForSchool(candidate, combinationCode): array
+   - allocateSubjectsForPrivate(candidate, subjectCodes): array
+
+MODAL UI (Extend acseeManager):
+
+1. Candidate Type Filter
+   - Dropdown: ALL | SCHOOL | PRIVATE
+   - Controls template type and validation mode
+
+2. Bulk Allocation Section
+   - File upload
+   - Template download (per type)
+   - Exam year selector
+   - Replace checkbox
+   - Import button
+   - Report display (summary + errors)
+   - Download error CSV button
+
+TESTS:
+- SCHOOL allocation (valid, combination missing, validation)
+- PRIVATE allocation (valid, missing GS, <3 principals, validation)
+- Candidate type mismatch detection
+- Duplicate prevention / idempotency
+- Replace mode
+- Error reporting
+- CSV format variations
+
+================================================================================
+NON-DESTRUCTIVE SAFEGUARDS
+================================================================================
+
+✅ Phase 1 (validate) is read-only
+✅ Phase 2 (commit) requires explicit user confirmation
+✅ Replace mode is opt-in (defaults to add-only)
+✅ Unique constraint prevents duplicates (updateOrCreate)
+✅ Idempotent (re-import same file = safe)
+✅ Detailed error reporting (row-by-row)
+✅ Downloadable error CSV (troubleshooting)
+✅ No schema changes needed
+✅ No breaking changes to existing flows
+✅ All changes are additive
+
+================================================================================
+EFFORT ESTIMATE
+================================================================================
+
+Backend Services:      4 hours
+Backend Endpoints:     2 hours
+Modal UI Updates:      4 hours
+Tests (Unit/Feature):  6 hours
+Integration Testing:   3 hours
+Documentation:         2 hours
+───────────────────
+TOTAL:                21 hours (~3 developer-days)
+
+Can be split across multiple sessions. Backend and frontend can be parallelized.
+
+================================================================================
+IMPLEMENTATION ROADMAP
+================================================================================
+
+PHASE 2a (Backend Setup):
+Day 1:  Create services + controller + routes
+Day 1:  Basic endpoint testing
+
+PHASE 2b (Frontend UI):
+Day 2:  Update modal with filters and bulk section
+Day 2:  Add Alpine functions for file upload/processing
+Day 2:  Add report display
+
+PHASE 2c (Integration & Testing):
+Day 3:  Full integration testing
+Day 3:  Edge case testing
+Day 3:  User acceptance testing
+
+PHASE 2d (Documentation):
+Day 4:  User guide + troubleshooting
+Day 4:  Cleanup and final deployment
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. ✅ STUDY COMPLETE (this phase)
+   - Analysis documents: PHASE2_IMPORT_EXISTING_BEHAVIOR.md
+   - Implementation plan: PHASE2_IMPLEMENTATION_PLAN.md
+   - Quick reference: PHASE2_QUICK_REFERENCE.md
+
+2. READY FOR IMPLEMENTATION (next phase):
+   - Start with backend services (Day 1)
+   - Parallel: UI updates (Day 2)
+   - Integration testing (Day 3)
+
+3. KEY FILES TO REMEMBER:
+   - docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md (for context)
+   - PHASE2_IMPLEMENTATION_PLAN.md (for detailed spec)
+   - PHASE2_QUICK_REFERENCE.md (for quick lookup)
+
+================================================================================
+STUDY DOCUMENTS CREATED
+================================================================================
+
+1. docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md  (14 sections, 350+ lines)
+   └─ Complete system analysis, schema, workflows, integration points
+
+2. PHASE2_IMPLEMENTATION_PLAN.md  (13 sections, 500+ lines)
+   └─ Detailed implementation spec, CSV formats, endpoints, UI, services, tests
+
+3. PHASE2_QUICK_REFERENCE.md  (20 sections, 300+ lines)
+   └─ Key findings, gotchas, file locations, reusable components
+
+4. PHASE2_STUDY_SUMMARY.txt  (this file)
+   └─ Executive summary of study phase
+
+================================================================================
+SUCCESS CRITERIA
+================================================================================
+
+Study Phase:
+✅ Understand existing import/allocation system
+✅ Document current CSV formats
+✅ Identify integration points
+✅ Define new CSV formats (SCHOOL vs PRIVATE)
+✅ Plan implementation approach
+✅ Ensure non-destructive design
+✅ Reuse existing components
+
+Implementation Phase (Next):
+□ CSV templates downloadable (SCHOOL + PRIVATE)
+□ Candidate type filter in modal UI
+□ CSV allocation import endpoint (two-phase)
+□ Import report display (summary + errors)
+□ All tests passing
+□ Zero data loss
+□ Backward compatible
+□ User documentation complete
+
+================================================================================
+CONFIDENCE LEVEL
+================================================================================
+
+HIGH CONFIDENCE: Implementation plan is well-defined and realistic.
+
+Reasons:
+✅ Existing system has solid foundation (validators, patterns, relationships)
+✅ Clear reuse strategy (AcseeAllocationValidator, updateOrCreate pattern)
+✅ Non-destructive design is already present (two-phase pattern)
+✅ No schema changes required
+✅ No breaking changes needed
+✅ CSV formats aligned with NECTA standards
+✅ Testing strategy is straightforward
+
+Risks (Low):
+- CSV parsing edge cases (handled in CandidateImportService pattern)
+- Exam year resolution (already handled in existing system)
+- Subject code mismatches (validation before insert)
+
+================================================================================
+AUTHOR NOTES
+================================================================================
+
+This study was conducted as a MANDATORY PRE-IMPLEMENTATION PHASE per task requirements.
+
+Key principles applied:
+1. Do NOT assume — Study the code first ✅
+2. Do NOT delete data — Use idempotent patterns ✅
+3. Only additive/backward-compatible changes ✅
+4. Reuse existing services/validators ✅
+5. Follow existing patterns (two-phase import) ✅
+
+The implementation plan is ready to execute with high confidence.
+All necessary context is documented in the three study documents.
+
+================================================================================
+END OF STUDY SUMMARY
+================================================================================

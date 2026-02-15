@@ -1,0 +1,356 @@
+================================================================================
+PHASE 2 STUDY — FILES CREATED & REFERENCE MATERIALS
+================================================================================
+
+STUDY PHASE DELIVERABLES
+========================
+
+1. docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md
+   ├─ Status: CREATED ✅
+   ├─ Purpose: Complete technical analysis of existing system
+   ├─ Sections: 14
+   ├─ Content:
+   │  ├─ System overview (two-phase import)
+   │  ├─ Current CSV templates (SCHOOL + PRIVATE existing formats)
+   │  ├─ Database schema (tables, relationships, unique constraints)
+   │  ├─ Import workflows (Phase 1 validation, Phase 2 commit)
+   │  ├─ Key services (AcseeAllocationValidator, CandidateImportService)
+   │  ├─ Existing endpoint (allocate-subjects)
+   │  ├─ Related endpoints (listings, combinations)
+   │  ├─ Database relationships (Laravel models)
+   │  ├─ Allocation modal current state
+   │  ├─ Validation rule summary
+   │  ├─ Non-destructive design notes
+   │  ├─ Integration points for Phase 2
+   │  ├─ Files modified/created
+   │  └─ Next steps
+   └─ Reference when: Understanding current system, writing services
+
+2. PHASE2_IMPLEMENTATION_PLAN.md
+   ├─ Status: CREATED ✅
+   ├─ Purpose: Detailed specification for Phase 2 implementation
+   ├─ Sections: 13
+   ├─ Content:
+   │  ├─ Study findings (existing strengths + gaps)
+   │  ├─ Phase 2 objectives (refined)
+   │  ├─ Deliverables (templates, endpoints, UI, services)
+   │  ├─ Backend endpoints (template downloads + CSV import)
+   │  ├─ Modal UI changes (filter + bulk section)
+   │  ├─ Service layer architecture
+   │  ├─ Route changes
+   │  ├─ Implementation steps (Phase 2a/2b/2c)
+   │  ├─ Validation rules (CSV import specific)
+   │  ├─ Error messages (user-friendly)
+   │  ├─ Non-destructive safeguards
+   │  ├─ Success criteria
+   │  └─ Effort estimate (21 hours, 3 days)
+   └─ Reference when: Implementing Phase 2, creating endpoints
+
+3. PHASE2_QUICK_REFERENCE.md
+   ├─ Status: CREATED ✅
+   ├─ Purpose: Key findings at a glance, quick lookup
+   ├─ Sections: 20+
+   ├─ Content:
+   │  ├─ CSV formats (final specification)
+   │  ├─ Key models & relationships
+   │  ├─ Validation rules (reusable)
+   │  ├─ Existing endpoints (reusable)
+   │  ├─ Database unique constraint
+   │  ├─ Import workflow (two-phase diagram)
+   │  ├─ Candidate matching logic
+   │  ├─ Idempotency & safety patterns
+   │  ├─ Replace mode behavior
+   │  ├─ Error handling
+   │  ├─ Modal structure (current)
+   │  ├─ Endpoints to create
+   │  ├─ Services to create
+   │  ├─ Tests to write
+   │  ├─ File locations summary
+   │  ├─ Backward compatibility checklist
+   │  ├─ Common gotchas
+   │  ├─ Reuse & don't reinvent
+   │  └─ Quick navigation to existing code
+   └─ Reference when: Working on implementation, need quick lookup
+
+4. PHASE2_STUDY_SUMMARY.txt
+   ├─ Status: CREATED ✅
+   ├─ Purpose: Executive summary of study phase
+   ├─ Content:
+   │  ├─ Deliverables (study phase)
+   │  ├─ Key findings (system strengths, gaps, constraints)
+   │  ├─ CSV formats (final specification)
+   │  ├─ Integration points (reuse existing)
+   │  ├─ Phase 2 deliverables (endpoints, services, UI, tests)
+   │  ├─ Non-destructive safeguards (checklist)
+   │  ├─ Effort estimate
+   │  ├─ Implementation roadmap
+   │  ├─ Next steps
+   │  ├─ Success criteria
+   │  ├─ Confidence level
+   │  └─ Author notes
+   └─ Reference when: High-level overview, status updates
+
+5. PHASE2_STUDY_FILES.txt
+   ├─ Status: CREATED ✅ (this file)
+   ├─ Purpose: Index of all study documents + references
+   └─ Content: This file
+
+================================================================================
+EXISTING FILES REFERENCED (For Context)
+================================================================================
+
+Core Application Files:
+
+1. resources/views/exam-types/acsee.blade.php
+   ├─ Alpine.js component: acseeManager()
+   ├─ Current tabs: Subjects, Combinations, Candidates
+   ├─ Current modal: Allocation modal (single-candidate)
+   ├─ Key sections:
+   │  ├─ Lines 122-197: Candidates tab (read-only list)
+   │  ├─ Lines 296-450: Allocation modal
+   │  ├─ Lines 883-914: loadAcseeCandicates()
+   │  ├─ Lines 945-1115: Allocation modal functions
+   │  └─ Lines 1117-1127: showMessage() helper
+   └─ TO MODIFY: Add filter + bulk import section
+
+2. app/Http/Controllers/ExamTypeController.php
+   ├─ Lines 345-423: getAcseeCandicates() — candidate listing
+   ├─ Lines 428-454: getCombinationSubjectsForExam() — helper
+   └─ Key: Used for candidate list API in modal
+
+3. app/Services/AcseeAllocationValidator.php
+   ├─ Lines 36-62: validate() method
+   ├─ Lines 67-88: validateGeneralStudies()
+   ├─ Lines 95-118: validatePrincipalSubjectCount()
+   ├─ Lines 123-131: validateNoDuplicates()
+   ├─ Lines 142-160: validateFromCombination()
+   └─ REUSE: For CSV import validation
+
+4. app/Services/Candidates/CandidateImportService.php
+   ├─ Lines 35-50: validateCSV() — Phase 1 pattern
+   ├─ Lines 76-140: CSV validation rules
+   ├─ Pattern: Normalize headers, validate per row, return errors
+   └─ FOLLOW: Same pattern for CSV allocation import
+
+5. app/Http/Controllers/CandidateImportController.php
+   ├─ Lines 30-66: validateImport() — Phase 1 endpoint
+   ├─ Lines 73-114: commitImport() — Phase 2 endpoint
+   ├─ Lines 119-166: downloadTemplate() — template generation
+   ├─ Lines 173-224: asyncBulkImport() — background job
+   ├─ Lines 229-286: downloadErrorReport() — error CSV
+   └─ FOLLOW: Endpoint structure, error handling patterns
+
+6. routes/web.php
+   ├─ Lines 1357-1474: ACSEE API routes
+   │  ├─ Line 1357: GET /api/exam-types/{code}/candidates
+   │  ├─ Line 1360: GET /api/exam-types/{code}/combinations
+   │  ├─ Line 1366: POST /api/exam-types/acsee/allocate-subjects
+   │  └─ Lines 1368-1376: Validation rules for allocate-subjects
+   └─ TO ADD: Template download routes + CSV import route
+
+7. app/Models/Candidate.php
+   ├─ Column: candidate_type (SCHOOL or PRIVATE)
+   ├─ Column: candidate_id (index number)
+   ├─ Relationship: subjectSelections()
+   ├─ Relationship: examRegistrations()
+   └─ KEY: candidate_type already exists!
+
+8. app/Models/CandidateSubjectSelection.php
+   ├─ Unique constraint: (candidate_id, exam_type_id, exam_year_id, subject_id)
+   ├─ Columns: is_principal, source (template or manual)
+   └─ PATTERN: updateOrCreate() for idempotency
+
+9. app/Models/Combination.php
+   ├─ Relationship: subjects() (many-to-many via pivot)
+   └─ Lookup: By code field
+
+10. app/Models/ExamYear.php
+    ├─ Columns: year, year_label
+    └─ Lookup: For exam year resolution
+
+================================================================================
+CSV TEMPLATE REFERENCES (Existing)
+================================================================================
+
+1. public/templates/ACSEE_SCHOOL_CANDIDATES_TEMPLATE.csv
+   ├─ Current format for SCHOOL candidate registration
+   ├─ Columns: candidate_id, full_name, gender, exam_type, exam_year, school_code, combination, candidate_type
+   └─ NOTE: This is for CANDIDATE REGISTRATION, not allocation
+
+2. public/templates/ACSEE_PRIVATE_CANDIDATES_TEMPLATE.csv
+   ├─ Current format for PRIVATE candidate registration
+   ├─ Columns: candidate_id, full_name, gender, exam_type, exam_year, school_code, subjects, candidate_type
+   ├─ subjects column: Pipe-separated codes (e.g., 111|001|002|003)
+   └─ NOTE: This is for CANDIDATE REGISTRATION, not allocation
+
+PHASE 2 CSV TEMPLATES (TO CREATE):
+- ACSEE_SCHOOL_ALLOCATION_TEMPLATE.csv (for subject allocation, not registration)
+- ACSEE_PRIVATE_ALLOCATION_TEMPLATE.csv (for subject allocation, not registration)
+
+================================================================================
+STUDY DOCUMENT NAVIGATION
+================================================================================
+
+Quick Start (5 min):
+→ PHASE2_STUDY_SUMMARY.txt (this gives you the overview)
+→ PHASE2_QUICK_REFERENCE.md (CSV formats + key findings)
+
+Full Understanding (30 min):
+→ docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md (complete system analysis)
+→ PHASE2_IMPLEMENTATION_PLAN.md (detailed spec)
+→ PHASE2_QUICK_REFERENCE.md (for quick lookup during implementation)
+
+Implementation (refer as needed):
+→ PHASE2_IMPLEMENTATION_PLAN.md (for endpoint specs)
+→ PHASE2_QUICK_REFERENCE.md (for validation rules, gotchas)
+→ docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md (for integration points)
+
+Debugging:
+→ PHASE2_QUICK_REFERENCE.md (common gotchas section)
+→ docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md (validation rules section)
+
+================================================================================
+KEY FACTS (MEMORIZE)
+================================================================================
+
+1. CSV FORMATS (NEW)
+   SCHOOL: exam_year, index_number, combination_code, replace_allocations
+   PRIVATE: exam_year, index_number, subject_codes (pipe-separated), replace_allocations
+
+2. VALIDATION RULES (REUSE)
+   - General Studies (111) mandatory
+   - Minimum 3 principal subjects (excluding GS)
+   - No duplicates
+   → Use: AcseeAllocationValidator::validate()
+
+3. CANDIDATE MATCHING (NEW FOR CSV)
+   - Match by: index_number (from CSV) + exam_year_id (from UI)
+   - Not by: candidate ID (that's for single-step allocation)
+
+4. IDEMPOTENCY (EXISTING PATTERN)
+   - updateOrCreate() with unique key: (candidate_id, exam_type_id, exam_year_id, subject_id)
+   - Re-import same CSV = safe, no duplicates
+
+5. TWO-PHASE FLOW (EXISTING PATTERN)
+   - Phase 1 (validate): Read CSV, no DB changes, return errors
+   - Phase 2 (commit): Apply changes to DB only after user confirms
+
+6. SAFEGUARDS (EXISTING + NEW)
+   - Replace mode is opt-in (defaults to add-only)
+   - Explicit confirmation before destructive operations
+   - Detailed error reporting per row
+   - Downloadable error CSV
+
+7. REUSE (CRITICAL)
+   - AcseeAllocationValidator (validation rules)
+   - CandidateImportService pattern (CSV parsing)
+   - updateOrCreate() (idempotency)
+   - Two-phase pattern (validate + commit)
+   - CandidateImportController structure (endpoints)
+
+8. DON'T REINVENT
+   - Don't create new validation logic (use AcseeAllocationValidator)
+   - Don't create new CSV parsing patterns (follow CandidateImportService)
+   - Don't create new error handling (reuse existing patterns)
+
+================================================================================
+IMPLEMENTATION CHECKLIST (Phase 2)
+================================================================================
+
+BACKEND SERVICES:
+□ Create AcseeAllocationTemplateService
+  □ generateSchoolTemplate(): string
+  □ generatePrivateTemplate(): string
+□ Create AcseeAllocationCSVImporter
+  □ validateCSV(): array
+  □ commitImport(): array
+  □ matchCandidate(): ?Candidate
+  □ allocateSubjectsForSchool(): array
+  □ allocateSubjectsForPrivate(): array
+
+BACKEND ENDPOINTS:
+□ GET /api/exam-types/acsee/templates/school-allocation.csv
+□ GET /api/exam-types/acsee/templates/private-allocation.csv
+□ POST /api/exam-types/acsee/allocate-from-csv (or split into validate + commit)
+
+FRONTEND UI:
+□ Add candidate type filter to modal
+□ Add bulk allocation section
+□ Add file upload input
+□ Add template download buttons (x2)
+□ Add exam year selector
+□ Add replace checkbox
+□ Add import button
+□ Add report display (summary + errors)
+□ Add download error CSV button
+
+ALPINE FUNCTIONS:
+□ filterCandidateType(): void
+□ downloadTemplate(type: string): void
+□ handleFileUpload(event): void
+□ bulkImportAllocations(): void
+□ downloadErrorReport(): void
+
+TESTS:
+□ Test SCHOOL allocation (valid, invalid, validation)
+□ Test PRIVATE allocation (valid, invalid, validation)
+□ Test candidate type mismatch
+□ Test duplicate prevention
+□ Test replace mode
+□ Test error reporting
+□ Test idempotency
+
+DOCUMENTATION:
+□ Update docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md (mark as complete)
+□ Create user guide for CSV import
+□ Create troubleshooting guide
+□ Add inline code comments
+
+================================================================================
+CRITICAL REMINDERS
+================================================================================
+
+⚠️  DO NOT:
+   - Delete existing candidates or allocations
+   - Change database schema without migration
+   - Break existing import flows
+   - Ignore validation rules (GS + 3 principals)
+   - Assume candidate matching by ID (use index_number)
+   - Forget idempotency (updateOrCreate with unique key)
+
+✅  DO:
+   - Follow two-phase pattern (validate + commit)
+   - Reuse AcseeAllocationValidator
+   - Use updateOrCreate() for idempotency
+   - Include detailed error messages (per row)
+   - Test with real data before deploying
+   - Document all CSV format changes
+   - Get user confirmation before destructive ops (replace mode)
+
+================================================================================
+SUPPORT DOCUMENTS
+================================================================================
+
+If you need to understand:
+- "How does the current allocation work?" → docs/PHASE2_IMPORT_EXISTING_BEHAVIOR.md
+- "What are the CSV formats?" → PHASE2_QUICK_REFERENCE.md (section "CSV FORMATS")
+- "How do I implement the CSV importer?" → PHASE2_IMPLEMENTATION_PLAN.md
+- "What are the validation rules?" → PHASE2_QUICK_REFERENCE.md (section "VALIDATION RULES")
+- "What endpoints do I need to create?" → PHASE2_IMPLEMENTATION_PLAN.md (section "DELIVERABLES")
+- "How do I avoid breaking existing code?" → PHASE2_QUICK_REFERENCE.md (section "BACKWARD COMPATIBILITY")
+- "What's the quick status?" → PHASE2_STUDY_SUMMARY.txt (section "KEY FINDINGS")
+
+================================================================================
+STUDY COMPLETE ✅
+Ready for Phase 2 Implementation
+================================================================================
+
+Date: 2026-02-15
+Status: STUDY PHASE COMPLETE
+Next: Begin Phase 2a (Backend Services)
+Effort Estimate: 21 hours (3 developer-days)
+Confidence: HIGH
+
+All necessary context is documented. Proceed with implementation.
+
+================================================================================

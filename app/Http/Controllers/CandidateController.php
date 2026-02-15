@@ -10,6 +10,7 @@ use App\Models\ExamYear;
 use App\Models\CandidateExamRegistration;
 use App\Models\CandidateSubjectSelection;
 use App\Services\ExamYear\ExamYearValidationService;
+use App\Services\IndexNumber\IndexNumberValidator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -89,6 +90,52 @@ class CandidateController extends Controller
         }
 
         try {
+            // NECTA Index Number Validation (if index_number field provided or exam_type is ACSEE)
+            if ($validated['exam_type'] === 'ACSEE' && !empty($validated['candidate_id'])) {
+                $validator = new IndexNumberValidator();
+                
+                // Resolve exam year and type for context
+                $examYear = null;
+                if (!empty($validated['exam_year'])) {
+                    $examYear = ExamYear::where('year_label', $validated['exam_year'])
+                        ->orWhere('id', $validated['exam_year'])
+                        ->first();
+                }
+                if (!$examYear) {
+                    $examYear = ExamYear::where('is_active', true)->first();
+                }
+
+                $examType = ExamType::where('code', 'ACSEE')->first();
+
+                if ($examYear && $examType) {
+                    $validationContext = [
+                        'exam_year_id' => $examYear->id,
+                        'exam_type_id' => $examType->id,
+                        'candidate_id' => null,  // null = creating new
+                    ];
+
+                    $indexValidation = $validator->validate($validated['candidate_id'], $validationContext);
+                    if (!$indexValidation->ok) {
+                        $error = $indexValidation->firstError();
+                        if ($request->expectsJson()) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => $error['message'],
+                                'field' => $error['field'],
+                                'validation_errors' => $indexValidation->errors(),
+                            ], 422);
+                        }
+
+                        return redirect('/candidates')->with('error', 'Index number validation failed: ' . $error['message']);
+                    }
+
+                    // Auto-set candidate_type from index number
+                    if ($indexValidation->parsed) {
+                        $validated['candidate_type'] = $indexValidation->parsed->candidate_type;
+                    }
+                }
+            }
+
             // Start transaction for data consistency
             DB::beginTransaction();
 
@@ -98,6 +145,7 @@ class CandidateController extends Controller
                 'candidate_id' => $validated['candidate_id'],
                 'gender' => $validated['gender'],
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'candidate_type' => $validated['candidate_type'] ?? 'SCHOOL',  // Set from index number or default
             ];
 
             // Support both full_name and first_name/last_name
@@ -110,12 +158,12 @@ class CandidateController extends Controller
             // Create candidate
              $candidate = Candidate::create($candidateData);
 
-             // Register for ACSEE if specified
-             if ($validated['exam_type'] === 'ACSEE') {
-                 $this->registerForACSEE($candidate, $validated['combination'] ?? null, $validated['exam_year'] ?? null);
-             }
+              // Register for ACSEE if specified
+              if ($validated['exam_type'] === 'ACSEE') {
+                  $this->registerForACSEE($candidate, $validated['combination'] ?? null, $validated['exam_year'] ?? null);
+              }
 
-            DB::commit();
+             DB::commit();
 
             // Log successful candidate registration
             \App\Models\GovernanceAuditLog::log(
@@ -194,6 +242,47 @@ class CandidateController extends Controller
         ]);
 
         try {
+            // NECTA Index Number Validation (if updating to ACSEE or index_number changed)
+            if ($validated['exam_type'] === 'ACSEE' && $validated['candidate_id'] !== $candidate->candidate_id) {
+                $validator = new IndexNumberValidator();
+                
+                // Resolve exam year and type for context
+                $examYear = $candidate->examRegistrations()->first()?->examYear;
+                if (!$examYear) {
+                    $examYear = ExamYear::where('is_active', true)->first();
+                }
+
+                $examType = ExamType::where('code', 'ACSEE')->first();
+
+                if ($examYear && $examType) {
+                    $validationContext = [
+                        'exam_year_id' => $examYear->id,
+                        'exam_type_id' => $examType->id,
+                        'candidate_id' => $candidate->id,  // Ignore this candidate in duplicate check
+                    ];
+
+                    $indexValidation = $validator->validate($validated['candidate_id'], $validationContext);
+                    if (!$indexValidation->ok) {
+                        $error = $indexValidation->firstError();
+                        if ($request->expectsJson()) {
+                            return response()->json([
+                                'success' => false,
+                                'message' => $error['message'],
+                                'field' => $error['field'],
+                                'validation_errors' => $indexValidation->errors(),
+                            ], 422);
+                        }
+
+                        return redirect('/candidates')->with('error', 'Index number validation failed: ' . $error['message']);
+                    }
+
+                    // Auto-set candidate_type from index number
+                    if ($indexValidation->parsed) {
+                        $validated['candidate_type'] = $indexValidation->parsed->candidate_type;
+                    }
+                }
+            }
+
             DB::beginTransaction();
 
             // Prepare update data
@@ -202,6 +291,7 @@ class CandidateController extends Controller
                 'candidate_id' => $validated['candidate_id'],
                 'gender' => $validated['gender'],
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
+                'candidate_type' => $validated['candidate_type'] ?? $candidate->candidate_type,
             ];
 
             // Support both full_name and first_name/last_name

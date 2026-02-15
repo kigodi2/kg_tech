@@ -381,6 +381,11 @@
                 display: none;
             }
         }
+        
+        /* Alpine.js x-cloak directive - hide elements until Alpine initializes */
+        [x-cloak] { 
+            display: none !important; 
+        }
     </style>
 </head>
 <body class="bg-gray-100">

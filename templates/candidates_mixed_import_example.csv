@@ -1,0 +1,9 @@
+candidate_id,full_name,gender,candidate_type,combination,subjects,school_code,district,exam_type,exam_year
+S1378-0001,John Doe,M,SCHOOL,SCIENCE,,S1378,,ACSEE,2026
+S1378-0002,Jane Smith,F,SCHOOL,COMMERCE,,S1378,,ACSEE,2026
+S1378-0003,Peter Brown,M,SCHOOL,SCIENCE,,S1378,,ACSEE,2026
+P2026-0001,Alice Johnson,F,PRIVATE,,"111|102|103|104",,Dar es Salaam,ACSEE,2026
+P2026-0002,Bob Wilson,M,PRIVATE,,"111|102|103|105",,Dar es Salaam,ACSEE,2026
+P2026-0003,Carol Davis,F,PRIVATE,,"111|102|103|106",,Dodoma,ACSEE,2026
+S1379-0001,David Smith,M,SCHOOL,GENERAL,,S1379,,ACSEE,2026
+P2026-0004,Emma Brown,F,PRIVATE,,"111|102|104|105",,Arusha,ACSEE,2026

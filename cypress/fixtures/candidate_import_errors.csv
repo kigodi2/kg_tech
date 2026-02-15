@@ -1,0 +1,4 @@
+candidate_id,full_name,gender,school_code,combination,exam_type,exam_year,candidate_type
+,INVALID NO ID,M,S0754,PCM,ACSEE,2026,SCHOOL
+S0754-0099,NO SCHOOL,M,INVALID,ECA,ACSEE,2026,SCHOOL
+S0754-0100,MISSING GENDER,,S0754,HGE,ACSEE,2026,SCHOOL

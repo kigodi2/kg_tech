@@ -1,0 +1,236 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║          CANDIDATE IMPORT: SKIP/REPLACE FEATURE - QUICK REFERENCE            ║
+║                                                                              ║
+║                       Implementation Complete                               ║
+║                     Ready for Testing & Deployment                          ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+📋 FILES MODIFIED (3)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. app/Http/Controllers/CandidateImportController.php
+   • validateImport() - accepts on_exists_mode
+   • commitImport() - accepts on_exists_mode
+
+2. app/Services/Candidates/CandidateImportService.php
+   • validateCSV() - mode-aware validation
+   • commitImport() - mode-aware commit
+   • updateCandidate() - safe updates (name, gender, school only)
+
+3. resources/views/registration/candidates.blade.php
+   • Step 1: Radio buttons for mode selection
+   • Step 2: Summary cards (6 total)
+   • Step 2: Import Plan table with status badges
+
+
+🎯 TWO MODES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SKIP (Default)                          REPLACE
+┌─────────────────────────────┐        ┌──────────────────────────────┐
+│ • Ignore existing            │        │ • Update existing            │
+│ • Create only new            │        │ • Updates: name, gender,     │
+│ • Safe, non-destructive      │        │   school                     │
+│ • No changes to data         │        │ • Protects: ID, exam type,   │
+│                              │        │   marks, registrations       │
+│ Good for: Safe imports       │        │ Good for: Fixing errors      │
+└─────────────────────────────┘        └──────────────────────────────┘
+
+
+📊 VALIDATION RESPONSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Example: File with 3 rows (2 existing, 1 new)
+
+SKIP Mode:                              REPLACE Mode:
+{                                       {
+  "create_count": 1                       "create_count": 1
+  "skip_count": 2                         "update_count": 2
+  "update_count": 0                       "skip_count": 0
+  "error_count": 0                        "error_count": 0
+  "can_import": true                      "can_import": true
+  "rows": [                               "rows": [
+    {"status": "SKIP"},                     {"status": "REPLACE"},
+    {"status": "NEW"},                      {"status": "NEW"},
+    {"status": "SKIP"}                      {"status": "REPLACE"}
+  ]                                     ]
+}                                       }
+
+
+🔒 DATA SAFETY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REPLACE Mode UPDATES:           REPLACE Mode PROTECTS:
+✅ full_name                    ❌ candidate_id (never changes)
+✅ gender (M/F)                 ❌ exam_type (never changes)
+✅ school_id                    ❌ combination (never changes)
+                               ❌ exam registrations (preserved)
+                               ❌ marks (never deleted)
+                               ❌ results (never deleted)
+
+
+🧪 QUICK TEST (15 min)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1: Setup test data
+  php artisan tinker
+  >>> # Create S0754-0001 (existing)
+  >>> # Create S0754-0002 (existing)
+
+Step 2: Create test CSV
+  S0754-0001, S0754-0003 (new), S0754-0002
+
+Step 3: Validate SKIP mode
+  curl -F "file=@test.csv" -F "on_exists_mode=skip" \
+    http://127.0.0.1:8000/api/candidates/import/validate
+  
+  Expected: create=1, skip=2, update=0
+
+Step 4: Validate REPLACE mode
+  curl -F "file=@test.csv" -F "on_exists_mode=replace" \
+    http://127.0.0.1:8000/api/candidates/import/validate
+  
+  Expected: create=1, skip=0, update=2
+
+Step 5: Verify UI
+  Open http://127.0.0.1:8000/registration/candidates
+  Click Tools > Import CSV
+  See radio buttons in Step 1
+  See summary cards & table in Step 2
+
+
+✅ TESTS TO RUN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Use: SKIP_REPLACE_VERIFICATION_CHECKLIST.md
+
+Tests include:
+  ✓ TEST 1: Skip mode - new only
+  ✓ TEST 2: Skip mode - mixed file
+  ✓ TEST 3: Replace mode - mixed file
+  ✓ TEST 4: Skip mode commit - DB unchanged
+  ✓ TEST 5: Replace mode commit - DB updated
+  ✓ TEST 6: Validation errors
+  ✓ TEST 7: Duplicate in file
+  ✓ TEST 8: Default mode (backward compat)
+  ✓ TEST 9: Invalid mode rejected
+  ✓ TEST 10: Case sensitivity
+
+
+📖 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HOW_TO_VERIFY_SKIP_REPLACE.md
+  └─ Quick 15-minute test walkthrough
+
+SKIP_REPLACE_VERIFICATION_CHECKLIST.md
+  └─ Complete test plan with 10+ test cases
+  └─ API curl commands for each test
+  └─ Database verification queries
+  └─ UI verification steps
+
+IMPLEMENTATION_COMPLETE_SUMMARY.md
+  └─ What was implemented
+  └─ How to verify (overview)
+  └─ Success criteria
+
+
+🚀 DEPLOYMENT CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Before deploying:
+  ☐ Run quick test (HOW_TO_VERIFY_SKIP_REPLACE.md)
+  ☐ Run full test plan (SKIP_REPLACE_VERIFICATION_CHECKLIST.md)
+  ☐ Test UI (mode selection, cards, badges)
+  ☐ Verify backward compatibility (test without on_exists_mode)
+  ☐ Check database safety (marks/registrations preserved)
+  ☐ Monitor logs for errors
+
+No migrations needed:
+  ☐ No database schema changes
+  ☐ No config changes
+  ☐ No ENV changes
+
+
+🎨 UI CHANGES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1 (Upload):
+  ○ Skip existing (default, recommended)
+  ○ Replace existing
+
+Step 2 (Review):
+  [Total Rows: 3] [New: 1] [Will Skip: 2] [Errors: 0] [Can Import: Yes]
+
+  Import Plan:
+  Row 1 | S0754-0001 | JOHN DOE       | ⊘ SKIP
+  Row 2 | S0754-0003 | NEW STUDENT    | ✓ NEW
+  Row 3 | S0754-0002 | JANE SMITH     | ⊘ SKIP
+
+  Button: "Import 1 Records"
+
+Replace Mode adds:
+  [New: 1] [Will Update: 2] (instead of "Will Skip")
+  Orange warning: "Replace Mode Active - 2 candidate(s) will be updated..."
+  Button: "Import 3 Records"
+
+
+🔄 BACKWARD COMPATIBILITY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Old code continues to work:
+  ✓ Missing on_exists_mode defaults to "skip"
+  ✓ Old API consumers ignore new response fields
+  ✓ No database migrations required
+  ✓ No breaking changes
+
+
+❓ FAQ
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q: Will existing candidates be deleted?
+A: No. Skip mode ignores them. Replace only updates safe fields.
+
+Q: Will marks be deleted?
+A: No. Replace mode NEVER deletes marks, registrations, or results.
+
+Q: What if I don't specify on_exists_mode?
+A: Defaults to "skip" (safest behavior).
+
+Q: Can I change exam_type in Replace mode?
+A: No. exam_type is immutable to protect exam allocations.
+
+Q: What fields are updated in Replace mode?
+A: Only: full_name, gender, school_id
+
+Q: What if duplicate candidate_id in file?
+A: Second occurrence marked as ERROR, import blocked.
+
+Q: Is it case-sensitive?
+A: Yes. Only lowercase "skip" and "replace" accepted.
+
+
+📞 SUPPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Quick questions:
+  → See FAQ above
+
+Need to run tests:
+  → Read HOW_TO_VERIFY_SKIP_REPLACE.md (15 min)
+  → Follow SKIP_REPLACE_VERIFICATION_CHECKLIST.md (1-2 hours)
+
+Need implementation details:
+  → Read IMPLEMENTATION_COMPLETE_SUMMARY.md
+
+
+════════════════════════════════════════════════════════════════════════════════
+
+STATUS: ✅ IMPLEMENTATION COMPLETE
+
+NEXT: Run tests from HOW_TO_VERIFY_SKIP_REPLACE.md (15 min)
+
+════════════════════════════════════════════════════════════════════════════════

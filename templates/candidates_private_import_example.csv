@@ -1,0 +1,8 @@
+candidate_id,full_name,gender,candidate_type,subjects,exam_type,exam_year,district
+P2026-0001,Alice Mkwashi,F,PRIVATE,"111|102|103|104",ACSEE,2026,Dar es Salaam
+P2026-0002,Bob Mwase,M,PRIVATE,"111|102|103|105",ACSEE,2026,Dar es Salaam
+P2026-0003,Carol Njuki,F,PRIVATE,"111|102|103|106",ACSEE,2026,Dodoma
+P2026-0004,David Okafor,M,PRIVATE,"111|102|103|107",ACSEE,2026,Dodoma
+P2026-0005,Emma Banda,F,PRIVATE,"111|102|103|108",ACSEE,2026,Arusha
+P2026-0006,Frank Kipchoge,M,PRIVATE,"111|102|103|109",ACSEE,2026,Mbeya
+P2026-0007,Grace Mwangi,F,PRIVATE,"111|102|104|105",ACSEE,2026,Dar es Salaam
