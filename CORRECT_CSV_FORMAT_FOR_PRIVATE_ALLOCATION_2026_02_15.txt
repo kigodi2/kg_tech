@@ -1,0 +1,191 @@
+================================================================================
+CORRECT CSV FORMAT - PRIVATE CANDIDATE SUBJECT ALLOCATION
+Date: 2026-02-15
+Status: ✅ TEMPLATE UPDATED
+================================================================================
+
+⚠️ IMPORTANT: Match the template you download from the system
+
+When you download the template from "Import Candidates" button, you now get:
+
+TEMPLATE HEADER:
+  candidate_id,full_name,gender,school_code,candidate_type,combination,subjects,exam_type,exam_year
+
+COLUMNS EXPLAINED:
+  1. candidate_id       - Unique ID (e.g., S0001-0001 for SCHOOL, P0001-0001 for PRIVATE)
+  2. full_name         - Candidate name (e.g., John Doe)
+  3. gender            - M or F
+  4. school_code       - School code (e.g., SCH001)
+  5. candidate_type    - SCHOOL or PRIVATE (NEW: required to distinguish)
+  6. combination       - For SCHOOL only: code like PCM, HGE, ECA (leave blank for PRIVATE)
+  7. subjects          - For PRIVATE only: pipe-delimited codes like 111|102|103|121 (leave blank for SCHOOL)
+  8. exam_type         - ACSEE, CSEE, or PSLE (optional, defaults to ACSEE)
+  9. exam_year         - 4-digit year (optional, defaults to 2026)
+
+================================================================================
+EXAMPLES FROM TEMPLATE
+================================================================================
+
+SCHOOL CANDIDATE (uses combination):
+  S0001-0001,John School,M,SCH001,SCHOOL,PCM,,ACSEE,2026
+                                                  ↑↑↑         ↑↑↑↑↑↑↑↑↑↑↑
+                                        combination (PCM)    subjects (empty)
+
+PRIVATE CANDIDATE (uses subjects):
+  P0001-0001,John Private,M,SCH001,PRIVATE,,111|102|103|121,ACSEE,2026
+                                          ↑↑                ↑↑↑↑↑↑↑↑↑↑↑↑
+                                 combination (empty)    subjects (codes)
+
+================================================================================
+HOW TO FILL YOUR CSV
+================================================================================
+
+FOR SCHOOL CANDIDATES:
+  1. Set candidate_type to "SCHOOL"
+  2. Fill combination column (PCM, HGE, ECA, etc.)
+  3. Leave subjects column BLANK
+
+  Example row:
+    S0001-0001,John School,M,SCH001,SCHOOL,PCM,,ACSEE,2026
+
+FOR PRIVATE CANDIDATES:
+  1. Set candidate_type to "PRIVATE"
+  2. Leave combination column BLANK
+  3. Fill subjects column with pipe-delimited codes (111|102|103|121)
+
+  Example row:
+    P0001-0001,John Private,M,SCH001,PRIVATE,,111|102|103|121,ACSEE,2026
+
+FOR MIXED FILE (BOTH SCHOOL AND PRIVATE):
+  Include both types, fill appropriate columns for each
+
+  Example:
+    S0001-0001,John School,M,SCH001,SCHOOL,PCM,,ACSEE,2026
+    P0001-0001,Jane Private,F,SCH001,PRIVATE,,111|102|103|121,ACSEE,2026
+    S0002-0001,Bob School,M,SCH001,SCHOOL,HGE,,ACSEE,2026
+
+================================================================================
+SUBJECT CODES FOR PRIVATE CANDIDATES
+================================================================================
+
+GENERAL STUDIES (MANDATORY):
+  111 = General Studies
+
+SUBJECT CODES (pick any 3+ for principals):
+  102 = Mathematics
+  103 = Physics
+  104 = Chemistry
+  121 = English Language
+  122 = Swahili
+  etc.
+
+VALID EXAMPLES:
+  111|102|103|121    ✓ (1 GS + 3 principals)
+  111|102|103|104    ✓ (1 GS + 3 principals)
+  111|102|103|121|122 ✓ (1 GS + 4 principals)
+
+INVALID EXAMPLES:
+  111|102|103        ✗ (only 2 principals, need 3)
+  102|103|121        ✗ (missing GS 111)
+  111|102            ✗ (only 1 principal, need 3)
+
+================================================================================
+COMPLETE WORKING EXAMPLE
+================================================================================
+
+Save this as candidates.csv:
+
+candidate_id,full_name,gender,school_code,candidate_type,combination,subjects,exam_type,exam_year
+S0001-0001,Alice School,M,SCH001,SCHOOL,PCM,,ACSEE,2026
+P0001-0001,Bob Private,M,SCH001,PRIVATE,,111|102|103|121,ACSEE,2026
+S0002-0001,Charlie School,F,SCH001,SCHOOL,HGE,,ACSEE,2026
+P0002-0001,Diana Private,F,SCH001,PRIVATE,,111|104|121|122,ACSEE,2026
+
+Then import:
+  1. Go to REGISTRATION → Candidates
+  2. Click "Import Candidates"
+  3. Select this CSV file
+  4. Select exam year 2026
+  5. Click Validate
+  6. Click Commit
+
+Result:
+  - 4 candidates imported
+  - Allocations created for Bob and Diana (PRIVATE candidates)
+  - Allocations created for Alice and Charlie (SCHOOL candidates via combinations)
+
+================================================================================
+QUICK CHECKLIST
+================================================================================
+
+Before importing, verify your CSV:
+
+✓ Header row matches: candidate_id,full_name,gender,school_code,candidate_type,combination,subjects,exam_type,exam_year
+✓ SCHOOL rows have candidate_type=SCHOOL and combination filled (subjects empty)
+✓ PRIVATE rows have candidate_type=PRIVATE and subjects filled (combination empty)
+✓ All PRIVATE subject codes valid (111 must be present + 3 others)
+✓ No special characters or extra spaces
+✓ Saved as .csv file (not .xlsx)
+
+================================================================================
+DOWNLOAD TEMPLATE FIRST!
+================================================================================
+
+BEST PRACTICE:
+  1. Go to REGISTRATION → Candidates → Import Candidates
+  2. Click "Download Template"
+  3. Open the downloaded file (candidates-import-template-DATE.csv)
+  4. This shows you exact format from your system
+  5. Fill in your data using same format
+  6. Save and import
+
+This ensures you match exactly what the system expects.
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Q: "Allocated Subjects not showing?"
+A: 
+  - Verify candidate_type is set to "PRIVATE"
+  - Verify subjects column has pipe-delimited codes (111|102|103|121)
+  - Check that General Studies (111) is included
+  - Check that you have at least 3 principal subjects (111|XXX|XXX|XXX minimum)
+
+Q: "Validation error about missing combination?"
+A: 
+  - You're importing SCHOOL candidate without combination
+  - Either: fill combination column (e.g., PCM)
+  - Or: change candidate_type to PRIVATE and use subjects instead
+
+Q: "CSV import fails?"
+A:
+  - Download fresh template from system
+  - Compare your CSV structure to downloaded template
+  - Make sure columns are in exact order
+  - Verify no extra spaces in headers
+
+================================================================================
+DIFFERENCES FROM OLD TEMPLATE
+================================================================================
+
+OLD TEMPLATE (before update):
+  candidate_id,full_name,gender,combination,school_code,exam_type,exam_year
+  (no candidate_type, no subjects)
+
+NEW TEMPLATE (after update):
+  candidate_id,full_name,gender,school_code,candidate_type,combination,subjects,exam_type,exam_year
+  (added candidate_type, moved columns, added subjects)
+
+UPDATE REASON:
+  - Support both SCHOOL and PRIVATE candidates in same file
+  - Enable automatic subject allocation for PRIVATE candidates
+  - Make candidate type explicit (SCHOOL or PRIVATE)
+
+MIGRATION:
+  - Old files still work (candidate_type defaults to SCHOOL if missing)
+  - New files must include candidate_type column
+  - SCHOOL: use combination column
+  - PRIVATE: use subjects column
+
+================================================================================
