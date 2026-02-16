@@ -346,18 +346,30 @@ class ExamTypeController extends Controller
     {
         try {
             $page = $request->get('page', 1);
-            $pageSize = $request->get('page_size', 15);
-            $search = $request->get('search', '');
+            $perPage = $request->get('per_page', 15);
+            $search = $request->get('q', '');
+            $candidateType = $request->get('candidate_type', 'ALL');
             $schoolId = $request->get('school_id', '');
             $districtId = $request->get('district_id', '');
             $regionId = $request->get('region_id', '');
+
+            // Validate perPage to prevent abuse
+            $perPage = min(max((int)$perPage, 15), 100);
 
             // Get exam type from code
             $examType = ExamType::where('code', strtoupper($code))->firstOrFail();
 
             $query = \App\Models\Candidate::where('exam_type', $examType->code)
                 ->with('school', 'school.district', 'school.district.region')
+                ->with(['subjectSelections' => function ($q) {
+                    $q->with('subject');
+                }])
                 ->orderBy('candidate_id');
+
+            // Filter by candidate type
+            if ($candidateType && $candidateType !== 'ALL') {
+                $query->where('candidate_type', strtoupper($candidateType));
+            }
 
             // Filter by school
             if ($schoolId) {
@@ -380,19 +392,15 @@ class ExamTypeController extends Controller
                 });
             }
 
+            // Search by candidate_id or full_name
             if ($search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('candidate_id', 'like', "%{$search}%")
                       ->orWhere('full_name', 'like', "%{$search}%");
                 });
             }
-
-            // Eager load subject allocations for all candidates
-            $query->with(['subjectSelections' => function ($q) {
-                $q->with('subject');
-            }]);
             
-            $candidates = $query->paginate($pageSize);
+            $candidates = $query->paginate($perPage);
 
             $data = $candidates->map(function ($candidate) {
                 // For PRIVATE candidates, use actual allocations from database
@@ -426,12 +434,14 @@ class ExamTypeController extends Controller
             })->toArray();
 
             return response()->json([
-                'candidates' => $data,
-                'pagination' => [
-                    'page' => $candidates->currentPage(),
-                    'page_size' => $pageSize,
-                    'total_count' => $candidates->total(),
-                    'total_pages' => $candidates->lastPage(),
+                'data' => $data,
+                'meta' => [
+                    'current_page' => $candidates->currentPage(),
+                    'per_page' => $perPage,
+                    'total' => $candidates->total(),
+                    'last_page' => $candidates->lastPage(),
+                    'from' => $candidates->firstItem(),
+                    'to' => $candidates->lastItem(),
                 ]
             ]);
         } catch (\Exception $e) {

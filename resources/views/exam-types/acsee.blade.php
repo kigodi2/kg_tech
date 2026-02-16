@@ -41,6 +41,12 @@
                         <tr>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Code</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Name</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Category</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Papers</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Practical</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Project</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Max Marks</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Active</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Description</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Actions</th>
                         </tr>
@@ -48,9 +54,24 @@
                     <tbody class="divide-y divide-gray-200">
                         <template x-for="subject in filteredSubjects" :key="subject.id">
                             <tr class="hover:bg-blue-100 transition-colors">
-                                 <td class="px-6 py-4 text-sm font-mono text-gray-800" x-text="subject.code"></td>
+                                <td class="px-6 py-4 text-sm font-mono text-gray-800" x-text="subject.code"></td>
                                 <td class="px-6 py-4 text-sm text-gray-800 font-medium" x-text="subject.name"></td>
-                                <td class="px-6 py-4 text-sm text-gray-600" x-text="(subject.description || '-').substring(0, 30)"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="subject.category || '-'"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600 text-center" x-text="subject.written_papers || '-'"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600 text-center">
+                                    <span x-show="subject.has_practical" class="inline-flex items-center justify-center w-6 h-6 bg-green-100 text-green-700 rounded-full text-xs font-bold">✓</span>
+                                    <span x-show="!subject.has_practical" class="text-gray-400">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600 text-center">
+                                    <span x-show="subject.has_project" class="inline-flex items-center justify-center w-6 h-6 bg-green-100 text-green-700 rounded-full text-xs font-bold">✓</span>
+                                    <span x-show="!subject.has_project" class="text-gray-400">-</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600 text-center font-mono" x-text="subject.max_marks || '-'"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600 text-center">
+                                    <span x-show="subject.is_active" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                                    <span x-show="!subject.is_active" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="(subject.description || '-').substring(0, 40)"></td>
                                 <td class="px-6 py-4 text-sm space-x-3">
                                     <button @click="openEditSubjectModal(subject)" class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors">
                                         <i class="fas fa-edit text-sm"></i>
@@ -62,7 +83,7 @@
                             </tr>
                         </template>
                         <tr x-show="filteredSubjects.length === 0 && !loadingSubjects">
-                            <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                            <td colspan="10" class="px-6 py-8 text-center text-gray-500">
                                 No subjects found. <button @click="openSubjectModal()" class="text-blue-600 hover:underline">Add one now</button>
                             </td>
                         </tr>
@@ -90,15 +111,26 @@
                     <thead class="bg-gray-100 border-b-2 border-gray-300">
                         <tr>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Code</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Category</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Subject Count</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Subjects</th>
+                            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Description</th>
+                            <th class="px-6 py-3 text-center text-sm font-semibold text-gray-700 uppercase">Active</th>
                             <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700 uppercase">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         <template x-for="combination in filteredCombinations" :key="combination.id">
                             <tr class="hover:bg-blue-100 transition-colors">
-                                 <td class="px-6 py-4 text-sm font-mono text-gray-800" x-text="combination.code"></td>
-                                <td class="px-6 py-4 text-sm text-gray-600" x-text="combination.subjects"></td>
+                                <td class="px-6 py-4 text-sm font-mono text-gray-800" x-text="combination.code"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="combination.category || '-'"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600 text-center font-semibold" x-text="combination.subject_count || 0"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="combination.subject_codes || combination.subjects || '-'"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600" x-text="(combination.description || '-').substring(0, 40)"></td>
+                                <td class="px-6 py-4 text-sm text-gray-600 text-center">
+                                    <span x-show="combination.is_active" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                                    <span x-show="!combination.is_active" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>
+                                </td>
                                 <td class="px-6 py-4 text-sm space-x-3">
                                     <button @click="openEditCombinationModal(combination)" class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors">
                                         <i class="fas fa-edit text-sm"></i>
@@ -110,7 +142,7 @@
                             </tr>
                         </template>
                         <tr x-show="filteredCombinations.length === 0 && !loadingCombinations">
-                            <td colspan="3" class="px-6 py-8 text-center text-gray-500">
+                            <td colspan="7" class="px-6 py-8 text-center text-gray-500">
                                 No combinations found. <button @click="openCombinationModal()" class="text-blue-600 hover:underline">Add one now</button>
                             </td>
                         </tr>
@@ -188,23 +220,149 @@
                 </table>
             </div>
 
-            <!-- Pagination -->
-            <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white rounded-lg shadow">
-                <div class="text-sm text-gray-600">
-                    Page <span x-text="acseeCurrentPage"></span> of <span x-text="acseetotalPages"></span>, showing <span x-text="acseeCandicates.length"></span> of <span x-text="acseetotalCount"></span> candidates
-                </div>
-                <div class="flex gap-2 items-center">
-                    <button @click="acseeCurrentPage > 1 && (acseeCurrentPage--, loadAcseeCandicates())" :disabled="acseeCurrentPage <= 1" class="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <template x-for="page in Array.from({length: acseetotalPages}, (_, i) => i + 1)" :key="page">
-                        <button @click="acseeCurrentPage = page; loadAcseeCandicates()" :class="acseeCurrentPage === page ? 'bg-blue-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-100'" class="px-3 py-1 rounded transition-colors font-medium" x-text="page"></button>
-                    </template>
-                    <button @click="acseeCurrentPage < acseetotalPages && (acseeCurrentPage++, loadAcseeCandicates())" :disabled="acseeCurrentPage >= acseetotalPages" class="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-            </div>
+            <!-- Professional Pagination -->
+             <div class="bg-white rounded-lg shadow border-t border-gray-200">
+                 <div class="px-6 py-4 space-y-4">
+                     <!-- Row 1: Info and Per-Page Selector -->
+                     <div class="flex items-center justify-between gap-4 flex-wrap">
+                         <div class="text-sm text-gray-600">
+                             <span x-show="pagination.total > 0">
+                                 Showing <span class="font-semibold" x-text="pagination.from"></span> to <span class="font-semibold" x-text="pagination.to"></span> of <span class="font-semibold" x-text="pagination.total"></span> candidates
+                             </span>
+                             <span x-show="pagination.total === 0" class="text-gray-500">No candidates found</span>
+                         </div>
+                         
+                         <div class="flex items-center gap-3">
+                             <label class="text-sm font-medium text-gray-700">Per page:</label>
+                             <select x-model.number="pagination.perPage" @change="pagination.page = 1; loadAcseeCandicates()" class="px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" :disabled="loadingAcseeCandicates">
+                                 <template x-for="option in perPageOptions" :key="option">
+                                     <option :value="option" x-text="`${option} rows`"></option>
+                                 </template>
+                             </select>
+                         </div>
+                     </div>
+
+                     <!-- Row 2: Pagination Controls (Hidden on small screens) -->
+                     <div class="hidden md:flex items-center justify-between gap-2">
+                         <!-- Navigation Buttons -->
+                         <div class="flex gap-1 items-center">
+                             <button 
+                                 @click="pagination.page > 1 && (pagination.page--, loadAcseeCandicates())" 
+                                 :disabled="pagination.page <= 1 || loadingAcseeCandicates"
+                                 class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                 title="Go to first page"
+                                 aria-label="First page">
+                                 <i class="fas fa-step-backward"></i>
+                             </button>
+                             <button 
+                                 @click="pagination.page > 1 && (pagination.page--, loadAcseeCandicates())" 
+                                 :disabled="pagination.page <= 1 || loadingAcseeCandicates"
+                                 class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                 title="Previous page"
+                                 aria-label="Previous page">
+                                 <i class="fas fa-chevron-left"></i>
+                             </button>
+                         </div>
+
+                         <!-- Page Numbers with Ellipsis -->
+                         <div class="flex gap-1 items-center flex-wrap justify-center">
+                             <template x-for="page in (() => {
+                                 const pages = [];
+                                 const current = pagination.page;
+                                 const last = pagination.lastPage;
+                                 const delta = 2;
+                                 const range = { start: Math.max(2, current - delta), end: Math.min(last - 1, current + delta) };
+                                 
+                                 // First page
+                                 pages.push({ num: 1, type: 'number' });
+                                 
+                                 // Left ellipsis
+                                 if (range.start > 2) pages.push({ type: 'ellipsis' });
+                                 
+                                 // Range pages
+                                 for (let i = range.start; i <= range.end; i++) {
+                                     pages.push({ num: i, type: 'number' });
+                                 }
+                                 
+                                 // Right ellipsis
+                                 if (range.end < last - 1) pages.push({ type: 'ellipsis' });
+                                 
+                                 // Last page
+                                 if (last > 1) pages.push({ num: last, type: 'number' });
+                                 
+                                 return pages;
+                             })()" :key="`${page.num}-${page.type}`">
+                                 <template x-if="page.type === 'number'">
+                                     <button 
+                                         @click="pagination.page = page.num; loadAcseeCandicates()"
+                                         :class="pagination.page === page.num ? 'bg-blue-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-100'"
+                                         class="px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
+                                         :disabled="loadingAcseeCandicates"
+                                         :aria-current="pagination.page === page.num ? 'page' : undefined"
+                                         x-text="page.num">
+                                     </button>
+                                 </template>
+                                 <template x-if="page.type === 'ellipsis'">
+                                     <span class="px-2 text-gray-400">…</span>
+                                 </template>
+                             </template>
+                         </div>
+
+                         <!-- Navigation Buttons (Right) -->
+                         <div class="flex gap-1 items-center">
+                             <button 
+                                 @click="pagination.page < pagination.lastPage && (pagination.page++, loadAcseeCandicates())" 
+                                 :disabled="pagination.page >= pagination.lastPage || loadingAcseeCandicates"
+                                 class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                 title="Next page"
+                                 aria-label="Next page">
+                                 <i class="fas fa-chevron-right"></i>
+                             </button>
+                             <button 
+                                 @click="pagination.page < pagination.lastPage && (pagination.page = pagination.lastPage, loadAcseeCandicates())" 
+                                 :disabled="pagination.page >= pagination.lastPage || loadingAcseeCandicates"
+                                 class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                 title="Go to last page"
+                                 aria-label="Last page">
+                                 <i class="fas fa-step-forward"></i>
+                             </button>
+                         </div>
+                     </div>
+
+                     <!-- Row 3: Jump to Page & Mobile Controls -->
+                     <div class="flex items-center justify-between gap-4 flex-wrap">
+                         <!-- Jump to Page Input -->
+                         <div class="flex items-center gap-2">
+                             <label class="text-sm font-medium text-gray-700">Go to page:</label>
+                             <input 
+                                 x-model.number="jumpToPageInput" 
+                                 @keyup.enter="jumpToPageInput > 0 && jumpToPageInput <= pagination.lastPage && (pagination.page = jumpToPageInput, loadAcseeCandicates())"
+                                 type="number" 
+                                 min="1" 
+                                 :max="pagination.lastPage"
+                                 placeholder="1"
+                                 class="w-16 px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                 :disabled="loadingAcseeCandicates || pagination.lastPage === 1">
+                             <button 
+                                 @click="jumpToPageInput > 0 && jumpToPageInput <= pagination.lastPage && (pagination.page = jumpToPageInput, loadAcseeCandicates())"
+                                 :disabled="!jumpToPageInput || jumpToPageInput < 1 || jumpToPageInput > pagination.lastPage || loadingAcseeCandicates"
+                                 class="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm font-medium">
+                                 Go
+                             </button>
+                         </div>
+
+                         <!-- Mobile Page Display -->
+                         <div class="md:hidden text-sm text-gray-600">
+                             Page <span class="font-semibold" x-text="pagination.page"></span> of <span class="font-semibold" x-text="pagination.lastPage"></span>
+                         </div>
+
+                         <!-- Loading Indicator -->
+                         <div x-show="loadingAcseeCandicates" class="text-sm text-gray-500">
+                             <i class="fas fa-spinner animate-spin"></i> Loading...
+                         </div>
+                     </div>
+                 </div>
+             </div>
         </div>
 
         <!-- SUBJECT MODAL -->
@@ -215,7 +373,7 @@
                     <button @click="subjectModalOpen = false; editingSubjectId = null;" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
                 </div>
 
-                <form @submit.prevent="saveSubject()" class="p-6 space-y-4">
+                <form @submit.prevent="saveSubject()" class="p-6 space-y-4 max-h-96 overflow-y-auto">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Code *</label>
                         <input x-model="subjectForm.code" type="text" placeholder="e.g., ENG" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -225,9 +383,35 @@
                         <input x-model="subjectForm.name" type="text" placeholder="e.g., English" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                        <textarea x-model="subjectForm.description" placeholder="Subject description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none"></textarea>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                        <input x-model="subjectForm.category" type="text" placeholder="e.g., Language, Science" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Written Papers</label>
+                        <input x-model.number="subjectForm.written_papers" type="number" placeholder="e.g., 2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center gap-2">
+                            <input x-model="subjectForm.has_practical" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                            <span class="text-sm font-medium text-gray-700">Has Practical</span>
+                        </label>
+                        <label class="flex items-center gap-2">
+                            <input x-model="subjectForm.has_project" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                            <span class="text-sm font-medium text-gray-700">Has Project</span>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Max Marks</label>
+                        <input x-model.number="subjectForm.max_marks" type="number" placeholder="e.g., 100" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                        <textarea x-model="subjectForm.description" placeholder="Subject description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-16 resize-none"></textarea>
+                    </div>
+                    <label class="flex items-center gap-2">
+                        <input x-model="subjectForm.is_active" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                        <span class="text-sm font-medium text-gray-700">Active</span>
+                    </label>
 
                     <div class="flex gap-3 pt-4">
                         <button type="button" @click="subjectModalOpen = false; editingSubjectId = null;" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium">Cancel</button>
@@ -245,15 +429,27 @@
                     <button @click="combinationModalOpen = false; editingCombinationId = null;" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
                 </div>
 
-                <form @submit.prevent="saveCombination()" class="p-6 space-y-4">
+                <form @submit.prevent="saveCombination()" class="p-6 space-y-4 max-h-96 overflow-y-auto">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Code *</label>
                         <input x-model="combinationForm.code" type="text" placeholder="e.g., SC1" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Subjects (Comma-separated) *</label>
-                        <textarea x-model="combinationForm.subjects" placeholder="e.g., Physics, Chemistry, Biology" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none"></textarea>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                        <input x-model="combinationForm.category" type="text" placeholder="e.g., Science, Humanities" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Subjects (Comma-separated) *</label>
+                        <textarea x-model="combinationForm.subjects" placeholder="e.g., Physics, Chemistry, Biology" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-16 resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                        <textarea x-model="combinationForm.description" placeholder="Combination description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-16 resize-none"></textarea>
+                    </div>
+                    <label class="flex items-center gap-2">
+                        <input x-model="combinationForm.is_active" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                        <span class="text-sm font-medium text-gray-700">Active</span>
+                    </label>
 
                     <div class="flex gap-3 pt-4">
                         <button type="button" @click="combinationModalOpen = false; editingCombinationId = null;" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium">Cancel</button>
@@ -773,7 +969,7 @@ function acseeManager() {
         loadingSubjects: false,
         subjectModalOpen: false,
         editingSubjectId: null,
-        subjectForm: { code: '', name: '', description: '', is_active: true },
+        subjectForm: { code: '', name: '', category: '', written_papers: null, has_practical: false, has_project: false, max_marks: null, description: '', is_active: true },
         
         // Combinations
         combinations: [],
@@ -782,7 +978,7 @@ function acseeManager() {
         loadingCombinations: false,
         combinationModalOpen: false,
         editingCombinationId: null,
-        combinationForm: { code: '', subjects: '', is_active: true },
+        combinationForm: { code: '', category: '', subjects: '', description: '', is_active: true },
         
         // Candidates
         candidates: [],
@@ -799,9 +995,22 @@ function acseeManager() {
         acseeCandicates: [],
         candidateSearch: '',
         loadingAcseeCandicates: false,
-        acseeCurrentPage: 1,
-        acseetotalPages: 1,
-        acseetotalCount: 0,
+        
+        // Pagination state
+        pagination: {
+            page: 1,
+            perPage: 15,
+            total: 0,
+            lastPage: 1,
+            from: 0,
+            to: 0,
+        },
+        
+        // Available per-page options
+        perPageOptions: [15, 25, 50, 100],
+        
+        // Jump to page input
+        jumpToPageInput: '',
 
         // Allocation Modal
         allocationModalOpen: false,
@@ -847,16 +1056,22 @@ function acseeManager() {
 
         async init() {
             console.log('=== ACSEE Manager Initialized ===');
-            console.log('Data object keys:', Object.keys(this));
+            
+            // Load pagination state from URL
+            const params = new URLSearchParams(window.location.search);
+            this.pagination.page = parseInt(params.get('page')) || 1;
+            this.pagination.perPage = parseInt(params.get('per_page')) || 15;
+            this.candidateSearch = params.get('q') || '';
+            this.candidateTypeFilter = params.get('candidate_type') || 'ALL';
+            
+            console.log('Pagination state loaded from URL:', this.pagination);
+            
             await this.loadSubjects();
             await this.loadCombinations();
             await this.loadSchools();
             await this.loadCandidates();
             await this.loadAcseeCandicates();
             console.log('=== Initialization Complete ===');
-            console.log('subjectModalOpen:', this.subjectModalOpen);
-            console.log('combinationModalOpen:', this.combinationModalOpen);
-            console.log('candidateModalOpen:', this.candidateModalOpen);
         },
 
         async loadSubjects() {
@@ -951,13 +1166,18 @@ function acseeManager() {
         // SUBJECT FUNCTIONS
         openSubjectModal() {
             this.editingSubjectId = null;
-            this.subjectForm = { code: '', name: '', description: '', is_active: true };
+            this.subjectForm = { code: '', name: '', category: '', written_papers: null, has_practical: false, has_project: false, max_marks: null, description: '', is_active: true };
             this.subjectModalOpen = true;
         },
 
         openEditSubjectModal(subject) {
             this.editingSubjectId = subject.id;
-            this.subjectForm = { ...subject, is_active: subject.is_active ?? true };
+            this.subjectForm = { 
+                ...subject, 
+                is_active: subject.is_active ?? true,
+                has_practical: subject.has_practical ?? false,
+                has_project: subject.has_project ?? false
+            };
             this.subjectModalOpen = true;
         },
 
@@ -1017,13 +1237,16 @@ function acseeManager() {
         // COMBINATION FUNCTIONS
         openCombinationModal() {
             this.editingCombinationId = null;
-            this.combinationForm = { code: '', subjects: '', is_active: true };
+            this.combinationForm = { code: '', category: '', subjects: '', description: '', is_active: true };
             this.combinationModalOpen = true;
         },
 
         openEditCombinationModal(combination) {
             this.editingCombinationId = combination.id;
-            this.combinationForm = { ...combination, is_active: combination.is_active ?? true };
+            this.combinationForm = { 
+                ...combination, 
+                is_active: combination.is_active ?? true
+            };
             this.combinationModalOpen = true;
         },
 
@@ -1218,20 +1441,31 @@ function acseeManager() {
 
         async loadAcseeCandicates() {
             this.loadingAcseeCandicates = true;
+            this.jumpToPageInput = '';
             try {
                 const params = new URLSearchParams({
-                    page: this.acseeCurrentPage,
-                    page_size: 15,
-                    search: this.candidateSearch,
+                    page: this.pagination.page,
+                    per_page: this.pagination.perPage,
+                    q: this.candidateSearch,
+                    candidate_type: this.candidateTypeFilter,
                 });
+                
+                // Sync URL
+                const newUrl = `${window.location.pathname}?${params.toString()}#candidates`;
+                window.history.replaceState({}, '', newUrl);
                 
                 const response = await fetch(`/api/exam-types/acsee/candidates?${params}`);
                 const data = await response.json();
                 
-                this.acseeCandicates = data.candidates;
-                this.acseetotalPages = data.pagination.total_pages;
-                this.acseetotalCount = data.pagination.total_count;
-                this.acseeCurrentPage = data.pagination.page;
+                this.acseeCandicates = data.data || [];
+                this.pagination = {
+                    page: data.meta.current_page,
+                    perPage: data.meta.per_page,
+                    total: data.meta.total,
+                    lastPage: data.meta.last_page,
+                    from: data.meta.from,
+                    to: data.meta.to,
+                };
             } catch (error) {
                 console.error('Error loading ACSEE candidates:', error);
                 this.showMessage('Error loading candidates', 'error');
@@ -1241,8 +1475,16 @@ function acseeManager() {
         },
 
         filterAcseeCandicates() {
-            this.acseeCurrentPage = 1;
-            this.loadAcseeCandicates();
+            this.pagination.page = 1;
+            this.loadAcseeCandicatesDebounced();
+        },
+        
+        // Debounced search (300ms delay)
+        loadAcseeCandicatesDebounced() {
+            clearTimeout(this.searchDebounceTimer);
+            this.searchDebounceTimer = setTimeout(() => {
+                this.loadAcseeCandicates();
+            }, 300);
         },
 
         exportAcseeCandicates() {
@@ -1476,21 +1718,8 @@ function acseeManager() {
         // ==================== BULK CSV IMPORT FUNCTIONS ====================
 
         applyCandidateTypeFilter() {
-            // Filter the candidate list based on selected type
-            if (this.candidateTypeFilter === 'ALL') {
-                this.acseeCandicates = this.acseeCandicates; // No filter
-                this.bulkImportMode = 'SCHOOL'; // Default
-            } else if (this.candidateTypeFilter === 'SCHOOL') {
-                // Filter to show only SCHOOL candidates
-                this.acseeCandicates = this.acseeCandicates.filter(c => c.candidate_type === 'SCHOOL');
-                this.bulkImportMode = 'SCHOOL';
-            } else if (this.candidateTypeFilter === 'PRIVATE') {
-                // Filter to show only PRIVATE candidates
-                this.acseeCandicates = this.acseeCandicates.filter(c => c.candidate_type === 'PRIVATE');
-                this.bulkImportMode = 'PRIVATE';
-            }
-            // Reload to ensure filters are applied
-            this.acseeCurrentPage = 1;
+            // Server-side filtering - reset to page 1 and reload
+            this.pagination.page = 1;
             this.loadAcseeCandicates();
         },
 
