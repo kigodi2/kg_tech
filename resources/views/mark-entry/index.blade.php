@@ -13,10 +13,10 @@
                     <i class="fas fa-chart-bar"></i> Entry & Validation
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#upload" @click.prevent="smoothScroll('#upload')" class="sidebar-link text-sm hover:text-blue-400 transition cursor-pointer">📤 Upload Marks</a></li>
-                    <li><a href="#csv-tab" @click.prevent="importMode = 'single'; $nextTick(() => smoothScroll('#csv-tab'))" class="sidebar-link text-sm hover:text-blue-400 transition cursor-pointer">📊 Single Subject CSV</a></li>
-                    <li><a href="#school-bulk" @click.prevent="importMode = 'schoolBulk'; $nextTick(() => smoothScroll('#school-bulk'))" class="sidebar-link text-sm hover:text-blue-400 transition cursor-pointer">📦 School Bulk ZIP</a></li>
-                    <li><a href="#district-bulk" @click.prevent="importMode = 'district'; $nextTick(() => smoothScroll('#district-bulk'))" class="sidebar-link text-sm hover:text-blue-400 transition cursor-pointer">📋 District Bulk ZIP</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('upload-marks')" :class="activeView === 'upload-marks' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📤 Upload Marks</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('single-subject-csv')" :class="activeView === 'single-subject-csv' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📊 Single Subject CSV</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('school-bulk-zip')" :class="activeView === 'school-bulk-zip' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📦 School Bulk ZIP</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('district-bulk-zip')" :class="activeView === 'district-bulk-zip' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📋 District Bulk ZIP</a></li>
                 </ul>
             </div>
 
@@ -26,10 +26,10 @@
                     <i class="fas fa-search"></i> Moderation & Review
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#moderation-dashboard" @click.prevent="smoothScroll('#moderation-dashboard')" class="sidebar-link text-sm hover:text-yellow-400 transition cursor-pointer">📋 Review Dashboard</a></li>
-                    <li><a href="#pending-review" @click.prevent="smoothScroll('#pending-review')" class="sidebar-link text-sm hover:text-yellow-400 transition cursor-pointer">⏳ Pending Review</a></li>
-                    <li><a href="#approve-marks" @click.prevent="smoothScroll('#approve-marks')" class="sidebar-link text-sm hover:text-yellow-400 transition cursor-pointer">✅ Approve Marks</a></li>
-                    <li><a href="#reject-feedback" @click.prevent="smoothScroll('#reject-feedback')" class="sidebar-link text-sm hover:text-yellow-400 transition cursor-pointer">❌ Reject & Feedback</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('review-dashboard')" :class="activeView === 'review-dashboard' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📋 Review Dashboard</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('pending-review')" :class="activeView === 'pending-review' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">⏳ Pending Review</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('approve-marks')" :class="activeView === 'approve-marks' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">✅ Approve Marks</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('reject-feedback')" :class="activeView === 'reject-feedback' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">❌ Reject & Feedback</a></li>
                 </ul>
             </div>
 
@@ -39,10 +39,10 @@
                     <i class="fas fa-lock"></i> Submission & Locking
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#lock-status" @click.prevent="smoothScroll('#lock-status')" class="sidebar-link text-sm hover:text-green-400 transition cursor-pointer">🔒 Lock Status</a></li>
-                    <li><a href="#submit-marks" @click.prevent="smoothScroll('#submit-marks')" class="sidebar-link text-sm hover:text-green-400 transition cursor-pointer">📤 Submit Marks</a></li>
-                    <li><a href="#unlock-admin" @click.prevent="smoothScroll('#unlock-admin')" class="sidebar-link text-sm hover:text-green-400 transition cursor-pointer">(Admin) Unlock</a></li>
-                    <li><a href="#submission-history" @click.prevent="smoothScroll('#submission-history')" class="sidebar-link text-sm hover:text-green-400 transition cursor-pointer">📜 History</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('lock-status')" :class="activeView === 'lock-status' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">🔒 Lock Status</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('submit-marks')" :class="activeView === 'submit-marks' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📤 Submit Marks</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('admin-unlock')" :class="activeView === 'admin-unlock' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">(Admin) Unlock</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('history')" :class="activeView === 'history' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📜 History</a></li>
                 </ul>
             </div>
 
@@ -52,10 +52,10 @@
                     <i class="fas fa-file-alt"></i> Reports & Exports
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#scoresheets" @click.prevent="smoothScroll('#scoresheets')" class="sidebar-link text-sm hover:text-purple-400 transition cursor-pointer">📄 Scoresheets (PDF)</a></li>
-                    <li><a href="#csv-export" @click.prevent="smoothScroll('#csv-export')" class="sidebar-link text-sm hover:text-purple-400 transition cursor-pointer">📊 CSV Export</a></li>
-                    <li><a href="#analytics" @click.prevent="smoothScroll('#analytics')" class="sidebar-link text-sm hover:text-purple-400 transition cursor-pointer">📈 Analytics</a></li>
-                    <li><a href="#summary-report" @click.prevent="smoothScroll('#summary-report')" class="sidebar-link text-sm hover:text-purple-400 transition cursor-pointer">📋 Summary Report</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('scoresheets-pdf')" :class="activeView === 'scoresheets-pdf' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📄 Scoresheets (PDF)</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('csv-export')" :class="activeView === 'csv-export' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📊 CSV Export</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('analytics')" :class="activeView === 'analytics' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📈 Analytics</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('summary-report')" :class="activeView === 'summary-report' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📋 Summary Report</a></li>
                 </ul>
             </div>
 
@@ -65,10 +65,10 @@
                     <i class="fas fa-clock"></i> Monitoring & Audit
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#lifecycle-dashboard" @click.prevent="smoothScroll('#lifecycle-dashboard')" class="sidebar-link text-sm hover:text-blue-300 transition cursor-pointer">📊 Lifecycle Dashboard</a></li>
-                    <li><a href="#change-log" @click.prevent="smoothScroll('#change-log')" class="sidebar-link text-sm hover:text-blue-300 transition cursor-pointer">📝 Change Log</a></li>
-                    <li><a href="#audit-trail" @click.prevent="smoothScroll('#audit-trail')" class="sidebar-link text-sm hover:text-blue-300 transition cursor-pointer">🔍 Audit Trail</a></li>
-                    <li><a href="#activity-log" @click.prevent="smoothScroll('#activity-log')" class="sidebar-link text-sm hover:text-blue-300 transition cursor-pointer">👥 Activity Log</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('lifecycle-dashboard')" :class="activeView === 'lifecycle-dashboard' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📊 Lifecycle Dashboard</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('change-log')" :class="activeView === 'change-log' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📝 Change Log</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('audit-trail')" :class="activeView === 'audit-trail' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">🔍 Audit Trail</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('activity-log')" :class="activeView === 'activity-log' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">👥 Activity Log</a></li>
                 </ul>
             </div>
 
@@ -78,10 +78,10 @@
                     <i class="fas fa-cog"></i> Administration
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#configuration" @click.prevent="smoothScroll('#configuration')" class="sidebar-link text-sm hover:text-indigo-400 transition cursor-pointer">⚙️ Configuration</a></li>
-                    <li><a href="#permissions" @click.prevent="smoothScroll('#permissions')" class="sidebar-link text-sm hover:text-indigo-400 transition cursor-pointer">🔐 Permissions</a></li>
-                    <li><a href="#batch-management" @click.prevent="smoothScroll('#batch-management')" class="sidebar-link text-sm hover:text-indigo-400 transition cursor-pointer">📦 Batch Management</a></li>
-                    <li><a href="#system-logs" @click.prevent="smoothScroll('#system-logs')" class="sidebar-link text-sm hover:text-indigo-400 transition cursor-pointer">🖥️ System Logs</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('configuration')" :class="activeView === 'configuration' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">⚙️ Configuration</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('permissions')" :class="activeView === 'permissions' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">🔐 Permissions</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('batch-management')" :class="activeView === 'batch-management' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📦 Batch Management</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('system-logs')" :class="activeView === 'system-logs' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">🖥️ System Logs</a></li>
                 </ul>
             </div>
 
@@ -94,18 +94,27 @@
     <div class="flex-1 flex flex-col">
         <!-- Page Header -->
         <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-[140px] z-40 shadow-sm">
-            <h1 class="text-2xl font-bold text-gray-800">ACSEE Mark Entry</h1>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">ACSEE Mark Entry</h1>
+                    <p class="text-sm text-gray-600 mt-1" x-text="'→ ' + (viewRegistry[activeView]?.label || 'Unknown View')"></p>
+                </div>
+                <button x-show="activeView !== 'upload-marks' && activeView !== 'single-subject-csv'" @click="navigateToView('upload-marks')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+                    <i class="fas fa-home"></i> Back to Upload
+                </button>
+            </div>
         </div>
 
         <!-- Main Content -->
         <div class="px-8 py-8 flex-1 overflow-y-auto">
             <div class="space-y-6">
 
-            <!-- UPLOAD SECTION -->
-            <div id="upload" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h2 class="text-lg font-bold text-gray-800 mb-4">1. Select Context</h2>
-                
-                <div class="grid grid-cols-12 gap-3 items-start">
+            <!-- UPLOAD SECTION (View: upload-marks, single-subject-csv, school-bulk-zip, district-bulk-zip) -->
+            <div x-show="['upload-marks', 'single-subject-csv', 'school-bulk-zip', 'district-bulk-zip'].includes(activeView)">
+                <div x-show="activeView === 'upload-marks' || activeView === 'single-subject-csv'" id="upload" class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">1. Select Context</h2>
+                    
+                    <div class="grid grid-cols-12 gap-3 items-start">
                      <!-- Exam Year -->
                      <div class="col-span-1 flex flex-col h-full">
                          <label class="block text-sm font-semibold text-gray-700 mb-2">Year *</label>
@@ -1082,9 +1091,14 @@
                 </div>
             </div>
 
+            </div>
+            <!-- ===== END UPLOAD SECTION ===== -->
+
             <!-- ===== MODERATION & REVIEW SECTIONS ===== -->
+            <div x-show="['review-dashboard', 'pending-review', 'approve-marks', 'reject-feedback'].includes(activeView)">
 
             <!-- Review Dashboard Section -->
+            <template x-if="activeView === 'review-dashboard'">
             <section id="moderation-dashboard" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">📋 Moderation Dashboard</h2>
                 
@@ -1174,8 +1188,10 @@
                     </div>
                 </div>
             </section>
+            </template>
 
             <!-- Pending Review Section -->
+            <template x-if="activeView === 'pending-review'">
             <section id="pending-review" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">⏳ Pending Review</h2>
                 <p class="text-sm text-gray-600 mb-4">Batches currently awaiting moderation review. Click on a batch to view details and take action.</p>
@@ -1239,8 +1255,10 @@
                     <p class="text-gray-600 mt-2">Loading pending batches...</p>
                 </div>
             </section>
+            </template>
 
             <!-- Approve Marks Section -->
+            <template x-if="activeView === 'approve-marks'">
             <section id="approve-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">✅ Approve Marks</h3>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
@@ -1249,8 +1267,10 @@
                     <p class="text-xs text-green-600 mt-4">Coming in Phase 3C - Week 2</p>
                 </div>
             </section>
+            </template>
 
             <!-- Reject & Feedback Section -->
+            <template x-if="activeView === 'reject-feedback'">
             <section id="reject-feedback" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">❌ Reject & Feedback</h3>
                 <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
@@ -1259,10 +1279,16 @@
                     <p class="text-xs text-red-600 mt-4">Coming in Phase 3C - Week 2</p>
                 </div>
             </section>
+            </template>
+
+            </div>
+            <!-- ===== END MODERATION & REVIEW SECTIONS ===== -->
 
             <!-- ===== SUBMISSION & LOCKING SECTIONS ===== -->
+            <div x-show="['lock-status', 'submit-marks', 'admin-unlock', 'history'].includes(activeView)">
 
             <!-- Lock Status Section -->
+            <template x-if="activeView === 'lock-status'">
             <section id="lock-status" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">🔒 Lock Status</h2>
                 
@@ -1323,9 +1349,10 @@
                     </div>
                 </div>
             </section>
+            </template>
 
             <!-- Submit Marks Section -->
-            <section id="submit-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+            <section x-show="activeView === 'submit-marks'" id="submit-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">📤 Submit Marks</h3>
                 <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-6 text-center">
                     <p class="text-indigo-900 font-semibold">Submit Approved Marks</p>
@@ -1335,7 +1362,7 @@
             </section>
 
             <!-- Unlock Admin Section -->
-            <section id="unlock-admin" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+            <section x-show="activeView === 'admin-unlock'" id="unlock-admin" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">🔓 (Admin) Unlock Batches</h3>
                 <p class="text-sm text-gray-600 mb-4">Select a submitted batch to unlock for resubmission (admin only)</p>
                 
@@ -1389,6 +1416,7 @@
             </section>
 
             <!-- Submission History Section -->
+            <template x-if="activeView === 'history'">
             <section id="submission-history" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">📜 Submission History</h2>
                 
@@ -1446,10 +1474,14 @@
                     <p>No submission history found. Select a batch to view approval timeline.</p>
                 </div>
             </section>
+            </template>
 
-            <!-- ===== REPORTS & EXPORTS SECTIONS ===== -->
+            </div>
+            <!-- ===== END SUBMISSION & LOCKING SECTIONS ===== -->
+            <div x-show="['scoresheets-pdf', 'csv-export', 'analytics', 'summary-report'].includes(activeView)">
 
             <!-- Scoresheets Section -->
+            <template x-if="activeView === 'scoresheets-pdf'">
             <section id="scoresheets" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">📄 Scoresheets (PDF)</h3>
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
@@ -1458,9 +1490,10 @@
                     <p class="text-xs text-blue-600 mt-4">Coming in Phase 3C - Week 3</p>
                 </div>
             </section>
+            </template>
 
             <!-- CSV Export Section -->
-            <section id="csv-export" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+            <section x-show="activeView === 'csv-export'" id="csv-export" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">📊 CSV Export</h3>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                     <p class="text-green-900 font-semibold">Export Marks to CSV</p>
@@ -1470,6 +1503,7 @@
             </section>
 
             <!-- Analytics Section -->
+            <template x-if="activeView === 'analytics'">
             <section id="analytics" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-6">📈 Analytics</h2>
                 
@@ -1562,8 +1596,10 @@
                     </div>
                 </div>
             </section>
+            </template>
 
             <!-- Summary Report Section -->
+            <template x-if="activeView === 'summary-report'">
             <section id="summary-report" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-6">📋 Summary Report</h2>
                 
@@ -1651,10 +1687,16 @@
                     </div>
                 </div>
             </section>
+            </template>
+
+            </div>
+            <!-- ===== END REPORTS & EXPORTS SECTIONS ===== -->
 
             <!-- ===== MONITORING & AUDIT SECTIONS ===== -->
+            <div x-show="['lifecycle-dashboard', 'change-log', 'audit-trail', 'activity-log'].includes(activeView)">
 
             <!-- Lifecycle Dashboard Section -->
+            <template x-if="activeView === 'lifecycle-dashboard'">
             <section id="lifecycle-dashboard" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-6">📊 Lifecycle Dashboard</h2>
                 
@@ -1720,8 +1762,10 @@
                     </div>
                 </div>
             </section>
+            </template>
 
             <!-- Change Log Section -->
+            <template x-if="activeView === 'change-log'">
             <section id="change-log" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">📝 Change Log</h2>
                 
@@ -1800,8 +1844,10 @@
                     <p>No changes found. Select a batch to view change history.</p>
                 </div>
             </section>
+            </template>
 
             <!-- Audit Trail Section -->
+            <template x-if="activeView === 'audit-trail'">
             <section id="audit-trail" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">🔍 Audit Trail</h2>
                 
@@ -1857,8 +1903,10 @@
                     <p>No audit trail entries found. Select a batch to view changes.</p>
                 </div>
             </section>
+            </template>
 
             <!-- Activity Log Section -->
+            <template x-if="activeView === 'activity-log'">
             <section id="activity-log" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">👥 Activity Log</h2>
                 
@@ -1914,11 +1962,16 @@
                     <p>No activity found. Enter a user ID to view their actions.</p>
                 </div>
             </section>
+            </template>
+
+            </div>
+            <!-- ===== END MONITORING & AUDIT SECTIONS ===== -->
 
             <!-- ===== ADMINISTRATION SECTIONS ===== -->
+            <div x-show="['configuration', 'permissions', 'batch-management', 'system-logs'].includes(activeView)">
 
             <!-- Configuration Section -->
-            <section id="configuration" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+            <section x-show="activeView === 'configuration'" id="configuration" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">⚙️ Configuration</h3>
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
                     <p class="text-blue-900 font-semibold">System Configuration</p>
@@ -1928,7 +1981,7 @@
             </section>
 
             <!-- Permissions Section -->
-            <section id="permissions" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+            <section x-show="activeView === 'permissions'" id="permissions" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">🔐 Permissions</h3>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
                     <p class="text-green-900 font-semibold">Role & Permission Management</p>
@@ -1938,7 +1991,7 @@
             </section>
 
             <!-- Batch Management Section -->
-            <section id="batch-management" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+            <section x-show="activeView === 'batch-management'" id="batch-management" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">📦 Batch Management</h3>
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
                     <p class="text-purple-900 font-semibold">Batch Administration</p>
@@ -1948,7 +2001,7 @@
             </section>
 
             <!-- System Logs Section -->
-            <section id="system-logs" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+            <section x-show="activeView === 'system-logs'" id="system-logs" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
                 <h3 class="text-xl font-bold text-gray-800 mb-4">🖥️ System Logs</h3>
                 <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
                     <p class="text-gray-900 font-semibold">System Event Logs</p>
@@ -1957,9 +2010,12 @@
                 </div>
             </section>
 
-        </div>
-    </div>
-</div>
+            </div>
+            <!-- ===== END ADMINISTRATION SECTIONS ===== -->
+
+            </div>
+            <!-- Close upload wrapper -->
+            </div>
 
 <script>
 function markEntryManager() {
@@ -2024,7 +2080,8 @@ function markEntryManager() {
                  selectedRegion: this.selectedRegion,
                  selectedDistrict: this.selectedDistrict,
                  selectedSchool: this.selectedSchool,
-                 selectedSubject: this.selectedSubject,
+                selectedSubject: this.selectedSubject,
+                activeView: this.activeView,
                  timestamp: Date.now()
              };
              try {
@@ -2043,7 +2100,11 @@ function markEntryManager() {
                      this.selectedRegion = context.selectedRegion || '';
                      this.selectedDistrict = context.selectedDistrict || '';
                      this.selectedSchool = context.selectedSchool || '';
-                     this.selectedSubject = context.selectedSubject || '';
+                    this.selectedSubject = context.selectedSubject || '';
+                    // restore active view if available and valid
+                    if (context.activeView && this.viewRegistry[context.activeView]) {
+                        this.activeView = context.activeView;
+                    }
                      console.log('✓ Context restored from localStorage');
                  }
              } catch (e) {
@@ -2058,6 +2119,138 @@ function markEntryManager() {
                  console.warn('Failed to clear localStorage:', e);
              }
          },
+
+         // ========== VIEW NAVIGATION SYSTEM ==========
+         activeView: 'upload-marks',
+         viewRegistry: {
+             'upload-marks': { label: '📤 Upload Marks', category: 'Entry & Validation', lazy: false },
+             'single-subject-csv': { label: '📊 Single Subject CSV', category: 'Entry & Validation', lazy: false },
+             'school-bulk-zip': { label: '📦 School Bulk ZIP', category: 'Entry & Validation', lazy: false },
+             'district-bulk-zip': { label: '📋 District Bulk ZIP', category: 'Entry & Validation', lazy: false },
+             'review-dashboard': { label: '📋 Review Dashboard', category: 'Moderation & Review', lazy: true },
+             'pending-review': { label: '⏳ Pending Review', category: 'Moderation & Review', lazy: true },
+             'approve-marks': { label: '✅ Approve Marks', category: 'Moderation & Review', lazy: true },
+             'reject-feedback': { label: '❌ Reject & Feedback', category: 'Moderation & Review', lazy: true },
+             'lock-status': { label: '🔒 Lock Status', category: 'Submission & Locking', lazy: true },
+             'submit-marks': { label: '📤 Submit Marks', category: 'Submission & Locking', lazy: false },
+             'admin-unlock': { label: '🔓 Admin Unlock', category: 'Submission & Locking', lazy: false },
+             'history': { label: '📜 History', category: 'Submission & Locking', lazy: true },
+             'scoresheets-pdf': { label: '📄 Scoresheets (PDF)', category: 'Reports & Exports', lazy: true },
+             'csv-export': { label: '📊 CSV Export', category: 'Reports & Exports', lazy: false },
+             'analytics': { label: '📈 Analytics', category: 'Reports & Exports', lazy: true },
+             'summary-report': { label: '📋 Summary Report', category: 'Reports & Exports', lazy: true },
+             'lifecycle-dashboard': { label: '📊 Lifecycle Dashboard', category: 'Monitoring & Audit', lazy: true },
+             'change-log': { label: '📝 Change Log', category: 'Monitoring & Audit', lazy: true },
+             'audit-trail': { label: '🔍 Audit Trail', category: 'Monitoring & Audit', lazy: true },
+             'activity-log': { label: '👥 Activity Log', category: 'Monitoring & Audit', lazy: true },
+             'configuration': { label: '⚙️ Configuration', category: 'Administration', lazy: false },
+             'permissions': { label: '🔐 Permissions', category: 'Administration', lazy: false },
+             'batch-management': { label: '📦 Batch Management', category: 'Administration', lazy: false },
+             'system-logs': { label: '🖥️ System Logs', category: 'Administration', lazy: false },
+         },
+
+         // Navigate to a view
+         navigateToView(viewKey) {
+             if (!this.viewRegistry[viewKey]) {
+                 console.warn('View not found:', viewKey);
+                 return;
+             }
+             
+             this.activeView = viewKey;
+             this.closeAllDropdowns();
+             
+             // Update URL with view parameter
+             this.updateUrlState(viewKey);
+
+            // Update page title / breadcrumb
+            this.updatePageTitle(viewKey);
+             
+             // Trigger lazy loading if needed
+             if (this.viewRegistry[viewKey].lazy) {
+                 this.onViewEnter(viewKey);
+             }
+             
+             console.log(`✓ Navigated to view: ${viewKey}`);
+         },
+
+         // Close all open dropdowns
+         closeAllDropdowns() {
+             this.regionOpen = false;
+             this.districtOpen = false;
+             this.schoolOpen = false;
+             this.subjectOpen = false;
+             this.schoolBulkSchoolOpen = false;
+             this.schoolBulkYearOpen = false;
+         },
+
+         // Handle view entry (lazy loading, data fetching)
+         onViewEnter(viewKey) {
+             switch(viewKey) {
+                 case 'review-dashboard':
+                 case 'pending-review':
+                     this.loadModerationDashboard();
+                     break;
+                 case 'lock-status':
+                     this.loadLockStatus();
+                     break;
+                 case 'analytics':
+                 case 'summary-report':
+                 case 'lifecycle-dashboard':
+                     this.loadAnalytics();
+                     break;
+             }
+         },
+
+         // Update URL with view state
+         updateUrlState(viewKey) {
+             const url = new URL(window.location);
+             url.searchParams.set('view', viewKey);
+             window.history.pushState({ view: viewKey }, '', url);
+            // persist view into localStorage context as well
+            try {
+                this.saveContext();
+            } catch (e) {}
+         },
+
+         // Initialize from URL
+         initViewFromUrl() {
+             const url = new URL(window.location);
+             const viewParam = url.searchParams.get('view');
+             
+             if (viewParam && this.viewRegistry[viewParam]) {
+                 this.activeView = viewParam;
+                 console.log(`✓ View restored from URL: ${viewParam}`);
+                 
+                 // Lazy load if needed
+                 if (this.viewRegistry[viewParam].lazy) {
+                     this.onViewEnter(viewParam);
+                 }
+                // set page title
+                this.updatePageTitle(viewParam);
+             }
+         },
+
+         // Handle browser back/forward
+         handlePopState() {
+             const url = new URL(window.location);
+             const viewParam = url.searchParams.get('view');
+             if (viewParam && this.viewRegistry[viewParam]) {
+                this.activeView = viewParam;
+                console.log(`✓ View changed via back/forward: ${viewParam}`);
+                // lazy load if necessary
+                if (this.viewRegistry[viewParam].lazy) this.onViewEnter(viewParam);
+                // update title
+                this.updatePageTitle(viewParam);
+             }
+         },
+
+        // Update document title and breadcrumb label
+        updatePageTitle(viewKey) {
+            const label = this.viewRegistry[viewKey]?.label || 'ACSEE Mark Entry';
+            try {
+                document.title = `${label} - ACSEE Mark Entry - IRMS`;
+            } catch (e) {}
+        },
 
          async init() {
               // Restore context from localStorage if available
@@ -2091,6 +2284,13 @@ function markEntryManager() {
               this.$watch('selectedDistrict', () => this.saveContext());
               this.$watch('selectedSchool', () => this.saveContext());
               this.$watch('selectedSubject', () => this.saveContext());
+              this.$watch('activeView', () => this.saveContext());
+              
+              // Initialize view from URL
+              this.initViewFromUrl();
+              
+              // Set up popstate listener for back/forward
+              window.addEventListener('popstate', () => this.handlePopState());
               },
 
               smoothScroll(selector) {
