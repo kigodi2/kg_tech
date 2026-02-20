@@ -37,3 +37,14 @@ coverage/
 *.sql
 *.sqlite
 *.sqlite3
+
+# =========================
+# IRMS Runtime Generated Files
+# =========================
+storage/temp/
+storage/temp_*/
+storage/temp_*.zip
+storage/temp_*.zip.enc
+storage/temp_*.pdf
+storage/temp_*.csv
+storage/backups/
