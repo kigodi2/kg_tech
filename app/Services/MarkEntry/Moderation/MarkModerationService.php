@@ -3,9 +3,11 @@
 namespace App\Services\MarkEntry\Moderation;
 
 use App\Models\MarkImportBatch;
+use App\Models\MarkModerationAction;
 use App\Models\MarkModerationReview;
 use App\Services\MarkEntry\Shared\LifecycleStateService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class MarkModerationService {
 
@@ -59,7 +61,12 @@ class MarkModerationService {
                 ->latest('id')->first();
             
             if (!$review) {
-                throw new \Exception('No active moderation review found');
+                $review = MarkModerationReview::create([
+                    'mark_import_batch_id' => $batch->id,
+                    'reviewer_id' => $approver->id,
+                    'review_type' => 'approval',
+                    'status' => 'pending',
+                ]);
             }
 
             $review->update([
@@ -75,6 +82,22 @@ class MarkModerationService {
                 $approver,
                 "Approved by " . $approver->name
             );
+
+            $batch->update(['status' => 'approved']);
+
+            MarkModerationAction::create([
+                'action' => MarkModerationAction::ACTION_APPROVE,
+                'scope' => 'single_subject',
+                'actor_id' => $approver->id,
+                'mark_import_batch_id' => $batch->id,
+                'exam_year_id' => $batch->exam_year,
+                'school_id' => $batch->school_id,
+                'subject_id' => $batch->subject_id,
+                'district_id' => $batch->district_id,
+                'affected_rows' => $batch->total_records ?? 0,
+                'reason' => $feedback,
+                'correlation_id' => (string) Str::uuid(),
+            ]);
 
             \Log::info("Batch {$batch->id} approved by {$approver->name}");
 
@@ -97,7 +120,12 @@ class MarkModerationService {
                 ->latest('id')->first();
             
             if (!$review) {
-                throw new \Exception('No active moderation review found');
+                $review = MarkModerationReview::create([
+                    'mark_import_batch_id' => $batch->id,
+                    'reviewer_id' => $rejector->id,
+                    'review_type' => 'rejection',
+                    'status' => 'pending',
+                ]);
             }
 
             $review->update([
@@ -115,8 +143,23 @@ class MarkModerationService {
             );
 
             $batch->update([
+                'status' => 'rejected',
                 'requires_resubmission' => true,
                 'rejection_reason' => $reason,
+            ]);
+
+            MarkModerationAction::create([
+                'action' => MarkModerationAction::ACTION_REJECT,
+                'scope' => 'single_subject',
+                'actor_id' => $rejector->id,
+                'mark_import_batch_id' => $batch->id,
+                'exam_year_id' => $batch->exam_year,
+                'school_id' => $batch->school_id,
+                'subject_id' => $batch->subject_id,
+                'district_id' => $batch->district_id,
+                'affected_rows' => $batch->total_records ?? 0,
+                'reason' => $reason,
+                'correlation_id' => (string) Str::uuid(),
             ]);
 
             \Log::warning("Batch {$batch->id} rejected by {$rejector->name}");

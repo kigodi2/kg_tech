@@ -28,16 +28,22 @@ class CandidateImportSubjectAllocationTest extends TestCase
         $this->importService = app(CandidateImportService::class);
 
         // Setup test data
+        $region = \App\Models\Region::firstOrCreate(
+            ['code' => 'TESTR'],
+            ['name' => 'Test Region']
+        );
+
         $this->district = District::firstOrCreate(
             ['code' => 'TEST'],
-            ['name' => 'Test District']
+            ['name' => 'Test District', 'region_id' => $region->id]
         );
 
         $this->school = School::firstOrCreate(
             ['code' => 'TESTSCH'],
             [
                 'name' => 'Test School',
-                'district_id' => $this->district->id
+                'district_id' => $this->district->id,
+                'region_id' => $region->id,
             ]
         );
 

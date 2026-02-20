@@ -53,6 +53,19 @@ class GradingProfile extends Model
         return $this->belongsTo(User::class, 'locked_by_id');
     }
 
+    public function gradingRules()
+    {
+        return $this->hasMany(GradingRule::class);
+    }
+
+    /**
+     * Get all grading rules for this profile
+     */
+    public function rules()
+    {
+        return $this->hasMany(GradingRule::class);
+    }
+
     /**
      * Scope: active profiles
      */

@@ -14,6 +14,21 @@ class RawMarkResource extends Resource
 {
     protected static ?string $model = RawMark::class;
 
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return false;
+    }
+
     protected static ?string $slug = 'raw-marks';
 
     protected static ?string $navigationIcon = 'heroicon-o-pencil-square';
@@ -181,14 +196,9 @@ class RawMarkResource extends Resource
                     ->label('Locked'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -203,8 +213,7 @@ class RawMarkResource extends Resource
     {
         return [
             'index' => Pages\ListRawMarks::route('/'),
-            'create' => Pages\CreateRawMark::route('/create'),
-            'edit' => Pages\EditRawMark::route('/{record}/edit'),
+            'view' => Pages\ViewRawMark::route('/{record}'),
         ];
     }
 }

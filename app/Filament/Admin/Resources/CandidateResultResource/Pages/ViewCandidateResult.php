@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Resources\CandidateResultResource\Pages;
 
 use App\Filament\Admin\Resources\CandidateResultResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewCandidateResult extends ViewRecord
@@ -12,8 +11,6 @@ class ViewCandidateResult extends ViewRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\EditAction::make(),
-        ];
+        return [];
     }
 }

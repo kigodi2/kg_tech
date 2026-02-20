@@ -69,7 +69,6 @@ class ProcessCandidateBulkImport implements ShouldQueue
             Log::info("Candidate bulk import completed successfully", [
                 'file' => $this->filePath
             ]);
-
         } catch (Exception $e) {
             Log::error("Candidate bulk import failed", [
                 'error' => $e->getMessage(),
@@ -172,7 +171,6 @@ class ProcessCandidateBulkImport implements ShouldQueue
                         $batch = [];
                         gc_collect_cycles(); // Prevent memory bloat
                     }
-
                 } catch (Exception $e) {
                     Log::warning("Row $rowNumber error: " . $e->getMessage());
                     $errorCount++;
@@ -193,7 +191,6 @@ class ProcessCandidateBulkImport implements ShouldQueue
                 'updated' => $updateCount,
                 'errors' => $errorCount,
             ]);
-
         } finally {
             if (is_resource($handle)) {
                 fclose($handle);
@@ -267,21 +264,34 @@ class ProcessCandidateBulkImport implements ShouldQueue
                     continue;
                 }
 
-                // Create candidate
+                // Normalize combination and resolve ID (strict exact match)
+                $comboCode = isset($record['combination']) ? strtoupper(trim($record['combination'])) : null;
+                $combo = null;
+                if ($comboCode) {
+                    $combo = \App\Models\Combination::where('code', $comboCode)->first();
+                }
+
+                // Create candidate with both code and FK
                 $candidate = Candidate::create([
                     'school_id' => $school->id,
                     'candidate_id' => $record['candidate_id'],
                     'full_name' => $record['full_name'],
                     'gender' => strtoupper($record['gender'][0] ?? 'M'),
                     'exam_type' => $examType,
-                    'combination' => $record['combination'] ?? null,
+                    'combination' => $comboCode,
+                    'combination_id' => $combo?->id ?? null,
                     'status' => 'registered',
                     'is_active' => true,
                 ]);
 
-                // Register for ACSEE if needed
-                if (strtoupper($examType) === 'ACSEE' && $record['combination'] && $acseeType && $examYear) {
-                    $this->registerForACSEE($candidate, $record['combination'], $acseeType, $examYear);
+                // Integrity guard after create
+                if ($comboCode && ($candidate->combination !== $comboCode || $candidate->combination_id !== ($combo?->id ?? null))) {
+                    throw new Exception("Combination mismatch for {$candidate->candidate_id}: CSV='{$comboCode}' Saved='{$candidate->combination}'");
+                }
+
+                // Register for ACSEE if needed (use normalized code)
+                if (strtoupper($examType) === 'ACSEE' && $comboCode && $acseeType && $examYear) {
+                    $this->registerForACSEE($candidate, $comboCode, $acseeType, $examYear);
                 }
 
                 $count++;
@@ -329,7 +339,7 @@ class ProcessCandidateBulkImport implements ShouldQueue
             ->where(function ($q) use ($parts) {
                 foreach ($parts as $part) {
                     $q->orWhere('code', 'LIKE', $part)
-                      ->orWhereRaw('LOWER(code) = LOWER(?)', [$part]);
+                        ->orWhereRaw('LOWER(code) = LOWER(?)', [$part]);
                 }
             })
             ->get();
@@ -374,13 +384,20 @@ class ProcessCandidateBulkImport implements ShouldQueue
             return;
         }
 
-        $candidate->update([
+        $updateData = [
             'school_id' => $school->id,
             'full_name' => $record['full_name'],
             'gender' => strtoupper($record['gender'][0] ?? 'M'),
             'exam_type' => $examType ?? $candidate->exam_type,
-            'combination' => $record['combination'] ?? $candidate->combination,
-        ]);
+        ];
+        if (!empty($record['combination'])) {
+            $comboCode = strtoupper(trim($record['combination']));
+            $combo = \App\Models\Combination::where('code', $comboCode)->first();
+            $updateData['combination'] = $comboCode;
+            $updateData['combination_id'] = $combo?->id ?? null;
+        }
+
+        $candidate->update($updateData);
 
         // Re-register for ACSEE if needed
         if (strtoupper($examType ?? 'ACSEE') === 'ACSEE' && $record['combination']) {

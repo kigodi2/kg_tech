@@ -106,6 +106,7 @@ class ExamYearResource extends Resource
                     ->icon('heroicon-m-check')
                     ->color('success')
                     ->requiresConfirmation()
+                    ->modalDescription('Activating this year will deactivate any currently active year. Continue?')
                     ->visible(fn (ExamYear $record) => !$record->is_active && !$record->is_locked)
                     ->action(function (ExamYear $record) {
                         $record->activate();
@@ -115,6 +116,8 @@ class ExamYearResource extends Resource
                     ->icon('heroicon-m-lock-closed')
                     ->color('danger')
                     ->requiresConfirmation()
+                    ->modalHeading('⚠️ Danger Zone: Publish & Lock')
+                    ->modalDescription('This action is IRREVERSIBLE. Once published and locked, this exam year cannot be edited or unlocked. All marks and results for this year will become read-only. Are you absolutely sure?')
                     ->visible(fn (ExamYear $record) => !$record->is_locked && !$record->isPublished())
                     ->action(function (ExamYear $record) {
                         $record->publish();

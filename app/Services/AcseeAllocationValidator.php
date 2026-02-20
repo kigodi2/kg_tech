@@ -43,11 +43,14 @@ class AcseeAllocationValidator
         $this->principalSubjectIds = [];
         $this->allSubjectIds = array_unique($subjectIds);
 
-        // Rule 1: General Studies must be present
-        $this->validateGeneralStudies();
+        // Determine candidate type from index number prefix
+        $isPrivate = str_starts_with(strtoupper($candidate->candidate_id ?? ''), 'P');
 
-        // Rule 2: Minimum 3 principal subjects (excluding General Studies)
-        $this->validatePrincipalSubjectCount();
+        // Rule 1 & 2: Only apply to SCHOOL candidates
+        if (!$isPrivate) {
+            $this->validateGeneralStudies();
+            $this->validatePrincipalSubjectCount();
+        }
 
         // Rule 3: No duplicates (checked)
         $this->validateNoDuplicates();

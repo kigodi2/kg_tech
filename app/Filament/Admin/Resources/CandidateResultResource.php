@@ -14,6 +14,21 @@ class CandidateResultResource extends Resource
 {
     protected static ?string $model = CandidateResult::class;
 
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return false;
+    }
+
     protected static ?string $slug = 'candidate-results';
 
     protected static ?string $navigationIcon = 'heroicon-o-chart-bar';
@@ -163,14 +178,8 @@ class CandidateResultResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -185,9 +194,7 @@ class CandidateResultResource extends Resource
     {
         return [
             'index' => Pages\ListCandidateResults::route('/'),
-            'create' => Pages\CreateCandidateResult::route('/create'),
             'view' => Pages\ViewCandidateResult::route('/{record}'),
-            'edit' => Pages\EditCandidateResult::route('/{record}/edit'),
         ];
     }
 }

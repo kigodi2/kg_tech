@@ -23,7 +23,11 @@ class RawMark extends Model
         'paper_3_marks',
         'practical_marks',
         'project_marks',
+        'subject_status',
+        'status_reason',
         'has_errors',
+        'has_warnings',
+        'warning_messages',
         'error_messages',
         'raw_data',
         'processed_at',
@@ -34,7 +38,9 @@ class RawMark extends Model
 
     protected $casts = [
         'has_errors' => 'boolean',
+        'has_warnings' => 'boolean',
         'error_messages' => 'array',
+        'warning_messages' => 'array',
         'raw_data' => 'array',
         'processed_at' => 'datetime',
         'is_locked' => 'boolean',
@@ -98,6 +104,16 @@ class RawMark extends Model
     public function scopeUnlocked($query)
     {
         return $query->where('is_locked', false);
+    }
+
+    public function scopeWithWarnings($query)
+    {
+        return $query->where('has_warnings', true);
+    }
+
+    public function scopeAbsent($query)
+    {
+        return $query->whereNotNull('subject_status');
     }
 
     // ==================== METHODS ====================

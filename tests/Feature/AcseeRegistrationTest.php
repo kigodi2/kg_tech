@@ -28,30 +28,33 @@ class AcseeRegistrationTest extends TestCase
     {
         parent::setUp();
 
+        // Create exam type and year
+        $this->examType = ExamType::create(['code' => 'ACSEE', 'name' => 'ACSEE']);
+        $this->examYear = ExamYear::create(['year' => 2026, 'year_label' => '2026']);
+
         // Create school
+        $region = \App\Models\Region::create(['code' => 'TR', 'name' => 'Test Region']);
         $this->school = School::create([
             'code' => 'TEST001',
             'name' => 'Test School',
-            'registration_number' => 'REG001'
+            'region_id' => $region->id,
         ]);
-        
-        // Create exam type and year
-        $this->examType = ExamType::create(['name' => 'ACSEE']);
-        $this->examYear = ExamYear::create(['year' => 2026, 'year_label' => '2026']);
 
         // Create subjects
         $this->generalStudies = Subject::create([
             'code' => '111',
-            'name' => 'GENERAL STUDIES'
+            'name' => 'GENERAL STUDIES',
+            'exam_type_id' => $this->examType->id,
         ]);
-        $this->subject1 = Subject::create(['code' => '101', 'name' => 'Physics']);
-        $this->subject2 = Subject::create(['code' => '102', 'name' => 'Chemistry']);
-        $this->subject3 = Subject::create(['code' => '103', 'name' => 'Biology']);
+        $this->subject1 = Subject::create(['code' => '101', 'name' => 'Physics', 'exam_type_id' => $this->examType->id]);
+        $this->subject2 = Subject::create(['code' => '102', 'name' => 'Chemistry', 'exam_type_id' => $this->examType->id]);
+        $this->subject3 = Subject::create(['code' => '103', 'name' => 'Biology', 'exam_type_id' => $this->examType->id]);
 
         // Create combination
         $this->combination = Combination::create([
             'exam_type_id' => $this->examType->id,
-            'code' => 'PCB'
+            'code' => 'PCB',
+            'subjects' => 'Physics,Chemistry,Biology',
         ]);
         $this->combination->subjects()->attach([
             $this->subject1->id,
@@ -66,10 +69,11 @@ class AcseeRegistrationTest extends TestCase
      */
     public function test_can_register_school_candidate()
     {
+        $region = \App\Models\Region::first();
         $school = School::create([
             'code' => 'S0001',
             'name' => 'School 1',
-            'registration_number' => 'S0001'
+            'region_id' => $region->id,
         ]);
         
         $response = $this->postJson('/api/candidates', [

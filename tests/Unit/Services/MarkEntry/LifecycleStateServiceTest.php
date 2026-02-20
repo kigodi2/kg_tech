@@ -426,8 +426,9 @@ class LifecycleStateServiceTest extends TestCase
         $available = $this->service->getAvailableTransitions($this->batch);
 
         $this->assertContains('validating', $available);
+        $this->assertContains('validated', $available);
         $this->assertContains('rejected', $available);
-        $this->assertCount(2, $available);
+        $this->assertCount(3, $available);
     }
 
     /**

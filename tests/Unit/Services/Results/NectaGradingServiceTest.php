@@ -93,8 +93,8 @@ class NectaGradingServiceTest extends TestCase
         $this->assertEquals('Very Good', $this->service->getCompetenceLevel('B'));
         $this->assertEquals('Good', $this->service->getCompetenceLevel('C'));
         $this->assertEquals('Average', $this->service->getCompetenceLevel('D'));
-        $this->assertEquals('Satisfied', $this->service->getCompetenceLevel('E'));
-        $this->assertEquals('Unsatisfied', $this->service->getCompetenceLevel('S'));
+        $this->assertEquals('Satisfactory', $this->service->getCompetenceLevel('E'));
+        $this->assertEquals('Unsatisfactory', $this->service->getCompetenceLevel('S'));
         $this->assertEquals('Fail', $this->service->getCompetenceLevel('F'));
     }
 
@@ -163,7 +163,7 @@ class NectaGradingServiceTest extends TestCase
 
         // Verify A grade boundary
         $aGrade = collect($boundaries)->firstWhere('grade', 'A');
-        $this->assertEquals(80, $aGrade['min']);
+        $this->assertEquals(79.5, $aGrade['min']);
         $this->assertEquals(100, $aGrade['max']);
     }
 
@@ -316,7 +316,7 @@ class NectaGradingServiceTest extends TestCase
         $division = $this->service->calculateDivision(8.5);
         
         $this->assertIsArray($division);
-        $this->assertEquals('I', $division['division']);
+        $this->assertEquals(1, $division['division']);
         $this->assertEquals('Excellent', $division['competence']);
     }
 
@@ -324,31 +324,31 @@ class NectaGradingServiceTest extends TestCase
     {
         $division = $this->service->calculateDivision(12.0);
         
-        $this->assertEquals('II', $division['division']);
+        $this->assertEquals(2, $division['division']);
         $this->assertEquals('Very Good', $division['competence']);
     }
 
     public function test_calculate_division_good()
     {
-        $division = $this->service->calculateDivision(18.0);
+        $division = $this->service->calculateDivision(15.0);
         
-        $this->assertEquals('III', $division['division']);
+        $this->assertEquals(3, $division['division']);
         $this->assertEquals('Good', $division['competence']);
     }
 
     public function test_calculate_division_average()
     {
-        $division = $this->service->calculateDivision(20.0);
+        $division = $this->service->calculateDivision(18.0);
         
-        $this->assertEquals('IV', $division['division']);
+        $this->assertEquals(4, $division['division']);
         $this->assertEquals('Average', $division['competence']);
     }
 
     public function test_calculate_division_fail()
     {
-        $division = $this->service->calculateDivision(25.0);
+        $division = $this->service->calculateDivision(21.0);
         
-        $this->assertEquals('O', $division['division']);
+        $this->assertEquals(0, $division['division']);
         $this->assertEquals('Fail', $division['competence']);
     }
 

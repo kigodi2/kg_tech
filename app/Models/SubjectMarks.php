@@ -23,6 +23,7 @@ class SubjectMarks extends Model
         'max_marks',
         'percentage',
         'grade',
+        'subject_status',
     ];
 
     protected $casts = [

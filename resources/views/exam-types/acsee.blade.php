@@ -366,54 +366,61 @@
         </div>
 
         <!-- SUBJECT MODAL -->
-        <div x-show="subjectModalOpen || editingSubjectId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @click.self="subjectModalOpen = false; editingSubjectId = null;" x-transition style="display: none;">
+        <div x-show="subjectModalOpen || editingSubjectId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @mousedown.self="subjectModalOpen = false; editingSubjectId = null;" x-transition style="display: none;">
             <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
                 <div class="flex justify-between items-center p-6 border-b border-gray-200">
                     <h2 class="text-2xl font-bold text-gray-800" x-text="editingSubjectId ? 'Edit Subject' : 'Add Subject'"></h2>
                     <button @click="subjectModalOpen = false; editingSubjectId = null;" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
                 </div>
 
-                <form @submit.prevent="saveSubject()" class="p-6 space-y-4 max-h-96 overflow-y-auto">
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Code *</label>
-                        <input x-model="subjectForm.code" type="text" placeholder="e.g., ENG" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
-                        <input x-model="subjectForm.name" type="text" placeholder="e.g., English" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Category</label>
-                        <input x-model="subjectForm.category" type="text" placeholder="e.g., Language, Science" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Written Papers</label>
-                        <input x-model.number="subjectForm.written_papers" type="number" placeholder="e.g., 2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
+                <form @submit.prevent="saveSubject()">
+                    <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Code *</label>
+                            <input x-model="subjectForm.code" type="text" placeholder="e.g., ENG" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
+                            <input x-model="subjectForm.name" type="text" placeholder="e.g., English" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Category *</label>
+                            <select x-model="subjectForm.category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="">Select Category</option>
+                                <option value="SCIENCE">SCIENCE</option>
+                                <option value="ARTS">ARTS</option>
+                                <option value="BUSINESS">BUSINESS</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Written Papers</label>
+                            <input x-model.number="subjectForm.written_papers" type="number" placeholder="e.g., 2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="flex items-center gap-2">
+                                <input x-model="subjectForm.has_practical" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700">Has Practical</span>
+                            </label>
+                            <label class="flex items-center gap-2">
+                                <input x-model="subjectForm.has_project" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                                <span class="text-sm font-medium text-gray-700">Has Project</span>
+                            </label>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Max Marks</label>
+                            <input x-model.number="subjectForm.max_marks" type="number" placeholder="e.g., 100" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                            <textarea x-model="subjectForm.description" placeholder="Subject description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-16 resize-none"></textarea>
+                        </div>
                         <label class="flex items-center gap-2">
-                            <input x-model="subjectForm.has_practical" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                            <span class="text-sm font-medium text-gray-700">Has Practical</span>
-                        </label>
-                        <label class="flex items-center gap-2">
-                            <input x-model="subjectForm.has_project" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                            <span class="text-sm font-medium text-gray-700">Has Project</span>
+                            <input x-model="subjectForm.is_active" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                            <span class="text-sm font-medium text-gray-700">Active</span>
                         </label>
                     </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Max Marks</label>
-                        <input x-model.number="subjectForm.max_marks" type="number" placeholder="e.g., 100" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                        <textarea x-model="subjectForm.description" placeholder="Subject description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-16 resize-none"></textarea>
-                    </div>
-                    <label class="flex items-center gap-2">
-                        <input x-model="subjectForm.is_active" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-                        <span class="text-sm font-medium text-gray-700">Active</span>
-                    </label>
 
-                    <div class="flex gap-3 pt-4">
+                    <div class="flex gap-3 p-6 border-t border-gray-200">
                         <button type="button" @click="subjectModalOpen = false; editingSubjectId = null;" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium">Cancel</button>
                         <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save Subject</button>
                     </div>
@@ -422,25 +429,52 @@
         </div>
 
         <!-- COMBINATION MODAL -->
-        <div x-show="combinationModalOpen || editingCombinationId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @click.self="combinationModalOpen = false; editingCombinationId = null;" x-transition style="display: none;">
+        <div x-show="combinationModalOpen || editingCombinationId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @mousedown.self="combinationModalOpen = false; editingCombinationId = null;" x-transition style="display: none;">
             <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
                 <div class="flex justify-between items-center p-6 border-b border-gray-200">
                     <h2 class="text-2xl font-bold text-gray-800" x-text="editingCombinationId ? 'Edit Combination' : 'Add Combination'"></h2>
                     <button @click="combinationModalOpen = false; editingCombinationId = null;" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
                 </div>
 
-                <form @submit.prevent="saveCombination()" class="p-6 space-y-4 max-h-96 overflow-y-auto">
+                <form @submit.prevent="saveCombination()" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Code *</label>
                         <input x-model="combinationForm.code" type="text" placeholder="e.g., SC1" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Category</label>
-                        <input x-model="combinationForm.category" type="text" placeholder="e.g., Science, Humanities" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select x-model="combinationForm.category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">-- Select Category --</option>
+                            <option value="SCIENCE">SCIENCE</option>
+                            <option value="ARTS">ARTS</option>
+                            <option value="BUSINESS">BUSINESS</option>
+                        </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">Subjects (Comma-separated) *</label>
-                        <textarea x-model="combinationForm.subjects" placeholder="e.g., Physics, Chemistry, Biology" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-16 resize-none"></textarea>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Subjects *</label>
+                        <div class="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto space-y-1">
+                            <template x-for="subject in subjects" :key="subject.id">
+                                <label class="flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-50 cursor-pointer">
+                                    <input type="checkbox" 
+                                        :value="subject.code" 
+                                        :checked="combinationSelectedSubjects.includes(subject.code)"
+                                        @change="
+                                            if ($event.target.checked) {
+                                                if (!combinationSelectedSubjects.includes(subject.code)) combinationSelectedSubjects.push(subject.code);
+                                            } else {
+                                                combinationSelectedSubjects = combinationSelectedSubjects.filter(c => c !== subject.code);
+                                            }
+                                            combinationForm.subjects = combinationSelectedSubjects.join(',');
+                                        "
+                                        class="w-4 h-4 border border-gray-300 rounded text-blue-600 focus:ring-blue-500">
+                                    <span class="text-sm text-gray-700" x-text="subject.code + ' - ' + subject.name"></span>
+                                </label>
+                            </template>
+                            <template x-if="subjects.length === 0">
+                                <p class="text-sm text-gray-400 italic">No subjects available. Add subjects first.</p>
+                            </template>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1" x-text="'Selected: ' + combinationSelectedSubjects.length + ' subject(s)'"></p>
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
@@ -460,7 +494,7 @@
         </div>
 
         <!-- CANDIDATE MODAL -->
-        <div x-show="candidateModalOpen || editingCandidateId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @click.self="candidateModalOpen = false; editingCandidateId = null;" x-transition style="display: none;">
+        <div x-show="candidateModalOpen || editingCandidateId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @mousedown.self="candidateModalOpen = false; editingCandidateId = null;" x-transition style="display: none;">
             <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
                 <div class="flex justify-between items-center p-6 border-b border-gray-200">
                     <h2 class="text-2xl font-bold text-gray-800" x-text="editingCandidateId ? 'Edit Candidate' : 'Register Candidate'"></h2>
@@ -826,22 +860,46 @@
                                     </div>
                                 </div>
 
-                                <!-- Error List -->
+                                <!-- Error Table -->
                                 <div x-show="bulkValidationReport && bulkValidationReport.invalid_count > 0" class="mt-4">
-                                    <h4 class="font-semibold text-sm text-red-800 mb-2">Errors (<span x-text="bulkLastErrors.length"></span>)</h4>
-                                    <div class="max-h-64 overflow-y-auto space-y-2">
-                                        <template x-for="(error, idx) in bulkLastErrors.slice(0, 10)" :key="idx">
-                                            <div class="bg-white p-3 rounded border border-red-200 text-xs">
-                                                <div class="font-semibold text-red-700" x-text="`Row ${error.row_number}: ${error.index_number}`"></div>
-                                                <div class="text-gray-700 mt-1">
-                                                    <template x-for="msg in error.error_messages" :key="msg">
-                                                        <div>• <span x-text="msg"></span></div>
-                                                    </template>
-                                                </div>
-                                            </div>
-                                        </template>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h4 class="font-semibold text-sm text-red-800">Errors Found</h4>
+                                        <button
+                                            @click="downloadBulkErrorReport()"
+                                            class="inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 transition-colors"
+                                        >
+                                            <i class="fas fa-download text-xs"></i> Download Errors
+                                        </button>
                                     </div>
-                                    <p x-show="bulkLastErrors.length > 10" class="text-xs text-gray-600 mt-2" x-text="`And ${bulkLastErrors.length - 10} more errors...`"></p>
+                                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-sm">
+                                                <thead class="bg-gray-100 border-b border-gray-200">
+                                                    <tr>
+                                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
+                                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Index No.</th>
+                                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Error(s)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-gray-200">
+                                                    <template x-for="(error, idx) in bulkLastErrors.slice(0, 10)" :key="idx">
+                                                        <tr class="hover:bg-gray-50">
+                                                            <td class="px-3 py-2 text-gray-600 text-xs" x-text="error.row_number"></td>
+                                                            <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="error.index_number || '-'"></td>
+                                                            <td class="px-3 py-2">
+                                                                <template x-for="msg in error.error_messages" :key="msg">
+                                                                    <span class="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium mr-1 mb-1" x-text="msg"></span>
+                                                                </template>
+                                                            </td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div x-show="bulkLastErrors.length > 10" class="bg-gray-50 px-4 py-2 text-xs text-gray-600 border-t border-gray-200">
+                                            Showing 10 of <span x-text="bulkLastErrors.length"></span> errors (download file to see all)
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -879,18 +937,43 @@
 
                                 <!-- Commit Errors -->
                                 <div x-show="bulkCommitReport && bulkCommitReport.failed_count > 0" class="mt-4">
-                                    <h4 class="font-semibold text-sm text-red-800 mb-2">Errors</h4>
-                                    <div class="max-h-40 overflow-y-auto space-y-2">
-                                        <template x-for="(error, idx) in bulkLastErrors.slice(0, 5)" :key="idx">
-                                            <div class="bg-white p-2 rounded border border-red-200 text-xs">
-                                                <div class="font-semibold text-red-700" x-text="`Row ${error.row_number}`"></div>
-                                                <div class="text-gray-700">
-                                                    <template x-for="msg in error.error_messages" :key="msg">
-                                                        <div>• <span x-text="msg"></span></div>
+                                    <div class="flex justify-between items-center mb-2">
+                                        <h4 class="font-semibold text-sm text-red-800">Errors</h4>
+                                        <button
+                                            @click="downloadBulkErrorReport()"
+                                            class="inline-flex items-center gap-2 px-3 py-1 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200 transition-colors"
+                                        >
+                                            <i class="fas fa-download text-xs"></i> Download Errors
+                                        </button>
+                                    </div>
+                                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-sm">
+                                                <thead class="bg-gray-100 border-b border-gray-200">
+                                                    <tr>
+                                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
+                                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Index No.</th>
+                                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Error(s)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-gray-200">
+                                                    <template x-for="(error, idx) in bulkLastErrors.slice(0, 5)" :key="idx">
+                                                        <tr class="hover:bg-gray-50">
+                                                            <td class="px-3 py-2 text-gray-600 text-xs" x-text="error.row_number"></td>
+                                                            <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="error.index_number || '-'"></td>
+                                                            <td class="px-3 py-2">
+                                                                <template x-for="msg in error.error_messages" :key="msg">
+                                                                    <span class="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium mr-1 mb-1" x-text="msg"></span>
+                                                                </template>
+                                                            </td>
+                                                        </tr>
                                                     </template>
-                                                </div>
-                                            </div>
-                                        </template>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div x-show="bulkLastErrors.length > 5" class="bg-gray-50 px-4 py-2 text-xs text-gray-600 border-t border-gray-200">
+                                            Showing 5 of <span x-text="bulkLastErrors.length"></span> errors (download file to see all)
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -912,15 +995,6 @@
                                 class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
                             >
                                 Close
-                            </button>
-                            <button 
-                                type="button"
-                                @click="downloadBulkErrorReport()"
-                                x-show="bulkPhase !== 'idle' && bulkLastErrors.length > 0"
-                                class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors text-sm flex items-center gap-2"
-                                data-testid="download-error-rows-button"
-                            >
-                                <i class="fas fa-download"></i> Error Rows CSV
                             </button>
                             <button 
                                 type="button"
@@ -979,6 +1053,7 @@ function acseeManager() {
         combinationModalOpen: false,
         editingCombinationId: null,
         combinationForm: { code: '', category: '', subjects: '', description: '', is_active: true },
+        combinationSelectedSubjects: [],
         
         // Candidates
         candidates: [],
@@ -1188,13 +1263,25 @@ function acseeManager() {
                     : `/api/exam-types/ACSEE/subjects`;
                 const method = this.editingSubjectId ? 'PUT' : 'POST';
 
+                const payload = {
+                    code: this.subjectForm.code,
+                    name: this.subjectForm.name,
+                    category: this.subjectForm.category,
+                    writtenPapers: this.subjectForm.written_papers || 1,
+                    hasPractical: this.subjectForm.has_practical || false,
+                    hasProject: this.subjectForm.has_project || false,
+                    max_marks: this.subjectForm.max_marks,
+                    description: this.subjectForm.description,
+                    is_active: this.subjectForm.is_active,
+                };
+
                 const response = await fetch(url, {
                     method,
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     },
-                    body: JSON.stringify(this.subjectForm),
+                    body: JSON.stringify(payload),
                 });
 
                 if (response.ok) {
@@ -1203,7 +1290,9 @@ function acseeManager() {
                     this.editingSubjectId = null;
                     await this.loadSubjects();
                 } else {
-                    this.showMessage('Error saving subject', 'error');
+                    const data = await response.json().catch(() => ({}));
+                    const errors = data.errors ? Object.values(data.errors).flat().join(', ') : (data.message || 'Error saving subject');
+                    this.showMessage(errors, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -1238,6 +1327,7 @@ function acseeManager() {
         openCombinationModal() {
             this.editingCombinationId = null;
             this.combinationForm = { code: '', category: '', subjects: '', description: '', is_active: true };
+            this.combinationSelectedSubjects = [];
             this.combinationModalOpen = true;
         },
 
@@ -1247,6 +1337,7 @@ function acseeManager() {
                 ...combination, 
                 is_active: combination.is_active ?? true
             };
+            this.combinationSelectedSubjects = combination.subjects ? combination.subjects.split(',').map(s => s.trim()).filter(s => s) : [];
             this.combinationModalOpen = true;
         },
 
@@ -1257,13 +1348,29 @@ function acseeManager() {
                     : `/api/exam-types/ACSEE/combinations`;
                 const method = this.editingCombinationId ? 'PUT' : 'POST';
 
+                // Convert selected subject codes to subject IDs for the backend
+                const subjectIds = this.combinationSelectedSubjects
+                    .map(code => {
+                        const subject = this.subjects.find(s => s.code == code);
+                        return subject ? subject.id : null;
+                    })
+                    .filter(id => id !== null);
+
+                const payload = {
+                    code: this.combinationForm.code,
+                    category: this.combinationForm.category,
+                    description: this.combinationForm.description,
+                    subject_ids: subjectIds,
+                };
+
                 const response = await fetch(url, {
                     method,
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        'Accept': 'application/json',
                     },
-                    body: JSON.stringify(this.combinationForm),
+                    body: JSON.stringify(payload),
                 });
 
                 if (response.ok) {
@@ -1272,7 +1379,9 @@ function acseeManager() {
                     this.editingCombinationId = null;
                     await this.loadCombinations();
                 } else {
-                    this.showMessage('Error saving combination', 'error');
+                    const errorData = await response.json().catch(() => null);
+                    const msg = errorData?.message || 'Error saving combination';
+                    this.showMessage(msg, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -1798,7 +1907,7 @@ function acseeManager() {
                 const formData = new FormData();
                 formData.append('file', this.bulkUploadedFile);
                 formData.append('exam_year_id', this.bulkExamYearId);
-                formData.append('mode', this.bulkImportMode);
+                formData.append('candidate_type_filter', this.bulkImportMode === 'private' ? 'PRIVATE' : (this.bulkImportMode === 'school' ? 'SCHOOL' : 'ALL'));
                 formData.append('replace_allocations', this.bulkReplaceAllocations ? 'true' : 'false');
                 
                 const response = await fetch('/api/exam-types/acsee/allocate-from-csv/validate', {
@@ -1811,13 +1920,24 @@ function acseeManager() {
                 
                 const data = await response.json();
                 
-                if (response.ok) {
-                    this.bulkValidationReport = data.report;
+                if (data.total_rows !== undefined && data.total_rows > 0) {
+                    // Validation ran and produced results (may have errors)
+                    this.bulkValidationReport = {
+                        total_rows: data.total_rows || 0,
+                        valid_count: data.valid_count || 0,
+                        invalid_count: data.invalid_count || 0,
+                        summary: data.summary || [],
+                    };
                     this.bulkLastErrors = data.errors || [];
                     this.bulkPhase = 'reviewing';
-                    this.bulkSuccessMessage = `Validation complete: ${data.report.total} rows scanned, ${data.report.valid} valid`;
-                    this.showMessage(this.bulkSuccessMessage, 'success');
-                } else {
+                    if (data.invalid_count > 0) {
+                        this.bulkErrorMessage = `${data.invalid_count} row(s) have errors. Please fix and re-upload, or commit the ${data.valid_count} valid rows.`;
+                        this.showMessage(this.bulkErrorMessage, 'error');
+                    } else {
+                        this.bulkSuccessMessage = `Validation complete: ${data.total_rows} rows scanned, ${data.valid_count} valid`;
+                        this.showMessage(this.bulkSuccessMessage, 'success');
+                    }
+                } else if (!response.ok) {
                     this.bulkPhase = 'idle';
                     this.bulkErrorMessage = data.message || 'Validation failed';
                     this.bulkLastErrors = data.errors || [];
@@ -1849,8 +1969,8 @@ function acseeManager() {
                 const formData = new FormData();
                 formData.append('file', this.bulkUploadedFile);
                 formData.append('exam_year_id', this.bulkExamYearId);
-                formData.append('mode', this.bulkImportMode);
-                formData.append('replace_allocations', this.bulkReplaceAllocations ? 'true' : 'false');
+                formData.append('candidate_type_filter', this.bulkImportMode === 'private' ? 'PRIVATE' : (this.bulkImportMode === 'school' ? 'SCHOOL' : 'ALL'));
+                formData.append('replace_allocations_default', this.bulkReplaceAllocations ? '1' : '0');
                 
                 const response = await fetch('/api/exam-types/acsee/allocate-from-csv/commit', {
                     method: 'POST',
@@ -1863,10 +1983,15 @@ function acseeManager() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    this.bulkCommitReport = data.report;
+                    this.bulkCommitReport = {
+                        success_count: data.success_count || 0,
+                        skipped_count: data.skipped_count || 0,
+                        failed_count: data.failed_count || 0,
+                        affected_candidates: data.affected_candidates || [],
+                    };
                     this.bulkLastErrors = data.errors || [];
                     this.bulkPhase = 'complete';
-                    this.bulkSuccessMessage = `Import completed: ${data.report.imported} rows imported`;
+                    this.bulkSuccessMessage = `Import completed: ${this.bulkCommitReport.success_count} rows imported`;
                     this.showMessage(this.bulkSuccessMessage, 'success');
                     
                     // Reload ACSEE candidates after successful import
@@ -1966,15 +2091,6 @@ function acseeManager() {
             this.resetBulkState();
         },
 
-        showMessage(message, type) {
-            // Use the existing message system if available
-            // This assumes there's a message display mechanism in the component
-            console.log(`[${type.toUpperCase()}] ${message}`);
-            // Add toast/alert if your system has one
-            if (type === 'error') {
-                alert(message); // Simple fallback
-            }
-        }
     };
 }
 </script>

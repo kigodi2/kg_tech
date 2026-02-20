@@ -46,6 +46,25 @@ class MarkImportService
         $subject = Subject::findOrFail($subjectId);
         $school = \App\Models\School::findOrFail($schoolId);
 
+        // Check for existing active batches (draft/validated/approved) — supersede them
+        $existingBatches = MarkImportBatch::where('school_id', $schoolId)
+            ->where('subject_id', $subjectId)
+            ->where('exam_year', $examYear)
+            ->whereIn('status', [
+                MarkImportBatch::STATUS_DRAFT,
+                MarkImportBatch::STATUS_VALIDATED,
+                MarkImportBatch::STATUS_APPROVED,
+            ])
+            ->get();
+
+        foreach ($existingBatches as $existingBatch) {
+            $existingBatch->rawMarks()->delete();
+            $existingBatch->update([
+                'status' => 'superseded',
+                'lifecycle_state' => 'archived',
+            ]);
+        }
+
         $batch = MarkImportBatch::create([
             'batch_code' => $this->generateBatchCode($schoolId, $subjectId, $examYear),
             'exam_year' => $examYear,
@@ -238,6 +257,7 @@ class MarkImportService
         $rawMarks = $batch->rawMarks()->get();
         $validRecords = 0;
         $errorRecords = 0;
+        $warningRecords = 0;
         $allErrors = [];
 
         foreach ($rawMarks as $rawMark) {
@@ -251,8 +271,14 @@ class MarkImportService
                 $errorRecords++;
                 $allErrors = array_merge($allErrors, $errors);
             } else {
-                $rawMark->clearErrors();
+                $rawMark->update([
+                    'error_messages' => [],
+                    'has_errors' => false,
+                ]);
                 $validRecords++;
+                if ($rawMark->has_warnings) {
+                    $warningRecords++;
+                }
             }
         }
 
@@ -264,6 +290,7 @@ class MarkImportService
         return [
             'valid' => $validRecords,
             'invalid' => $errorRecords,
+            'warnings' => $warningRecords,
             'total' => $batch->total_records,
             'errors' => $allErrors,
         ];

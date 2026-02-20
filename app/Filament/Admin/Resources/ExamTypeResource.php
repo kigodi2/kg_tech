@@ -50,23 +50,9 @@ class ExamTypeResource extends Resource
 
                 Forms\Components\Section::make('Exam Configuration')
                     ->schema([
-                        Forms\Components\TextInput::make('level')
-                            ->label('Level')
-                            ->maxLength(50),
-
                         Forms\Components\TextInput::make('education_level')
                             ->label('Education Level')
                             ->maxLength(50),
-
-                        Forms\Components\TextInput::make('min_candidates')
-                            ->label('Minimum Candidates')
-                            ->numeric()
-                            ->minValue(1),
-
-                        Forms\Components\TextInput::make('max_papers')
-                            ->label('Maximum Papers')
-                            ->numeric()
-                            ->minValue(1),
 
                         Forms\Components\Toggle::make('is_active')
                             ->label('Active')
@@ -91,23 +77,9 @@ class ExamTypeResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('level')
-                    ->label('Level')
-                    ->searchable(),
-
                 Tables\Columns\TextColumn::make('education_level')
                     ->label('Education Level')
                     ->searchable(),
-
-                Tables\Columns\TextColumn::make('min_candidates')
-                    ->label('Min Candidates')
-                    ->numeric()
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('max_papers')
-                    ->label('Max Papers')
-                    ->numeric()
-                    ->sortable(),
 
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Active')
@@ -133,7 +105,9 @@ class ExamTypeResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation()
+                    ->modalDescription('Deleting an exam type will affect all associated subjects, combinations, and results. This cannot be undone.'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

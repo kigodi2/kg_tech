@@ -28,6 +28,10 @@ class MarkImportBatch extends Model
         'imported_at',
         'validated_by',
         'validated_at',
+        'submitted_by',
+        'submitted_at',
+        'approved_by',
+        'approved_at',
         'locked_by',
         'locked_at',
         'processed_by',
@@ -40,24 +44,33 @@ class MarkImportBatch extends Model
         'resubmitted_from_batch_id',
         'latest_review_id',
         'batch_hash',
+        'promoted_count',
     ];
 
     protected $casts = [
         'imported_at' => 'datetime',
         'validated_at' => 'datetime',
+        'submitted_at' => 'datetime',
+        'approved_at' => 'datetime',
         'locked_at' => 'datetime',
         'processed_at' => 'datetime',
     ];
 
-    // Status constants
+    // Status constants — full lifecycle
     const STATUS_DRAFT = 'draft';
     const STATUS_VALIDATED = 'validated';
+    const STATUS_SUBMITTED = 'submitted';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_REJECTED = 'rejected';
     const STATUS_LOCKED = 'locked';
     const STATUS_PROCESSED = 'processed';
 
     const STATUSES = [
         self::STATUS_DRAFT => 'Draft',
         self::STATUS_VALIDATED => 'Validated',
+        self::STATUS_SUBMITTED => 'Submitted',
+        self::STATUS_APPROVED => 'Approved',
+        self::STATUS_REJECTED => 'Rejected',
         self::STATUS_LOCKED => 'Locked',
         self::STATUS_PROCESSED => 'Processed',
     ];
@@ -94,6 +107,21 @@ class MarkImportBatch extends Model
         return $this->hasMany(RawMark::class);
     }
 
+    public function importRuns(): HasMany
+    {
+        return $this->hasMany(MarkImportRun::class, 'mark_import_batch_id');
+    }
+
+    public function moderationActions(): HasMany
+    {
+        return $this->hasMany(MarkModerationAction::class, 'mark_import_batch_id');
+    }
+
+    public function rejections(): HasMany
+    {
+        return $this->hasMany(MarkRejection::class, 'mark_import_batch_id');
+    }
+
     public function checksum()
     {
         return $this->hasOne(MarkImportChecksum::class);
@@ -119,6 +147,26 @@ class MarkImportBatch extends Model
         return $this->hasMany(MarkEntryLifecycleState::class, 'mark_import_batch_id');
     }
 
+    public function importedByUser()
+    {
+        return $this->belongsTo(User::class, 'imported_by');
+    }
+
+    public function submittedByUser()
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
+    }
+
+    public function approvedByUser()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function lockedByUser()
+    {
+        return $this->belongsTo(User::class, 'locked_by');
+    }
+
     // ==================== SCOPES ====================
 
     public function scopeByStatus($query, $status)
@@ -136,12 +184,40 @@ class MarkImportBatch extends Model
         return $query->where('school_id', $schoolId);
     }
 
-    public function scopeActive($query)
+    public function scopeByDistrict($query, $districtId)
     {
-        return $query->whereIn('status', [self::STATUS_DRAFT, self::STATUS_VALIDATED, self::STATUS_LOCKED]);
+        return $query->where('district_id', $districtId);
     }
 
-    // ==================== METHODS ====================
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', [
+            self::STATUS_DRAFT,
+            self::STATUS_VALIDATED,
+            self::STATUS_SUBMITTED,
+            self::STATUS_APPROVED,
+            self::STATUS_LOCKED,
+        ]);
+    }
+
+    public function scopeForUserScope($query, $user)
+    {
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
+        if ($user->district_id) {
+            return $query->where('district_id', $user->district_id);
+        }
+
+        if ($user->school_id) {
+            return $query->where('school_id', $user->school_id);
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
+    // ==================== STATUS HELPERS ====================
 
     public function isDraft(): bool
     {
@@ -153,6 +229,21 @@ class MarkImportBatch extends Model
         return $this->status === self::STATUS_VALIDATED;
     }
 
+    public function isSubmitted(): bool
+    {
+        return $this->status === self::STATUS_SUBMITTED;
+    }
+
+    public function isApproved(): bool
+    {
+        return $this->status === self::STATUS_APPROVED;
+    }
+
+    public function isRejected(): bool
+    {
+        return $this->status === self::STATUS_REJECTED;
+    }
+
     public function isLocked(): bool
     {
         return $this->status === self::STATUS_LOCKED;
@@ -162,6 +253,42 @@ class MarkImportBatch extends Model
     {
         return $this->status === self::STATUS_PROCESSED;
     }
+
+    public function hasErrors(): bool
+    {
+        return ($this->error_records ?? 0) > 0;
+    }
+
+    public function canBeSubmitted(): bool
+    {
+        return ($this->isValidated() || $this->isDraft()) && !$this->hasErrors();
+    }
+
+    public function canBeApproved(): bool
+    {
+        return in_array($this->lifecycle_state ?? $this->status, [
+            'submitted', 'validated', 'awaiting_moderation',
+        ]);
+    }
+
+    public function canBeRejected(): bool
+    {
+        return in_array($this->lifecycle_state ?? $this->status, [
+            'submitted', 'validated', 'awaiting_moderation',
+        ]);
+    }
+
+    public function canBeLocked(): bool
+    {
+        return $this->isApproved();
+    }
+
+    public function canBeUnlocked(): bool
+    {
+        return $this->isLocked();
+    }
+
+    // ==================== LEGACY TRANSITION METHODS ====================
 
     public function validate(string $validatedBy): bool
     {
@@ -180,7 +307,7 @@ class MarkImportBatch extends Model
 
     public function lock(string $lockedBy): bool
     {
-        if (!$this->isValidated()) {
+        if (!$this->isApproved()) {
             return false;
         }
 
@@ -213,8 +340,11 @@ class MarkImportBatch extends Model
         return match ($this->status) {
             self::STATUS_DRAFT => 'bg-gray-100 text-gray-800',
             self::STATUS_VALIDATED => 'bg-blue-100 text-blue-800',
+            self::STATUS_SUBMITTED => 'bg-indigo-100 text-indigo-800',
+            self::STATUS_APPROVED => 'bg-green-100 text-green-800',
+            self::STATUS_REJECTED => 'bg-red-100 text-red-800',
             self::STATUS_LOCKED => 'bg-yellow-100 text-yellow-800',
-            self::STATUS_PROCESSED => 'bg-green-100 text-green-800',
+            self::STATUS_PROCESSED => 'bg-emerald-100 text-emerald-800',
             default => 'bg-gray-100 text-gray-800',
         };
     }

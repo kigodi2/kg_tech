@@ -61,6 +61,11 @@ class School extends Model
         return $this->hasMany(User::class);
     }
 
+    public function markImportBatches()
+    {
+        return $this->hasMany(MarkImportBatch::class);
+    }
+
     public function registrations()
     {
         return $this->hasManyThrough(

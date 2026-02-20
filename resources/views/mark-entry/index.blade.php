@@ -1,7 +1,8 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full flex gap-0" x-data="markEntryManager()" @init="init()">
+@include('mark-entry.partials.import-modal')
+<div class="w-full flex gap-0" x-data="markEntryManager()" x-init="init()">
     <!-- SIDEBAR MENU -->
     <aside class="w-64 bg-gray-900 text-gray-100 min-h-screen sticky top-[140px] overflow-y-auto">
         <div class="p-6">
@@ -319,13 +320,13 @@
             <!-- Tabs Navigation -->
             <div id="csv-tab" class="bg-white rounded-lg shadow border-b border-gray-200 scroll-mt-32">
                 <div class="flex gap-8 px-6">
-                    <button type="button" @click="importMode = 'single'" :class="importMode === 'single' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+                    <button type="button" @click="navigateToView('single-subject-csv')" :class="importMode === 'single' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
                         <i class="fas fa-file-csv mr-2"></i>Single Subject CSV
                     </button>
-                    <button type="button" @click="importMode = 'schoolBulk'" :class="importMode === 'schoolBulk' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+                    <button type="button" @click="navigateToView('school-bulk-zip')" :class="importMode === 'schoolBulk' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
                         <i class="fas fa-box mr-2"></i>School Bulk ZIP
                     </button>
-                    <button type="button" @click="importMode = 'district'" :class="importMode === 'district' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+                    <button type="button" @click="navigateToView('district-bulk-zip')" :class="importMode === 'district' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
                         <i class="fas fa-archive mr-2"></i>District Bulk ZIP
                     </button>
                 </div>
@@ -373,6 +374,15 @@
                              class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                          >
                              <i class="fas fa-file-pdf"></i> Single Scoresheet (PDF)
+                         </button>
+
+                         <!-- Upload via Modal (Single CSV) -->
+                         <button type="button"
+                             @click="openImportModal('single_csv')"
+                             :disabled="!selectedSubject || !selectedSchool || !examYear"
+                             class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                         >
+                             <i class="fas fa-upload"></i> Upload via Modal
                          </button>
 
                          <!-- School Scoresheets -->
@@ -466,7 +476,11 @@
                 <h2 class="text-lg font-bold text-gray-800 mb-4">Import Summary</h2>
                 
                 <div class="space-y-4">
-                    <div class="grid grid-cols-4 gap-4">
+                    <div class="grid grid-cols-5 gap-4">
+                        <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                            <div class="text-sm text-gray-600">Candidates</div>
+                            <div class="text-2xl font-bold text-purple-700" x-text="importResult?.batch?.candidate_count || importResult?.candidate_count || '—'"></div>
+                        </div>
                         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                             <div class="text-sm text-gray-600">Total Records</div>
                             <div class="text-2xl font-bold text-blue-700" x-text="importResult?.batch?.total_records || 0"></div>
@@ -633,7 +647,11 @@
                 
                 <div class="space-y-4">
                     <!-- Status -->
-                    <div class="grid grid-cols-4 gap-4">
+                    <div class="grid grid-cols-5 gap-4">
+                        <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                            <div class="text-sm text-gray-600">Candidates</div>
+                            <div class="text-2xl font-bold text-purple-700" x-text="importResult?.batch?.candidate_count || importResult?.candidate_count || '—'"></div>
+                        </div>
                         <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                             <div class="text-sm text-gray-600">Total Records</div>
                             <div class="text-2xl font-bold text-blue-700" x-text="importResult?.batch?.total_records || 0"></div>
@@ -742,30 +760,12 @@
                         </div>
                     </div>
 
-                    <!-- File Upload -->
+                    <!-- Use Modal for Upload/Validate -->
                     <div class="mt-6">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">ZIP File *</label>
-                        <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" @click="$refs.schoolZipInput.click()" @dragover="schoolDragOver = true" @dragleave="schoolDragOver = false" @drop="handleSchoolFileDrop($event)" :class="schoolDragOver && 'border-blue-500 bg-blue-50'">
-                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                            <p class="text-gray-600 font-medium">Click or drag ZIP file here</p>
-                            <p class="text-gray-400 text-sm mt-1">Format: SCHOOL_CODE_YEAR.zip</p>
-                            <input type="file" @change="handleSchoolFileSelect($event)" accept=".zip" x-ref="schoolZipInput" hidden>
-                        </div>
-                        <p x-show="selectedSchoolZipFile" class="mt-2 text-sm text-gray-600">
-                            <i class="fas fa-check text-green-600 mr-1"></i>
-                            <span x-text="`Selected: ${selectedSchoolZipFile?.name}`"></span>
-                        </p>
+                        <button type="button" @click="openImportModal('school_zip')" :disabled="!schoolBulkExamYear || !schoolBulkId" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
+                            <i class="fas fa-upload"></i> Upload & Validate in Modal
+                        </button>
                     </div>
-
-                    <!-- Actions -->
-                     <div class="mt-6 flex gap-3">
-                         <button type="button" @click="previewSchoolZip()" :disabled="!selectedSchoolZipFile || !schoolBulkExamYear || !schoolBulkId" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
-                             <i class="fas fa-eye"></i> Preview
-                         </button>
-                         <button type="button" @click="startSchoolBulkImport()" :disabled="!selectedSchoolZipFile || !schoolBulkExamYear || !schoolBulkId || !schoolBulkPreviewLoaded" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
-                             <i class="fas fa-play"></i> Start Import
-                         </button>
-                     </div>
                 </div>
 
                 <!-- Preview Section -->
@@ -902,42 +902,33 @@
                                 </select>
                             </div>
 
-                            <!-- District -->
+                            <!-- Region (filters districts) -->
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">District *</label>
-                                <select x-model.number="districtId" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-10">
-                                    <option value="">Select District</option>
-                                    <template x-for="district in districtBulkList" :key="district.id">
-                                        <option :value="district.id" x-text="`${district.code} - ${district.name}`"></option>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
+                                <select x-model.number="districtBulkRegionId" @change="districtId = ''" :disabled="!districtExamYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-10 disabled:bg-gray-100 disabled:cursor-not-allowed">
+                                    <option value="">All Regions</option>
+                                    <template x-for="region in districtBulkRegions" :key="region.id">
+                                        <option :value="region.id" x-text="region.name"></option>
                                     </template>
                                 </select>
                             </div>
 
-                            <div></div>
-                        </div>
-
-                        <!-- File Upload -->
-                        <div class="mt-6">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">ZIP File *</label>
-                            <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors cursor-pointer" @click="$refs.zipInput.click()" @dragover="dragOver = true" @dragleave="dragOver = false" @drop="handleZipFileDrop($event)" :class="dragOver && 'border-blue-500 bg-blue-50'">
-                                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
-                                <p class="text-gray-600 font-medium">Click or drag ZIP file here</p>
-                                <p class="text-gray-400 text-sm mt-1">Format: DISTRICT_CODE_YEAR.zip</p>
-                                <input type="file" @change="handleZipFileSelect($event)" accept=".zip" x-ref="zipInput" hidden>
+                            <!-- District -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">District *</label>
+                                <select x-model.number="districtId" :disabled="!districtExamYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-10 disabled:bg-gray-100 disabled:cursor-not-allowed">
+                                    <option value="">Select District</option>
+                                    <template x-for="district in filteredDistrictBulkList" :key="district.id">
+                                        <option :value="district.id" x-text="`${district.code} - ${district.name}`"></option>
+                                    </template>
+                                </select>
                             </div>
-                            <p x-show="selectedZipFile" class="mt-2 text-sm text-gray-600">
-                                <i class="fas fa-check text-green-600 mr-1"></i>
-                                <span x-text="`Selected: ${selectedZipFile?.name}`"></span>
-                            </p>
                         </div>
 
-                        <!-- Actions -->
-                        <div class="mt-6 flex gap-3">
-                            <button @click="previewZip()" :disabled="!selectedZipFile || !districtExamYear || !districtId" class="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
-                                <i class="fas fa-eye"></i> Preview
-                            </button>
-                            <button @click="startDistrictImport()" :disabled="!selectedZipFile || !districtExamYear || !districtId || !districtPreviewLoaded" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
-                                <i class="fas fa-play"></i> Start Import
+                        <!-- Use Modal for Upload/Validate -->
+                        <div class="mt-6">
+                            <button @click="openImportModal('district_zip')" :disabled="!districtExamYear || !districtId" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
+                                <i class="fas fa-upload"></i> Upload & Validate in Modal
                             </button>
                         </div>
                     </div>
@@ -1099,92 +1090,130 @@
 
             <!-- Review Dashboard Section -->
             <template x-if="activeView === 'review-dashboard'">
-            <section id="moderation-dashboard" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">📋 Moderation Dashboard</h2>
-                
-                <!-- Loading State -->
-                <div x-show="loading" class="text-center py-8">
-                    <div class="inline-block animate-spin">
-                        <i class="fas fa-spinner text-blue-500 text-2xl"></i>
+            <section id="moderation-dashboard" class="space-y-6 scroll-mt-32" x-init="loadReviewDashboard()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">📋 Moderation Dashboard</h2>
+                        <button @click="loadReviewDashboard()" :disabled="dashboardStatsLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2">
+                            <i :class="dashboardStatsLoading ? 'fas fa-spinner fa-spin' : 'fas fa-sync-alt'"></i>
+                            Refresh
+                        </button>
                     </div>
-                    <p class="text-gray-600 mt-2">Loading pending batches...</p>
-                </div>
-                
-                <!-- Error State -->
-                <div x-show="error && !loading" class="bg-red-50 border border-red-200 rounded p-4 mb-4">
-                    <p class="text-red-700">⚠️ <span x-text="error"></span></p>
-                </div>
-                
-                <!-- Content -->
-                <div x-show="!loading && !error" @click="loadModerationDashboard()">
-                    <!-- Stats Bar -->
+
+                    <!-- Stats Cards — API-driven -->
                     <div class="grid grid-cols-4 gap-4 mb-6">
-                        <div class="bg-yellow-50 rounded p-4">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow" @click="navigateToView('pending-review')">
+                            <i class="fas fa-hourglass-end text-yellow-600 text-xl mb-2"></i>
                             <p class="text-xs text-gray-600 mb-1">Total Pending</p>
-                            <p class="text-2xl font-bold text-yellow-600" x-text="totalBatches"></p>
+                            <p class="text-3xl font-bold text-yellow-600">
+                                <span x-show="dashboardStatsLoading" class="text-gray-400">…</span>
+                                <span x-show="!dashboardStatsLoading" x-text="dashboardStats.total_pending ?? 0"></span>
+                            </p>
                         </div>
-                        <div class="bg-blue-50 rounded p-4">
-                            <p class="text-xs text-gray-600 mb-1">Current Page</p>
-                            <p class="text-2xl font-bold text-blue-600" x-text="currentPage"></p>
+                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                            <i class="fas fa-exclamation-circle text-orange-600 text-xl mb-2"></i>
+                            <p class="text-xs text-gray-600 mb-1">Errors to Review</p>
+                            <p class="text-3xl font-bold text-orange-600">
+                                <span x-show="dashboardStatsLoading" class="text-gray-400">…</span>
+                                <span x-show="!dashboardStatsLoading" x-text="dashboardStats.errors_to_review ?? 0"></span>
+                            </p>
+                            <p class="text-[10px] text-gray-500 mt-1">Blocking errors in pending batches</p>
                         </div>
-                        <div class="bg-green-50 rounded p-4">
-                            <p class="text-xs text-gray-600 mb-1">Per Page</p>
-                            <p class="text-2xl font-bold text-green-600" x-text="perPage"></p>
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <i class="fas fa-check-circle text-green-600 text-xl mb-2"></i>
+                            <p class="text-xs text-gray-600 mb-1">Approved Today</p>
+                            <p class="text-3xl font-bold text-green-600">
+                                <span x-show="dashboardStatsLoading" class="text-gray-400">…</span>
+                                <span x-show="!dashboardStatsLoading" x-text="dashboardStats.approved_today ?? 0"></span>
+                            </p>
                         </div>
-                        <div class="bg-purple-50 rounded p-4">
-                            <p class="text-xs text-gray-600 mb-1">Showing</p>
-                            <p class="text-2xl font-bold text-purple-600" x-text="moderationBatches.length"></p>
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <i class="fas fa-times-circle text-red-600 text-xl mb-2"></i>
+                            <p class="text-xs text-gray-600 mb-1">Rejected Today</p>
+                            <p class="text-3xl font-bold text-red-600">
+                                <span x-show="dashboardStatsLoading" class="text-gray-400">…</span>
+                                <span x-show="!dashboardStatsLoading" x-text="dashboardStats.rejected_today ?? 0"></span>
+                            </p>
                         </div>
                     </div>
-                    
-                    <!-- Table -->
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-100 border-b">
-                                <tr>
-                                    <th class="px-4 py-2 text-left">Batch Code</th>
-                                    <th class="px-4 py-2 text-left">School</th>
-                                    <th class="px-4 py-2 text-left">Subject</th>
-                                    <th class="px-4 py-2 text-center">Marks</th>
-                                    <th class="px-4 py-2 text-center">Created</th>
-                                    <th class="px-4 py-2 text-center">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <template x-for="batch in moderationBatches" :key="batch.id">
-                                    <tr class="border-b hover:bg-gray-50">
-                                        <td class="px-4 py-2 font-mono text-xs" x-text="batch.batch_code"></td>
-                                        <td class="px-4 py-2 text-xs" x-text="batch.school?.name || 'N/A'"></td>
-                                        <td class="px-4 py-2 text-xs" x-text="batch.subject?.name || 'N/A'"></td>
-                                        <td class="px-4 py-2 text-center text-xs" x-text="batch.total_records"></td>
-                                        <td class="px-4 py-2 text-center text-xs" x-text="formatDate(batch.created_at)"></td>
-                                        <td class="px-4 py-2 text-center">
-                                            <button class="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600">
-                                                View
-                                            </button>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <!-- Empty State -->
-                    <div x-show="moderationBatches.length === 0 && !loading" class="text-center py-8 text-gray-500">
-                        <p>No batches awaiting moderation</p>
-                    </div>
-                    
-                    <!-- Pagination -->
-                    <div x-show="moderationBatches.length > 0" class="flex items-center justify-between mt-4">
-                        <button @click="if(currentPage > 1) loadModerationDashboard(currentPage - 1)" 
-                                class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
-                            ← Previous
+                </div>
+
+                <!-- Recent Pending Batches (quick view) -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Recent Pending Batches</h3>
+                        <button @click="navigateToView('pending-review')" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            View All →
                         </button>
-                        <span class="text-gray-600" x-text="`Page ${currentPage}`"></span>
-                        <button @click="loadModerationDashboard(currentPage + 1)" 
-                                class="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">
-                            Next →
-                        </button>
+                    </div>
+
+                    <div x-show="loading && !error" class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-blue-600 text-3xl"></i>
+                    </div>
+
+                    <template x-if="!loading">
+                    <div>
+                        <template x-if="moderationBatches.length === 0">
+                            <div class="text-center py-8">
+                                <i class="fas fa-inbox text-gray-400 text-4xl mb-3"></i>
+                                <p class="text-gray-600">No batches awaiting moderation</p>
+                            </div>
+                        </template>
+
+                        <template x-if="moderationBatches.length > 0">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Batch Code</th>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">School</th>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Subject</th>
+                                            <th class="px-4 py-3 text-center font-semibold text-gray-700">Year</th>
+                                            <th class="px-4 py-3 text-right font-semibold text-gray-700">Candidates</th>
+                                            <th class="px-4 py-3 text-right font-semibold text-gray-700">Valid</th>
+                                            <th class="px-4 py-3 text-right font-semibold text-gray-700">Errors</th>
+                                            <th class="px-4 py-3 text-left font-semibold text-gray-700">Uploaded</th>
+                                            <th class="px-4 py-3 text-center font-semibold text-gray-700">Actions</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody class="divide-y">
+                                            <template x-for="batch in moderationBatches.slice(0, 10)" :key="batch.id">
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-4 py-3 font-mono font-semibold text-xs" x-text="batch.batch_code"></td>
+                                                <td class="px-4 py-3 text-sm text-gray-700" x-text="batch.school?.name || 'N/A'"></td>
+                                                <td class="px-4 py-3 text-sm text-gray-700" x-text="(batch.subject?.code || '') + ' - ' + (batch.subject?.name || 'N/A')"></td>
+                                                <td class="px-4 py-3 text-sm text-center text-gray-700" x-text="batch.exam_year"></td>
+                                                <td class="px-4 py-3 text-sm text-right">
+                                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold" x-text="batch.candidate_count ?? '—'"></span>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm text-right">
+                                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold" x-text="batch.pending_marks_count ?? batch.valid_records ?? 0"></span>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm text-right">
+                                                    <span :class="(batch.error_marks_count || batch.error_records || 0) > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'" class="px-2 py-1 rounded-full text-xs font-semibold" x-text="batch.error_marks_count ?? batch.error_records ?? 0"></span>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm text-gray-600" x-text="formatDate(batch.imported_at)"></td>
+                                                <td class="px-4 py-3 text-center space-x-1">
+                                                    <button @click="openBatchDetail(batch.id)" class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs font-medium transition-colors">
+                                                        <i class="fas fa-eye mr-1"></i> Review
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                    </div>
+                    </template>
+                </div>
+
+                <!-- Visibility Notice -->
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 flex items-start gap-3">
+                    <i class="fas fa-info-circle text-amber-500 mt-0.5"></i>
+                    <div>
+                        <p class="text-sm font-semibold text-amber-800">Marks Visibility Notice</p>
+                        <p class="text-xs text-amber-700 mt-1">Pending marks are <strong>not visible</strong> in Scoresheets (PDF) or Reports until Approved/Locked. Approve or Lock batches to make them available for reporting.</p>
                     </div>
                 </div>
             </section>
@@ -1192,91 +1221,520 @@
 
             <!-- Pending Review Section -->
             <template x-if="activeView === 'pending-review'">
-            <section id="pending-review" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">⏳ Pending Review</h2>
-                <p class="text-sm text-gray-600 mb-4">Batches currently awaiting moderation review. Click on a batch to view details and take action.</p>
-                
-                <!-- Info Alert -->
-                <div class="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
-                    <p class="text-blue-800 text-sm">
-                        <i class="fas fa-info-circle mr-2"></i>
-                        Same data as Review Dashboard above. Click a batch to review details and approve/reject.
-                    </p>
-                </div>
-                
-                <!-- Load Button -->
-                <div x-show="!loading && moderationBatches.length === 0" class="text-center py-4">
-                    <button @click="loadModerationDashboard()" 
-                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
-                        Load Pending Batches
-                    </button>
-                </div>
-                
-                <!-- Batch List -->
-                <div x-show="!loading && moderationBatches.length > 0" class="space-y-3">
-                    <template x-for="batch in moderationBatches" :key="batch.id">
-                        <div class="border rounded p-4 hover:bg-gray-50 cursor-pointer transition">
-                            <div class="grid grid-cols-3 gap-4">
-                                <div>
-                                    <p class="text-xs text-gray-600">Batch Code</p>
-                                    <p class="font-mono font-semibold text-sm" x-text="batch.batch_code"></p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-600">School</p>
-                                    <p class="text-sm" x-text="batch.school?.name || 'N/A'"></p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-600">Subject</p>
-                                    <p class="text-sm" x-text="batch.subject?.name || 'N/A'"></p>
-                                </div>
+            <section id="pending-review" class="space-y-6 scroll-mt-32" x-init="loadPendingQueue(1)">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold text-gray-800">⏳ Pending Review Queue</h2>
+                        <button @click="loadPendingQueue(1)" :disabled="pendingQueueLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2">
+                            <i :class="pendingQueueLoading ? 'fas fa-spinner fa-spin' : 'fas fa-sync-alt'"></i>
+                            Refresh
+                        </button>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
+                            <select x-model="pendingFilters.exam_year" @change="loadPendingQueue(1)" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Years</option>
+                                <template x-for="yr in examYears" :key="yr.id">
+                                    <option :value="yr.year_label" x-text="yr.year_label"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Region</label>
+                            <select x-model="pendingFilters.region_id" @change="loadPendingQueue(1)" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Regions</option>
+                                <template x-for="r in regions" :key="r.id">
+                                    <option :value="r.id" x-text="r.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
+                            <input type="text" x-model="pendingFilters.school_search" @input.debounce.300ms="loadPendingQueue(1)" placeholder="Search school..." class="w-full border rounded px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                            <select x-model="pendingFilters.subject_id" @change="loadPendingQueue(1)" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Subjects</option>
+                                <template x-for="sub in subjects" :key="sub.id">
+                                    <option :value="sub.id" x-text="sub.code + ' - ' + sub.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                            <select x-model="pendingFilters.status" @change="loadPendingQueue(1)" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All</option>
+                                <option value="errors">With Errors Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Loading -->
+                    <div x-show="pendingQueueLoading" class="text-center py-12">
+                        <i class="fas fa-spinner fa-spin text-blue-600 text-4xl mb-4"></i>
+                        <p class="text-gray-600">Loading pending queue...</p>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="pendingQueueError" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                        <p class="text-red-800"><i class="fas fa-exclamation-triangle mr-2"></i> <span x-text="pendingQueueError"></span></p>
+                    </div>
+
+                    <!-- Content -->
+                    <div x-show="!pendingQueueLoading && !pendingQueueError">
+                        <template x-if="pendingQueueBatches.length === 0">
+                            <div class="text-center py-12">
+                                <i class="fas fa-check-circle text-green-400 text-4xl mb-3"></i>
+                                <p class="text-gray-600 text-lg">No pending batches</p>
+                                <p class="text-gray-500 text-sm mt-1">All batches have been reviewed</p>
                             </div>
-                            <div class="grid grid-cols-3 gap-4 mt-2 pt-2 border-t">
-                                <div>
-                                    <p class="text-xs text-gray-600">Total Marks</p>
-                                    <p class="text-sm font-semibold" x-text="batch.total_records"></p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-600">Created</p>
-                                    <p class="text-xs text-gray-700" x-text="formatDate(batch.created_at)"></p>
-                                </div>
-                                <div class="text-right">
-                                    <button class="bg-yellow-500 text-white px-3 py-1 rounded text-xs hover:bg-yellow-600">
-                                        Review & Moderate
-                                    </button>
+                        </template>
+
+                        <template x-if="pendingQueueBatches.length > 0">
+                        <div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-3 text-left font-semibold text-gray-700">Batch</th>
+                                            <th class="px-3 py-3 text-left font-semibold text-gray-700">School</th>
+                                            <th class="px-3 py-3 text-left font-semibold text-gray-700">Subject</th>
+                                            <th class="px-3 py-3 text-center font-semibold text-gray-700">Year</th>
+                                            <th class="px-3 py-3 text-right font-semibold text-gray-700">Candidates</th>
+                                            <th class="px-3 py-3 text-right font-semibold text-gray-700">Valid</th>
+                                            <th class="px-3 py-3 text-right font-semibold text-gray-700">Errors</th>
+                                            <th class="px-3 py-3 text-right font-semibold text-gray-700">Warnings</th>
+                                            <th class="px-3 py-3 text-right font-semibold text-gray-700">Pending</th>
+                                            <th class="px-3 py-3 text-left font-semibold text-gray-700">Uploaded</th>
+                                            <th class="px-3 py-3 text-center font-semibold text-gray-700">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        <template x-for="batch in pendingQueueBatches" :key="batch.id">
+                                            <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-3 py-3 font-mono font-semibold text-xs" x-text="batch.batch_code"></td>
+                                                <td class="px-3 py-3 text-sm text-gray-700" x-text="batch.school?.name || 'N/A'"></td>
+                                                <td class="px-3 py-3 text-sm text-gray-700" x-text="(batch.subject?.code || '') + ' - ' + (batch.subject?.name || '')"></td>
+                                                <td class="px-3 py-3 text-sm text-center" x-text="batch.exam_year"></td>
+                                                <td class="px-3 py-3 text-sm text-right">
+                                                    <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold" x-text="batch.candidate_count ?? '—'"></span>
+                                                </td>
+                                                <td class="px-3 py-3 text-sm text-right">
+                                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold" x-text="batch.pending_marks_count ?? batch.valid_records ?? 0"></span>
+                                                </td>
+                                                <td class="px-3 py-3 text-sm text-right">
+                                                    <span :class="(batch.error_marks_count || batch.error_records || 0) > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'" class="px-2 py-1 rounded-full text-xs font-semibold" x-text="batch.error_marks_count ?? batch.error_records ?? 0"></span>
+                                                </td>
+                                                <td class="px-3 py-3 text-sm text-right">
+                                                    <span :class="(batch.warning_marks_count || 0) > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-500'" class="px-2 py-1 rounded-full text-xs font-semibold" x-text="batch.warning_marks_count ?? 0"></span>
+                                                </td>
+                                                <td class="px-3 py-3 text-sm text-right font-semibold" x-text="batch.total_records ?? 0"></td>
+                                                <td class="px-3 py-3 text-xs text-gray-600" x-text="formatDate(batch.imported_at)"></td>
+                                                <td class="px-3 py-3 text-center">
+                                                    <div class="flex items-center justify-center gap-1 flex-wrap">
+                                                        <button @click="viewBatchErrors(batch.id)" x-show="(batch.error_marks_count || batch.error_records || batch.warning_marks_count || 0) > 0" class="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors" title="View Errors & Warnings">
+                                                            <i class="fas fa-bug"></i>
+                                                        </button>
+                                                        <button @click="openBatchDetail(batch.id)" class="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors" title="Preview Marks">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button @click="openApproveBatchModal(batch.id)" :disabled="(batch.error_marks_count || batch.error_records || 0) > 0" class="px-2 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition-colors" title="Approve">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                        <button @click="openRejectBatchModal(batch.id)" class="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium transition-colors" title="Reject">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                    <p x-show="(batch.error_marks_count || batch.error_records || 0) > 0" class="text-[10px] text-red-500 mt-1">Resolve errors to approve</p>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination -->
+                            <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
+                                <span>Page <span x-text="pendingQueuePage"></span> of <span x-text="pendingQueueLastPage"></span> (<span x-text="pendingQueueTotal"></span> total)</span>
+                                <div class="space-x-2">
+                                    <button @click="loadPendingQueue(pendingQueuePage - 1)" :disabled="pendingQueuePage <= 1" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">← Prev</button>
+                                    <button @click="loadPendingQueue(pendingQueuePage + 1)" :disabled="!pendingQueueHasMore" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">Next →</button>
                                 </div>
                             </div>
                         </div>
-                    </template>
+                        </template>
+                    </div>
                 </div>
-                
-                <!-- Loading State -->
-                <div x-show="loading" class="text-center py-8">
-                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
-                    <p class="text-gray-600 mt-2">Loading pending batches...</p>
+
+                <!-- Info Banner -->
+                <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3">
+                    <i class="fas fa-info-circle text-amber-500 mt-0.5"></i>
+                    <p class="text-xs text-amber-700">Marks with <strong>blocking errors</strong> (red) cannot be approved until resolved. <strong>Warnings</strong> (yellow, e.g. absent 'X') are non-blocking — batches with only warnings can be approved. Use "View Errors" to see details or download CSV.</p>
                 </div>
             </section>
             </template>
 
+            <!-- Errors Modal (shared by pending-review) -->
+            <div x-show="showErrorsModal" class="fixed inset-0 bg-black/50 z-[9999] flex items-start justify-center pt-[180px]" x-cloak>
+                <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full mx-4 max-h-[65vh] flex flex-col" @click.outside="showErrorsModal = false">
+                    <div class="px-6 py-4 border-b flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-gray-800">Import Errors</h3>
+                        <div class="flex items-center gap-2">
+                            <button @click="downloadBatchErrorsCsv()" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-medium">
+                                <i class="fas fa-download mr-1"></i> Download CSV
+                            </button>
+                            <button @click="showErrorsModal = false" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+                        </div>
+                    </div>
+                    <div class="px-6 py-4 overflow-y-auto flex-1">
+                        <div x-show="errorsModalLoading" class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-blue-600 text-3xl"></i>
+                        </div>
+                        <template x-if="!errorsModalLoading && errorsModalData.length > 0">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs">
+                                    <thead class="bg-gray-100 sticky top-0">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Row</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Index Number</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Paper</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Column</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Error Code</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Message</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Raw Value</th>
+                                            <th class="px-3 py-2 text-center font-semibold text-gray-600">Severity</th>
+                                            <th class="px-3 py-2 text-center font-semibold text-gray-600">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        <template x-for="err in errorsModalData" :key="err.id">
+                                            <tr class="hover:bg-gray-50" :class="err.is_resolved ? 'opacity-60 bg-green-50' : (err.is_actionable ? 'bg-amber-50' : '')">
+                                                <td class="px-3 py-2 font-mono" x-text="err.row_number"></td>
+                                                <td class="px-3 py-2 font-mono" x-text="err.index_number || '—'"></td>
+                                                <td class="px-3 py-2" x-text="err.paper || '—'"></td>
+                                                <td class="px-3 py-2" x-text="err.column_name || '—'"></td>
+                                                <td class="px-3 py-2"><span :class="err.severity === 'error' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'" class="px-1.5 py-0.5 rounded text-[10px] font-semibold" x-text="err.error_code"></span></td>
+                                                <td class="px-3 py-2 max-w-xs truncate" x-text="err.message"></td>
+                                                <td class="px-3 py-2 font-mono text-red-600" x-text="err.raw_value || '—'"></td>
+                                                <td class="px-3 py-2 text-center">
+                                                    <template x-if="err.is_resolved">
+                                                        <span :class="err.resolution_action === 'AUTO_ABSENT' ? 'bg-yellow-100 text-yellow-800' : (err.resolution_action === 'ACCEPT_INC' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')"
+                                                              class="px-1.5 py-0.5 rounded text-[10px] font-semibold"
+                                                              x-text="err.resolution_action === 'ACCEPT_INC' ? '✓ INC' : (err.resolution_action === 'AUTO_ABSENT' ? 'X Absent' : '✗ Rejected')"></span>
+                                                    </template>
+                                                    <template x-if="!err.is_resolved">
+                                                        <span :class="err.severity === 'error' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'" class="px-1.5 py-0.5 rounded text-[10px] font-semibold" x-text="err.severity"></span>
+                                                    </template>
+                                                </td>
+                                                <td class="px-3 py-2 text-center">
+                                                    <template x-if="err.is_actionable && !err.is_resolved && err.error_code === 'MISSING_REQUIRED_PAPER_MARK'">
+                                                        <div class="flex items-center gap-1 justify-center">
+                                                            <button @click="showIncConfirmModal(err, 'accept')"
+                                                                class="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-semibold whitespace-nowrap">
+                                                                Accept INC
+                                                            </button>
+                                                            <button @click="showIncConfirmModal(err, 'reject')"
+                                                                class="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-semibold whitespace-nowrap">
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="err.is_resolved">
+                                                        <span class="text-[10px] text-gray-500">Resolved</span>
+                                                    </template>
+                                                    <template x-if="!err.is_actionable && !err.is_resolved">
+                                                        <span class="text-[10px] text-gray-400">—</span>
+                                                    </template>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                        <template x-if="!errorsModalLoading && errorsModalData.length === 0">
+                            <div class="text-center py-8 text-gray-500">No errors found for this batch.</div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INC Confirmation Modal -->
+            <div x-show="showIncConfirm" class="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center" x-cloak>
+                <div class="bg-white rounded-lg shadow-2xl max-w-lg w-full mx-4 p-6" @click.outside="showIncConfirm = false">
+                    <template x-if="incConfirmAction === 'accept'">
+                        <div>
+                            <h3 class="text-lg font-bold text-amber-800 mb-3">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>Accept as INC?
+                            </h3>
+                            <div class="bg-amber-50 border border-amber-200 rounded p-3 mb-4 text-sm text-amber-900">
+                                <p class="font-semibold mb-1">This will mark the subject as Incomplete (INC):</p>
+                                <ul class="list-disc list-inside text-xs space-y-1">
+                                    <li>INC will be <strong>excluded from grading</strong> and will not affect GPA/Division.</li>
+                                    <li>INC will appear as "INC" in scoresheets and reports.</li>
+                                    <li>Existing paper marks will <strong>NOT</strong> be deleted.</li>
+                                    <li>This action is recorded in the audit trail.</li>
+                                </ul>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-3">
+                                <p><strong>Candidate:</strong> <span x-text="incConfirmError?.index_number"></span></p>
+                                <p><strong>Missing:</strong> <span x-text="incConfirmError?.paper"></span></p>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Note (optional)</label>
+                                <textarea x-model="incConfirmNote" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Optional reason for accepting as INC..."></textarea>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button @click="showIncConfirm = false" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded text-sm">Cancel</button>
+                                <button @click="resolveIncIssue('accept')" :disabled="incResolvingId" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded text-sm font-semibold">
+                                    <i :class="incResolvingId ? 'fas fa-spinner fa-spin' : 'fas fa-check'" class="mr-1"></i>
+                                    Confirm Accept as INC
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                    <template x-if="incConfirmAction === 'reject'">
+                        <div>
+                            <h3 class="text-lg font-bold text-red-800 mb-3">
+                                <i class="fas fa-times-circle mr-2"></i>Reject Incomplete Entry?
+                            </h3>
+                            <div class="bg-red-50 border border-red-200 rounded p-3 mb-4 text-sm text-red-900">
+                                <p>This entry has missing required papers and will be rejected. The batch will remain blocked until the data is corrected and re-uploaded.</p>
+                            </div>
+                            <div class="text-xs text-gray-600 mb-3">
+                                <p><strong>Candidate:</strong> <span x-text="incConfirmError?.index_number"></span></p>
+                                <p><strong>Missing:</strong> <span x-text="incConfirmError?.paper"></span></p>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">Rejection note (optional)</label>
+                                <textarea x-model="incConfirmNote" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Reason for rejection..."></textarea>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button @click="showIncConfirm = false" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded text-sm">Cancel</button>
+                                <button @click="resolveIncIssue('reject')" :disabled="incResolvingId" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold">
+                                    <i :class="incResolvingId ? 'fas fa-spinner fa-spin' : 'fas fa-ban'" class="mr-1"></i>
+                                    Confirm Reject
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             <!-- Approve Marks Section -->
             <template x-if="activeView === 'approve-marks'">
-            <section id="approve-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">✅ Approve Marks</h3>
-                <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                    <p class="text-green-900 font-semibold">Approve Mark Batches</p>
-                    <p class="text-sm text-green-700 mt-2">Review validated marks and approve for processing</p>
-                    <p class="text-xs text-green-600 mt-4">Coming in Phase 3C - Week 2</p>
+            <section id="approve-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32" x-init="loadApprovableBatches(1)">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">✅ Approve & Lock Marks</h2>
+                    <button @click="loadApprovableBatches(1)" :disabled="approvableLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2">
+                        <i :class="approvableLoading ? 'fas fa-spinner fa-spin' : 'fas fa-refresh'"></i>
+                        Refresh
+                    </button>
                 </div>
+                <p class="text-gray-600 mb-4">Approve submitted batches or lock approved batches for final submission to the exam authority.</p>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                    <div @click="setApprovableFilter('all')" :class="approvableFilter === 'all' ? 'ring-2 ring-blue-500' : ''" class="cursor-pointer bg-blue-50 border border-blue-200 rounded-lg p-4 transition-shadow hover:shadow-md">
+                        <i class="fas fa-layer-group text-blue-600 text-xl mb-2"></i>
+                        <p class="text-xs text-gray-600 mb-1">All Batches</p>
+                        <p class="text-3xl font-bold text-blue-600" x-text="approvableTotalBatches"></p>
+                    </div>
+                    <div @click="setApprovableFilter('submitted')" :class="approvableFilter === 'submitted' ? 'ring-2 ring-yellow-500' : ''" class="cursor-pointer bg-yellow-50 border border-yellow-200 rounded-lg p-4 transition-shadow hover:shadow-md">
+                        <i class="fas fa-hourglass-half text-yellow-600 text-xl mb-2"></i>
+                        <p class="text-xs text-gray-600 mb-1">Awaiting Approval</p>
+                        <p class="text-3xl font-bold text-yellow-600" x-text="approvableBatches.filter(b => b._stage === 'submitted').length"></p>
+                    </div>
+                    <div @click="setApprovableFilter('approved')" :class="approvableFilter === 'approved' ? 'ring-2 ring-green-500' : ''" class="cursor-pointer bg-green-50 border border-green-200 rounded-lg p-4 transition-shadow hover:shadow-md">
+                        <i class="fas fa-check-circle text-green-600 text-xl mb-2"></i>
+                        <p class="text-xs text-gray-600 mb-1">Ready to Lock</p>
+                        <p class="text-3xl font-bold text-green-600" x-text="approvableBatches.filter(b => b._stage === 'approved').length"></p>
+                    </div>
+                </div>
+
+                <!-- Error Alert -->
+                <div x-show="approvableError" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <p class="text-red-800"><i class="fas fa-exclamation-triangle mr-2"></i> <span x-text="approvableError"></span></p>
+                </div>
+
+                <!-- Loading -->
+                <div x-show="approvableLoading && !approvableError" class="text-center py-12">
+                    <i class="fas fa-spinner fa-spin text-blue-600 text-4xl mb-4"></i>
+                    <p class="text-gray-600">Loading batches...</p>
+                </div>
+
+                <!-- Empty State -->
+                <template x-if="!approvableLoading && !approvableError && approvableBatches.length === 0">
+                    <div class="text-center py-12">
+                        <i class="fas fa-check-double text-green-400 text-4xl mb-3"></i>
+                        <p class="text-gray-600 text-lg">No batches awaiting approval or locking</p>
+                        <p class="text-gray-500 text-sm mt-1">All batches have been processed or are still pending review</p>
+                    </div>
+                </template>
+
+                <!-- Batches Table -->
+                <template x-if="!approvableLoading && !approvableError && approvableBatches.length > 0">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Batch Code</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">School</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Subject</th>
+                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Year</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-gray-700">Candidates</th>
+                                    <th class="px-4 py-3 text-right font-semibold text-gray-700">Records</th>
+                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Stage</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Uploaded</th>
+                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y">
+                                <template x-for="batch in approvableBatches" :key="batch.id">
+                                    <tr class="hover:bg-gray-50 transition-colors">
+                                        <td class="px-4 py-3 font-mono font-semibold text-xs" x-text="batch.batch_code"></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700" x-text="batch.school?.name || 'N/A'"></td>
+                                        <td class="px-4 py-3 text-sm text-gray-700" x-text="(batch.subject?.code || '') + ' - ' + (batch.subject?.name || 'N/A')"></td>
+                                        <td class="px-4 py-3 text-sm text-center text-gray-700" x-text="batch.exam_year"></td>
+                                        <td class="px-4 py-3 text-sm text-right">
+                                           <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold" x-text="batch.candidate_count ?? '—'"></span>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-right">
+                                           <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-semibold" x-text="batch.total_records"></span>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-center">
+                                            <span x-show="batch._stage === 'submitted'" class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                                                <i class="fas fa-hourglass-half mr-1"></i> Awaiting Approval
+                                            </span>
+                                            <span x-show="batch._stage === 'approved'" class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                                                <i class="fas fa-check mr-1"></i> Approved
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-sm text-gray-600" x-text="formatDate(batch.imported_at || batch.created_at)"></td>
+                                        <td class="px-4 py-3 text-center space-x-1">
+                                            <button @click="openBatchDetail(batch.id)" class="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs font-medium transition-colors" title="View Details">
+                                                <i class="fas fa-eye mr-1"></i> View
+                                            </button>
+                                            <button x-show="batch._stage === 'submitted'" @click="openApproveBatchModal(batch.id)" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors" title="Approve Batch">
+                                                <i class="fas fa-check mr-1"></i> Approve
+                                            </button>
+                                            <button x-show="batch._stage === 'submitted'" @click="openRejectBatchModal(batch.id)" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors" title="Reject Batch">
+                                                <i class="fas fa-times mr-1"></i> Reject
+                                            </button>
+                                            <button x-show="batch._stage === 'approved'" @click="openLockBatchModal(batch.id)" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors" title="Lock Batch">
+                                                <i class="fas fa-lock mr-1"></i> Lock
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
             </section>
             </template>
 
             <!-- Reject & Feedback Section -->
             <template x-if="activeView === 'reject-feedback'">
-            <section id="reject-feedback" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">❌ Reject & Feedback</h3>
-                <div class="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                    <p class="text-red-900 font-semibold">Return Batches with Feedback</p>
-                    <p class="text-sm text-red-700 mt-2">Reject batches and provide feedback for corrections</p>
-                    <p class="text-xs text-red-600 mt-4">Coming in Phase 3C - Week 2</p>
+            <section id="reject-feedback" class="space-y-6 scroll-mt-32" x-init="loadRejectionHistory()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">❌ Reject & Feedback</h2>
+                        <button @click="loadRejectionHistory()" :disabled="rejectionsLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2">
+                            <i :class="rejectionsLoading ? 'fas fa-spinner fa-spin' : 'fas fa-sync-alt'"></i>
+                            Refresh
+                        </button>
+                    </div>
+
+                    <!-- Reject by Scope -->
+                    <div class="bg-gray-50 border rounded-lg p-4 mb-6">
+                        <h3 class="text-sm font-bold text-gray-800 mb-3">Reject by Scope</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Scope</label>
+                                <select x-model="rejectForm.scope" class="w-full border rounded px-2 py-1.5 text-sm">
+                                    <option value="batch">Subject Batch</option>
+                                    <option value="run">Entire Import Run</option>
+                                    <option value="candidate">Single Candidate</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Batch ID</label>
+                                <input type="number" x-model="rejectForm.batch_id" placeholder="Batch ID" class="w-full border rounded px-2 py-1.5 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Reason</label>
+                                <select x-model="rejectForm.reason_code" class="w-full border rounded px-2 py-1.5 text-sm">
+                                    <option value="">Select reason...</option>
+                                    <option value="DATA_QUALITY">Data Quality Issue</option>
+                                    <option value="MISSING_MARKS">Missing Marks</option>
+                                    <option value="WRONG_SUBJECT">Wrong Subject</option>
+                                    <option value="DUPLICATE_SUBMISSION">Duplicate Submission</option>
+                                    <option value="TEMPLATE_ERROR">Template Error</option>
+                                    <option value="OTHER">Other</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button @click="submitScopedReject()" :disabled="!rejectForm.batch_id || !rejectForm.reason_code || rejectFormSubmitting" class="w-full px-4 py-1.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-1">
+                                    <i :class="rejectFormSubmitting ? 'fas fa-spinner fa-spin' : 'fas fa-times'"></i>
+                                    <span x-text="rejectFormSubmitting ? 'Rejecting...' : 'Reject'"></span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Note / Feedback</label>
+                            <textarea x-model="rejectForm.note" rows="2" placeholder="Provide feedback for corrections (min 10 characters)..." class="w-full border rounded px-2 py-1.5 text-sm"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Rejection History -->
+                    <h3 class="text-lg font-bold text-gray-800 mb-3">Rejection History</h3>
+
+                    <div x-show="rejectionsLoading" class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-blue-600 text-3xl"></i>
+                    </div>
+
+                    <div x-show="!rejectionsLoading">
+                        <template x-if="rejectionsList.length === 0">
+                            <div class="text-center py-8 text-gray-500">
+                                <i class="fas fa-inbox text-gray-400 text-3xl mb-2"></i>
+                                <p>No rejections recorded yet.</p>
+                            </div>
+                        </template>
+
+                        <template x-if="rejectionsList.length > 0">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-100">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Date</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Batch</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Scope</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Reason</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Note</th>
+                                            <th class="px-3 py-2 text-left font-semibold text-gray-600">Rejected By</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y">
+                                        <template x-for="rej in rejectionsList" :key="rej.id">
+                                            <tr class="hover:bg-gray-50">
+                                                <td class="px-3 py-2 text-xs text-gray-600" x-text="formatDate(rej.created_at)"></td>
+                                                <td class="px-3 py-2 font-mono text-xs" x-text="rej.batch?.batch_code || rej.mark_import_batch_id || '—'"></td>
+                                                <td class="px-3 py-2 text-xs"><span class="px-1.5 py-0.5 bg-red-100 text-red-800 rounded font-semibold" x-text="rej.scope"></span></td>
+                                                <td class="px-3 py-2 text-xs font-semibold" x-text="rej.reason_code"></td>
+                                                <td class="px-3 py-2 text-xs text-gray-600 max-w-xs truncate" x-text="rej.note || '—'"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="rej.rejected_by_user?.name || '—'"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </section>
             </template>
@@ -1287,191 +1745,636 @@
             <!-- ===== SUBMISSION & LOCKING SECTIONS ===== -->
             <div x-show="['lock-status', 'submit-marks', 'admin-unlock', 'history'].includes(activeView)">
 
-            <!-- Lock Status Section -->
-            <template x-if="activeView === 'lock-status'">
-            <section id="lock-status" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">🔒 Lock Status</h2>
-                
-                <!-- Loading State -->
-                <div x-show="loading" class="text-center py-8">
-                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
-                    <p class="text-gray-600 mt-2">Loading batches ready for submission...</p>
-                </div>
-                
-                <!-- Error State -->
-                <div x-show="error && !loading" class="bg-red-50 border border-red-200 rounded p-4 mb-4">
-                    <p class="text-red-700">⚠️ <span x-text="error"></span></p>
-                </div>
-                
-                <!-- Content -->
-                <div x-show="!loading && !error" @click="loadLockStatus()">
-                    <!-- Ready Count Badge -->
-                    <div class="mb-6 inline-block bg-green-50 border border-green-200 rounded px-4 py-2">
-                        <p class="text-sm text-gray-600">Batches Ready to Lock</p>
-                        <p class="text-3xl font-bold text-green-600" x-text="readyBatches.length"></p>
+            <!-- ========== SUBMIT MARKS PAGE ========== -->
+            <template x-if="activeView === 'submit-marks'">
+            <section id="submit-marks" class="space-y-6" x-data="submitMarksView()" x-init="loadBatches()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-1">📤 Submit Marks for Review</h2>
+                    <p class="text-sm text-gray-500 mb-6">Submit validated batches to moderators for approval</p>
+
+                    <!-- Filters -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
+                            <select x-model="filters.exam_year" @change="loadBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Years</option>
+                                <template x-for="yr in filterYears" :key="yr">
+                                    <option :value="yr" x-text="yr"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                            <select x-model="filters.status" @change="loadBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="validated">Validated / Ready</option>
+                                <option value="submitted">Submitted</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="all">All</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
+                            <select x-model="filters.school_id" @change="loadBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Schools</option>
+                                <template x-for="s in filterSchools" :key="s.id">
+                                    <option :value="s.id" x-text="s.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                            <select x-model="filters.subject_id" @change="loadBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Subjects</option>
+                                <template x-for="sub in filterSubjects" :key="sub.id">
+                                    <option :value="sub.id" x-text="sub.name"></option>
+                                </template>
+                            </select>
+                        </div>
                     </div>
-                    
+
+                    <!-- Loading -->
+                    <div x-show="isLoading" class="text-center py-10">
+                        <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                        <p class="text-gray-500 mt-2 text-sm">Loading batches...</p>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="errorMsg && !isLoading" class="bg-red-50 border border-red-200 rounded p-3 mb-4">
+                        <p class="text-red-700 text-sm">⚠️ <span x-text="errorMsg"></span></p>
+                    </div>
+
                     <!-- Table -->
-                    <div class="overflow-x-auto mt-4">
+                    <div x-show="!isLoading && !errorMsg" class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-100 border-b">
                                 <tr>
-                                    <th class="px-4 py-2 text-left">Batch Code</th>
-                                    <th class="px-4 py-2 text-left">School</th>
-                                    <th class="px-4 py-2 text-left">Subject</th>
-                                    <th class="px-4 py-2 text-center">Status</th>
-                                    <th class="px-4 py-2 text-center">Actions</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Batch Code</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Year</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">School</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Subject</th>
+                                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Total</th>
+                                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Valid</th>
+                                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Errors</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Uploaded</th>
+                                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Status</th>
+                                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <template x-for="batch in readyBatches" :key="batch.id">
-                                    <tr class="border-b hover:bg-gray-50">
-                                        <td class="px-4 py-2 font-mono text-xs" x-text="batch.batch_code"></td>
-                                        <td class="px-4 py-2 text-xs" x-text="batch.school?.name"></td>
-                                        <td class="px-4 py-2 text-xs" x-text="batch.subject?.name"></td>
-                                        <td class="px-4 py-2 text-center">
-                                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Approved</span>
+                                <template x-for="b in batches" :key="b.id">
+                                    <tr class="border-b hover:bg-blue-50/30 transition">
+                                        <td class="px-3 py-2 font-mono text-xs" x-text="b.batch_code"></td>
+                                        <td class="px-3 py-2 text-xs" x-text="b.exam_year"></td>
+                                        <td class="px-3 py-2 text-xs" x-text="b.school?.name || '—'"></td>
+                                        <td class="px-3 py-2 text-xs" x-text="b.subject?.name || '—'"></td>
+                                        <td class="px-3 py-2 text-center text-xs font-medium" x-text="b.total_records || 0"></td>
+                                        <td class="px-3 py-2 text-center text-xs text-green-700 font-medium" x-text="b.valid_records || 0"></td>
+                                        <td class="px-3 py-2 text-center text-xs" :class="(b.error_records||0) > 0 ? 'text-red-600 font-bold' : 'text-gray-400'" x-text="b.error_records || 0"></td>
+                                        <td class="px-3 py-2 text-xs text-gray-500">
+                                            <span x-text="b.imported_by_user?.name || '—'"></span>
+                                            <br><span class="text-[10px]" x-text="b.imported_at ? new Date(b.imported_at).toLocaleDateString() : ''"></span>
                                         </td>
-                                        <td class="px-4 py-2 text-center">
-                                            <button class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600">
-                                                Lock & Submit
+                                        <td class="px-3 py-2 text-center">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase"
+                                                  :class="statusBadge(b.status)" x-text="b.status"></span>
+                                        </td>
+                                        <td class="px-3 py-2 text-center space-x-1">
+                                            <button @click="viewBatchDetail(b)"
+                                                    class="text-blue-600 hover:text-blue-800 text-xs underline">View</button>
+                                            <button x-show="['validated','draft'].includes(b.status) && (b.error_records||0) === 0"
+                                                    @click="submitBatch(b)"
+                                                    :disabled="submittingId === b.id"
+                                                    class="bg-indigo-600 text-white px-2 py-0.5 rounded text-xs hover:bg-indigo-700 disabled:opacity-50">
+                                                <span x-show="submittingId !== b.id">Submit for Review</span>
+                                                <span x-show="submittingId === b.id"><i class="fas fa-spinner animate-spin"></i></span>
                                             </button>
+                                            <span x-show="['validated','draft'].includes(b.status) && (b.error_records||0) > 0"
+                                                  class="text-red-500 text-[10px]">Fix errors first</span>
+                                            <span x-show="b.status === 'rejected'" class="text-red-500 text-[10px]" x-text="'Rejected: ' + (b.rejection_reason || '')"></span>
                                         </td>
                                     </tr>
                                 </template>
                             </tbody>
                         </table>
-                    </div>
-                    
-                    <!-- Empty State -->
-                    <div x-show="readyBatches.length === 0" class="text-center py-8 text-gray-500 mt-4">
-                        <p>No batches ready for locking</p>
-                    </div>
-                </div>
-            </section>
-            </template>
 
-            <!-- Submit Marks Section -->
-            <section x-show="activeView === 'submit-marks'" id="submit-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">📤 Submit Marks</h3>
-                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-6 text-center">
-                    <p class="text-indigo-900 font-semibold">Submit Approved Marks</p>
-                    <p class="text-sm text-indigo-700 mt-2">Submit locked batches to examination authority</p>
-                    <p class="text-xs text-indigo-600 mt-4">Coming in Phase 3C - Week 3</p>
-                </div>
-            </section>
+                        <!-- Empty -->
+                        <div x-show="batches.length === 0 && !isLoading" class="text-center py-10 text-gray-400">
+                            <p class="text-lg">No batches found</p>
+                            <p class="text-sm mt-1">Upload and validate marks first, then they will appear here.</p>
+                        </div>
 
-            <!-- Unlock Admin Section -->
-            <section x-show="activeView === 'admin-unlock'" id="unlock-admin" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">🔓 (Admin) Unlock Batches</h3>
-                <p class="text-sm text-gray-600 mb-4">Select a submitted batch to unlock for resubmission (admin only)</p>
-                
-                <!-- Batch Selector -->
-                <div class="mb-6 p-4 bg-purple-50 rounded">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Submitted Batch to Unlock</label>
-                    <div class="flex gap-2">
-                        <input type="number" class="border rounded px-3 py-2 flex-1" 
-                               placeholder="Enter batch ID"
-                               x-model.number="selectedBatchId">
-                        <button @click="if(selectedBatchId) { console.log('Unlock batch:', selectedBatchId); openUnlockBatchModal(selectedBatchId); }" 
-                                :disabled="!selectedBatchId"
-                                class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                            Unlock Batch
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Empty State -->
-                <div x-show="!submittedBatches || submittedBatches.length === 0" class="bg-gray-50 rounded-lg p-6 text-center">
-                    <p class="text-gray-600">No submitted batches available for unlock</p>
-                </div>
-
-                <!-- List of Submitted Batches -->
-                <div x-show="submittedBatches && submittedBatches.length > 0" class="space-y-3">
-                    <div class="text-sm text-gray-600 mb-3">
-                        <strong x-text="submittedBatches.length"></strong> submitted batch(es) available:
-                    </div>
-                    <template x-for="batch in submittedBatches" :key="batch.id">
-                        <div class="border rounded-lg p-4 hover:bg-gray-50 transition">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <p class="font-semibold text-gray-800">
-                                        <span x-text="`Batch #${batch.id}`"></span>
-                                    </p>
-                                    <p class="text-sm text-gray-600 mt-1">
-                                        <span x-text="`School: ${batch.school?.name || 'Unknown'}`"></span>
-                                    </p>
-                                    <p class="text-sm text-gray-600">
-                                        <span x-text="`Subject: ${batch.subject?.code || 'Unknown'}`"></span>
-                                    </p>
-                                </div>
-                                <button @click="openUnlockBatchModal(batch.id)"
-                                        class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded transition">
-                                    🔓 Unlock
-                                </button>
+                        <!-- Pagination -->
+                        <div x-show="pagination.last_page > 1" class="flex justify-between items-center mt-4 text-sm text-gray-600">
+                            <span>Page <span x-text="pagination.current_page"></span> of <span x-text="pagination.last_page"></span> (<span x-text="pagination.total"></span> total)</span>
+                            <div class="space-x-2">
+                                <button @click="loadBatches(pagination.current_page - 1)" :disabled="pagination.current_page <= 1"
+                                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">← Prev</button>
+                                <button @click="loadBatches(pagination.current_page + 1)" :disabled="!pagination.has_more"
+                                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">Next →</button>
                             </div>
                         </div>
-                    </template>
+                    </div>
                 </div>
-            </section>
 
-            <!-- Submission History Section -->
-            <template x-if="activeView === 'history'">
-            <section id="submission-history" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">📜 Submission History</h2>
-                
-                <!-- Batch Selector -->
-                <div class="mb-4 p-4 bg-blue-50 rounded">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Batch to View Submission History</label>
-                    <div class="flex gap-2">
-                        <input type="number" class="border rounded px-3 py-2 flex-1" 
-                               placeholder="Enter batch ID" @input="selectedBatchId = $el.value">
-                        <button @click="if(selectedBatchId) loadSubmissionHistory(selectedBatchId)" 
-                                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                            Load History
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Loading State -->
-                <div x-show="loading" class="text-center py-8">
-                    <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
-                    <p class="text-gray-600 mt-2">Loading submission history...</p>
-                </div>
-                
-                <!-- Timeline View -->
-                <div x-show="!loading && currentBatch && currentBatch.history.length > 0" class="space-y-4">
-                    <div class="text-sm text-gray-600 mb-4">
-                        <p><strong>Batch ID:</strong> <span x-text="currentBatch.id" class="font-mono"></span></p>
-                    </div>
-                    <div class="relative">
-                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-green-500"></div>
-                        <div class="ml-6 space-y-4">
-                            <template x-for="(entry, index) in currentBatch.history" :key="index">
-                                <div class="relative pb-4">
-                                    <div class="absolute -left-6 top-2 w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></div>
-                                    <div class="bg-gray-50 rounded p-4">
-                                        <div class="flex justify-between items-start">
-                                            <div>
-                                                <p class="font-semibold text-gray-800" x-text="entry.approval_type || 'Approval'"></p>
-                                                <p class="text-sm text-gray-600 mt-1">
-                                                    <span x-text="entry.approvedByUser?.name || 'System'"></span>
-                                                </p>
-                                            </div>
-                                            <span class="text-xs px-2 py-1 rounded" :class="entry.status === 'locked' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" x-text="entry.status"></span>
-                                        </div>
-                                        <p class="text-xs text-gray-500 mt-2" x-text="formatDate(entry.approved_at)"></p>
-                                        <p class="text-sm text-gray-700 mt-2" x-show="entry.approval_notes" x-text="entry.approval_notes"></p>
+                <!-- Batch Detail Modal -->
+                <div x-show="showDetailModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" x-cloak>
+                    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto" @click.outside="showDetailModal = false">
+                        <div class="p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">Batch Details</h3>
+                                <button @click="showDetailModal = false" class="text-gray-400 hover:text-gray-600">&times;</button>
+                            </div>
+                            <template x-if="detailBatch">
+                                <div class="space-y-3 text-sm">
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div><span class="font-medium text-gray-600">Batch Code:</span> <span x-text="detailBatch.batch_code" class="font-mono"></span></div>
+                                        <div><span class="font-medium text-gray-600">Year:</span> <span x-text="detailBatch.exam_year"></span></div>
+                                        <div><span class="font-medium text-gray-600">School:</span> <span x-text="detailBatch.school?.name || '—'"></span></div>
+                                        <div><span class="font-medium text-gray-600">Subject:</span> <span x-text="detailBatch.subject?.name || '—'"></span></div>
+                                        <div><span class="font-medium text-gray-600">Total Records:</span> <span x-text="detailBatch.total_records"></span></div>
+                                        <div><span class="font-medium text-gray-600">Valid / Errors:</span> <span x-text="(detailBatch.valid_records||0) + ' / ' + (detailBatch.error_records||0)"></span></div>
+                                        <div><span class="font-medium text-gray-600">Status:</span> <span class="px-2 py-0.5 rounded-full text-xs font-semibold uppercase" :class="statusBadge(detailBatch.status)" x-text="detailBatch.status"></span></div>
+                                    </div>
+                                    <div x-show="detailBatch.rejection_reason" class="bg-red-50 border border-red-200 rounded p-3 mt-3">
+                                        <p class="text-red-700 text-sm"><strong>Rejection Reason:</strong> <span x-text="detailBatch.rejection_reason"></span></p>
                                     </div>
                                 </div>
                             </template>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Empty State -->
-                <div x-show="!loading && (!currentBatch || currentBatch.history.length === 0)" class="text-center py-8 text-gray-500">
-                    <p>No submission history found. Select a batch to view approval timeline.</p>
+            </section>
+            </template>
+
+            <!-- ========== LOCK STATUS PAGE ========== -->
+            <template x-if="activeView === 'lock-status'">
+            <section id="lock-status" class="space-y-6" x-data="lockStatusView()" x-init="loadData()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-1">🔒 Lock Status Dashboard</h2>
+                    <p class="text-sm text-gray-500 mb-6">Lock approved batches to promote marks to final results</p>
+
+                    <!-- Loading -->
+                    <div x-show="isLoading" class="text-center py-10">
+                        <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                        <p class="text-gray-500 mt-2 text-sm">Loading lock status...</p>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="errorMsg && !isLoading" class="bg-red-50 border border-red-200 rounded p-3 mb-4">
+                        <p class="text-red-700 text-sm">⚠️ <span x-text="errorMsg"></span></p>
+                    </div>
+
+                    <div x-show="!isLoading && !errorMsg">
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center">
+                                <p class="text-2xl font-bold text-indigo-700" x-text="stats.submitted_pending"></p>
+                                <p class="text-xs text-indigo-600 mt-1">Submitted Pending Review</p>
+                            </div>
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                                <p class="text-2xl font-bold text-green-700" x-text="stats.approved_ready"></p>
+                                <p class="text-xs text-green-600 mt-1">Approved Ready to Lock</p>
+                            </div>
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                                <p class="text-2xl font-bold text-yellow-700" x-text="stats.locked_today"></p>
+                                <p class="text-xs text-yellow-600 mt-1">Locked Today</p>
+                            </div>
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                                <p class="text-2xl font-bold text-red-700" x-text="stats.rejected_today"></p>
+                                <p class="text-xs text-red-600 mt-1">Rejected Today</p>
+                            </div>
+                        </div>
+
+                        <!-- Approved Ready to Lock -->
+                        <div class="mb-8">
+                            <h3 class="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" x-text="approvedBatches.length"></span>
+                                Approved — Ready to Lock
+                            </h3>
+                            <div x-show="approvedBatches.length === 0" class="text-center py-6 text-gray-400 bg-gray-50 rounded">
+                                <p>No approved batches waiting to be locked</p>
+                            </div>
+                            <div x-show="approvedBatches.length > 0" class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-green-50 border-b">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs">Batch Code</th>
+                                            <th class="px-3 py-2 text-left text-xs">School</th>
+                                            <th class="px-3 py-2 text-left text-xs">Subject</th>
+                                            <th class="px-3 py-2 text-center text-xs">Records</th>
+                                            <th class="px-3 py-2 text-left text-xs">Approved By</th>
+                                            <th class="px-3 py-2 text-left text-xs">Approved At</th>
+                                            <th class="px-3 py-2 text-center text-xs">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="b in approvedBatches" :key="b.id">
+                                            <tr class="border-b hover:bg-green-50/50 transition">
+                                                <td class="px-3 py-2 font-mono text-xs" x-text="b.batch_code"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="b.school?.name || '—'"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="b.subject?.name || '—'"></td>
+                                                <td class="px-3 py-2 text-center text-xs" x-text="b.valid_records || b.total_records || 0"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="b.approved_by_user?.name || '—'"></td>
+                                                <td class="px-3 py-2 text-xs text-gray-500" x-text="b.approved_at ? new Date(b.approved_at).toLocaleString() : '—'"></td>
+                                                <td class="px-3 py-2 text-center">
+                                                    <button @click="openLockModal(b)"
+                                                            :disabled="lockingId === b.id"
+                                                            class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 disabled:opacity-50 transition">
+                                                        <span x-show="lockingId !== b.id">🔒 Lock & Promote</span>
+                                                        <span x-show="lockingId === b.id"><i class="fas fa-spinner animate-spin"></i> Locking...</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Locked Batches -->
+                        <div>
+                            <h3 class="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <span class="bg-yellow-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" x-text="lockedBatches.length"></span>
+                                Locked Batches
+                            </h3>
+                            <div x-show="lockedBatches.length === 0" class="text-center py-6 text-gray-400 bg-gray-50 rounded">
+                                <p>No locked batches yet</p>
+                            </div>
+                            <div x-show="lockedBatches.length > 0" class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-yellow-50 border-b">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs">Batch Code</th>
+                                            <th class="px-3 py-2 text-left text-xs">School</th>
+                                            <th class="px-3 py-2 text-left text-xs">Subject</th>
+                                            <th class="px-3 py-2 text-center text-xs">Promoted</th>
+                                            <th class="px-3 py-2 text-left text-xs">Locked By</th>
+                                            <th class="px-3 py-2 text-left text-xs">Locked At</th>
+                                            <th class="px-3 py-2 text-center text-xs">Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="b in lockedBatches" :key="b.id">
+                                            <tr class="border-b hover:bg-yellow-50/50 transition">
+                                                <td class="px-3 py-2 font-mono text-xs" x-text="b.batch_code"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="b.school?.name || '—'"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="b.subject?.name || '—'"></td>
+                                                <td class="px-3 py-2 text-center">
+                                                    <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-semibold" x-text="b.promoted_count ?? '—'"></span>
+                                                </td>
+                                                <td class="px-3 py-2 text-xs" x-text="b.locked_by_user?.name || '—'"></td>
+                                                <td class="px-3 py-2 text-xs text-gray-500" x-text="b.locked_at ? new Date(b.locked_at).toLocaleString() : '—'"></td>
+                                                <td class="px-3 py-2 text-center">
+                                                    <button @click="viewHistory(b.id)" class="text-blue-600 hover:text-blue-800 text-xs underline">History</button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lock Confirmation Modal -->
+                <div x-show="showLockModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" x-cloak>
+                    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.outside="showLockModal = false">
+                        <div class="p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">🔒 Confirm Lock & Promote</h3>
+                            <div class="bg-yellow-50 border border-yellow-200 rounded p-3 mb-4">
+                                <p class="text-yellow-800 text-sm"><strong>Warning:</strong> Locking this batch will promote all valid marks to <code>subject_marks</code> (final results). This action updates downstream results.</p>
+                            </div>
+                            <div class="text-sm mb-4 space-y-1" x-show="lockTarget">
+                                <p><strong>Batch:</strong> <span x-text="lockTarget?.batch_code"></span></p>
+                                <p><strong>School:</strong> <span x-text="lockTarget?.school?.name"></span></p>
+                                <p><strong>Subject:</strong> <span x-text="lockTarget?.subject?.name"></span></p>
+                                <p><strong>Records:</strong> <span x-text="lockTarget?.valid_records || lockTarget?.total_records"></span></p>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Type <strong>LOCK</strong> to confirm:</label>
+                                <input type="text" x-model="lockConfirmText" class="w-full border rounded px-3 py-2 text-sm" placeholder="LOCK">
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button @click="showLockModal = false" class="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancel</button>
+                                <button @click="confirmLock()"
+                                        :disabled="lockConfirmText.toUpperCase() !== 'LOCK' || lockingId"
+                                        class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50">
+                                    <span x-show="!lockingId">🔒 Lock & Promote</span>
+                                    <span x-show="lockingId"><i class="fas fa-spinner animate-spin"></i> Processing...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Promotion Result Modal -->
+                <div x-show="showPromotionResult" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" x-cloak>
+                    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.outside="showPromotionResult = false">
+                        <div class="p-6">
+                            <h3 class="text-lg font-bold text-green-700 mb-4">✅ Promotion Report</h3>
+                            <div class="space-y-2 text-sm" x-show="promotionData">
+                                <div class="flex justify-between"><span class="text-gray-600">Promoted:</span> <span class="font-bold text-green-700" x-text="promotionData?.promoted || 0"></span></div>
+                                <div class="flex justify-between"><span class="text-gray-600">Skipped:</span> <span x-text="promotionData?.skipped || 0"></span></div>
+                                <div class="flex justify-between"><span class="text-gray-600">Failed:</span> <span :class="(promotionData?.failed||0) > 0 ? 'text-red-600 font-bold' : ''" x-text="promotionData?.failed || 0"></span></div>
+                                <div class="flex justify-between"><span class="text-gray-600">Total Processed:</span> <span x-text="promotionData?.total || 0"></span></div>
+                            </div>
+                            <div class="mt-4 text-right">
+                                <button @click="showPromotionResult = false" class="px-4 py-2 bg-gray-600 text-white rounded text-sm hover:bg-gray-700">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Modal -->
+                <div x-show="showHistoryModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" x-cloak>
+                    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[70vh] overflow-y-auto" @click.outside="showHistoryModal = false">
+                        <div class="p-6">
+                            <div class="flex justify-between items-start mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">📜 Batch History</h3>
+                                <button @click="showHistoryModal = false" class="text-gray-400 hover:text-gray-600">&times;</button>
+                            </div>
+                            <div x-show="historyLoading" class="text-center py-6"><i class="fas fa-spinner animate-spin text-blue-500"></i></div>
+                            <div x-show="!historyLoading" class="space-y-3">
+                                <template x-for="h in historyItems" :key="h.id">
+                                    <div class="flex gap-3 items-start border-l-2 border-blue-300 pl-3 py-1">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium"><span class="text-gray-400" x-text="h.from"></span> → <span class="font-bold" x-text="h.to"></span></p>
+                                            <p class="text-xs text-gray-500" x-text="h.reason"></p>
+                                            <p class="text-[10px] text-gray-400 mt-0.5"><span x-text="h.by"></span> · <span x-text="h.at"></span></p>
+                                        </div>
+                                    </div>
+                                </template>
+                                <div x-show="historyItems.length === 0" class="text-gray-400 text-center py-4">No history records</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </template>
+
+            <!-- ========== ADMIN UNLOCK PAGE ========== -->
+            <template x-if="activeView === 'admin-unlock'">
+            <section id="admin-unlock" class="space-y-6" x-data="adminUnlockView()" x-init="loadLockedBatches()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-1">🔓 (Admin) Unlock Batches</h2>
+                    <p class="text-sm text-gray-500 mb-2">Unlock locked batches to allow re-review (admin only)</p>
+
+                    <!-- Warning Banner -->
+                    <div class="bg-amber-50 border border-amber-300 rounded-lg p-3 mb-6">
+                        <p class="text-amber-800 text-sm"><strong>⚠️ Warning:</strong> Unlocked batches return to "submitted" status and must go through approval again before they can be locked.</p>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="grid grid-cols-3 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
+                            <select x-model="filters.exam_year" @change="loadLockedBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Years</option>
+                                <template x-for="yr in $root.examYears" :key="yr.id">
+                                    <option :value="yr.year_label" x-text="yr.year_label"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">District</label>
+                            <select x-model="filters.district_id" @change="loadLockedBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Districts</option>
+                                <template x-for="d in $root.districts" :key="d.id">
+                                    <option :value="d.id" x-text="d.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
+                            <select x-model="filters.school_id" @change="loadLockedBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Schools</option>
+                                <template x-for="s in $root.schools" :key="s.id">
+                                    <option :value="s.id" x-text="s.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Loading -->
+                    <div x-show="isLoading" class="text-center py-10">
+                        <i class="fas fa-spinner animate-spin text-purple-500 text-2xl"></i>
+                        <p class="text-gray-500 mt-2 text-sm">Loading locked batches...</p>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="errorMsg && !isLoading" class="bg-red-50 border border-red-200 rounded p-3 mb-4">
+                        <p class="text-red-700 text-sm">⚠️ <span x-text="errorMsg"></span></p>
+                    </div>
+
+                    <!-- Table -->
+                    <div x-show="!isLoading && !errorMsg" class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-purple-50 border-b">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Batch Code</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">School</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Subject</th>
+                                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Promoted</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Locked By</th>
+                                    <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Locked At</th>
+                                    <th class="px-3 py-2 text-center text-xs font-semibold text-gray-600">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="b in batches" :key="b.id">
+                                    <tr class="border-b hover:bg-purple-50/30 transition">
+                                        <td class="px-3 py-2 font-mono text-xs" x-text="b.batch_code"></td>
+                                        <td class="px-3 py-2 text-xs" x-text="b.school?.name || '—'"></td>
+                                        <td class="px-3 py-2 text-xs" x-text="b.subject?.name || '—'"></td>
+                                        <td class="px-3 py-2 text-center text-xs" x-text="b.promoted_count ?? '—'"></td>
+                                        <td class="px-3 py-2 text-xs" x-text="b.locked_by_user?.name || '—'"></td>
+                                        <td class="px-3 py-2 text-xs text-gray-500" x-text="b.locked_at ? new Date(b.locked_at).toLocaleString() : '—'"></td>
+                                        <td class="px-3 py-2 text-center">
+                                            <button @click="openUnlockModal(b)"
+                                                    class="bg-purple-600 text-white px-3 py-1 rounded text-xs hover:bg-purple-700 transition">
+                                                🔓 Unlock
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+
+                        <!-- Empty -->
+                        <div x-show="batches.length === 0 && !isLoading" class="text-center py-10 text-gray-400">
+                            <p class="text-lg">No locked batches found</p>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div x-show="pagination.last_page > 1" class="flex justify-between items-center mt-4 text-sm text-gray-600">
+                            <span>Page <span x-text="pagination.current_page"></span> of <span x-text="pagination.last_page"></span></span>
+                            <div class="space-x-2">
+                                <button @click="loadLockedBatches(pagination.current_page - 1)" :disabled="pagination.current_page <= 1"
+                                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">← Prev</button>
+                                <button @click="loadLockedBatches(pagination.current_page + 1)" :disabled="!pagination.has_more"
+                                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">Next →</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unlock Reason Modal -->
+                <div x-show="showUnlockModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" x-cloak>
+                    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4" @click.outside="showUnlockModal = false">
+                        <div class="p-6">
+                            <h3 class="text-lg font-bold text-purple-800 mb-2">🔓 Unlock Batch</h3>
+                            <div class="bg-red-50 border border-red-200 rounded p-3 mb-4">
+                                <p class="text-red-800 text-sm"><strong>Caution:</strong> Unlocking will return this batch to "submitted" status. It must be reviewed and approved again before it can be locked.</p>
+                            </div>
+                            <div class="text-sm mb-3" x-show="unlockTarget">
+                                <p><strong>Batch:</strong> <span x-text="unlockTarget?.batch_code"></span></p>
+                                <p><strong>School:</strong> <span x-text="unlockTarget?.school?.name"></span></p>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Reason for Unlock <span class="text-red-500">*</span></label>
+                                <textarea x-model="unlockReason" rows="3" class="w-full border rounded px-3 py-2 text-sm" placeholder="Enter reason (minimum 10 characters)..."></textarea>
+                                <p class="text-xs text-gray-400 mt-1"><span x-text="(unlockReason||'').length"></span>/10 minimum characters</p>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button @click="showUnlockModal = false" class="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancel</button>
+                                <button @click="confirmUnlock()"
+                                        :disabled="(unlockReason||'').length < 10 || unlockingId"
+                                        class="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 disabled:opacity-50">
+                                    <span x-show="!unlockingId">🔓 Confirm Unlock</span>
+                                    <span x-show="unlockingId"><i class="fas fa-spinner animate-spin"></i> Unlocking...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </template>
+
+            <!-- ========== HISTORY PAGE ========== -->
+            <template x-if="activeView === 'history'">
+            <section id="submission-history" class="space-y-6" x-data="historyView()" x-init="loadHistory()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-1">📜 Submission & Locking History</h2>
+                    <p class="text-sm text-gray-500 mb-6">Complete audit trail of all state transitions</p>
+
+                    <!-- Filters -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
+                            <select x-model="filters.exam_year" @change="loadHistory()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Years</option>
+                                <template x-for="yr in filterYears" :key="yr">
+                                    <option :value="yr" x-text="yr"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
+                            <select x-model="filters.school_id" @change="loadHistory()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Schools</option>
+                                <template x-for="s in filterSchools" :key="s.id">
+                                    <option :value="s.id" x-text="s.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Action</label>
+                            <select x-model="filters.action" @change="loadHistory()" class="w-full border rounded px-2 py-1.5 text-sm">
+                                <option value="">All Actions</option>
+                                <option value="submitted">Submitted</option>
+                                <option value="approved">Approved</option>
+                                <option value="rejected">Rejected</option>
+                                <option value="locked">Locked</option>
+                                <option value="unlocked">Unlocked</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">From Date</label>
+                            <input type="date" x-model="filters.from_date" @change="loadHistory()" class="w-full border rounded px-2 py-1.5 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">To Date</label>
+                            <input type="date" x-model="filters.to_date" @change="loadHistory()" class="w-full border rounded px-2 py-1.5 text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Loading -->
+                    <div x-show="isLoading" class="text-center py-10">
+                        <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
+                        <p class="text-gray-500 mt-2 text-sm">Loading history...</p>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="errorMsg && !isLoading" class="bg-red-50 border border-red-200 rounded p-3 mb-4">
+                        <p class="text-red-700 text-sm">⚠️ <span x-text="errorMsg"></span></p>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div x-show="!isLoading && !errorMsg">
+                        <div x-show="events.length === 0" class="text-center py-10 text-gray-400">
+                            <i class="fas fa-history text-4xl mb-3"></i>
+                            <p class="text-lg">No history events found</p>
+                            <p class="text-sm mt-1">Submit, approve, or lock batches to create history records.</p>
+                        </div>
+
+                        <div x-show="events.length > 0" class="space-y-3">
+                            <template x-for="evt in events" :key="evt.id">
+                                <div class="flex gap-3 items-start border-l-4 pl-4 py-2 rounded-r hover:bg-gray-50 transition"
+                                     :class="{
+                                         'border-indigo-400 bg-indigo-50/30': evt.current_state === 'submitted',
+                                         'border-green-400 bg-green-50/30': evt.current_state === 'approved',
+                                         'border-red-400 bg-red-50/30': evt.current_state === 'rejected',
+                                         'border-yellow-500 bg-yellow-50/30': evt.current_state === 'locked',
+                                         'border-purple-400 bg-purple-50/30': evt.previous_state === 'locked',
+                                         'border-gray-300': !['submitted','approved','rejected','locked'].includes(evt.current_state) && evt.previous_state !== 'locked'
+                                     }">
+                                    <div class="flex-shrink-0 mt-1">
+                                        <span class="text-lg" x-text="({
+                                            submitted: '📤', approved: '✅', rejected: '❌',
+                                            locked: '🔒', processed: '⚙️'
+                                        })[evt.current_state] || (evt.previous_state === 'locked' ? '🔓' : '🔄')"></span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase"
+                                                  :class="{
+                                                      'bg-gray-200 text-gray-700': true
+                                                  }" x-text="evt.previous_state || 'initial'"></span>
+                                            <span class="text-gray-400 text-xs">→</span>
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase"
+                                                  :class="{
+                                                      'bg-indigo-100 text-indigo-800': evt.current_state === 'submitted',
+                                                      'bg-green-100 text-green-800': evt.current_state === 'approved',
+                                                      'bg-red-100 text-red-800': evt.current_state === 'rejected',
+                                                      'bg-yellow-100 text-yellow-800': evt.current_state === 'locked',
+                                                      'bg-gray-200 text-gray-700': !['submitted','approved','rejected','locked'].includes(evt.current_state)
+                                                  }" x-text="evt.current_state"></span>
+                                            <span class="text-gray-400 text-xs">·</span>
+                                            <span class="font-mono text-xs text-gray-500" x-text="evt.batch_code || ('Batch #' + evt.mark_import_batch_id)"></span>
+                                        </div>
+                                        <p class="text-sm text-gray-700 mt-1" x-show="evt.transition_reason" x-text="evt.transition_reason"></p>
+                                        <div class="flex items-center gap-3 mt-1 text-[11px] text-gray-400">
+                                            <span><i class="fas fa-user mr-1"></i><span x-text="evt.transitioned_by_user?.name || 'System'"></span></span>
+                                            <span><i class="fas fa-clock mr-1"></i><span x-text="evt.transitioned_at ? new Date(evt.transitioned_at).toLocaleString() : '—'"></span></span>
+                                            <span x-show="evt.school_name" class="text-gray-500"><i class="fas fa-school mr-1"></i><span x-text="evt.school_name"></span></span>
+                                            <span x-show="evt.subject_name" class="text-gray-500"><i class="fas fa-book mr-1"></i><span x-text="evt.subject_name"></span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Pagination -->
+                            <div x-show="pagination.last_page > 1" class="flex justify-between items-center mt-4 text-sm text-gray-600 pt-4 border-t">
+                                <span>Page <span x-text="pagination.current_page"></span> of <span x-text="pagination.last_page"></span> (<span x-text="pagination.total"></span> events)</span>
+                                <div class="space-x-2">
+                                    <button @click="loadHistory(pagination.current_page - 1)" :disabled="pagination.current_page <= 1"
+                                            class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">← Prev</button>
+                                    <button @click="loadHistory(pagination.current_page + 1)" :disabled="!pagination.has_more"
+                                            class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">Next →</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
             </template>
@@ -1483,24 +2386,388 @@
             <!-- Scoresheets Section -->
             <template x-if="activeView === 'scoresheets-pdf'">
             <section id="scoresheets" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">📄 Scoresheets (PDF)</h3>
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                    <p class="text-blue-900 font-semibold">Generate Scoresheet PDFs</p>
-                    <p class="text-sm text-blue-700 mt-2">Create and download PDF scoresheets for students</p>
-                    <p class="text-xs text-blue-600 mt-4">Coming in Phase 3C - Week 3</p>
+                <h2 class="text-lg font-bold text-gray-800 mb-4">📄 Scoresheets (PDF) — Filled Marks</h2>
+
+                <div class="flex items-center gap-4 mb-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" x-model="reportMode" value="approved" @change="loadReportSubjects()" class="text-blue-600">
+                        <span class="text-sm font-medium text-gray-700">✅ Approved/Locked Only</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" x-model="reportMode" value="all" @change="loadReportSubjects()" class="text-blue-600">
+                        <span class="text-sm font-medium text-gray-700">📝 Include Draft Imports (Preview)</span>
+                    </label>
+                </div>
+
+                <div x-show="reportMode === 'all'" class="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-4">
+                    <p class="text-sm text-yellow-800 font-medium"><i class="fas fa-exclamation-triangle mr-1"></i> Draft Preview Mode — Generated PDFs will have a DRAFT watermark and are for verification only.</p>
+                </div>
+
+                <!-- Filter Bar (same layout as Upload Marks) -->
+                <div class="grid grid-cols-12 gap-3 items-start mb-6">
+                    <!-- Exam Year -->
+                    <div class="col-span-1 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Year *</label>
+                        <select x-model="reportExamYear"
+                            @change="reportRegion = ''; reportDistrict = ''; reportSchool = ''; reportSubject = ''; reportSubjects = []"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm h-10">
+                            <option value="">Select Year</option>
+                            <template x-for="year in examYears" :key="year.id">
+                                <option :value="year.id" x-text="year.year_label"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Region -->
+                    <div class="col-span-1 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
+                        <div class="relative flex-1 flex flex-col" @click.outside="rptRegionOpen = false">
+                            <button @click="rptRegionOpen = !rptRegionOpen"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10">
+                                <span x-text="reportRegion ? regions.find(r => r.id == reportRegion)?.name : 'All'" class="text-gray-700 whitespace-nowrap"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="rptRegionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <input x-model="rptRegionSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="reportRegion = ''; rptRegionOpen = false; onReportRegionChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Regions</div>
+                                    <template x-for="region in regions.filter(r => r.name.toLowerCase().includes(rptRegionSearch.toLowerCase()))" :key="region.id">
+                                        <div @click="reportRegion = region.id; rptRegionOpen = false; onReportRegionChange()"
+                                            :class="reportRegion == region.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors" x-text="region.name"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- District -->
+                    <div class="col-span-2 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">District</label>
+                        <div class="relative flex-1 flex flex-col" @click.outside="rptDistrictOpen = false">
+                            <button @click="reportRegion && (rptDistrictOpen = !rptDistrictOpen)"
+                                :disabled="!reportRegion"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                <span x-text="reportDistrict ? (rptDistricts.find(d => d.id == reportDistrict)?.name || 'Unknown') : (reportRegion ? 'All Districts' : 'Select Region First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="rptDistrictOpen && reportRegion" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <input x-model="rptDistrictSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="reportDistrict = ''; rptDistrictOpen = false; onReportDistrictChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Districts</div>
+                                    <template x-for="district in rptDistricts.filter(d => d.name.toLowerCase().includes(rptDistrictSearch.toLowerCase()))" :key="district.id">
+                                        <div @click="reportDistrict = district.id; rptDistrictOpen = false; onReportDistrictChange()"
+                                            :class="reportDistrict == district.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors" x-text="district.name"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- School -->
+                    <div class="col-span-3 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">School *</label>
+                        <div class="relative flex-1 flex flex-col" @click.outside="rptSchoolOpen = false">
+                            <button @click="reportDistrict && (rptSchoolOpen = !rptSchoolOpen)"
+                                :disabled="!reportDistrict"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                <span x-text="reportSchool ? (rptSchools.find(s => s.id == reportSchool)?.code + ' - ' + rptSchools.find(s => s.id == reportSchool)?.name) : (reportDistrict ? 'Select School' : 'Select District First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="rptSchoolOpen && reportDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <input x-model="rptSchoolSearch" type="text" placeholder="Search schools..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <template x-for="school in rptSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSchoolSearch.toLowerCase()))" :key="school.id">
+                                        <div @click="reportSchool = school.id; rptSchoolOpen = false; onReportSchoolChange()"
+                                            :class="reportSchool == school.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors" x-text="school.code + ' - ' + school.name"></div>
+                                    </template>
+                                    <template x-if="rptSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSchoolSearch.toLowerCase())).length === 0">
+                                        <div class="px-3 py-2 text-gray-500 text-sm">No schools found</div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subject -->
+                    <div class="col-span-4 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Subject *</label>
+                        <div class="relative flex-1 flex flex-col" @click.outside="rptSubjectOpen = false">
+                            <button @click="reportSchool && reportSubjects.length > 0 && (rptSubjectOpen = !rptSubjectOpen)"
+                                :disabled="!reportSchool || reportSubjects.length === 0"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                <span x-text="reportSubject ? reportSubjects.find(s => s.id == reportSubject)?.code + ' - ' + reportSubjects.find(s => s.id == reportSubject)?.name : (reportSchool ? 'Select Subject' : 'Select School First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="reportSchool && reportSubjects.length > 0" class="bg-blue-50 border-t border-blue-200 px-3 py-1.5 text-xs text-blue-700 flex items-center gap-2">
+                                <i class="fas fa-info-circle flex-shrink-0"></i>
+                                <span x-text="reportSubjects.length + ' subject(s) with marks available'"></span>
+                            </div>
+                            <div x-show="reportSchool && reportSubjects.length === 0" class="bg-yellow-50 border-t border-yellow-200 px-3 py-1.5 text-xs text-yellow-700 flex items-center gap-2">
+                                <i class="fas fa-exclamation-triangle flex-shrink-0"></i>
+                                <span>No subjects with imported marks found for this school</span>
+                            </div>
+                            <div x-show="rptSubjectOpen && reportSubjects.length > 0" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <input x-model="rptSubjectSearch" type="text" placeholder="Search subjects..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <template x-for="subj in reportSubjects.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSubjectSearch.toLowerCase()))" :key="subj.id">
+                                        <div @click="reportSubject = subj.id; rptSubjectOpen = false"
+                                            :class="reportSubject == subj.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors flex items-center justify-between">
+                                            <span x-text="subj.code + ' - ' + subj.name"></span>
+                                            <span class="ml-2 px-2 py-0.5 rounded text-xs font-medium"
+                                                :class="{
+                                                    'bg-green-100 text-green-800': subj.batch_status === 'approved' || subj.batch_status === 'locked' || subj.batch_status === 'processed',
+                                                    'bg-yellow-100 text-yellow-800': subj.batch_status === 'submitted',
+                                                    'bg-gray-100 text-gray-600': subj.batch_status === 'draft' || subj.batch_status === 'validated',
+                                                    'bg-red-100 text-red-800': subj.batch_status === 'rejected',
+                                                }"
+                                                x-text="subj.batch_status ? (subj.batch_status.charAt(0).toUpperCase() + subj.batch_status.slice(1)) : ''"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reset -->
+                    <div class="col-span-1 flex items-end h-full">
+                        <button type="button" @click="reportExamYear = ''; reportRegion = ''; reportDistrict = ''; reportSchool = ''; reportSubject = ''; reportSubjects = []; reportMessage = ''"
+                            class="w-full px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium text-sm rounded-lg transition-colors h-10">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-wrap gap-3">
+                    <button @click="downloadScoresheetPdf('single')"
+                        :disabled="!reportExamYear || !reportSchool || !reportSubject || reportExporting || (reportMode === 'approved' && reportSubjects.find(s => s.id == reportSubject)?.batch_status && !['approved','locked','processed'].includes(reportSubjects.find(s => s.id == reportSubject)?.batch_status))"
+                        class="px-5 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i :class="reportExporting ? 'fas fa-spinner animate-spin' : 'fas fa-file-pdf'"></i>
+                        📄 Single Subject
+                    </button>
+                    <button @click="downloadScoresheetPdf('school')"
+                        :disabled="!reportExamYear || !reportSchool || reportExporting"
+                        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i :class="reportExporting ? 'fas fa-spinner animate-spin' : 'fas fa-file-archive'"></i>
+                        📦 School (All Subjects)
+                    </button>
+                    <button @click="downloadScoresheetPdf('district')"
+                        :disabled="!reportExamYear || !reportDistrict || reportExporting"
+                        class="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i :class="reportExporting ? 'fas fa-spinner animate-spin' : 'fas fa-file-archive'"></i>
+                        📋 District (All Schools)
+                    </button>
+                    <button @click="downloadScoresheetPdf('region')"
+                        :disabled="!reportExamYear || !reportRegion || reportExporting"
+                        class="px-5 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i :class="reportExporting ? 'fas fa-spinner animate-spin' : 'fas fa-file-archive'"></i>
+                        🌍 Region (All Districts)
+                    </button>
+                </div>
+
+                <!-- Actionable message for non-approved subjects -->
+                <div x-show="reportSubject && reportSubjects.find(s => s.id == reportSubject)?.batch_status && !['approved','locked','processed'].includes(reportSubjects.find(s => s.id == reportSubject)?.batch_status) && reportMode === 'approved'"
+                    class="mt-4 bg-amber-50 border border-amber-300 rounded-lg p-4">
+                    <p class="text-sm text-amber-800 font-medium">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Marks exist but are not yet approved/locked (current status: 
+                        <strong x-text="reportSubjects.find(s => s.id == reportSubject)?.batch_status"></strong>).
+                    </p>
+                    <p class="text-sm text-amber-700 mt-1">
+                        To generate approved scoresheets: Go to <strong>Moderation & Review → Pending Review</strong> to approve, then <strong>Submit & Lock</strong>.
+                    </p>
+                    <p class="text-sm text-amber-700 mt-1">
+                        Or switch to <strong>"Include Draft Imports (Preview)"</strong> mode to generate a draft preview PDF.
+                    </p>
+                </div>
+
+                <!-- Info -->
+                <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p class="text-sm text-blue-800"><i class="fas fa-info-circle mr-1"></i> Generates PDF scoresheets with actual marks filled in from approved/locked batches.</p>
+                    <p class="text-xs text-blue-600 mt-1"><strong>Single Subject:</strong> requires School + Subject • <strong>School:</strong> ZIP of all subjects • <strong>District:</strong> ZIP of all schools • <strong>Region:</strong> ZIP of all districts</p>
+                </div>
+
+                <!-- Status -->
+                <div x-show="reportMessage" class="mt-4 p-3 rounded-lg text-sm" :class="reportError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'">
+                    <span x-text="reportMessage"></span>
                 </div>
             </section>
             </template>
 
             <!-- CSV Export Section -->
-            <section x-show="activeView === 'csv-export'" id="csv-export" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">📊 CSV Export</h3>
-                <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                    <p class="text-green-900 font-semibold">Export Marks to CSV</p>
-                    <p class="text-sm text-green-700 mt-2">Download marks data in CSV format for analysis</p>
-                    <p class="text-xs text-green-600 mt-4">Coming in Phase 3C - Week 3</p>
+            <template x-if="activeView === 'csv-export'">
+            <section id="csv-export" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
+                <h2 class="text-lg font-bold text-gray-800 mb-4">📊 CSV Export — Marks Data</h2>
+
+                <!-- Filter Bar (same layout as Upload Marks) -->
+                <div class="grid grid-cols-12 gap-3 items-start mb-6">
+                    <!-- Exam Year -->
+                    <div class="col-span-1 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Year *</label>
+                        <select x-model="reportExamYear"
+                            @change="reportRegion = ''; reportDistrict = ''; reportSchool = ''; reportSubject = ''; reportSubjects = []"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm h-10">
+                            <option value="">Select Year</option>
+                            <template x-for="year in examYears" :key="year.id">
+                                <option :value="year.id" x-text="year.year_label"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Region -->
+                    <div class="col-span-1 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
+                        <div class="relative flex-1 flex flex-col" @click.outside="rptRegionOpen = false">
+                            <button @click="rptRegionOpen = !rptRegionOpen"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10">
+                                <span x-text="reportRegion ? regions.find(r => r.id == reportRegion)?.name : 'All'" class="text-gray-700 whitespace-nowrap"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="rptRegionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <input x-model="rptRegionSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="reportRegion = ''; rptRegionOpen = false; onReportRegionChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Regions</div>
+                                    <template x-for="region in regions.filter(r => r.name.toLowerCase().includes(rptRegionSearch.toLowerCase()))" :key="region.id">
+                                        <div @click="reportRegion = region.id; rptRegionOpen = false; onReportRegionChange()"
+                                            :class="reportRegion == region.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors" x-text="region.name"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- District -->
+                    <div class="col-span-2 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">District</label>
+                        <div class="relative flex-1 flex flex-col" @click.outside="rptDistrictOpen = false">
+                            <button @click="reportRegion && (rptDistrictOpen = !rptDistrictOpen)"
+                                :disabled="!reportRegion"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                <span x-text="reportDistrict ? (rptDistricts.find(d => d.id == reportDistrict)?.name || 'Unknown') : (reportRegion ? 'All Districts' : 'Select Region First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="rptDistrictOpen && reportRegion" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <input x-model="rptDistrictSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="reportDistrict = ''; rptDistrictOpen = false; onReportDistrictChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Districts</div>
+                                    <template x-for="district in rptDistricts.filter(d => d.name.toLowerCase().includes(rptDistrictSearch.toLowerCase()))" :key="district.id">
+                                        <div @click="reportDistrict = district.id; rptDistrictOpen = false; onReportDistrictChange()"
+                                            :class="reportDistrict == district.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors" x-text="district.name"></div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- School -->
+                    <div class="col-span-3 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">School</label>
+                        <div class="relative flex-1 flex flex-col" @click.outside="rptSchoolOpen = false">
+                            <button @click="reportDistrict && (rptSchoolOpen = !rptSchoolOpen)"
+                                :disabled="!reportDistrict"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                <span x-text="reportSchool ? (rptSchools.find(s => s.id == reportSchool)?.code + ' - ' + rptSchools.find(s => s.id == reportSchool)?.name) : (reportDistrict ? 'All Schools' : 'Select District First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="rptSchoolOpen && reportDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <input x-model="rptSchoolSearch" type="text" placeholder="Search schools..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="reportSchool = ''; rptSchoolOpen = false; onReportSchoolChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Schools</div>
+                                    <template x-for="school in rptSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSchoolSearch.toLowerCase()))" :key="school.id">
+                                        <div @click="reportSchool = school.id; rptSchoolOpen = false; onReportSchoolChange()"
+                                            :class="reportSchool == school.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors" x-text="school.code + ' - ' + school.name"></div>
+                                    </template>
+                                    <template x-if="rptSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSchoolSearch.toLowerCase())).length === 0">
+                                        <div class="px-3 py-2 text-gray-500 text-sm">No schools found</div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subject -->
+                    <div class="col-span-4 flex flex-col h-full">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Subject</label>
+                        <div class="relative flex-1 flex flex-col" @click.outside="rptSubjectOpen = false">
+                            <button @click="reportSchool && reportSubjects.length > 0 && (rptSubjectOpen = !rptSubjectOpen)"
+                                :disabled="!reportSchool || reportSubjects.length === 0"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                <span x-text="reportSubject ? reportSubjects.find(s => s.id == reportSubject)?.code + ' - ' + reportSubjects.find(s => s.id == reportSubject)?.name : (reportSchool ? 'All Subjects (ZIP)' : 'Select School First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="reportSchool && reportSubjects.length > 0" class="bg-blue-50 border-t border-blue-200 px-3 py-1.5 text-xs text-blue-700 flex items-center gap-2">
+                                <i class="fas fa-info-circle flex-shrink-0"></i>
+                                <span x-text="reportSubjects.length + ' subject(s) with marks available'"></span>
+                            </div>
+                            <div x-show="rptSubjectOpen && reportSubjects.length > 0" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <input x-model="rptSubjectSearch" type="text" placeholder="Search subjects..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <template x-for="subj in reportSubjects.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSubjectSearch.toLowerCase()))" :key="subj.id">
+                                        <div @click="reportSubject = subj.id; rptSubjectOpen = false"
+                                            :class="reportSubject == subj.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors flex items-center justify-between">
+                                            <span x-text="subj.code + ' - ' + subj.name"></span>
+                                            <span class="ml-2 px-2 py-0.5 rounded text-xs font-medium"
+                                                :class="{
+                                                    'bg-green-100 text-green-800': subj.batch_status === 'approved' || subj.batch_status === 'locked' || subj.batch_status === 'processed',
+                                                    'bg-yellow-100 text-yellow-800': subj.batch_status === 'submitted',
+                                                    'bg-gray-100 text-gray-600': subj.batch_status === 'draft' || subj.batch_status === 'validated',
+                                                    'bg-red-100 text-red-800': subj.batch_status === 'rejected',
+                                                }"
+                                                x-text="subj.batch_status ? (subj.batch_status.charAt(0).toUpperCase() + subj.batch_status.slice(1)) : ''"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reset -->
+                    <div class="col-span-1 flex items-end h-full">
+                        <button type="button" @click="reportExamYear = ''; reportRegion = ''; reportDistrict = ''; reportSchool = ''; reportSubject = ''; reportSubjects = []; reportMessage = ''"
+                            class="w-full px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium text-sm rounded-lg transition-colors h-10">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex flex-wrap gap-3">
+                    <button @click="downloadCsvExport('school-subject')"
+                        :disabled="!reportExamYear || !reportSchool || !reportSubject || reportExporting"
+                        class="px-5 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i :class="reportExporting ? 'fas fa-spinner animate-spin' : 'fas fa-file-csv'"></i>
+                        School + Subject CSV
+                    </button>
+                    <button @click="downloadCsvExport('school-zip')"
+                        :disabled="!reportExamYear || !reportSchool || reportExporting"
+                        class="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i :class="reportExporting ? 'fas fa-spinner animate-spin' : 'fas fa-file-archive'"></i>
+                        School Full ZIP
+                    </button>
+                    <button @click="downloadCsvExport('district-zip')"
+                        :disabled="!reportExamYear || !reportDistrict || reportExporting"
+                        class="px-5 py-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                        <i :class="reportExporting ? 'fas fa-spinner animate-spin' : 'fas fa-file-archive'"></i>
+                        📋 District (All Schools)
+                    </button>
+                </div>
+
+                <!-- Info -->
+                <div class="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p class="text-sm text-green-800"><i class="fas fa-info-circle mr-1"></i> Exports actual marks data from approved/locked batches as CSV files.</p>
+                    <p class="text-xs text-green-600 mt-1">CSV headers: exam_year, centre_no, school_name, candidate_index_no, candidate_name, gender, combination, subject_code, paper columns, total, remarks.</p>
+                </div>
+
+                <!-- Status -->
+                <div x-show="reportMessage" class="mt-4 p-3 rounded-lg text-sm" :class="reportError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'">
+                    <span x-text="reportMessage"></span>
                 </div>
             </section>
+            </template>
 
             <!-- Analytics Section -->
             <template x-if="activeView === 'analytics'">
@@ -1601,90 +2868,142 @@
             <!-- Summary Report Section -->
             <template x-if="activeView === 'summary-report'">
             <section id="summary-report" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h2 class="text-xl font-bold text-gray-800 mb-6">📋 Summary Report</h2>
-                
-                <!-- Load Button -->
-                <div x-show="!loading && !analyticsData" class="text-center py-4">
-                    <button @click="loadAnalytics()" 
-                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
-                        Generate Report
-                    </button>
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold text-gray-800">📋 Summary Report</h2>
+                    <div class="flex gap-2">
+                        <select x-model="reportExamYear" @change="loadSummaryReport()"
+                            class="px-3 py-2 border border-gray-300 rounded-lg text-sm h-10">
+                            <option value="">Select Year</option>
+                            <template x-for="year in examYears" :key="year.id">
+                                <option :value="year.id" x-text="year.year_label"></option>
+                            </template>
+                        </select>
+                        <button @click="downloadSummaryPdf()"
+                            :disabled="!summaryReportData || reportExporting"
+                            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium flex items-center gap-2">
+                            <i :class="reportExporting ? 'fas fa-spinner animate-spin' : 'fas fa-file-pdf'"></i>
+                            Export PDF
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Loading State -->
-                <div x-show="loading" class="text-center py-8">
+                <div x-show="summaryReportLoading" class="text-center py-8">
                     <i class="fas fa-spinner animate-spin text-blue-500 text-2xl"></i>
                     <p class="text-gray-600 mt-2">Generating summary report...</p>
                 </div>
                 
-                <!-- Executive Summary -->
-                <div x-show="!loading && analyticsData" class="space-y-6">
+                <!-- Report Content -->
+                <div x-show="!summaryReportLoading && summaryReportData" class="space-y-6">
+                    <!-- Completion Overview -->
                     <div class="border-b pb-4">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Executive Overview</h3>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Completion Overview</h3>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                             <div class="bg-blue-50 rounded p-3">
                                 <p class="text-xs text-gray-600">Total Batches</p>
-                                <p class="text-xl font-bold text-blue-600" x-text="analyticsData.overview.total_batches"></p>
-                            </div>
-                            <div class="bg-yellow-50 rounded p-3">
-                                <p class="text-xs text-gray-600">Pending</p>
-                                <p class="text-xl font-bold text-yellow-600" x-text="analyticsData.overview.pending_moderation"></p>
+                                <p class="text-xl font-bold text-blue-600" x-text="summaryReportData.completion.total_batches"></p>
                             </div>
                             <div class="bg-green-50 rounded p-3">
-                                <p class="text-xs text-gray-600">Approved</p>
-                                <p class="text-xl font-bold text-green-600" x-text="analyticsData.overview.approved_batches"></p>
+                                <p class="text-xs text-gray-600">Approved Batches</p>
+                                <p class="text-xl font-bold text-green-600" x-text="summaryReportData.completion.approved_batches"></p>
                             </div>
                             <div class="bg-purple-50 rounded p-3">
-                                <p class="text-xs text-gray-600">Submitted</p>
-                                <p class="text-xl font-bold text-purple-600" x-text="analyticsData.overview.submitted_batches"></p>
+                                <p class="text-xs text-gray-600">Completion Rate</p>
+                                <p class="text-xl font-bold text-purple-600" x-text="summaryReportData.completion.completion_rate + '%'"></p>
+                            </div>
+                            <div class="bg-orange-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Data Quality</p>
+                                <p class="text-xl font-bold text-orange-600" x-text="summaryReportData.completion.data_quality_rate + '%'"></p>
                             </div>
                         </div>
                     </div>
-                    
+
+                    <!-- Data Coverage -->
                     <div class="border-b pb-4">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Data Quality Metrics</h3>
-                        <div class="grid grid-cols-3 gap-4">
-                            <div>
-                                <p class="text-sm text-gray-600">Total Marks Imported</p>
-                                <p class="text-2xl font-bold text-blue-600" x-text="analyticsData.overview.total_marks_imported"></p>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Data Coverage</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div class="bg-gray-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Schools with Marks</p>
+                                <p class="text-xl font-bold text-gray-700" x-text="summaryReportData.completion.schools_with_marks"></p>
                             </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Marks with Errors</p>
-                                <p class="text-2xl font-bold text-red-600" x-text="analyticsData.overview.marks_with_errors"></p>
+                            <div class="bg-gray-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Subjects with Marks</p>
+                                <p class="text-xl font-bold text-gray-700" x-text="summaryReportData.completion.subjects_with_marks"></p>
                             </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Error Rate</p>
-                                <p class="text-2xl font-bold text-orange-600" x-show="analyticsData.overview.total_marks_imported > 0"
-                                   x-text="`${((analyticsData.overview.marks_with_errors / analyticsData.overview.total_marks_imported) * 100).toFixed(2)}%`"></p>
+                            <div class="bg-gray-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Total Marks</p>
+                                <p class="text-xl font-bold text-gray-700" x-text="(summaryReportData.completion.total_marks || 0).toLocaleString()"></p>
+                            </div>
+                            <div class="bg-gray-50 rounded p-3">
+                                <p class="text-xs text-gray-600">Error-Free Marks</p>
+                                <p class="text-xl font-bold text-green-600" x-text="(summaryReportData.completion.error_free_marks || 0).toLocaleString()"></p>
                             </div>
                         </div>
                     </div>
-                    
+
+                    <!-- Status Snapshot -->
+                    <div class="border-b pb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Status Snapshot</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+                            <template x-for="(count, status) in summaryReportData.status_snapshot" :key="status">
+                                <div class="rounded p-3 text-center" :class="{
+                                    'bg-gray-50': status === 'draft',
+                                    'bg-blue-50': status === 'validated',
+                                    'bg-yellow-50': status === 'submitted',
+                                    'bg-green-50': status === 'approved',
+                                    'bg-red-50': status === 'rejected',
+                                    'bg-orange-50': status === 'locked',
+                                    'bg-emerald-50': status === 'processed',
+                                }">
+                                    <p class="text-xs text-gray-600 capitalize" x-text="status"></p>
+                                    <p class="text-lg font-bold" x-text="count"></p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Worst Schools -->
                     <div>
-                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top Subjects by Batch Volume</h3>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Schools with Highest Error Rates</h3>
+                        <template x-if="summaryReportData.worst_schools && summaryReportData.worst_schools.length > 0">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead class="bg-gray-100">
                                     <tr>
-                                        <th class="px-4 py-2 text-left">Subject</th>
+                                        <th class="px-4 py-2 text-left">School Code</th>
+                                        <th class="px-4 py-2 text-left">School Name</th>
                                         <th class="px-4 py-2 text-center">Batches</th>
+                                        <th class="px-4 py-2 text-center">Total Records</th>
+                                        <th class="px-4 py-2 text-center">Errors</th>
                                         <th class="px-4 py-2 text-center">Error Rate</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <template x-for="item in analyticsData.bySubject.slice(0, 10)" :key="item.subject">
+                                    <template x-for="school in summaryReportData.worst_schools" :key="school.school_code">
                                         <tr class="border-b">
-                                            <td class="px-4 py-2" x-text="item.subject"></td>
-                                            <td class="px-4 py-2 text-center font-semibold" x-text="item.total_batches"></td>
+                                            <td class="px-4 py-2 font-mono text-sm" x-text="school.school_code"></td>
+                                            <td class="px-4 py-2" x-text="school.school_name"></td>
+                                            <td class="px-4 py-2 text-center" x-text="school.batch_count"></td>
+                                            <td class="px-4 py-2 text-center" x-text="school.total_records"></td>
+                                            <td class="px-4 py-2 text-center text-red-600 font-semibold" x-text="school.total_errors"></td>
                                             <td class="px-4 py-2 text-center">
-                                                <span x-text="`${item.error_rate}%`" :class="item.error_rate > 5 ? 'text-red-600 font-semibold' : 'text-green-600'"></span>
+                                                <span x-text="school.error_rate + '%'" :class="school.error_rate > 5 ? 'text-red-600 font-semibold' : 'text-green-600'"></span>
                                             </td>
                                         </tr>
                                     </template>
                                 </tbody>
                             </table>
                         </div>
+                        </template>
+                        <template x-if="!summaryReportData.worst_schools || summaryReportData.worst_schools.length === 0">
+                            <p class="text-gray-500 text-sm">No schools with errors found.</p>
+                        </template>
                     </div>
+                </div>
+
+                <!-- No Year Selected -->
+                <div x-show="!summaryReportLoading && !summaryReportData && !reportExamYear" class="text-center py-8">
+                    <p class="text-gray-500">Select an exam year to generate the summary report.</p>
                 </div>
             </section>
             </template>
@@ -1970,52 +3289,907 @@
             <!-- ===== ADMINISTRATION SECTIONS ===== -->
             <div x-show="['configuration', 'permissions', 'batch-management', 'system-logs'].includes(activeView)">
 
-            <!-- Configuration Section -->
-            <section x-show="activeView === 'configuration'" id="configuration" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">⚙️ Configuration</h3>
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-                    <p class="text-blue-900 font-semibold">System Configuration</p>
-                    <p class="text-sm text-blue-700 mt-2">Configure mark entry system settings</p>
-                    <p class="text-xs text-blue-600 mt-4">Coming in Phase 3C - Week 4</p>
+            <!-- ==================== CONFIGURATION SECTION ==================== -->
+            <section x-show="activeView === 'configuration'" id="configuration" class="space-y-6 scroll-mt-32"
+                     x-data="adminConfigManager()" x-init="loadSettings()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">⚙️ Configuration</h3>
+                        <span class="text-xs text-gray-500">Changes are versioned and auditable</span>
+                    </div>
+
+                    <!-- Loading -->
+                    <div x-show="cfgLoading" class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+                        <p class="text-sm text-gray-500 mt-2">Loading settings...</p>
+                    </div>
+
+                    <!-- Error -->
+                    <div x-show="cfgError" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <p class="text-red-800 text-sm" x-text="cfgError"></p>
+                    </div>
+
+                    <!-- Settings Groups -->
+                    <div x-show="!cfgLoading && !cfgError" class="space-y-6">
+                        <template x-for="(settings, group) in cfgSettings" :key="group">
+                            <div class="border border-gray-200 rounded-lg">
+                                <div class="bg-gray-50 px-4 py-3 border-b border-gray-200 rounded-t-lg">
+                                    <h4 class="font-semibold text-gray-700 capitalize" x-text="group + ' Settings'"></h4>
+                                </div>
+                                <div class="divide-y divide-gray-100">
+                                    <template x-for="setting in settings" :key="setting.key">
+                                        <div class="px-4 py-4 flex items-center justify-between gap-4 hover:bg-gray-50">
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-sm font-medium text-gray-900" x-text="setting.key.replace('acsee.', '')"></p>
+                                                <p class="text-xs text-gray-500 mt-0.5" x-text="setting.description"></p>
+                                                <p x-show="setting.updated_at" class="text-xs text-gray-400 mt-0.5">
+                                                    Last changed: <span x-text="setting.updated_at ? new Date(setting.updated_at).toLocaleString() : 'Never'"></span>
+                                                </p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <!-- Boolean toggle -->
+                                                <template x-if="setting.type === 'boolean'">
+                                                    <button @click="toggleSetting(setting)"
+                                                            :class="setting.value === '1' ? 'bg-indigo-600' : 'bg-gray-300'"
+                                                            class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors">
+                                                        <span :class="setting.value === '1' ? 'translate-x-6' : 'translate-x-1'"
+                                                              class="inline-block h-4 w-4 rounded-full bg-white transition-transform"></span>
+                                                    </button>
+                                                </template>
+                                                <!-- String/Integer input -->
+                                                <template x-if="setting.type !== 'boolean'">
+                                                    <div class="flex items-center gap-1">
+                                                        <input :type="setting.type === 'integer' ? 'number' : 'text'"
+                                                               x-model="setting._editValue"
+                                                               x-init="setting._editValue = setting.value"
+                                                               class="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500">
+                                                        <button @click="saveSetting(setting)"
+                                                                x-show="setting._editValue !== setting.value"
+                                                                class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+                                                    </div>
+                                                </template>
+                                                <!-- History button -->
+                                                <button @click="showHistory(setting.key)" class="text-gray-400 hover:text-indigo-600" title="View history">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- History Modal -->
+                <div x-show="cfgHistoryOpen" x-cloak class="fixed inset-0 z-[1060] flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)" @click.self="cfgHistoryOpen=false">
+                    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[70vh] overflow-y-auto">
+                        <div class="sticky top-0 bg-indigo-600 text-white p-4 flex justify-between items-center rounded-t-lg">
+                            <h4 class="font-bold">📜 Setting History</h4>
+                            <button @click="cfgHistoryOpen=false" class="text-white hover:text-indigo-100 text-xl">&times;</button>
+                        </div>
+                        <div class="p-4">
+                            <div x-show="cfgHistoryItems.length === 0" class="text-center py-4 text-gray-500 text-sm">No history available</div>
+                            <div class="space-y-2">
+                                <template x-for="h in cfgHistoryItems" :key="h.id">
+                                    <div class="border border-gray-200 rounded p-3 text-sm">
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600" x-text="new Date(h.created_at).toLocaleString()"></span>
+                                            <button @click="restoreSettingFromHistory(h.id)" class="text-xs text-indigo-600 hover:underline">Restore</button>
+                                        </div>
+                                        <p class="mt-1"><span class="text-red-600 line-through" x-text="h.old_value || '(empty)'"></span> → <span class="text-green-600 font-medium" x-text="h.new_value"></span></p>
+                                        <p class="text-xs text-gray-400 mt-0.5" x-text="'By: ' + (h.changed_by_user?.name || h.changed_by_user?.first_name || 'Unknown')"></p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Toast -->
+                <div x-show="cfgToast" x-transition class="fixed bottom-6 right-6 z-[1070] px-4 py-3 rounded-lg shadow-lg text-sm text-white"
+                     :class="cfgToastType === 'success' ? 'bg-green-600' : 'bg-red-600'">
+                    <span x-text="cfgToast"></span>
                 </div>
             </section>
 
-            <!-- Permissions Section -->
-            <section x-show="activeView === 'permissions'" id="permissions" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">🔐 Permissions</h3>
-                <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                    <p class="text-green-900 font-semibold">Role & Permission Management</p>
-                    <p class="text-sm text-green-700 mt-2">Manage user roles and access permissions</p>
-                    <p class="text-xs text-green-600 mt-4">Coming in Phase 3C - Week 4</p>
+            <!-- ==================== PERMISSIONS SECTION ==================== -->
+            <section x-show="activeView === 'permissions'" id="permissions" class="space-y-6 scroll-mt-32"
+                     x-data="adminPermissionsManager()" x-init="loadRoles()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-bold text-gray-800">🔐 Permissions</h3>
+                        <span class="text-xs text-gray-500">Role × Permission matrix</span>
+                    </div>
+
+                    <div x-show="permLoading" class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                    </div>
+
+                    <div x-show="permError" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                        <p class="text-red-800 text-sm" x-text="permError"></p>
+                    </div>
+
+                    <!-- Permission Matrix -->
+                    <div x-show="!permLoading && !permError" class="overflow-x-auto">
+                        <table class="min-w-full text-xs">
+                            <thead>
+                                <tr class="bg-gray-50">
+                                    <th class="px-3 py-2 text-left font-semibold text-gray-700 sticky left-0 bg-gray-50 z-10 min-w-[200px]">Permission</th>
+                                    <template x-for="role in permRoles" :key="role.id">
+                                        <th class="px-3 py-2 text-center font-semibold text-gray-700 min-w-[100px]">
+                                            <div x-text="role.name"></div>
+                                            <div class="text-[10px] font-normal text-gray-400" x-text="role.user_count + ' users'"></div>
+                                        </th>
+                                    </template>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <template x-for="(desc, perm) in permDefined" :key="perm">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 sticky left-0 bg-white z-10">
+                                            <div class="font-medium text-gray-800" x-text="perm"></div>
+                                            <div class="text-[10px] text-gray-400" x-text="desc"></div>
+                                        </td>
+                                        <template x-for="role in permRoles" :key="role.id + '-' + perm">
+                                            <td class="px-3 py-2 text-center">
+                                                <input type="checkbox"
+                                                       :checked="roleHasPerm(role, perm)"
+                                                       @change="togglePerm(role, perm, $event.target.checked)"
+                                                       class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                                            </td>
+                                        </template>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Save button -->
+                    <div x-show="permDirty" class="mt-4 flex justify-end gap-3">
+                        <button @click="resetPermChanges()" class="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">Discard</button>
+                        <button @click="savePermissions()" :disabled="permSaving"
+                                class="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                            <span x-show="!permSaving">💾 Save Changes</span>
+                            <span x-show="permSaving">Saving...</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="permToast" x-transition class="fixed bottom-6 right-6 z-[1070] px-4 py-3 rounded-lg shadow-lg text-sm text-white"
+                     :class="permToastType === 'success' ? 'bg-green-600' : 'bg-red-600'">
+                    <span x-text="permToast"></span>
                 </div>
             </section>
 
-            <!-- Batch Management Section -->
-            <section x-show="activeView === 'batch-management'" id="batch-management" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">📦 Batch Management</h3>
-                <div class="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
-                    <p class="text-purple-900 font-semibold">Batch Administration</p>
-                    <p class="text-sm text-purple-700 mt-2">Manage and archive mark import batches</p>
-                    <p class="text-xs text-purple-600 mt-4">Coming in Phase 3C - Week 4</p>
+            <!-- ==================== BATCH MANAGEMENT SECTION ==================== -->
+            <section x-show="activeView === 'batch-management'" id="batch-management" class="space-y-6 scroll-mt-32"
+                     x-data="adminBatchManager()" x-init="loadBatches()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">📦 Batch Management</h3>
+                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">Read-Only by Default</span>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-4">
+                        <input type="text" x-model="batchFilters.search" @input.debounce.400ms="loadBatches()" placeholder="Search batch/school/subject..." class="col-span-2 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500">
+                        <select x-model="batchFilters.status" @change="loadBatches()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                            <option value="">All Statuses</option>
+                            <option value="draft">Draft</option>
+                            <option value="validated">Validated</option>
+                            <option value="submitted">Submitted</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="locked">Locked</option>
+                            <option value="processed">Processed</option>
+                        </select>
+                        <input type="number" x-model="batchFilters.exam_year" @input.debounce.400ms="loadBatches()" placeholder="Exam Year" class="px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                        <input type="date" x-model="batchFilters.date_from" @change="loadBatches()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                        <input type="date" x-model="batchFilters.date_to" @change="loadBatches()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                    </div>
+
+                    <!-- Loading -->
+                    <div x-show="batchLoading" class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                    </div>
+
+                    <!-- Table -->
+                    <div x-show="!batchLoading" class="overflow-x-auto">
+                        <table class="min-w-full text-xs">
+                            <thead>
+                                <tr class="bg-gray-50 text-left">
+                                    <th class="px-3 py-2 font-semibold">Batch Code</th>
+                                    <th class="px-3 py-2 font-semibold">School</th>
+                                    <th class="px-3 py-2 font-semibold">Subject</th>
+                                    <th class="px-3 py-2 font-semibold">Status</th>
+                                    <th class="px-3 py-2 font-semibold text-center">Records</th>
+                                    <th class="px-3 py-2 font-semibold">Imported</th>
+                                    <th class="px-3 py-2 font-semibold text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <template x-for="b in batchList" :key="b.id">
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-3 py-2 font-mono text-xs" x-text="b.batch_code"></td>
+                                        <td class="px-3 py-2" x-text="b.school?.name || '—'"></td>
+                                        <td class="px-3 py-2" x-text="b.subject?.name || '—'"></td>
+                                        <td class="px-3 py-2">
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-medium"
+                                                  :class="batchStatusClass(b.status)" x-text="b.status"></span>
+                                        </td>
+                                        <td class="px-3 py-2 text-center">
+                                            <span class="text-green-600" x-text="b.valid_records"></span>/<span class="text-gray-600" x-text="b.total_records"></span>
+                                            <span x-show="b.error_records > 0" class="text-red-600 text-[10px]" x-text="'(' + b.error_records + ' err)'"></span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-500" x-text="b.created_at ? new Date(b.created_at).toLocaleDateString() : '—'"></td>
+                                        <td class="px-3 py-2 text-center">
+                                            <div class="flex items-center justify-center gap-1">
+                                                <button @click="viewBatchDetail(b.id)" class="px-2 py-1 text-[10px] bg-blue-100 text-blue-700 rounded hover:bg-blue-200" title="View Details">👁</button>
+                                                <button @click="recomputeStats(b.id)" class="px-2 py-1 text-[10px] bg-gray-100 text-gray-700 rounded hover:bg-gray-200" title="Recompute Stats">🔄</button>
+                                                <button x-show="b.status === 'locked'" @click="openUnlockModal(b)" class="px-2 py-1 text-[10px] bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200" title="Admin Unlock">🔓</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr x-show="batchList.length === 0 && !batchLoading">
+                                    <td colspan="7" class="px-3 py-8 text-center text-gray-500">No batches found matching filters</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div x-show="batchPagination.last_page > 1" class="flex items-center justify-between mt-4 text-sm">
+                        <span class="text-gray-500" x-text="'Page ' + batchPagination.current_page + ' of ' + batchPagination.last_page + ' (' + batchPagination.total + ' batches)'"></span>
+                        <div class="flex gap-2">
+                            <button @click="batchPage(batchPagination.current_page - 1)" :disabled="batchPagination.current_page <= 1" class="px-3 py-1 border rounded disabled:opacity-50">← Prev</button>
+                            <button @click="batchPage(batchPagination.current_page + 1)" :disabled="batchPagination.current_page >= batchPagination.last_page" class="px-3 py-1 border rounded disabled:opacity-50">Next →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Batch Detail Modal -->
+                <div x-show="batchDetailOpen" x-cloak class="fixed inset-0 z-[1060] flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)" @click.self="batchDetailOpen=false">
+                    <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[85vh] overflow-y-auto">
+                        <div class="sticky top-0 bg-purple-600 text-white p-4 flex justify-between items-center rounded-t-lg">
+                            <h4 class="font-bold">📋 Batch Detail</h4>
+                            <button @click="batchDetailOpen=false" class="text-white hover:text-purple-100 text-xl">&times;</button>
+                        </div>
+                        <div class="p-4 space-y-4" x-show="batchDetail">
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div><span class="text-gray-500">Batch Code:</span> <span class="font-mono font-bold" x-text="batchDetail?.batch_code"></span></div>
+                                <div><span class="text-gray-500">Status:</span> <span class="font-bold" x-text="batchDetail?.status"></span></div>
+                                <div><span class="text-gray-500">School:</span> <span x-text="batchDetail?.school?.name || '—'"></span></div>
+                                <div><span class="text-gray-500">Subject:</span> <span x-text="batchDetail?.subject?.name || '—'"></span></div>
+                                <div><span class="text-gray-500">Exam Year:</span> <span x-text="batchDetail?.exam_year"></span></div>
+                                <div><span class="text-gray-500">Records:</span> <span x-text="batchDetail?.total_records + ' total / ' + batchDetail?.valid_records + ' valid / ' + batchDetail?.error_records + ' errors'"></span></div>
+                            </div>
+                            <!-- Visibility -->
+                            <div x-show="batchVisibility.length > 0" class="border-t pt-3">
+                                <h5 class="font-semibold text-sm mb-2">📊 Report Visibility</h5>
+                                <template x-for="v in batchVisibility" :key="v.reason">
+                                    <div class="flex items-center gap-2 text-sm" :class="v.visible ? 'text-green-700' : 'text-amber-700'">
+                                        <span x-text="v.visible ? '✅' : '⚠️'"></span>
+                                        <span x-text="v.reason"></span>
+                                    </div>
+                                </template>
+                            </div>
+                            <!-- Lifecycle timeline -->
+                            <div x-show="batchDetail?.lifecycle_states?.length > 0" class="border-t pt-3">
+                                <h5 class="font-semibold text-sm mb-2">🔄 Lifecycle Timeline</h5>
+                                <div class="space-y-1 max-h-40 overflow-y-auto">
+                                    <template x-for="ls in batchDetail?.lifecycle_states || []" :key="ls.id">
+                                        <div class="flex items-center gap-2 text-xs">
+                                            <span class="text-gray-400 w-32" x-text="ls.transitioned_at ? new Date(ls.transitioned_at).toLocaleString() : '—'"></span>
+                                            <span class="font-medium" x-text="(ls.previous_state || '—') + ' → ' + ls.current_state"></span>
+                                            <span class="text-gray-400" x-text="ls.transition_reason || ''"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <!-- Import Runs -->
+                            <div x-show="batchDetail?.import_runs?.length > 0" class="border-t pt-3">
+                                <h5 class="font-semibold text-sm mb-2">📥 Import Runs</h5>
+                                <div class="space-y-1 max-h-32 overflow-y-auto">
+                                    <template x-for="run in batchDetail?.import_runs || []" :key="run.id">
+                                        <div class="flex items-center gap-3 text-xs bg-gray-50 rounded p-2">
+                                            <span class="font-mono" x-text="'#' + run.id"></span>
+                                            <span x-text="run.file_name"></span>
+                                            <span class="text-green-600" x-text="run.success_rows + ' ok'"></span>
+                                            <span class="text-red-600" x-text="run.error_rows + ' err'"></span>
+                                            <span class="text-gray-400" x-text="run.status"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Unlock Modal -->
+                <div x-show="unlockModalOpen" x-cloak class="fixed inset-0 z-[1060] flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)" @click.self="unlockModalOpen=false">
+                    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+                        <div class="bg-yellow-500 text-white p-4 rounded-t-lg">
+                            <h4 class="font-bold">🔓 Admin Unlock Batch</h4>
+                        </div>
+                        <div class="p-4">
+                            <p class="text-sm text-gray-700 mb-2">Unlock batch <strong x-text="unlockBatch?.batch_code"></strong>?</p>
+                            <p class="text-xs text-amber-700 mb-4">⚠️ This will revert status from LOCKED to APPROVED. A reason is required for audit.</p>
+                            <textarea x-model="unlockReason" rows="3" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-yellow-500" placeholder="Reason for unlock (min 10 characters)..."></textarea>
+                            <div class="flex justify-end gap-3 mt-4">
+                                <button @click="unlockModalOpen=false" class="px-4 py-2 text-sm border rounded-lg">Cancel</button>
+                                <button @click="confirmUnlock()" :disabled="unlockReason.length < 10 || unlockSaving"
+                                        class="px-4 py-2 text-sm bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 disabled:opacity-50">
+                                    <span x-show="!unlockSaving">🔓 Unlock</span>
+                                    <span x-show="unlockSaving">Processing...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="batchToast" x-transition class="fixed bottom-6 right-6 z-[1070] px-4 py-3 rounded-lg shadow-lg text-sm text-white"
+                     :class="batchToastType === 'success' ? 'bg-green-600' : 'bg-red-600'">
+                    <span x-text="batchToast"></span>
                 </div>
             </section>
 
-            <!-- System Logs Section -->
-            <section x-show="activeView === 'system-logs'" id="system-logs" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">🖥️ System Logs</h3>
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-                    <p class="text-gray-900 font-semibold">System Event Logs</p>
-                    <p class="text-sm text-gray-700 mt-2">View application logs and error tracking</p>
-                    <p class="text-xs text-gray-600 mt-4">Coming in Phase 3C - Week 4</p>
+            <!-- ==================== SYSTEM LOGS SECTION ==================== -->
+            <section x-show="activeView === 'system-logs'" id="system-logs" class="space-y-6 scroll-mt-32"
+                     x-data="adminLogsManager()" x-init="loadLogs()">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">🖥️ System Logs</h3>
+                        <button @click="exportCsv()" class="px-3 py-1.5 text-xs bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200">📥 Download CSV</button>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
+                        <input type="text" x-model="logFilters.search" @input.debounce.400ms="loadLogs()" placeholder="Search message/action/correlation..." class="col-span-2 px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                        <select x-model="logFilters.category" @change="loadLogs()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                            <option value="">All Categories</option>
+                            <option value="import">Import</option>
+                            <option value="moderation">Moderation</option>
+                            <option value="submission">Submission</option>
+                            <option value="locking">Locking</option>
+                            <option value="export">Export</option>
+                            <option value="admin">Admin</option>
+                            <option value="system">System</option>
+                        </select>
+                        <select x-model="logFilters.status" @change="loadLogs()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                            <option value="">All Statuses</option>
+                            <option value="success">✅ Success</option>
+                            <option value="failed">❌ Failed</option>
+                            <option value="warning">⚠️ Warning</option>
+                        </select>
+                        <input type="date" x-model="logFilters.date_from" @change="loadLogs()" class="px-3 py-2 text-sm border border-gray-300 rounded-lg">
+                    </div>
+
+                    <!-- Loading -->
+                    <div x-show="logLoading" class="text-center py-8">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto"></div>
+                    </div>
+
+                    <!-- Table -->
+                    <div x-show="!logLoading" class="overflow-x-auto">
+                        <table class="min-w-full text-xs">
+                            <thead>
+                                <tr class="bg-gray-50 text-left">
+                                    <th class="px-3 py-2 font-semibold">Time</th>
+                                    <th class="px-3 py-2 font-semibold">Category</th>
+                                    <th class="px-3 py-2 font-semibold">Action</th>
+                                    <th class="px-3 py-2 font-semibold">Status</th>
+                                    <th class="px-3 py-2 font-semibold">Actor</th>
+                                    <th class="px-3 py-2 font-semibold">Message</th>
+                                    <th class="px-3 py-2 font-semibold">Correlation</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100">
+                                <template x-for="log in logList" :key="log.id">
+                                    <tr class="hover:bg-gray-50 cursor-pointer" @click="openLogDetail(log)">
+                                        <td class="px-3 py-2 text-gray-500 whitespace-nowrap" x-text="log.created_at ? new Date(log.created_at).toLocaleString() : '—'"></td>
+                                        <td class="px-3 py-2">
+                                            <span class="px-1.5 py-0.5 rounded text-[10px] font-medium"
+                                                  :class="logCategoryClass(log.category)" x-text="log.category"></span>
+                                        </td>
+                                        <td class="px-3 py-2 font-mono" x-text="log.action"></td>
+                                        <td class="px-3 py-2">
+                                            <span x-text="log.status === 'success' ? '✅' : log.status === 'failed' ? '❌' : '⚠️'"></span>
+                                        </td>
+                                        <td class="px-3 py-2 text-gray-600" x-text="log.actor?.name || log.actor?.first_name || 'System'"></td>
+                                        <td class="px-3 py-2 max-w-xs truncate" x-text="log.message"></td>
+                                        <td class="px-3 py-2">
+                                            <button x-show="log.correlation_id" @click.stop="copyCorrelation(log.correlation_id)" class="text-[10px] font-mono text-indigo-600 hover:underline" x-text="log.correlation_id?.substring(0, 8) + '...'"></button>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr x-show="logList.length === 0 && !logLoading">
+                                    <td colspan="7" class="px-3 py-8 text-center text-gray-500">No logs found</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div x-show="logPagination.last_page > 1" class="flex items-center justify-between mt-4 text-sm">
+                        <span class="text-gray-500" x-text="'Page ' + logPagination.current_page + ' of ' + logPagination.last_page + ' (' + logPagination.total + ' logs)'"></span>
+                        <div class="flex gap-2">
+                            <button @click="logPage(logPagination.current_page - 1)" :disabled="logPagination.current_page <= 1" class="px-3 py-1 border rounded disabled:opacity-50">← Prev</button>
+                            <button @click="logPage(logPagination.current_page + 1)" :disabled="logPagination.current_page >= logPagination.last_page" class="px-3 py-1 border rounded disabled:opacity-50">Next →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log Detail Modal -->
+                <div x-show="logDetailOpen" x-cloak class="fixed inset-0 z-[1060] flex items-center justify-center p-4" style="background:rgba(0,0,0,0.5)" @click.self="logDetailOpen=false">
+                    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[70vh] overflow-y-auto">
+                        <div class="sticky top-0 bg-gray-800 text-white p-4 flex justify-between items-center rounded-t-lg">
+                            <h4 class="font-bold">📋 Log Detail</h4>
+                            <button @click="logDetailOpen=false" class="text-white hover:text-gray-300 text-xl">&times;</button>
+                        </div>
+                        <div class="p-4 space-y-3 text-sm" x-show="logDetail">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div><span class="text-gray-500">Category:</span> <span x-text="logDetail?.category" class="font-medium"></span></div>
+                                <div><span class="text-gray-500">Action:</span> <span x-text="logDetail?.action" class="font-mono"></span></div>
+                                <div><span class="text-gray-500">Status:</span> <span x-text="logDetail?.status" class="font-medium"></span></div>
+                                <div><span class="text-gray-500">Actor:</span> <span x-text="logDetail?.actor?.name || 'System'"></span></div>
+                                <div><span class="text-gray-500">IP:</span> <span x-text="logDetail?.ip_address || '—'" class="font-mono"></span></div>
+                                <div><span class="text-gray-500">Time:</span> <span x-text="logDetail?.created_at ? new Date(logDetail.created_at).toLocaleString() : '—'"></span></div>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Correlation ID:</span>
+                                <button @click="copyCorrelation(logDetail?.correlation_id)" class="ml-1 font-mono text-xs text-indigo-600 hover:underline" x-text="logDetail?.correlation_id"></button>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Message:</span>
+                                <p class="mt-1 text-gray-800" x-text="logDetail?.message"></p>
+                            </div>
+                            <div x-show="logDetail?.context">
+                                <span class="text-gray-500">Context (JSON):</span>
+                                <pre class="mt-1 bg-gray-50 rounded p-3 text-xs overflow-x-auto max-h-48" x-text="JSON.stringify(logDetail?.context, null, 2)"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div x-show="logToast" x-transition class="fixed bottom-6 right-6 z-[1070] px-4 py-3 rounded-lg shadow-lg text-sm text-white bg-green-600">
+                    <span x-text="logToast"></span>
                 </div>
             </section>
 
             </div>
             <!-- ===== END ADMINISTRATION SECTIONS ===== -->
 
-            </div>
             <!-- Close upload wrapper -->
+
+<!-- ===== MODALS ===== -->
+
+<!-- Batch Detail Modal -->
+<div x-show="showBatchDetailModal" x-cloak class="fixed inset-0 z-[1050] flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.5);" @click.self="closeBatchDetailModal()" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <!-- Modal Header -->
+        <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex justify-between items-center">
+            <div>
+                <h3 class="text-xl font-bold">📋 Batch Details</h3>
+                <p class="text-sm text-blue-100" x-text="`Batch Code: ${batchDetail?.batch_code || 'Loading...'}`"></p>
             </div>
+            <button @click="closeBatchDetailModal()" class="text-white hover:text-blue-100 text-2xl">×</button>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="border-b bg-gray-50 flex gap-1 p-4 overflow-x-auto">
+            <button @click="switchBatchDetailTab('overview')" 
+                    :class="batchDetailTab === 'overview' ? 'border-b-2 border-blue-600 text-blue-600 font-bold' : 'text-gray-600'"
+                    class="px-4 py-2 whitespace-nowrap transition">
+                📊 Overview
+            </button>
+            <button @click="switchBatchDetailTab('errors')" 
+                    :class="batchDetailTab === 'errors' ? 'border-b-2 border-blue-600 text-blue-600 font-bold' : 'text-gray-600'"
+                    class="px-4 py-2 whitespace-nowrap transition">
+                ⚠️ Error Rows
+            </button>
+            <button @click="switchBatchDetailTab('valid')" 
+                    :class="batchDetailTab === 'valid' ? 'border-b-2 border-blue-600 text-blue-600 font-bold' : 'text-gray-600'"
+                    class="px-4 py-2 whitespace-nowrap transition">
+                ✓ Valid Rows
+            </button>
+            <button @click="switchBatchDetailTab('audit')" 
+                    :class="batchDetailTab === 'audit' ? 'border-b-2 border-blue-600 text-blue-600 font-bold' : 'text-gray-600'"
+                    class="px-4 py-2 whitespace-nowrap transition">
+                🔍 Audit Trail
+            </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="p-6">
+            <!-- Overview Tab -->
+            <div x-show="batchDetailTab === 'overview'" class="space-y-6">
+                <div x-show="batchDetailsLoading" class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="text-gray-600 mt-2">Loading batch details...</p>
+                </div>
+
+                <div x-show="!batchDetailsLoading && batchDetail">
+                    <!-- Batch Metadata -->
+                    <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold">Batch Code</p>
+                            <p class="text-lg font-mono" x-text="batchDetail?.batch_code"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold">School</p>
+                            <p class="text-lg" x-text="batchDetail?.school?.name"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold">Subject</p>
+                            <p class="text-lg" x-text="batchDetail?.subject?.code + ' - ' + batchDetail?.subject?.name"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold">Exam Year</p>
+                            <p class="text-lg" x-text="batchDetail?.exam_year"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold">Total Records</p>
+                            <p class="text-lg font-bold text-blue-600" x-text="batchDetail?.total_records || 0"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold">Valid Records</p>
+                            <p class="text-lg font-bold text-green-600" x-text="batchDetail?.valid_records || (batchDetail?.total_records || 0) - (batchDetail?.error_count || 0)"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold">Error Records</p>
+                            <p class="text-lg font-bold text-red-600" x-text="batchDetail?.error_count || 0"></p>
+                        </div>
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold">Status</p>
+                            <span class="px-3 py-1 rounded-full text-sm font-bold"
+                                  :class="batchDetail?.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                           batchDetail?.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                           batchDetail?.status === 'validated' ? 'bg-blue-100 text-blue-800' :
+                                           'bg-gray-100 text-gray-800'"
+                                  x-text="batchDetail?.status?.toUpperCase()"></span>
+                        </div>
+                    </div>
+
+                    <!-- Timestamps -->
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <p class="text-gray-600 text-sm font-semibold">Uploaded</p>
+                            <p class="text-sm" x-text="formatDate(batchDetail?.created_at)"></p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <p class="text-gray-600 text-sm font-semibold">Last Modified</p>
+                            <p class="text-sm" x-text="formatDate(batchDetail?.updated_at)"></p>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex gap-4 mt-6 pt-6 border-t">
+                        <button @click="openApproveBatchModal(selectedBatchId)"
+                                x-show="batchDetail?.status === 'validated'"
+                                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition">
+                            ✅ Approve Batch
+                        </button>
+                        <button @click="openRejectBatchModal(selectedBatchId)"
+                                x-show="batchDetail?.status === 'validated'"
+                                class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition">
+                            ❌ Reject Batch
+                        </button>
+                        <button @click="openLockBatchModal(selectedBatchId)"
+                                x-show="batchDetail?.status === 'approved'"
+                                class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 rounded-lg transition">
+                            🔒 Lock & Submit
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="!batchDetailsLoading && batchDetailsError" class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+                    <p x-text="batchDetailsError"></p>
+                </div>
+            </div>
+
+            <!-- Error Rows Tab -->
+            <div x-show="batchDetailTab === 'errors'">
+                <div x-show="batchRawMarksLoading" class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="text-gray-600 mt-2">Loading error rows...</p>
+                </div>
+
+                <div x-show="!batchRawMarksLoading && batchRawMarks.length > 0">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-red-50 border-b">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">Row #</th>
+                                    <th class="px-4 py-2 text-left">Index Number</th>
+                                    <th class="px-4 py-2 text-left">Errors</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="mark in batchRawMarks" :key="mark.id">
+                                    <tr class="border-b hover:bg-red-50">
+                                        <td class="px-4 py-2 font-mono text-xs" x-text="mark.row_number"></td>
+                                        <td class="px-4 py-2 font-mono text-xs" x-text="mark.candidate_index_number"></td>
+                                        <td class="px-4 py-2 text-xs">
+                                            <div class="space-y-1">
+                                                <template x-for="error in mark.error_messages" :key="error">
+                                                    <div class="text-red-700 text-xs" x-text="error"></div>
+                                                </template>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div x-show="!batchRawMarksLoading && batchRawMarks.length === 0" class="text-center py-8 text-gray-500">
+                    <p>✓ No errors found in this batch</p>
+                </div>
+            </div>
+
+            <!-- Valid Rows Tab -->
+            <div x-show="batchDetailTab === 'valid'">
+                <div x-show="batchRawMarksLoading" class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="text-gray-600 mt-2">Loading valid rows...</p>
+                </div>
+
+                <div x-show="!batchRawMarksLoading && batchRawMarks.length > 0">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-green-50 border-b">
+                                <tr>
+                                    <th class="px-4 py-2 text-left">Row #</th>
+                                    <th class="px-4 py-2 text-left">Index Number</th>
+                                    <th class="px-4 py-2 text-left">Papers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="mark in batchRawMarks" :key="mark.id">
+                                    <tr class="border-b hover:bg-green-50">
+                                        <td class="px-4 py-2 font-mono text-xs" x-text="mark.row_number"></td>
+                                        <td class="px-4 py-2 font-mono text-xs" x-text="mark.candidate_index_number"></td>
+                                        <td class="px-4 py-2 text-xs">
+                                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded">Valid</span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div x-show="!batchRawMarksLoading && batchRawMarks.length === 0" class="text-center py-8 text-gray-500">
+                    <p>No valid rows to display</p>
+                </div>
+            </div>
+
+            <!-- Audit Trail Tab -->
+            <div x-show="batchDetailTab === 'audit'">
+                <div x-show="batchRawMarksLoading" class="text-center py-8">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <p class="text-gray-600 mt-2">Loading audit trail...</p>
+                </div>
+
+                <div x-show="!batchRawMarksLoading && batchAuditTrail.length > 0">
+                    <div class="space-y-3">
+                        <template x-for="entry in batchAuditTrail" :key="entry.id">
+                            <div class="border-l-4 border-blue-500 pl-4 py-2">
+                                <p class="font-semibold text-sm">
+                                    <span x-text="entry.action_type"></span> by 
+                                    <span class="text-blue-600" x-text="entry.performed_by"></span>
+                                </p>
+                                <p class="text-xs text-gray-600 mt-1" x-text="formatDate(entry.created_at)"></p>
+                                <p x-show="entry.notes" class="text-xs text-gray-700 mt-1" x-text="entry.notes"></p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div x-show="!batchRawMarksLoading && batchAuditTrail.length === 0" class="text-center py-8 text-gray-500">
+                    <p>No audit trail entries for this batch</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Batch Modal -->
+<div x-show="showApproveBatchModal" x-cloak class="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.6);" @click.self="showApproveBatchModal = false" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-gradient-to-r from-green-600 to-green-700 text-white p-6">
+            <h3 class="text-xl font-bold">✅ Approve Batch</h3>
+            <p class="text-sm text-green-100">Confirm approval for this batch</p>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <p class="text-sm text-gray-700">
+                    Review this batch carefully. Once approved, the submitter will be notified and can proceed to lock it.
+                </p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Optional Feedback
+                </label>
+                <textarea x-model="approveFeedback"
+                          placeholder="Enter optional feedback for the submitter..."
+                          maxlength="1000"
+                          class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          rows="4"></textarea>
+                <p class="text-xs text-gray-500 mt-1" x-text="`${approveFeedback.length}/1000`"></p>
+            </div>
+        </div>
+
+        <div class="border-t p-6 flex gap-3 justify-end">
+            <button @click="showApproveBatchModal = false"
+                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                Cancel
+            </button>
+            <button @click="approveBatchConfirm()"
+                    :disabled="isApproving"
+                    class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition disabled:opacity-50">
+                <span x-show="!isApproving">✅ Approve</span>
+                <span x-show="isApproving">Processing...</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Batch Modal -->
+<div x-show="showRejectBatchModal" x-cloak class="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.6);" @click.self="showRejectBatchModal = false" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white p-6">
+            <h3 class="text-xl font-bold">❌ Reject Batch</h3>
+            <p class="text-sm text-red-100">Provide reason for rejection</p>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div class="bg-red-50 border border-red-200 p-4 rounded-lg">
+                <p class="text-sm text-gray-700">
+                    The submitter will be required to correct the issues and resubmit the batch.
+                </p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Rejection Reason <span class="text-red-600">*</span>
+                </label>
+                <textarea x-model="rejectReason"
+                          placeholder="Describe the issues that need to be corrected (min. 10 characters)..."
+                          minlength="10"
+                          maxlength="1000"
+                          class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                          rows="4"></textarea>
+                <p class="text-xs text-gray-600 mt-1">
+                    <span x-show="rejectReason.length < 10" class="text-red-600">
+                        Minimum 10 characters required (<span x-text="rejectReason.length"></span>/10)
+                    </span>
+                    <span x-show="rejectReason.length >= 10" class="text-green-600">✓ Ready to submit</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="border-t p-6 flex gap-3 justify-end">
+            <button @click="showRejectBatchModal = false"
+                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                Cancel
+            </button>
+            <button @click="rejectBatchConfirm()"
+                    :disabled="isRejecting || rejectReason.length < 10"
+                    class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition disabled:opacity-50">
+                <span x-show="!isRejecting">❌ Reject</span>
+                <span x-show="isRejecting">Processing...</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Lock Batch Modal -->
+<div x-show="showLockBatchModal" x-cloak class="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.6);" @click.self="showLockBatchModal = false" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-gradient-to-r from-orange-600 to-orange-700 text-white p-6">
+            <h3 class="text-xl font-bold">🔒 Lock & Submit Batch</h3>
+            <p class="text-sm text-orange-100">Finalize and submit batch for processing</p>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div class="bg-orange-50 border border-orange-200 p-4 rounded-lg">
+                <p class="text-sm text-gray-800 font-semibold">⚠️ Warning</p>
+                <p class="text-sm text-gray-700 mt-2">
+                    Once locked, this batch cannot be modified. Please ensure all data is correct before proceeding.
+                </p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Confirmation <span class="text-red-600">*</span>
+                </label>
+                <p class="text-xs text-gray-600 mb-2">Type <span class="font-bold">LOCK</span> to confirm:</p>
+                <input x-model="lockConfirmText"
+                       type="text"
+                       placeholder="Type LOCK to confirm"
+                       class="w-full border border-gray-300 rounded-lg p-3 text-sm uppercase focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                       @input="lockConfirmText = lockConfirmText.toUpperCase()">
+            </div>
+        </div>
+
+        <div class="border-t p-6 flex gap-3 justify-end">
+            <button @click="showLockBatchModal = false"
+                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                Cancel
+            </button>
+            <button @click="lockBatchConfirm()"
+                    :disabled="isLocking || lockConfirmText.toUpperCase() !== 'LOCK'"
+                    class="px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white font-bold rounded-lg transition disabled:opacity-50">
+                <span x-show="!isLocking">🔒 Lock Batch</span>
+                <span x-show="isLocking">Processing...</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Unlock Batch Modal (Admin Only) -->
+<div x-show="showUnlockBatchModal" x-cloak class="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.6);" @click.self="closeUnlockModal()" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
+            <h3 class="text-xl font-bold">🔓 Admin Unlock</h3>
+            <p class="text-sm text-purple-100">Request unlock for modifications (admin action)</p>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div class="bg-purple-50 border border-purple-200 p-4 rounded-lg">
+                <p class="text-sm text-gray-800 font-semibold">⚠️ Admin Only</p>
+                <p class="text-sm text-gray-700 mt-2">
+                    This action will unlock the batch and allow the submitter to make corrections.
+                </p>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Unlock Reason <span class="text-red-600">*</span>
+                </label>
+                <textarea x-model="unlockReason"
+                          placeholder="Explain why this batch needs to be unlocked for modification (min. 10 characters)..."
+                          minlength="10"
+                          maxlength="500"
+                          class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          rows="4"></textarea>
+                <p class="text-xs text-gray-600 mt-1">
+                    <span x-show="unlockReason.length < 10" class="text-red-600">
+                        Minimum 10 characters required (<span x-text="unlockReason.length"></span>/10)
+                    </span>
+                    <span x-show="unlockReason.length >= 10" class="text-green-600">✓ Ready to submit</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="border-t p-6 flex gap-3 justify-end">
+            <button @click="closeUnlockModal()"
+                    :disabled="isUnlocking"
+                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition disabled:opacity-50">
+                Cancel
+            </button>
+            <button @click="unlockBatchConfirm()"
+                    :disabled="isUnlocking || unlockReason.length < 10"
+                    class="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition disabled:opacity-50">
+                <span x-show="!isUnlocking">🔓 Unlock</span>
+                <span x-show="isUnlocking">Processing...</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+</div> <!-- Close main x-data="markEntryManager()" div -->
 
 <script>
 function markEntryManager() {
@@ -2045,6 +4219,28 @@ function markEntryManager() {
         bulkCsvLoading: false,
         districtBulkCsvLoading: false,
         districtBulkScoresheetLoading: false,
+        // Reports & Exports states
+        reportExamYear: '',
+        reportRegion: '',
+        reportDistrict: '',
+        reportSchool: '',
+        reportSubject: '',
+        reportSubjects: [],
+        reportExporting: false,
+        reportMessage: '',
+        reportError: false,
+        summaryReportData: null,
+        summaryReportLoading: false,
+        reportMode: 'approved', // 'approved' or 'all'
+        // Report filter dropdown states
+        rptRegionOpen: false,
+        rptDistrictOpen: false,
+        rptSchoolOpen: false,
+        rptSubjectOpen: false,
+        rptRegionSearch: '',
+        rptDistrictSearch: '',
+        rptSchoolSearch: '',
+        rptSubjectSearch: '',
         // Bulk import states
         importMode: 'single',
         bulkZipPreview: null,
@@ -2072,6 +4268,10 @@ function markEntryManager() {
              if (!this.selectedDistrict) return this.schools;
              return this.schools.filter(s => s.district_id == this.selectedDistrict);
          },
+
+        // Report-specific data arrays (loaded independently from upload section)
+        rptDistricts: [],
+        rptSchools: [],
 
          // ========== LOCALSTORAGE PERSISTENCE ==========
          saveContext() {
@@ -2104,6 +4304,7 @@ function markEntryManager() {
                     // restore active view if available and valid
                     if (context.activeView && this.viewRegistry[context.activeView]) {
                         this.activeView = context.activeView;
+                        this.syncImportMode(context.activeView);
                     }
                      console.log('✓ Context restored from localStorage');
                  }
@@ -2132,11 +4333,11 @@ function markEntryManager() {
              'approve-marks': { label: '✅ Approve Marks', category: 'Moderation & Review', lazy: true },
              'reject-feedback': { label: '❌ Reject & Feedback', category: 'Moderation & Review', lazy: true },
              'lock-status': { label: '🔒 Lock Status', category: 'Submission & Locking', lazy: true },
-             'submit-marks': { label: '📤 Submit Marks', category: 'Submission & Locking', lazy: false },
-             'admin-unlock': { label: '🔓 Admin Unlock', category: 'Submission & Locking', lazy: false },
+             'submit-marks': { label: '📤 Submit Marks', category: 'Submission & Locking', lazy: true },
+             'admin-unlock': { label: '🔓 Admin Unlock', category: 'Submission & Locking', lazy: true },
              'history': { label: '📜 History', category: 'Submission & Locking', lazy: true },
              'scoresheets-pdf': { label: '📄 Scoresheets (PDF)', category: 'Reports & Exports', lazy: true },
-             'csv-export': { label: '📊 CSV Export', category: 'Reports & Exports', lazy: false },
+              'csv-export': { label: '📊 CSV Export', category: 'Reports & Exports', lazy: true },
              'analytics': { label: '📈 Analytics', category: 'Reports & Exports', lazy: true },
              'summary-report': { label: '📋 Summary Report', category: 'Reports & Exports', lazy: true },
              'lifecycle-dashboard': { label: '📊 Lifecycle Dashboard', category: 'Monitoring & Audit', lazy: true },
@@ -2159,6 +4360,9 @@ function markEntryManager() {
              this.activeView = viewKey;
              this.closeAllDropdowns();
              
+             // Sync importMode for upload sub-views
+             this.syncImportMode(viewKey);
+
              // Update URL with view parameter
              this.updateUrlState(viewKey);
 
@@ -2169,6 +4373,9 @@ function markEntryManager() {
              if (this.viewRegistry[viewKey].lazy) {
                  this.onViewEnter(viewKey);
              }
+             
+             // Scroll to top of content area
+             window.scrollTo({ top: 0, behavior: 'smooth' });
              
              console.log(`✓ Navigated to view: ${viewKey}`);
          },
@@ -2190,14 +4397,30 @@ function markEntryManager() {
                  case 'pending-review':
                      this.loadModerationDashboard();
                      break;
-                 case 'lock-status':
-                     this.loadLockStatus();
-                     break;
-                 case 'analytics':
-                 case 'summary-report':
-                 case 'lifecycle-dashboard':
-                     this.loadAnalytics();
-                     break;
+                 case 'submit-marks':
+                      // submitMarksView handles its own x-init="loadBatches()"
+                      break;
+                   case 'lock-status':
+                      // lockStatusView handles its own x-init="loadData()"
+                      break;
+                   case 'admin-unlock':
+                      // adminUnlockView handles its own x-init="loadLockedBatches()"
+                      break;
+                   case 'history':
+                      break;
+                 case 'scoresheets-pdf':
+                  case 'csv-export':
+                      // Reset report state when entering
+                      this.reportMessage = '';
+                      this.reportError = false;
+                      break;
+                  case 'analytics':
+                  case 'lifecycle-dashboard':
+                      this.loadAnalytics();
+                      break;
+                  case 'summary-report':
+                      this.loadSummaryReport();
+                      break;
              }
          },
 
@@ -2212,6 +4435,12 @@ function markEntryManager() {
             } catch (e) {}
          },
 
+         // Sync importMode from a view key
+         syncImportMode(viewKey) {
+             const map = { 'upload-marks': 'single', 'single-subject-csv': 'single', 'school-bulk-zip': 'schoolBulk', 'district-bulk-zip': 'district' };
+             if (map[viewKey]) this.importMode = map[viewKey];
+         },
+
          // Initialize from URL
          initViewFromUrl() {
              const url = new URL(window.location);
@@ -2219,6 +4448,7 @@ function markEntryManager() {
              
              if (viewParam && this.viewRegistry[viewParam]) {
                  this.activeView = viewParam;
+                 this.syncImportMode(viewParam);
                  console.log(`✓ View restored from URL: ${viewParam}`);
                  
                  // Lazy load if needed
@@ -2236,6 +4466,7 @@ function markEntryManager() {
              const viewParam = url.searchParams.get('view');
              if (viewParam && this.viewRegistry[viewParam]) {
                 this.activeView = viewParam;
+                this.syncImportMode(viewParam);
                 console.log(`✓ View changed via back/forward: ${viewParam}`);
                 // lazy load if necessary
                 if (this.viewRegistry[viewParam].lazy) this.onViewEnter(viewParam);
@@ -3182,7 +5413,34 @@ function markEntryManager() {
          // District Bulk Import Methods
          districtExamYear: '',
          districtId: '',
+         districtBulkRegionId: '',
          districtBulkList: [],
+
+         get districtBulkRegions() {
+             const regionMap = {};
+             for (const d of this.districtBulkList) {
+                 if (d.region_id && d.region) {
+                     regionMap[d.region_id] = d.region;
+                 } else if (d.region_id) {
+                     const r = (this.regions || []).find(r => r.id === d.region_id);
+                     if (r) regionMap[d.region_id] = r;
+                 }
+             }
+             // Fallback: derive unique regions from the loaded regions list filtered to those present in districtBulkList
+             if (Object.keys(regionMap).length === 0) {
+                 const regionIds = [...new Set(this.districtBulkList.map(d => d.region_id).filter(Boolean))];
+                 for (const id of regionIds) {
+                     const r = (this.regions || []).find(r => r.id === id);
+                     if (r) regionMap[id] = r;
+                 }
+             }
+             return Object.values(regionMap).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+         },
+
+         get filteredDistrictBulkList() {
+             if (!this.districtBulkRegionId) return this.districtBulkList;
+             return this.districtBulkList.filter(d => d.region_id == this.districtBulkRegionId);
+         },
          selectedZipFile: null,
          dragOver: false,
          
@@ -3273,11 +5531,12 @@ function markEntryManager() {
          },
          
          async onDistrictExamYearChange() {
-             // Reset district selection when exam year changes
-             this.districtId = '';
-             
-             // Load districts for selected exam year
-             if (this.districtExamYear) {
+              // Reset region and district selection when exam year changes
+              this.districtBulkRegionId = '';
+              this.districtId = '';
+              
+              // Load districts for selected exam year
+              if (this.districtExamYear) {
                  await this.loadDistrictBulkList();
              } else {
                  this.districtBulkList = [];
@@ -3477,22 +5736,321 @@ function markEntryManager() {
                    new Date(date).toLocaleTimeString();
             },
             
-            // =========== MODERATION DASHBOARD ===========
+            // =========== DASHBOARD STATS (new moderation API) ===========
+            dashboardStats: { total_pending: 0, errors_to_review: 0, approved_today: 0, rejected_today: 0 },
+            dashboardStatsLoading: false,
+
+            async loadReviewDashboard() {
+                this.dashboardStatsLoading = true;
+                try {
+                    const resp = await fetch('/api/mark-entry/acsee/moderation/dashboard', {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const json = await resp.json();
+                    if (json.success) {
+                        this.dashboardStats = json.data;
+                    }
+                } catch (err) {
+                    console.error('Dashboard stats error:', err);
+                } finally {
+                    this.dashboardStatsLoading = false;
+                }
+                // Also load recent batches for the table
+                await this.loadModerationDashboard(1);
+            },
+
+            // =========== PENDING QUEUE (new moderation API) ===========
+            pendingQueueBatches: [],
+            pendingQueueLoading: false,
+            pendingQueueError: null,
+            pendingQueuePage: 1,
+            pendingQueueLastPage: 1,
+            pendingQueueTotal: 0,
+            pendingQueueHasMore: false,
+            pendingFilters: { exam_year: '', region_id: '', school_search: '', subject_id: '', status: '' },
+
+            async loadPendingQueue(page = 1) {
+                this.pendingQueueLoading = true;
+                this.pendingQueueError = null;
+                try {
+                    const params = new URLSearchParams({ page, per_page: 20 });
+                    if (this.pendingFilters.exam_year) params.set('exam_year', this.pendingFilters.exam_year);
+                    if (this.pendingFilters.region_id) params.set('region_id', this.pendingFilters.region_id);
+                    if (this.pendingFilters.subject_id) params.set('subject_id', this.pendingFilters.subject_id);
+                    if (this.pendingFilters.status) params.set('status', this.pendingFilters.status);
+
+                    const resp = await fetch(`/api/mark-entry/acsee/moderation/pending?${params}`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const json = await resp.json();
+                    if (json.success) {
+                        this.pendingQueueBatches = json.data || [];
+                        this.pendingQueuePage = json.pagination.current_page;
+                        this.pendingQueueLastPage = json.pagination.last_page;
+                        this.pendingQueueTotal = json.pagination.total;
+                        this.pendingQueueHasMore = json.pagination.has_more;
+                    } else {
+                        this.pendingQueueError = json.message || 'Failed to load pending queue';
+                    }
+                } catch (err) {
+                    this.pendingQueueError = 'Failed to load: ' + err.message;
+                } finally {
+                    this.pendingQueueLoading = false;
+                }
+            },
+
+            // =========== ERRORS MODAL ===========
+            showErrorsModal: false,
+            errorsModalLoading: false,
+            errorsModalData: [],
+            errorsModalBatchId: null,
+
+            async viewBatchErrors(batchId) {
+                this.errorsModalBatchId = batchId;
+                this.showErrorsModal = true;
+                this.errorsModalLoading = true;
+                this.errorsModalData = [];
+                try {
+                    const resp = await fetch(`/api/mark-entry/acsee/moderation/errors?batch_id=${batchId}&per_page=200`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const json = await resp.json();
+                    if (json.success) {
+                        this.errorsModalData = json.data || [];
+                    }
+                } catch (err) {
+                    this.showMessage('Failed to load errors: ' + err.message, 'error');
+                } finally {
+                    this.errorsModalLoading = false;
+                }
+            },
+
+            downloadBatchErrorsCsv() {
+                if (!this.errorsModalBatchId) return;
+                window.open(`/api/mark-entry/acsee/moderation/errors/csv?batch_id=${this.errorsModalBatchId}`, '_blank');
+            },
+
+            // =========== INC RESOLUTION ===========
+            showIncConfirm: false,
+            incConfirmAction: null,
+            incConfirmError: null,
+            incConfirmNote: '',
+            incResolvingId: null,
+
+            showIncConfirmModal(err, action) {
+                this.incConfirmError = err;
+                this.incConfirmAction = action;
+                this.incConfirmNote = '';
+                this.showIncConfirm = true;
+            },
+
+            async resolveIncIssue(action) {
+                if (!this.incConfirmError) return;
+                const issueId = this.incConfirmError.id;
+                this.incResolvingId = issueId;
+
+                const endpoint = action === 'accept'
+                    ? `/api/mark-entry/acsee/moderation/issues/${issueId}/accept-inc`
+                    : `/api/mark-entry/acsee/moderation/issues/${issueId}/reject`;
+
+                try {
+                    const resp = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({ note: this.incConfirmNote }),
+                    });
+                    const json = await resp.json();
+                    if (json.ok) {
+                        this.showMessage(json.message, 'success');
+                        this.showIncConfirm = false;
+                        // Refresh errors list
+                        await this.viewBatchErrors(this.errorsModalBatchId);
+                    } else {
+                        this.showMessage(json.message || 'Failed to resolve issue', 'error');
+                    }
+                } catch (err) {
+                    this.showMessage('Network error: ' + err.message, 'error');
+                } finally {
+                    this.incResolvingId = null;
+                }
+            },
+
+            // =========== REJECT & FEEDBACK ===========
+            rejectionsList: [],
+            rejectionsLoading: false,
+            rejectForm: { scope: 'batch', batch_id: '', reason_code: '', note: '' },
+            rejectFormSubmitting: false,
+
+            async loadRejectionHistory() {
+                this.rejectionsLoading = true;
+                try {
+                    const resp = await fetch('/api/mark-entry/acsee/moderation/rejections?per_page=50', {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const json = await resp.json();
+                    if (json.success) {
+                        this.rejectionsList = json.data || [];
+                    }
+                } catch (err) {
+                    console.error('Rejections load error:', err);
+                } finally {
+                    this.rejectionsLoading = false;
+                }
+            },
+
+            async submitScopedReject() {
+                if (!this.rejectForm.batch_id || !this.rejectForm.reason_code) return;
+                if ((this.rejectForm.note || '').length > 0 && (this.rejectForm.note || '').length < 10) {
+                    this.showMessage('Note must be at least 10 characters if provided.', 'error');
+                    return;
+                }
+                this.rejectFormSubmitting = true;
+                try {
+                    const resp = await fetch('/api/mark-entry/acsee/moderation/reject', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify(this.rejectForm),
+                    });
+                    const json = await resp.json();
+                    if (json.success) {
+                        this.showMessage(json.message || 'Rejection recorded.', 'success');
+                        this.rejectForm = { scope: 'batch', batch_id: '', reason_code: '', note: '' };
+                        await this.loadRejectionHistory();
+                    } else {
+                        this.showMessage(json.message || 'Failed to reject.', 'error');
+                    }
+                } catch (err) {
+                    this.showMessage('Error: ' + err.message, 'error');
+                } finally {
+                    this.rejectFormSubmitting = false;
+                }
+            },
+
+            // =========== MODERATION DASHBOARD (legacy — loads batches for table) ===========
             async loadModerationDashboard(page = 1) {
             try {
                 this.loading = true;
+                this.error = null;
                 const response = await this.fetchApi(
-                    `/api/mark-entry/moderation/pending?page=${page}&per_page=${this.perPage}`
+                    `/api/mark-entry/acsee/moderation/pending?page=${page}&per_page=${this.perPage}`
                 );
                 
-                this.moderationBatches = response.data;
-                this.totalBatches = response.pagination.total;
-                this.currentPage = page;
-                
-                console.log(`✓ Loaded ${this.moderationBatches.length} pending batches`);
+                if (response.success) {
+                    this.moderationBatches = response.data || [];
+                    this.totalBatches = response.pagination.total;
+                    this.currentPage = page;
+                    this.hasModerationMore = response.pagination.has_more;
+                } else {
+                    this.error = response.message || 'Failed to load batches';
+                }
             } catch (err) {
-                this.error = 'Failed to load moderation dashboard';
+                this.error = 'Failed to load moderation dashboard: ' + err.message;
+            } finally {
+                this.loading = false;
             }
+            },
+            
+            // Alias for pending review
+            async loadPendingReview(page = 1) {
+                return this.loadModerationDashboard(page);
+            },
+            
+            // =========== BATCH DETAIL ===========
+            batchDetail: null,
+            batchDetailsLoading: false,
+            batchDetailsError: null,
+            showBatchDetailModal: false,
+            batchDetailTab: 'overview', // overview, errors, valid, audit
+            batchRawMarks: [],
+            batchRawMarksLoading: false,
+            batchAuditTrail: [],
+            
+            async openBatchDetail(batchId) {
+                this.selectedBatchId = batchId;
+                this.showBatchDetailModal = true;
+                this.batchDetailTab = 'overview';
+                await this.loadBatchDetail(batchId);
+            },
+            
+            async loadBatchDetail(batchId) {
+                try {
+                    this.batchDetailsLoading = true;
+                    this.batchDetailsError = null;
+                    
+                    const response = await this.fetchApi(`/api/mark-entry/moderation/batch/${batchId}`);
+                    
+                    if (response.success) {
+                        this.batchDetail = response.batch;
+                        console.log('✓ Loaded batch details');
+                    } else {
+                        this.batchDetailsError = response.message || 'Failed to load batch';
+                    }
+                } catch (err) {
+                    this.batchDetailsError = 'Error loading batch details: ' + err.message;
+                } finally {
+                    this.batchDetailsLoading = false;
+                }
+            },
+            
+            async loadBatchRawMarks(batchId, type = 'all') {
+                try {
+                    this.batchRawMarksLoading = true;
+                    const response = await this.fetchApi(
+                        `/api/mark-entry/moderation/batch/${batchId}/raw-marks?type=${type}&per_page=50`
+                    );
+                    
+                    if (response.success) {
+                        this.batchRawMarks = response.data || [];
+                    } else {
+                        this.batchDetailsError = response.message || 'Failed to load marks';
+                    }
+                } catch (err) {
+                    this.batchDetailsError = 'Error loading marks: ' + err.message;
+                } finally {
+                    this.batchRawMarksLoading = false;
+                }
+            },
+            
+            async switchBatchDetailTab(tab) {
+                this.batchDetailTab = tab;
+                if (this.selectedBatchId && (tab === 'errors' || tab === 'valid')) {
+                    const type = tab === 'errors' ? 'errors' : 'valid';
+                    await this.loadBatchRawMarks(this.selectedBatchId, type);
+                } else if (this.selectedBatchId && tab === 'audit') {
+                    await this.loadBatchAuditTrail(this.selectedBatchId);
+                }
+            },
+            
+            async loadBatchAuditTrail(batchId) {
+                try {
+                    this.batchRawMarksLoading = true;
+                    const response = await this.fetchApi(`/api/mark-entry/audit/batch/${batchId}?per_page=50`);
+                    
+                    if (response.success || response.data) {
+                        this.batchAuditTrail = response.data || [];
+                    }
+                } catch (err) {
+                    console.error('Error loading audit trail:', err);
+                } finally {
+                    this.batchRawMarksLoading = false;
+                }
+            },
+            
+            closeBatchDetailModal() {
+                this.showBatchDetailModal = false;
+                this.selectedBatchId = null;
+                this.batchDetail = null;
+                this.batchRawMarks = [];
+                this.batchAuditTrail = [];
             },
             
             // =========== LOCK STATUS ===========
@@ -3507,6 +6065,21 @@ function markEntryManager() {
                 console.log(`✓ Loaded ${this.readyBatches.length} batches ready for locking`);
             } catch (err) {
                 this.error = 'Failed to load lock status';
+            }
+            },
+
+            // Load submitted batches
+            async loadSubmittedBatches(page = 1) {
+            try {
+                this.loading = true;
+                const response = await this.fetchApi(
+                    `/api/mark-entry/submission/submitted?page=${page}&per_page=${this.perPage}`
+                );
+                
+                this.submittedBatches = response.data || [];
+                console.log(`✓ Loaded ${this.submittedBatches.length} submitted batches`);
+            } catch (err) {
+                this.error = 'Failed to load submitted batches';
             }
             },
             
@@ -3553,6 +6126,211 @@ function markEntryManager() {
             }
             },
             
+            // =========== REPORTS & EXPORTS ===========
+            async onReportRegionChange() {
+                this.reportDistrict = '';
+                this.reportSchool = '';
+                this.reportSubject = '';
+                this.reportSubjects = [];
+                this.rptDistricts = [];
+                this.rptSchools = [];
+                this.rptDistrictSearch = '';
+                this.rptSchoolSearch = '';
+                this.rptSubjectSearch = '';
+                if (this.reportRegion) {
+                    try {
+                        const resp = await this.fetchApi(`/mark-entry/acsee/api/districts?region_id=${this.reportRegion}`);
+                        this.rptDistricts = resp.data || [];
+                    } catch (e) { console.error('Failed to load report districts:', e); }
+                }
+            },
+            async onReportDistrictChange() {
+                this.reportSchool = '';
+                this.reportSubject = '';
+                this.reportSubjects = [];
+                this.rptSchools = [];
+                this.rptSchoolSearch = '';
+                this.rptSubjectSearch = '';
+                if (this.reportDistrict) {
+                    try {
+                        const resp = await this.fetchApi(`/mark-entry/acsee/api/schools?district_id=${this.reportDistrict}`);
+                        this.rptSchools = resp.data || [];
+                    } catch (e) { console.error('Failed to load report schools:', e); }
+                }
+            },
+            onReportSchoolChange() {
+                this.reportSubject = '';
+                this.rptSubjectSearch = '';
+                this.loadReportSubjects();
+            },
+            closeRptDropdowns() {
+                this.rptRegionOpen = false;
+                this.rptDistrictOpen = false;
+                this.rptSchoolOpen = false;
+                this.rptSubjectOpen = false;
+            },
+
+            async loadReportSubjects() {
+                if (!this.reportExamYear || !this.reportSchool) {
+                    this.reportSubjects = [];
+                    return;
+                }
+                try {
+                    const response = await this.fetchApi(
+                        `/mark-entry/acsee/reports/scoresheet-subjects?school_id=${this.reportSchool}&exam_year_id=${this.reportExamYear}&mode=${this.reportMode}`
+                    );
+                    this.reportSubjects = response.data || [];
+                } catch (err) {
+                    this.reportSubjects = [];
+                    console.error('Failed to load report subjects:', err);
+                }
+            },
+
+            async downloadScoresheetPdf(level = 'single') {
+                this.reportExporting = true;
+                this.reportMessage = '';
+                this.reportError = false;
+                try {
+                    let url;
+                    switch (level) {
+                        case 'single':
+                            if (!this.reportExamYear || !this.reportSchool || !this.reportSubject) return;
+                            url = `/mark-entry/acsee/reports/scoresheet-pdf?exam_year_id=${this.reportExamYear}&school_id=${this.reportSchool}&subject_id=${this.reportSubject}&mode=${this.reportMode}`;
+                            break;
+                        case 'school':
+                            if (!this.reportExamYear || !this.reportSchool) return;
+                            url = `/mark-entry/acsee/reports/scoresheet-pdf/school-zip?exam_year_id=${this.reportExamYear}&school_id=${this.reportSchool}&mode=${this.reportMode}`;
+                            break;
+                        case 'district':
+                            if (!this.reportExamYear || !this.reportDistrict) return;
+                            url = `/mark-entry/acsee/reports/scoresheet-pdf/district-zip?exam_year_id=${this.reportExamYear}&district_id=${this.reportDistrict}&mode=${this.reportMode}`;
+                            break;
+                        case 'region':
+                            if (!this.reportExamYear || !this.reportRegion) return;
+                            url = `/mark-entry/acsee/reports/scoresheet-pdf/region-zip?exam_year_id=${this.reportExamYear}&region_id=${this.reportRegion}&mode=${this.reportMode}`;
+                            break;
+                    }
+                    const response = await fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Download failed');
+                    }
+                    const blob = await response.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    const disposition = response.headers.get('Content-Disposition');
+                    link.download = disposition?.split('filename=')[1]?.replace(/"/g, '') || (level === 'single' ? 'scoresheet.pdf' : 'scoresheets.zip');
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    this.reportMessage = `✅ ${level.charAt(0).toUpperCase() + level.slice(1)} scoresheet ${level === 'single' ? 'PDF' : 'ZIP'} downloaded successfully`;
+                    this.reportError = false;
+                } catch (err) {
+                    this.reportMessage = '❌ ' + (err.message || 'Failed to generate scoresheets');
+                    this.reportError = true;
+                } finally {
+                    this.reportExporting = false;
+                }
+            },
+
+            async downloadCsvExport(type) {
+                if (!this.reportExamYear) return;
+                this.reportExporting = true;
+                this.reportMessage = '';
+                this.reportError = false;
+                try {
+                    let url;
+                    if (type === 'school-subject') {
+                        if (!this.reportSchool || !this.reportSubject) return;
+                        url = `/mark-entry/acsee/reports/csv-export/school-subject?exam_year_id=${this.reportExamYear}&school_id=${this.reportSchool}&subject_id=${this.reportSubject}&mode=${this.reportMode}`;
+                    } else if (type === 'school-zip') {
+                        if (!this.reportSchool) return;
+                        url = `/mark-entry/acsee/reports/csv-export/school-zip?exam_year_id=${this.reportExamYear}&school_id=${this.reportSchool}&mode=${this.reportMode}`;
+                    } else if (type === 'district-zip') {
+                        if (!this.reportDistrict) return;
+                        url = `/mark-entry/acsee/reports/csv-export/district-zip?exam_year_id=${this.reportExamYear}&district_id=${this.reportDistrict}&mode=${this.reportMode}`;
+                    }
+                    const response = await fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Download failed');
+                    }
+                    const blob = await response.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'export.csv';
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                    this.reportMessage = '✅ CSV export downloaded successfully';
+                    this.reportError = false;
+                } catch (err) {
+                    this.reportMessage = '❌ ' + (err.message || 'Failed to generate CSV');
+                    this.reportError = true;
+                } finally {
+                    this.reportExporting = false;
+                }
+            },
+
+            async loadSummaryReport() {
+                if (!this.reportExamYear) {
+                    // Use first exam year if available
+                    if (this.examYears.length > 0) {
+                        this.reportExamYear = this.examYears[0].id;
+                    } else {
+                        return;
+                    }
+                }
+                const yearId = this.reportExamYear || (this.examYears.length > 0 ? this.examYears[0].id : '');
+                if (!yearId) return;
+
+                this.summaryReportLoading = true;
+                this.loading = true;
+                try {
+                    const response = await this.fetchApi(
+                        `/mark-entry/acsee/reports/summary?exam_year_id=${yearId}`
+                    );
+                    this.summaryReportData = response.data;
+                    // Also load general analytics if not already loaded
+                    if (!this.analyticsData) {
+                        await this.loadAnalytics();
+                    }
+                } catch (err) {
+                    this.error = 'Failed to load summary report';
+                    console.error('Summary report error:', err);
+                } finally {
+                    this.summaryReportLoading = false;
+                    this.loading = false;
+                }
+            },
+
+            async downloadSummaryPdf() {
+                const yearId = this.reportExamYear || (this.examYears.length > 0 ? this.examYears[0].id : '');
+                if (!yearId) return;
+                this.reportExporting = true;
+                try {
+                    const response = await fetch(`/mark-entry/acsee/reports/summary/pdf?exam_year_id=${yearId}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!response.ok) {
+                        const err = await response.json();
+                        throw new Error(err.error || 'Download failed');
+                    }
+                    const blob = await response.blob();
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = 'summary_report.pdf';
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                } catch (err) {
+                    alert('Failed to download summary PDF: ' + err.message);
+                } finally {
+                    this.reportExporting = false;
+                }
+            },
+
             // =========== AUDIT TRAIL ===========
             async loadAuditTrail(batchId, page = 1) {
             try {
@@ -3633,9 +6411,12 @@ function markEntryManager() {
                     if (data.success) {
                         this.showMessage('Batch approved successfully', 'success');
                         this.showApproveBatchModal = false;
+                        this.showBatchDetailModal = false;
                         this.approveFeedback = '';
-                        // Refresh the moderation dashboard
+                        // Refresh the moderation dashboard and approve view
                         await this.loadPendingReview();
+                        this.loadReviewDashboard();
+                        if (this.activeView === 'approve-marks') await this.loadApprovableBatches(1);
                     } else {
                         this.showMessage(data.message || 'Failed to approve batch', 'error');
                     }
@@ -3691,9 +6472,12 @@ function markEntryManager() {
                     if (data.success) {
                         this.showMessage('Batch rejected successfully. Submitter will be notified.', 'success');
                         this.showRejectBatchModal = false;
+                        this.showBatchDetailModal = false;
                         this.rejectReason = '';
-                        // Refresh the moderation dashboard
+                        // Refresh the moderation dashboard and approve view
                         await this.loadPendingReview();
+                        this.loadReviewDashboard();
+                        if (this.activeView === 'approve-marks') await this.loadApprovableBatches(1);
                     } else {
                         this.showMessage(data.message || 'Failed to reject batch', 'error');
                     }
@@ -3756,8 +6540,9 @@ function markEntryManager() {
                         this.showMessage('Batch locked and submitted successfully', 'success');
                         this.showLockBatchModal = false;
                         this.lockConfirmText = '';
-                        // Refresh the submission dashboard
+                        // Refresh the submission dashboard and approve view
                         await this.loadLockStatus();
+                        if (this.activeView === 'approve-marks') await this.loadApprovableBatches(1);
                     } else {
                         this.showMessage(data.message || 'Failed to lock batch', 'error');
                     }
@@ -3845,10 +6630,59 @@ function markEntryManager() {
                     this.selectedBatchId = null;
                     
                     // Refresh if success
-                    if (success && this.loadSubmittedBatches) {
-                        setTimeout(() => this.loadSubmittedBatches(), 500);
+                    if (success) {
+                        if (this.loadSubmittedBatches) setTimeout(() => this.loadSubmittedBatches(), 500);
+                        if (this.activeView === 'approve-marks') setTimeout(() => this.loadApprovableBatches(1), 500);
                     }
                 }
+            },
+
+            // =========== APPROVE MARKS DASHBOARD ===========
+            approvableBatches: [],
+            approvableLoading: false,
+            approvableError: null,
+            approvableCurrentPage: 1,
+            approvableTotalBatches: 0,
+            approvableHasMore: false,
+            approvableFilter: 'all', // 'all', 'submitted', 'approved'
+
+            async loadApprovableBatches(page = 1) {
+                try {
+                    this.approvableLoading = true;
+                    this.approvableError = null;
+
+                    // Load both submitted (ready for approval) and approved (ready for locking)
+                    const [submittedRes, readyRes] = await Promise.all([
+                        this.fetchApi(`/api/mark-entry/submission/submitted?page=${page}&per_page=${this.perPage}`),
+                        this.fetchApi(`/api/mark-entry/submission/ready?page=${page}&per_page=${this.perPage}`)
+                    ]);
+
+                    const submitted = (submittedRes.data || []).map(b => ({ ...b, _stage: 'submitted' }));
+                    const approved  = (readyRes.data || []).map(b => ({ ...b, _stage: 'approved' }));
+                    const combined  = [...submitted, ...approved];
+
+                    if (this.approvableFilter === 'submitted') {
+                        this.approvableBatches = submitted;
+                    } else if (this.approvableFilter === 'approved') {
+                        this.approvableBatches = approved;
+                    } else {
+                        this.approvableBatches = combined;
+                    }
+
+                    this.approvableTotalBatches = combined.length;
+                    this.approvableCurrentPage = page;
+                    console.log(`✓ Loaded ${this.approvableBatches.length} approvable batches`);
+                } catch (err) {
+                    this.approvableError = 'Failed to load approvable batches: ' + err.message;
+                    console.error('Error:', err);
+                } finally {
+                    this.approvableLoading = false;
+                }
+            },
+
+            setApprovableFilter(filter) {
+                this.approvableFilter = filter;
+                this.loadApprovableBatches(1);
             },
 
             // =========== TOAST NOTIFICATION SYSTEM ===========
@@ -3878,16 +6712,763 @@ function markEntryManager() {
 
             };
             }
+
+// ==================== SUBMIT MARKS VIEW ====================
+function submitMarksView() {
+    return {
+        batches: [],
+        isLoading: false,
+        errorMsg: '',
+        submittingId: null,
+        showDetailModal: false,
+        detailBatch: null,
+        filters: { exam_year: '', status: 'validated', school_id: '', subject_id: '' },
+        filterYears: [],
+        filterSchools: [],
+        filterSubjects: [],
+        pagination: { total: 0, current_page: 1, last_page: 1, has_more: false },
+
+        init() {
+            // Populate filter dropdowns from parent markEntryManager context
+            const root = this.$root || {};
+            this.filterYears = (root.examYears || []).map(y => y.year_label);
+            this.filterSchools = root.schools || [];
+            this.filterSubjects = root.subjects || [];
+        },
+
+        statusBadge(status) {
+            const map = {
+                draft: 'bg-gray-100 text-gray-800',
+                validated: 'bg-blue-100 text-blue-800',
+                submitted: 'bg-indigo-100 text-indigo-800',
+                approved: 'bg-green-100 text-green-800',
+                rejected: 'bg-red-100 text-red-800',
+                locked: 'bg-yellow-100 text-yellow-800',
+                processed: 'bg-emerald-100 text-emerald-800',
+            };
+            return map[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        async loadBatches(page = 1) {
+            this.isLoading = true;
+            this.errorMsg = '';
+            try {
+                const params = new URLSearchParams({ page, per_page: 20 });
+                if (this.filters.exam_year) params.set('exam_year', this.filters.exam_year);
+                if (this.filters.status) params.set('status', this.filters.status);
+                if (this.filters.school_id) params.set('school_id', this.filters.school_id);
+                if (this.filters.subject_id) params.set('subject_id', this.filters.subject_id);
+
+                const resp = await fetch(`/api/mark-entry/acsee/submission/batches?${params}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                this.batches = json.data || [];
+                this.pagination = json.pagination || {};
+            } catch (e) {
+                this.errorMsg = 'Failed to load batches: ' + e.message;
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        viewBatchDetail(batch) {
+            this.detailBatch = batch;
+            this.showDetailModal = true;
+        },
+
+        async submitBatch(batch) {
+            if (!confirm(`Submit batch ${batch.batch_code} for review?`)) return;
+            this.submittingId = batch.id;
+            try {
+                const resp = await fetch(`/api/mark-entry/acsee/batches/${batch.id}/submit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                });
+                const json = await resp.json();
+                if (json.success) {
+                    this.$root.showMessage('Batch submitted for review successfully!', 'success');
+                    await this.loadBatches(this.pagination.current_page);
+                } else {
+                    this.$root.showMessage(json.message || 'Failed to submit', 'error');
+                }
+            } catch (e) {
+                this.$root.showMessage('Error: ' + e.message, 'error');
+            } finally {
+                this.submittingId = null;
+            }
+        },
+    };
+}
+
+// ==================== LOCK STATUS VIEW ====================
+function lockStatusView() {
+    return {
+        isLoading: false,
+        errorMsg: '',
+        stats: { submitted_pending: 0, approved_ready: 0, locked_today: 0, rejected_today: 0 },
+        approvedBatches: [],
+        lockedBatches: [],
+        lockingId: null,
+        showLockModal: false,
+        lockTarget: null,
+        lockConfirmText: '',
+        showPromotionResult: false,
+        promotionData: null,
+        showHistoryModal: false,
+        historyLoading: false,
+        historyItems: [],
+
+        async loadData() {
+            this.isLoading = true;
+            this.errorMsg = '';
+            try {
+                const resp = await fetch('/api/mark-entry/acsee/locking/status', {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                this.stats = json.stats || {};
+                this.approvedBatches = json.approved_batches || [];
+                this.lockedBatches = json.locked_batches || [];
+            } catch (e) {
+                this.errorMsg = 'Failed to load lock status: ' + e.message;
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        openLockModal(batch) {
+            this.lockTarget = batch;
+            this.lockConfirmText = '';
+            this.showLockModal = true;
+        },
+
+        async confirmLock() {
+            if (!this.lockTarget || this.lockConfirmText.toUpperCase() !== 'LOCK') return;
+            this.lockingId = this.lockTarget.id;
+            try {
+                const resp = await fetch(`/api/mark-entry/acsee/batches/${this.lockTarget.id}/lock`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                });
+                const json = await resp.json();
+                if (json.success) {
+                    this.showLockModal = false;
+                    this.lockConfirmText = '';
+                    this.$root.showMessage(json.message || 'Batch locked and marks promoted!', 'success');
+                    if (json.promotion) {
+                        this.promotionData = json.promotion;
+                        this.showPromotionResult = true;
+                    }
+                    await this.loadData();
+                } else {
+                    this.$root.showMessage(json.message || 'Failed to lock batch', 'error');
+                }
+            } catch (e) {
+                this.$root.showMessage('Error: ' + e.message, 'error');
+            } finally {
+                this.lockingId = null;
+            }
+        },
+
+        async viewHistory(batchId) {
+            this.showHistoryModal = true;
+            this.historyLoading = true;
+            this.historyItems = [];
+            try {
+                const resp = await fetch(`/api/mark-entry/acsee/batches/${batchId}/history`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                this.historyItems = json.history || [];
+            } catch (e) {
+                this.$root.showMessage('Failed to load history', 'error');
+            } finally {
+                this.historyLoading = false;
+            }
+        },
+    };
+}
+
+// ==================== ADMIN UNLOCK VIEW ====================
+function adminUnlockView() {
+    return {
+        batches: [],
+        isLoading: false,
+        errorMsg: '',
+        filters: { exam_year: '', district_id: '', school_id: '' },
+        pagination: { total: 0, current_page: 1, last_page: 1, has_more: false },
+        showUnlockModal: false,
+        unlockTarget: null,
+        unlockReason: '',
+        unlockingId: null,
+
+        async loadLockedBatches(page = 1) {
+            this.isLoading = true;
+            this.errorMsg = '';
+            try {
+                const params = new URLSearchParams({ page, per_page: 20 });
+                if (this.filters.exam_year) params.set('exam_year', this.filters.exam_year);
+                if (this.filters.district_id) params.set('district_id', this.filters.district_id);
+                if (this.filters.school_id) params.set('school_id', this.filters.school_id);
+
+                const resp = await fetch(`/api/mark-entry/acsee/admin/locked-batches?${params}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                this.batches = json.data || [];
+                this.pagination = json.pagination || {};
+            } catch (e) {
+                this.errorMsg = 'Failed to load locked batches: ' + e.message;
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        openUnlockModal(batch) {
+            this.unlockTarget = batch;
+            this.unlockReason = '';
+            this.showUnlockModal = true;
+        },
+
+        async confirmUnlock() {
+            if (!this.unlockTarget || (this.unlockReason || '').length < 10) return;
+            this.unlockingId = this.unlockTarget.id;
+            try {
+                const resp = await fetch(`/api/mark-entry/acsee/batches/${this.unlockTarget.id}/unlock`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                    },
+                    body: JSON.stringify({ reason: this.unlockReason }),
+                });
+                const json = await resp.json();
+                if (json.success) {
+                    this.showUnlockModal = false;
+                    this.unlockReason = '';
+                    this.$root.showMessage(json.message || 'Batch unlocked. Must be reviewed again.', 'success');
+                    await this.loadLockedBatches(this.pagination.current_page);
+                } else {
+                    this.$root.showMessage(json.message || 'Failed to unlock', 'error');
+                }
+            } catch (e) {
+                this.$root.showMessage('Error: ' + e.message, 'error');
+            } finally {
+                this.unlockingId = null;
+            }
+        },
+    };
+}
+
+// ==================== HISTORY VIEW ====================
+function historyView() {
+    return {
+        events: [],
+        isLoading: false,
+        errorMsg: '',
+        filters: { exam_year: '', school_id: '', action: '', from_date: '', to_date: '' },
+        pagination: { total: 0, current_page: 1, last_page: 1, has_more: false },
+        filterYears: [],
+        filterSchools: [],
+
+        init() {
+            const root = this.$root || {};
+            this.filterYears = (root.examYears || []).map(y => y.year_label);
+            this.filterSchools = root.schools || [];
+        },
+
+        async loadHistory(page = 1) {
+            this.isLoading = true;
+            this.errorMsg = '';
+            try {
+                const params = new URLSearchParams({ page, per_page: 30 });
+                if (this.filters.exam_year) params.set('exam_year', this.filters.exam_year);
+                if (this.filters.school_id) params.set('school_id', this.filters.school_id);
+                if (this.filters.action) params.set('action', this.filters.action);
+                if (this.filters.from_date) params.set('from_date', this.filters.from_date);
+                if (this.filters.to_date) params.set('to_date', this.filters.to_date);
+
+                const resp = await fetch(`/api/mark-entry/acsee/history?${params}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                this.events = json.data || [];
+                this.pagination = json.pagination || {};
+            } catch (e) {
+                this.errorMsg = 'Failed to load history: ' + e.message;
+            } finally {
+                this.isLoading = false;
+            }
+        },
+    };
+}
+
+// ==================== ADMIN: CONFIGURATION ====================
+function adminConfigManager() {
+    return {
+        cfgSettings: {},
+        cfgLoading: false,
+        cfgError: null,
+        cfgHistoryOpen: false,
+        cfgHistoryItems: [],
+        cfgToast: '',
+        cfgToastType: 'success',
+
+        async loadSettings() {
+            this.cfgLoading = true;
+            this.cfgError = null;
+            try {
+                const resp = await fetch('/api/acsee/admin/settings', {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message || 'Failed');
+                this.cfgSettings = json.settings;
+            } catch (e) {
+                this.cfgError = e.message;
+            } finally {
+                this.cfgLoading = false;
+            }
+        },
+
+        async toggleSetting(setting) {
+            const newVal = setting.value === '1' ? '0' : '1';
+            await this._saveSetting(setting.key, newVal);
+            setting.value = newVal;
+        },
+
+        async saveSetting(setting) {
+            await this._saveSetting(setting.key, setting._editValue);
+            setting.value = setting._editValue;
+        },
+
+        async _saveSetting(key, value) {
+            try {
+                const resp = await fetch(`/api/acsee/admin/settings/${encodeURIComponent(key)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ value }),
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message);
+                this._toast('Setting updated', 'success');
+            } catch (e) {
+                this._toast(e.message, 'error');
+            }
+        },
+
+        async showHistory(key) {
+            this.cfgHistoryItems = [];
+            this.cfgHistoryOpen = true;
+            try {
+                const resp = await fetch(`/api/acsee/admin/settings/${encodeURIComponent(key)}/history`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                this.cfgHistoryItems = json.history || [];
+            } catch (e) {
+                this._toast('Failed to load history', 'error');
+            }
+        },
+
+        async restoreSettingFromHistory(historyId) {
+            if (!confirm('Restore this previous value?')) return;
+            try {
+                const resp = await fetch(`/api/acsee/admin/settings/restore/${historyId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message);
+                this._toast('Setting restored', 'success');
+                this.cfgHistoryOpen = false;
+                await this.loadSettings();
+            } catch (e) {
+                this._toast(e.message, 'error');
+            }
+        },
+
+        _toast(msg, type) {
+            this.cfgToast = msg;
+            this.cfgToastType = type;
+            setTimeout(() => this.cfgToast = '', 3000);
+        },
+    };
+}
+
+// ==================== ADMIN: PERMISSIONS ====================
+function adminPermissionsManager() {
+    return {
+        permRoles: [],
+        permDefined: {},
+        permLoading: false,
+        permError: null,
+        permDirty: false,
+        permSaving: false,
+        permToast: '',
+        permToastType: 'success',
+        _originalPerms: {},
+
+        async loadRoles() {
+            this.permLoading = true;
+            this.permError = null;
+            try {
+                const resp = await fetch('/api/acsee/admin/roles', {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message || 'Failed');
+                this.permRoles = json.roles;
+                this.permDefined = json.defined_permissions;
+                // Store original state
+                this._originalPerms = {};
+                this.permRoles.forEach(r => {
+                    this._originalPerms[r.id] = [...(r.permissions || [])];
+                });
+                this.permDirty = false;
+            } catch (e) {
+                this.permError = e.message;
+            } finally {
+                this.permLoading = false;
+            }
+        },
+
+        roleHasPerm(role, perm) {
+            return (role.permissions || []).includes(perm);
+        },
+
+        togglePerm(role, perm, checked) {
+            if (!role.permissions) role.permissions = [];
+            if (checked && !role.permissions.includes(perm)) {
+                role.permissions.push(perm);
+            } else if (!checked) {
+                role.permissions = role.permissions.filter(p => p !== perm);
+            }
+            this.permDirty = true;
+        },
+
+        resetPermChanges() {
+            this.permRoles.forEach(r => {
+                r.permissions = [...(this._originalPerms[r.id] || [])];
+            });
+            this.permDirty = false;
+        },
+
+        async savePermissions() {
+            if (!confirm('Save permission changes? This will be logged.')) return;
+            this.permSaving = true;
+            let errors = [];
+            for (const role of this.permRoles) {
+                try {
+                    const resp = await fetch(`/api/acsee/admin/roles/${role.id}/permissions`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({ permissions: role.permissions }),
+                    });
+                    const json = await resp.json();
+                    if (!json.ok) errors.push(`${role.name}: ${json.message}`);
+                } catch (e) {
+                    errors.push(`${role.name}: ${e.message}`);
+                }
+            }
+            this.permSaving = false;
+            if (errors.length) {
+                this.permToast = errors.join('; ');
+                this.permToastType = 'error';
+            } else {
+                this.permToast = 'Permissions saved successfully';
+                this.permToastType = 'success';
+                this.permDirty = false;
+                this._originalPerms = {};
+                this.permRoles.forEach(r => {
+                    this._originalPerms[r.id] = [...(r.permissions || [])];
+                });
+            }
+            setTimeout(() => this.permToast = '', 4000);
+        },
+    };
+}
+
+// ==================== ADMIN: BATCH MANAGEMENT ====================
+function adminBatchManager() {
+    return {
+        batchList: [],
+        batchLoading: false,
+        batchFilters: { search: '', status: '', exam_year: '', date_from: '', date_to: '' },
+        batchPagination: { current_page: 1, last_page: 1, total: 0 },
+        batchDetailOpen: false,
+        batchDetail: null,
+        batchVisibility: [],
+        unlockModalOpen: false,
+        unlockBatch: null,
+        unlockReason: '',
+        unlockSaving: false,
+        batchToast: '',
+        batchToastType: 'success',
+
+        async loadBatches(page) {
+            this.batchLoading = true;
+            const params = new URLSearchParams();
+            if (this.batchFilters.search) params.set('search', this.batchFilters.search);
+            if (this.batchFilters.status) params.set('status', this.batchFilters.status);
+            if (this.batchFilters.exam_year) params.set('exam_year', this.batchFilters.exam_year);
+            if (this.batchFilters.date_from) params.set('date_from', this.batchFilters.date_from);
+            if (this.batchFilters.date_to) params.set('date_to', this.batchFilters.date_to);
+            params.set('page', page || 1);
+            params.set('per_page', 25);
+            try {
+                const resp = await fetch(`/api/acsee/admin/batches?${params}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message);
+                this.batchList = json.batches?.data || [];
+                this.batchPagination = {
+                    current_page: json.batches?.current_page || 1,
+                    last_page: json.batches?.last_page || 1,
+                    total: json.batches?.total || 0,
+                };
+            } catch (e) {
+                this._toast(e.message, 'error');
+            } finally {
+                this.batchLoading = false;
+            }
+        },
+
+        batchPage(p) {
+            if (p >= 1 && p <= this.batchPagination.last_page) this.loadBatches(p);
+        },
+
+        async viewBatchDetail(id) {
+            try {
+                const resp = await fetch(`/api/acsee/admin/batches/${id}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message);
+                this.batchDetail = json.batch;
+                this.batchVisibility = json.visibility || [];
+                this.batchDetailOpen = true;
+            } catch (e) {
+                this._toast(e.message, 'error');
+            }
+        },
+
+        async recomputeStats(id) {
+            try {
+                const resp = await fetch(`/api/acsee/admin/batches/${id}/recompute`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message);
+                this._toast(`Stats recomputed: ${json.stats.total} total, ${json.stats.valid} valid, ${json.stats.errors} errors`, 'success');
+                await this.loadBatches(this.batchPagination.current_page);
+            } catch (e) {
+                this._toast(e.message, 'error');
+            }
+        },
+
+        openUnlockModal(batch) {
+            this.unlockBatch = batch;
+            this.unlockReason = '';
+            this.unlockModalOpen = true;
+        },
+
+        async confirmUnlock() {
+            if (this.unlockReason.length < 10) return;
+            this.unlockSaving = true;
+            try {
+                const resp = await fetch(`/api/acsee/admin/batches/${this.unlockBatch.id}/unlock`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({ reason: this.unlockReason }),
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message);
+                this._toast(json.message, 'success');
+                this.unlockModalOpen = false;
+                await this.loadBatches(this.batchPagination.current_page);
+            } catch (e) {
+                this._toast(e.message, 'error');
+            } finally {
+                this.unlockSaving = false;
+            }
+        },
+
+        batchStatusClass(status) {
+            const map = {
+                draft: 'bg-gray-100 text-gray-800',
+                validated: 'bg-blue-100 text-blue-800',
+                submitted: 'bg-indigo-100 text-indigo-800',
+                approved: 'bg-green-100 text-green-800',
+                rejected: 'bg-red-100 text-red-800',
+                locked: 'bg-yellow-100 text-yellow-800',
+                processed: 'bg-emerald-100 text-emerald-800',
+            };
+            return map[status] || 'bg-gray-100 text-gray-800';
+        },
+
+        _toast(msg, type) {
+            this.batchToast = msg;
+            this.batchToastType = type;
+            setTimeout(() => this.batchToast = '', 4000);
+        },
+    };
+}
+
+// ==================== ADMIN: SYSTEM LOGS ====================
+function adminLogsManager() {
+    return {
+        logList: [],
+        logLoading: false,
+        logFilters: { search: '', category: '', status: '', date_from: '' },
+        logPagination: { current_page: 1, last_page: 1, total: 0 },
+        logDetailOpen: false,
+        logDetail: null,
+        logToast: '',
+
+        async loadLogs(page) {
+            this.logLoading = true;
+            const params = new URLSearchParams();
+            if (this.logFilters.search) params.set('search', this.logFilters.search);
+            if (this.logFilters.category) params.set('category', this.logFilters.category);
+            if (this.logFilters.status) params.set('status', this.logFilters.status);
+            if (this.logFilters.date_from) params.set('date_from', this.logFilters.date_from);
+            params.set('page', page || 1);
+            params.set('per_page', 50);
+            try {
+                const resp = await fetch(`/api/acsee/admin/logs?${params}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = await resp.json();
+                if (!json.ok) throw new Error(json.message);
+                this.logList = json.logs?.data || [];
+                this.logPagination = {
+                    current_page: json.logs?.current_page || 1,
+                    last_page: json.logs?.last_page || 1,
+                    total: json.logs?.total || 0,
+                };
+            } catch (e) {
+                console.error('Failed to load logs:', e);
+            } finally {
+                this.logLoading = false;
+            }
+        },
+
+        logPage(p) {
+            if (p >= 1 && p <= this.logPagination.last_page) this.loadLogs(p);
+        },
+
+        openLogDetail(log) {
+            this.logDetail = log;
+            this.logDetailOpen = true;
+        },
+
+        copyCorrelation(id) {
+            if (!id) return;
+            navigator.clipboard.writeText(id).then(() => {
+                this.logToast = 'Correlation ID copied!';
+                setTimeout(() => this.logToast = '', 2000);
+            });
+        },
+
+        exportCsv() {
+            const params = new URLSearchParams();
+            if (this.logFilters.category) params.set('category', this.logFilters.category);
+            if (this.logFilters.status) params.set('status', this.logFilters.status);
+            if (this.logFilters.date_from) params.set('date_from', this.logFilters.date_from);
+            window.location.href = `/api/acsee/admin/logs/export.csv?${params}`;
+        },
+
+        logCategoryClass(cat) {
+            const map = {
+                import: 'bg-blue-100 text-blue-800',
+                moderation: 'bg-purple-100 text-purple-800',
+                submission: 'bg-indigo-100 text-indigo-800',
+                locking: 'bg-yellow-100 text-yellow-800',
+                export: 'bg-green-100 text-green-800',
+                admin: 'bg-orange-100 text-orange-800',
+                system: 'bg-gray-100 text-gray-800',
+            };
+            return map[cat] || 'bg-gray-100 text-gray-800';
+        },
+    };
+}
 </script>
 
         <!-- MODALS AND NOTIFICATIONS -->
-         {{-- @include('mark-entry.components._approve_batch_modal') --}} <!-- TODO: Implement approve modal later -->
-         {{-- @include('mark-entry.components._reject_batch_modal') --}} <!-- TODO: Implement reject modal later -->
-         {{-- @include('mark-entry.components._lock_batch_modal') --}} <!-- TODO: Implement lock modal later -->
-         {{-- @include('mark-entry.components._unlock_batch_modal') --}} <!-- TODO: Implement unlock modal later -->
+         {{-- @include('mark-entry.components._approve_batch_modal') --}}
+         {{-- @include('mark-entry.components._reject_batch_modal') --}}
+         {{-- @include('mark-entry.components._lock_batch_modal') --}}
+         {{-- @include('mark-entry.components._unlock_batch_modal') --}}
          @include('mark-entry.components._toast_notification')
         </div>
         </div>
         </div>
         </div>
-        @endsection
+        <!-- Inject openImportModal into markEntryManager context -->
+<script>
+  document.addEventListener('alpine:init', () => {
+    if (window.markEntryManager) {
+      const original = window.markEntryManager;
+      window.markEntryManager = function() {
+        const ctx = original();
+        ctx.openImportModal = function(type){
+          const detail = { type, context: {} };
+          if (type === 'single_csv') {
+            detail.context = { exam_year: this.examYear, school_id: this.selectedSchool, subject_id: this.selectedSubject };
+          } else if (type === 'school_zip') {
+            const year = (this.examYears||[]).find(y => y.year_label == this.schoolBulkExamYear);
+            detail.context = { exam_year_id: year?.id, school_id: this.schoolBulkId };
+          } else if (type === 'district_zip') {
+            const year = (this.examYears||[]).find(y => y.year_label == this.districtExamYear);
+            detail.context = { exam_year_id: year?.id, district_id: this.districtId };
+          }
+          window.dispatchEvent(new CustomEvent('open-import-modal', { detail }));
+        };
+        return ctx;
+      }
+    }
+  });
+</script>
+@endsection

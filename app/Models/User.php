@@ -132,6 +132,19 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     }
 
     /**
+     * HELPERS - Role code retrievers
+     */
+    public function roleCode(): ?string
+    {
+        return $this->role?->code;
+    }
+
+    public function roleName(): ?string
+    {
+        return $this->role?->name;
+    }
+
+    /**
      * HELPERS - Scope checks
      */
     public function getScopeType()
@@ -166,6 +179,33 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
             return $this->getScopeId();
         }
         return null;
+    }
+
+    /**
+     * HELPERS - Scope access checks
+     */
+    public function canAccessRegion($regionId): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+        return $this->getRegionId() === (int) $regionId;
+    }
+
+    public function canAccessDistrict($districtId): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+        return $this->getDistrictId() === (int) $districtId;
+    }
+
+    public function canAccessSchool($schoolId): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+        return $this->getSchoolId() === (int) $schoolId;
     }
 
     /**

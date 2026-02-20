@@ -14,6 +14,21 @@ class FinalGradeResource extends Resource
 {
     protected static ?string $model = FinalGrade::class;
 
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return false;
+    }
+
     protected static ?string $slug = 'final-grades';
 
     protected static ?string $navigationIcon = 'heroicon-o-star';
@@ -152,14 +167,8 @@ class FinalGradeResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -174,9 +183,7 @@ class FinalGradeResource extends Resource
     {
         return [
             'index' => Pages\ListFinalGrades::route('/'),
-            'create' => Pages\CreateFinalGrade::route('/create'),
             'view' => Pages\ViewFinalGrade::route('/{record}'),
-            'edit' => Pages\EditFinalGrade::route('/{record}/edit'),
         ];
     }
 }

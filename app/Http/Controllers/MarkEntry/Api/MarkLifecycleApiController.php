@@ -10,7 +10,8 @@ use App\Services\MarkEntry\Analytics\MarkAnalyticsService;
 use App\Services\MarkEntry\Audit\MarkEntryAuditService;
 use Illuminate\Http\Request;
 
-class MarkLifecycleApiController extends Controller {
+class MarkLifecycleApiController extends Controller
+{
 
     private MarkModerationQueryService $moderationQuery;
     private MarkSubmissionService $submissionService;
@@ -35,17 +36,20 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/moderation/pending
      * Get pending batches for moderation
      */
-    public function getPendingBatches(Request $request) {
+    public function getPendingBatches(Request $request)
+    {
         $perPage = $request->input('per_page', 20);
         $batches = $this->moderationQuery->getPendingReviews($perPage);
 
         return response()->json([
+            'success' => true,
             'data' => $batches->items(),
             'pagination' => [
                 'total' => $batches->total(),
                 'per_page' => $batches->perPage(),
                 'current_page' => $batches->currentPage(),
                 'last_page' => $batches->lastPage(),
+                'has_more' => $batches->hasMorePages(),
             ],
         ]);
     }
@@ -54,19 +58,86 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/moderation/batch/{batchId}
      * Get batch details with review history
      */
-    public function getBatchModeration(MarkImportBatch $batch) {
-        return response()->json([
-            'batch' => $batch->load(['school', 'subject', 'examType']),
-            'reviews' => $this->moderationQuery->getBatchReviews($batch),
-            'lifecycle_history' => json_decode($batch->lifecycle_history ?? '[]', true),
-        ]);
+    public function getBatchModeration(Request $request, MarkImportBatch $batch)
+    {
+        $this->authorize('view', $batch);
+
+        try {
+            $batch->load(['school', 'subject', 'examType', 'region', 'district']);
+
+            $errorCount = $batch->rawMarks()->where('has_errors', true)->count();
+            $validCount = $batch->rawMarks()->where('has_errors', false)->count();
+
+            return response()->json([
+                'success' => true,
+                'batch' => [
+                    'id' => $batch->id,
+                    'batch_code' => $batch->batch_code,
+                    'exam_year' => $batch->exam_year,
+                    'status' => $batch->status,
+                    'lifecycle_state' => $batch->lifecycle_state,
+                    'total_records' => $batch->total_records,
+                    'valid_records' => $batch->valid_records,
+                    'error_records' => $batch->error_records,
+                    'error_count' => $errorCount,
+                    'valid_count' => $validCount,
+                    'school' => [
+                        'id' => $batch->school?->id,
+                        'code' => $batch->school?->code,
+                        'name' => $batch->school?->name,
+                    ],
+                    'subject' => [
+                        'id' => $batch->subject?->id,
+                        'code' => $batch->subject?->code,
+                        'name' => $batch->subject?->name,
+                    ],
+                    'district' => [
+                        'id' => $batch->district?->id,
+                        'code' => $batch->district?->code,
+                        'name' => $batch->district?->name,
+                    ],
+                    'region' => [
+                        'id' => $batch->region?->id,
+                        'name' => $batch->region?->name,
+                    ],
+                    'imported_by' => $batch->imported_by,
+                    'imported_at' => $batch->imported_at?->format('Y-m-d H:i:s'),
+                    'validated_at' => $batch->validated_at?->format('Y-m-d H:i:s'),
+                    'locked_at' => $batch->locked_at?->format('Y-m-d H:i:s'),
+                    'created_at' => $batch->created_at?->format('Y-m-d H:i:s'),
+                    'updated_at' => $batch->updated_at?->format('Y-m-d H:i:s'),
+                ],
+                'reviews' => $this->moderationQuery->getBatchReviews($batch)->map(fn($review) => [
+                    'id' => $review->id,
+                    'status' => $review->status,
+                    'feedback' => $review->feedback,
+                    'reviewed_at' => $review->reviewed_at?->format('Y-m-d H:i:s'),
+                    'reviewer' => [
+                        'id' => $review->reviewer?->id,
+                        'name' => $review->reviewer?->name,
+                    ],
+                ])->values(),
+                'permissions' => [
+                    'can_approve' => auth()->check() && auth()->user()->can('moderate', $batch),
+                    'can_reject' => auth()->check() && auth()->user()->can('moderate', $batch),
+                    'can_lock' => auth()->check() && auth()->user()->can('lock', $batch),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching batch details', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load batch details'
+            ], 500);
+        }
     }
 
     /**
      * GET /api/mark-entry/moderation/search
      * Search pending batches
      */
-    public function searchPending(Request $request) {
+    public function searchPending(Request $request)
+    {
         $validated = $request->validate(['query' => 'required|string|min:2']);
         $results = $this->moderationQuery->searchPending($validated['query']);
 
@@ -77,9 +148,69 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/moderation/stats
      * Get moderator statistics
      */
-    public function getModeratorStats() {
+    public function getModeratorStats()
+    {
         $stats = $this->moderationQuery->getModeratorStats(auth()->id());
         return response()->json(['data' => $stats]);
+    }
+
+    /**
+     * GET /api/mark-entry/moderation/batch/{batchId}/raw-marks
+     * Get raw marks for a batch (with error filtering)
+     */
+    public function getBatchRawMarks(Request $request, MarkImportBatch $batch)
+    {
+        try {
+            $this->authorize('view', $batch);
+
+            $type = $request->input('type', 'all'); // 'all', 'errors', 'valid'
+            $perPage = $request->input('per_page', 20);
+            $page = $request->input('page', 1);
+
+            $query = $batch->rawMarks();
+
+            if ($type === 'errors') {
+                $query->where('has_errors', true);
+            } elseif ($type === 'valid') {
+                $query->where('has_errors', false);
+            }
+
+            $marks = $query->paginate($perPage, ['*'], 'page', $page);
+
+            $formattedMarks = $marks->getCollection()->map(fn($mark) => [
+                'id' => $mark->id,
+                'row_number' => $mark->row_number,
+                'candidate_id' => $mark->candidate_id,
+                'candidate_index_number' => $mark->candidate_index_number,
+                'full_name' => $mark->full_name,
+                'paper_1_marks' => $mark->paper_1_marks,
+                'paper_2_marks' => $mark->paper_2_marks,
+                'paper_3_marks' => $mark->paper_3_marks,
+                'practical_marks' => $mark->practical_marks,
+                'project_marks' => $mark->project_marks,
+                'has_errors' => $mark->has_errors,
+                'error_messages' => $mark->error_messages ?? [],
+            ])->values();
+
+            return response()->json([
+                'success' => true,
+                'type' => $type,
+                'data' => $formattedMarks,
+                'pagination' => [
+                    'total' => $marks->total(),
+                    'per_page' => $marks->perPage(),
+                    'current_page' => $marks->currentPage(),
+                    'last_page' => $marks->lastPage(),
+                    'has_more' => $marks->hasMorePages(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching batch raw marks', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load raw marks'
+            ], 500);
+        }
     }
 
     // ==================== SUBMISSION ENDPOINTS ====================
@@ -88,7 +219,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/submission/ready
      * Get batches ready for submission
      */
-    public function getReadyForSubmission(Request $request) {
+    public function getReadyForSubmission(Request $request)
+    {
         $perPage = $request->input('per_page', 20);
         $batches = $this->submissionService->getSubmissionReadyBatches($perPage);
 
@@ -107,7 +239,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/submission/submitted
      * Get submitted batches
      */
-    public function getSubmitted(Request $request) {
+    public function getSubmitted(Request $request)
+    {
         $perPage = $request->input('per_page', 20);
         $batches = $this->submissionService->getSubmittedBatches($perPage);
 
@@ -126,7 +259,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/submission/history/{batchId}
      * Get submission history for a batch
      */
-    public function getSubmissionHistory(MarkImportBatch $batch) {
+    public function getSubmissionHistory(MarkImportBatch $batch)
+    {
         return response()->json([
             'data' => $this->submissionService->getSubmissionHistory($batch),
         ]);
@@ -138,7 +272,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/analytics/overview
      * Get overall analytics
      */
-    public function getAnalytics() {
+    public function getAnalytics()
+    {
         return response()->json([
             'data' => $this->analyticsService->getOverallAnalytics(),
         ]);
@@ -148,7 +283,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/analytics/by-year
      * Analytics by exam year
      */
-    public function getAnalyticsByYear() {
+    public function getAnalyticsByYear()
+    {
         return response()->json([
             'data' => $this->analyticsService->getByExamYear(),
         ]);
@@ -158,7 +294,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/analytics/by-subject
      * Analytics by subject
      */
-    public function getAnalyticsBySubject() {
+    public function getAnalyticsBySubject()
+    {
         return response()->json([
             'data' => $this->analyticsService->getBySubject(),
         ]);
@@ -168,7 +305,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/analytics/by-school
      * Analytics by school
      */
-    public function getAnalyticsBySchool() {
+    public function getAnalyticsBySchool()
+    {
         return response()->json([
             'data' => $this->analyticsService->getBySchool(),
         ]);
@@ -178,7 +316,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/analytics/errors
      * Error rate statistics
      */
-    public function getErrorStats() {
+    public function getErrorStats()
+    {
         return response()->json([
             'data' => $this->analyticsService->getErrorRateStats(),
         ]);
@@ -188,7 +327,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/analytics/batch/{batchId}/timeline
      * Get batch processing timeline
      */
-    public function getBatchTimeline(MarkImportBatch $batch) {
+    public function getBatchTimeline(MarkImportBatch $batch)
+    {
         return response()->json([
             'data' => $this->analyticsService->getBatchTimeline($batch),
         ]);
@@ -200,7 +340,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/audit/batch/{batchId}
      * Get audit trail for batch
      */
-    public function getBatchAuditTrail(Request $request, MarkImportBatch $batch) {
+    public function getBatchAuditTrail(Request $request, MarkImportBatch $batch)
+    {
         $perPage = $request->input('per_page', 50);
         $auditTrail = $this->auditService->getBatchAuditTrail($batch, $perPage);
 
@@ -219,7 +360,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/audit/user/{userId}
      * Get user activity
      */
-    public function getUserActivity(Request $request, $userId) {
+    public function getUserActivity(Request $request, $userId)
+    {
         $perPage = $request->input('per_page', 50);
         $activity = $this->auditService->getUserActivity($userId, $perPage);
 
@@ -238,7 +380,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/audit/batch/{batchId}/summary
      * Get batch activity summary
      */
-    public function getBatchActivitySummary(MarkImportBatch $batch) {
+    public function getBatchActivitySummary(MarkImportBatch $batch)
+    {
         return response()->json([
             'data' => $this->auditService->getBatchActivitySummary($batch),
         ]);
@@ -248,7 +391,8 @@ class MarkLifecycleApiController extends Controller {
      * GET /api/mark-entry/audit/batch/{batchId}/modifications
      * Get modification report for batch
      */
-    public function getBatchModifications(MarkImportBatch $batch) {
+    public function getBatchModifications(MarkImportBatch $batch)
+    {
         return response()->json([
             'data' => $this->auditService->getModificationReport($batch),
         ]);
@@ -260,9 +404,10 @@ class MarkLifecycleApiController extends Controller {
      * POST /api/mark-entry/moderation/batch/{batchId}/approve
      * Approve a batch (moderation action)
      */
-    public function approveBatchAction(Request $request, MarkImportBatch $batch) {
+    public function approveBatchAction(Request $request, MarkImportBatch $batch)
+    {
         $this->authorize('moderate', $batch);
-        
+
         try {
             $validated = $request->validate([
                 'feedback' => 'nullable|string|max:1000'
@@ -292,9 +437,10 @@ class MarkLifecycleApiController extends Controller {
      * POST /api/mark-entry/moderation/batch/{batchId}/reject
      * Reject a batch (moderation action)
      */
-    public function rejectBatchAction(Request $request, MarkImportBatch $batch) {
-        $this->authorize('moderate', $batch);
-        
+    public function rejectBatchAction(Request $request, MarkImportBatch $batch)
+    {
+        $this->authorize('reject', $batch);
+
         try {
             $validated = $request->validate([
                 'reason' => 'required|string|min:10|max:1000'
@@ -325,9 +471,10 @@ class MarkLifecycleApiController extends Controller {
      * POST /api/mark-entry/submission/lock/{batchId}
      * Lock a batch for submission (prevents further modifications)
      */
-    public function lockBatchAction(Request $request, MarkImportBatch $batch) {
+    public function lockBatchAction(Request $request, MarkImportBatch $batch)
+    {
         $this->authorize('lock', $batch);
-        
+
         try {
             $moderationService = app(\App\Services\MarkEntry\Moderation\MarkModerationService::class);
             $approval = $this->submissionService->lockBatch($batch, auth()->user());
@@ -354,7 +501,8 @@ class MarkLifecycleApiController extends Controller {
      * POST /api/mark-entry/submission/unlock/{batchId}
      * Unlock a batch (admin only - allows resubmission)
      */
-    public function unlockBatchAction(Request $request, $batchId = null) {
+    public function unlockBatchAction(Request $request, $batchId = null)
+    {
         // Handle both route parameter and query string
         $batchId = $batchId ?? $request->input('batch_id') ?? $request->input('batchId');
         try {
@@ -363,7 +511,7 @@ class MarkLifecycleApiController extends Controller {
                 'user' => auth()->user() ? auth()->user()->id : null,
                 'authenticated' => auth()->check(),
             ]);
-            
+
             // Check authentication
             if (!auth()->check()) {
                 \Log::warning('Unlock batch: User not authenticated');
@@ -372,17 +520,17 @@ class MarkLifecycleApiController extends Controller {
                     'message' => 'Not authenticated. Please login first.'
                 ], 401);
             }
-            
+
             // Check authorization
             $user = auth()->user();
-            $isAdmin = $user && ($user->hasRole('admin') || $user->hasPermissionTo('mark-entry.admin'));
-            
+            $isAdmin = $user && ($user->isAdmin() || \Illuminate\Support\Facades\Gate::allows('mark-entry.admin'));
+
             \Log::info('Admin check', [
                 'user_id' => $user->id,
                 'is_admin' => $isAdmin,
-                'roles' => $user->roles->pluck('name')->toArray(),
+                'role' => $user->role?->code,
             ]);
-            
+
             if (!$isAdmin) {
                 \Log::warning('Unlock batch: User not admin', ['user_id' => $user->id]);
                 return response()->json([
@@ -390,7 +538,7 @@ class MarkLifecycleApiController extends Controller {
                     'message' => 'Unauthorized: Admin access required'
                 ], 403);
             }
-            
+
             // Find batch by ID
             $batch = MarkImportBatch::find($batchId);
             if (!$batch) {
@@ -400,9 +548,9 @@ class MarkLifecycleApiController extends Controller {
                     'message' => "Batch with ID {$batchId} not found"
                 ], 404);
             }
-            
+
             \Log::info('Batch found', ['batch_id' => $batch->id, 'state' => $batch->lifecycle_state]);
-            
+
             $validated = $request->validate([
                 'reason' => 'required|string|min:10|max:1000'
             ]);

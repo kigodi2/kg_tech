@@ -51,12 +51,13 @@ class AcseeAllocationCSVImportTest extends TestCase
             'hasPractical' => false,
             'hasProject' => false,
             'is_active' => true,
+            'exam_type_id' => $this->examType->id,
         ]);
 
         // Create other subjects
-        Subject::create(['code' => '001', 'name' => 'Physics', 'category' => 'SCIENCE', 'writtenPapers' => 2, 'hasPractical' => false, 'hasProject' => false, 'is_active' => true]);
-        Subject::create(['code' => '002', 'name' => 'Chemistry', 'category' => 'SCIENCE', 'writtenPapers' => 2, 'hasPractical' => false, 'hasProject' => false, 'is_active' => true]);
-        Subject::create(['code' => '003', 'name' => 'Biology', 'category' => 'SCIENCE', 'writtenPapers' => 2, 'hasPractical' => false, 'hasProject' => false, 'is_active' => true]);
+        Subject::create(['code' => '001', 'name' => 'Physics', 'category' => 'SCIENCE', 'writtenPapers' => 2, 'hasPractical' => false, 'hasProject' => false, 'is_active' => true, 'exam_type_id' => $this->examType->id]);
+        Subject::create(['code' => '002', 'name' => 'Chemistry', 'category' => 'SCIENCE', 'writtenPapers' => 2, 'hasPractical' => false, 'hasProject' => false, 'is_active' => true, 'exam_type_id' => $this->examType->id]);
+        Subject::create(['code' => '003', 'name' => 'Biology', 'category' => 'SCIENCE', 'writtenPapers' => 2, 'hasPractical' => false, 'hasProject' => false, 'is_active' => true, 'exam_type_id' => $this->examType->id]);
 
         // Create combination
         $this->combination = Combination::create([

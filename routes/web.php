@@ -1526,7 +1526,20 @@ Route::middleware('auth')->group(function () {
       // Mark Entry Module Routes (ACSEE)
       Route::get('/mark-entry/acsee', [MarkEntryController::class, 'index']);
       Route::get('/mark-entry/acsee/download-template', [MarkEntryController::class, 'downloadTemplate']);
+      // DEPRECATED: legacy upload endpoint (use validate/commit)
       Route::post('/mark-entry/acsee/upload', [MarkEntryController::class, 'uploadMarks']);
+      
+      // New Two-Phase Single Subject CSV Endpoints
+      Route::post('/mark-entry/acsee/single/validate', [MarkEntryController::class, 'singleValidate']);
+      Route::post('/mark-entry/acsee/single/commit', [MarkEntryController::class, 'singleCommit']);
+
+      // New Bulk ZIP Validate/Commit + Progress
+      Route::post('/mark-entry/acsee/bulk/school/validate-zip', [MarkEntryController::class, 'schoolValidateZip']);
+      Route::post('/mark-entry/acsee/bulk/district/validate-zip', [MarkEntryController::class, 'districtValidateZip']);
+      Route::post('/mark-entry/acsee/bulk/school/commit-zip', [MarkEntryController::class, 'schoolCommitZip']);
+      Route::post('/mark-entry/acsee/bulk/district/commit-zip', [MarkEntryController::class, 'districtCommitZip']);
+      Route::get('/mark-entry/acsee/bulk/{id}/progress', [MarkEntryController::class, 'bulkProgress']);
+
       Route::get('/test-upload', function() { return response()->json(['status' => 'ok']); });
       Route::get('/mark-entry/acsee/batch/{batchId}', [MarkEntryController::class, 'getBatchDetails']);
       Route::get('/mark-entry/acsee/batch/{batchId}/error-report', [MarkEntryController::class, 'downloadErrorReport']);
@@ -1545,10 +1558,14 @@ Route::middleware('auth')->group(function () {
       // District Bulk Scoresheet Export Route
       Route::get('/mark-entry/acsee/district-bulk-scoresheet-download', [MarkEntryController::class, 'downloadDistrictBulkScoresheetExport']);
 
-      // Bulk Import Routes
+      // Bulk Import Routes (must be in web.php for session/CSRF support)
       Route::post('/api/bulk-import/preview', [\App\Http\Controllers\BulkImportController::class, 'preview']);
       Route::post('/api/bulk-import/start', [\App\Http\Controllers\BulkImportController::class, 'startImport']);
+      Route::post('/api/bulk-import/district/start', [\App\Http\Controllers\BulkImportController::class, 'startDistrictImport']);
       Route::get('/api/bulk-import/{id}/progress', [\App\Http\Controllers\BulkImportController::class, 'getProgress']);
+      Route::get('/api/bulk-import/{id}/recovery-status', [\App\Http\Controllers\BulkImportController::class, 'getRecoveryStatus']);
+      Route::post('/api/bulk-import/{id}/retry-school', [\App\Http\Controllers\BulkImportController::class, 'retrySchool']);
+      Route::post('/api/bulk-import/{id}/retry-all', [\App\Http\Controllers\BulkImportController::class, 'retryAll']);
       Route::get('/api/bulk-import/{id}', [\App\Http\Controllers\BulkImportController::class, 'getDetails']);
 
       // Mark Entry API Endpoints

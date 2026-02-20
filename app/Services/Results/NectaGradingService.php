@@ -188,10 +188,20 @@ class NectaGradingService
         $validSubjectCount = 0;
 
         foreach ($marks as $mark) {
+            // Skip INC/X/ABS subjects — they must not affect points
+            $subjectStatus = $mark->subject_status ?? null;
+            if (in_array($subjectStatus, ['INC', 'X', 'ABS'], true)) {
+                continue;
+            }
+
             $subjectName = $mark->subject->name ?? '';
 
             // Skip excluded subjects
             if ($this->isExcludedSubject($subjectName)) {
+                continue;
+            }
+
+            if ($mark->marks_obtained === null) {
                 continue;
             }
 
@@ -225,10 +235,20 @@ class NectaGradingService
         $validSubjectCount = 0;
 
         foreach ($marks as $mark) {
+            // Skip INC/X/ABS subjects — they must not affect GPA
+            $subjectStatus = $mark->subject_status ?? null;
+            if (in_array($subjectStatus, ['INC', 'X', 'ABS'], true)) {
+                continue;
+            }
+
             $subjectName = $mark->subject->name ?? '';
 
             // Skip excluded subjects from GPA calculation
             if ($this->isExcludedSubject($subjectName)) {
+                continue;
+            }
+
+            if ($mark->marks_obtained === null) {
                 continue;
             }
 
@@ -355,9 +375,31 @@ class NectaGradingService
         $subjectGrades = [];
         $includedSubjectGrades = [];
         $excludedSubjectGrades = [];
+        $incSubjects = [];
 
         foreach ($marks as $mark) {
             $subjectName = $mark->subject->name ?? '';
+            $subjectStatus = $mark->subject_status ?? null;
+
+            // Handle INC/X/ABS — show status, not grade
+            if (in_array($subjectStatus, ['INC', 'X', 'ABS'], true)) {
+                $subjectGrade = [
+                    'subject_id' => $mark->subject_id,
+                    'subject_name' => $subjectName,
+                    'marks_obtained' => null,
+                    'grade' => $subjectStatus,
+                    'points' => null,
+                    'competence' => $subjectStatus === 'INC' ? 'Incomplete' : 'Absent',
+                    'competence_level' => $subjectStatus,
+                    'color' => '#999999',
+                    'is_excluded' => true,
+                    'subject_status' => $subjectStatus,
+                ];
+                $subjectGrades[] = $subjectGrade;
+                if ($subjectStatus === 'INC') $incSubjects[] = $subjectGrade;
+                continue;
+            }
+
             $grade = $this->calculateGrade($mark->marks_obtained);
             $points = $this->getGradePoints($grade);
             $competence = $this->getCompetenceLevel($grade);
@@ -374,6 +416,7 @@ class NectaGradingService
                 'competence_level' => $competenceLevel,
                 'color' => $color,
                 'is_excluded' => $this->isExcludedSubject($subjectName),
+                'subject_status' => null,
             ];
 
             $subjectGrades[] = $subjectGrade;
@@ -399,12 +442,15 @@ class NectaGradingService
             'subject_grades' => $subjectGrades,
             'included_subject_grades' => $includedSubjectGrades,
             'excluded_subject_grades' => $excludedSubjectGrades,
+            'inc_subjects' => $incSubjects,
             'total_marks' => $totalMarks,
             'total_points' => $totalPoints,
             'gpa' => $gpa,
             'division' => $division,
             'overall_grade' => $overallGrade,
             'competence_level' => $division ? $division['competence'] : null,
+            'has_inc' => !empty($incSubjects),
+            'inc_note' => !empty($incSubjects) ? 'INC subjects excluded from GPA/Division calculation' : null,
         ];
     }
 

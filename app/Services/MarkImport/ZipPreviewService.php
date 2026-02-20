@@ -205,6 +205,11 @@ class ZipPreviewService
     {
         $index = $zip->locateName('manifest.json');
 
+        // Also search in subdirectories (e.g., when user zips a folder)
+        if ($index === false) {
+            $index = $zip->locateName('manifest.json', ZipArchive::FL_NODIR);
+        }
+
         if ($index === false) {
             return null;
         }
@@ -268,8 +273,11 @@ class ZipPreviewService
             return ['valid' => false, 'errors' => $errors];
         }
 
-        // Check manifest exists
+        // Check manifest exists (including subdirectories)
         $manifestIndex = $zip->locateName('manifest.json');
+        if ($manifestIndex === false) {
+            $manifestIndex = $zip->locateName('manifest.json', ZipArchive::FL_NODIR);
+        }
         if ($manifestIndex === false) {
             $errors[] = "manifest.json not found in ZIP";
             $zip->close();

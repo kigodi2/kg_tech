@@ -29,23 +29,25 @@ class AcseeAllocationValidatorTest extends TestCase
         $this->validator = new AcseeAllocationValidator();
 
         // Create exam type and year directly (no factory)
-        $this->examType = ExamType::create(['name' => 'ACSEE']);
+        $this->examType = ExamType::create(['code' => 'ACSEE', 'name' => 'ACSEE']);
         $this->examYear = ExamYear::create(['year' => 2026, 'year_label' => '2026']);
 
         // Create subjects
         $this->generalStudies = Subject::create([
             'code' => '111',
-            'name' => 'GENERAL STUDIES'
+            'name' => 'GENERAL STUDIES',
+            'exam_type_id' => $this->examType->id,
         ]);
-        $this->subject1 = Subject::create(['code' => '101', 'name' => 'Physics']);
-        $this->subject2 = Subject::create(['code' => '102', 'name' => 'Chemistry']);
-        $this->subject3 = Subject::create(['code' => '103', 'name' => 'Biology']);
+        $this->subject1 = Subject::create(['code' => '101', 'name' => 'Physics', 'exam_type_id' => $this->examType->id]);
+        $this->subject2 = Subject::create(['code' => '102', 'name' => 'Chemistry', 'exam_type_id' => $this->examType->id]);
+        $this->subject3 = Subject::create(['code' => '103', 'name' => 'Biology', 'exam_type_id' => $this->examType->id]);
 
         // Create a test candidate directly
+        $region = \App\Models\Region::create(['code' => 'TR', 'name' => 'Test Region']);
         $school = \App\Models\School::create([
             'code' => 'TEST001',
             'name' => 'Test School',
-            'registration_number' => 'REG001'
+            'region_id' => $region->id,
         ]);
         
         $this->candidate = Candidate::create([

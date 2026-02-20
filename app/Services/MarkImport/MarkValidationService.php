@@ -53,16 +53,29 @@ class MarkValidationService
             return $errors;
         }
 
-        // Rule 4: Validate marks presence and ranges
-        $markErrors = $this->validateMarksStructure($rawMark, $subject);
-        if (!empty($markErrors)) {
-            return array_merge($errors, $markErrors);
+        // Rule 4: Validate marks presence — NECTA-aligned
+        $structureResult = $this->validateMarksStructure($rawMark, $subject);
+
+        if (!empty($structureResult['errors'])) {
+            return array_merge($errors, $structureResult['errors']);
         }
 
-        // Rule 5: Validate mark ranges
-        $rangeErrors = $this->validateMarkRanges($rawMark, $subject);
-        if (!empty($rangeErrors)) {
-            return array_merge($errors, $rangeErrors);
+        // Handle warnings and subject_status (X/ABS)
+        if (!empty($structureResult['warnings'])) {
+            $rawMark->update([
+                'has_warnings' => true,
+                'warning_messages' => $structureResult['warnings'],
+                'subject_status' => $structureResult['subject_status'],
+                'status_reason' => $structureResult['warnings'][0] ?? null,
+            ]);
+        }
+
+        // Rule 5: Validate mark ranges (skip for absent/INC candidates)
+        if (!in_array($structureResult['subject_status'], ['X', 'INC'])) {
+            $rangeErrors = $this->validateMarkRanges($rawMark, $subject);
+            if (!empty($rangeErrors)) {
+                return array_merge($errors, $rangeErrors);
+            }
         }
 
         return $errors;
@@ -70,7 +83,7 @@ class MarkValidationService
 
     /**
      * Get candidate's registered combination for a specific year
-     * Derived from candidate registration data
+     * Derived from candidate registration data, with fallback to candidate.combination field
      */
     private function getCandidateCombination($candidate, $year)
     {
@@ -96,20 +109,34 @@ class MarkValidationService
             ->pluck('subject_id')
             ->toArray();
 
-        if (empty($subjectIds)) {
-            return null;
+        if (!empty($subjectIds)) {
+            // Find combination that contains ALL candidate's selected subjects
+            $combinations = $acseeExamType->combinations()
+                ->active()
+                ->get();
+
+            foreach ($combinations as $combo) {
+                $comboSubjectIds = $combo->subjects()->pluck('subject_id')->toArray();
+
+                // Check if all candidate's subjects are in this combination
+                if (count(array_intersect($subjectIds, $comboSubjectIds)) === count($subjectIds)) {
+                    return $combo;
+                }
+            }
         }
 
-        // Find combination that contains ALL candidate's selected subjects
-        $combinations = $acseeExamType->combinations()
-            ->active()
-            ->get();
+        // Fallback: match by candidate.combination field (case-insensitive)
+        $candidateCombo = $candidate->combination ?? null;
+        if ($candidateCombo) {
+            $normalized = strtoupper(preg_replace('/\s+/', '', trim($candidateCombo)));
+            $combo = $acseeExamType->combinations()
+                ->active()
+                ->get()
+                ->first(function ($c) use ($normalized) {
+                    return strtoupper(preg_replace('/\s+/', '', trim($c->code))) === $normalized;
+                });
 
-        foreach ($combinations as $combo) {
-            $comboSubjectIds = $combo->subjects()->pluck('subject_id')->toArray();
-            
-            // Check if all candidate's subjects are in this combination
-            if (count(array_intersect($subjectIds, $comboSubjectIds)) === count($subjectIds)) {
+            if ($combo) {
                 return $combo;
             }
         }
@@ -130,31 +157,72 @@ class MarkValidationService
     }
 
     /**
-     * Validate marks structure (all required papers present)
+     * Validate marks structure with NECTA-aligned missing-paper rules.
+     *
+     * Returns ['errors' => [...], 'warnings' => [...], 'subject_status' => 'X'|null]
+     *
+     * RULE 1 – ALL_PAPERS_MISSING → warning (SUBJECT_ABSENT_X, non-blocking)
+     * RULE 2 – PARTIAL_PAPERS_MISSING → actionable warning (INC, non-blocking for moderation)
      */
     private function validateMarksStructure(RawMark $rawMark, $subject): array
     {
-        $errors = [];
+        $requiredComponents = [];
+        $filledComponents = [];
+        $missingComponents = [];
 
-        // Check written papers
         for ($i = 1; $i <= $subject->written_papers; $i++) {
             $field = "paper_{$i}_marks";
-            if ($rawMark->$field === null || $rawMark->$field === '') {
-                $errors[] = "Paper {$i} marks are missing or empty";
+            $requiredComponents[] = "Paper {$i}";
+            $value = $rawMark->$field;
+            if ($value === null || $value === '') {
+                $missingComponents[] = "Paper {$i}";
+            } else {
+                $filledComponents[] = "Paper {$i}";
             }
         }
 
-        // Check practical if required
-        if ($subject->has_practical && ($rawMark->practical_marks === null || $rawMark->practical_marks === '')) {
-            $errors[] = "Practical marks are missing but required for this subject";
+        if ($subject->has_practical) {
+            $requiredComponents[] = 'Practical';
+            if ($rawMark->practical_marks === null || $rawMark->practical_marks === '') {
+                $missingComponents[] = 'Practical';
+            } else {
+                $filledComponents[] = 'Practical';
+            }
         }
 
-        // Check project if required
-        if ($subject->has_project && ($rawMark->project_marks === null || $rawMark->project_marks === '')) {
-            $errors[] = "Project marks are missing but required for this subject";
+        if ($subject->has_project) {
+            $requiredComponents[] = 'Project';
+            if ($rawMark->project_marks === null || $rawMark->project_marks === '') {
+                $missingComponents[] = 'Project';
+            } else {
+                $filledComponents[] = 'Project';
+            }
         }
 
-        return $errors;
+        if (empty($requiredComponents)) {
+            return ['errors' => [], 'warnings' => [], 'subject_status' => null];
+        }
+
+        // ALL missing → SUBJECT_ABSENT ('X') — warning, non-blocking
+        if (count($missingComponents) === count($requiredComponents)) {
+            return [
+                'errors' => [],
+                'warnings' => ["All required papers missing (" . implode(', ', $missingComponents) . "). Candidate marked as 'X' (did not appear)."],
+                'subject_status' => 'X',
+            ];
+        }
+
+        // PARTIAL missing → actionable warning (INC), non-blocking for moderation
+        if (!empty($missingComponents)) {
+            $warnings = [];
+            foreach ($missingComponents as $component) {
+                $warnings[] = "Incomplete: {$component} marks missing. Has marks for: " . implode(', ', $filledComponents) . ". Pending moderation (Accept as INC or Reject).";
+            }
+            return ['errors' => [], 'warnings' => $warnings, 'subject_status' => 'INC'];
+        }
+
+        // All filled → valid
+        return ['errors' => [], 'warnings' => [], 'subject_status' => null];
     }
 
     /**
@@ -163,7 +231,8 @@ class MarkValidationService
     private function validateMarkRanges(RawMark $rawMark, $subject): array
     {
         $errors = [];
-        $maxMarks = 100; // Standard max marks per component
+        $maxMarks = 100;
+        $maxPracticalMarks = 50;
 
         // Validate written paper marks
         for ($i = 1; $i <= $subject->written_papers; $i++) {
@@ -181,12 +250,12 @@ class MarkValidationService
             }
         }
 
-        // Validate practical marks
+        // Validate practical marks (0-50 range)
         if ($subject->has_practical && $rawMark->practical_marks !== null) {
             if (!is_numeric($rawMark->practical_marks)) {
                 $errors[] = "Practical marks must be numeric";
-            } elseif ($rawMark->practical_marks < 0 || $rawMark->practical_marks > $maxMarks) {
-                $errors[] = "Practical marks must be between 0 and {$maxMarks}";
+            } elseif ($rawMark->practical_marks < 0 || $rawMark->practical_marks > $maxPracticalMarks) {
+                $errors[] = "Practical marks must be between 0 and {$maxPracticalMarks} (got: {$rawMark->practical_marks})";
             } elseif (!$this->isValidMarkIncrement($rawMark->practical_marks)) {
                 $errors[] = "Practical marks must be in increments of 0.5";
             }

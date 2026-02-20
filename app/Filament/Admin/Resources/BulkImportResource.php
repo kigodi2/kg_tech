@@ -28,6 +28,16 @@ class BulkImportResource extends Resource
         return false;
     }
 
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return false;
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -44,7 +54,7 @@ class BulkImportResource extends Resource
                         'info' => 'school',
                         'warning' => 'district',
                     ])
-                    ->formatStateUsing(fn ($state) => ucfirst($state)),
+                    ->formatStateUsing(fn($state) => ucfirst($state)),
 
                 Tables\Columns\TextColumn::make('examYear.year_label')
                     ->label('Exam Year')
@@ -59,14 +69,15 @@ class BulkImportResource extends Resource
                         'danger' => 'failed',
                         'secondary' => 'pending',
                     ])
-                    ->formatStateUsing(fn ($state) => ucfirst($state)),
+                    ->formatStateUsing(fn($state) => ucfirst($state)),
 
                 Tables\Columns\TextColumn::make('processed_files')
                     ->label('Progress')
-                    ->formatStateUsing(fn (BulkImport $record) => 
-                        $record->total_files > 0 
+                    ->formatStateUsing(
+                        fn(BulkImport $record) =>
+                        $record->total_files > 0
                             ? "{$record->processed_files}/{$record->total_files} files"
-                            : ($record->total_schools > 0 
+                            : ($record->total_schools > 0
                                 ? "{$record->processed_schools}/{$record->total_schools} schools"
                                 : 'N/A')
                     ),
@@ -115,7 +126,7 @@ class BulkImportResource extends Resource
                             ->label('Import ID'),
                         BadgeEntry::make('scope_type')
                             ->label('Scope')
-                            ->formatStateUsing(fn ($state) => ucfirst($state))
+                            ->formatStateUsing(fn($state) => ucfirst($state))
                             ->colors([
                                 'info' => 'school',
                                 'warning' => 'district',
@@ -128,7 +139,7 @@ class BulkImportResource extends Resource
                                 'danger' => 'failed',
                                 'secondary' => 'pending',
                             ])
-                            ->formatStateUsing(fn ($state) => ucfirst($state)),
+                            ->formatStateUsing(fn($state) => ucfirst($state)),
                     ]),
 
                 Section::make('Exam Information')
@@ -145,12 +156,14 @@ class BulkImportResource extends Resource
                     ->schema([
                         TextEntry::make('processed_files')
                             ->label('Files Processed')
-                            ->formatStateUsing(fn (BulkImport $record) => 
+                            ->formatStateUsing(
+                                fn(BulkImport $record) =>
                                 "{$record->processed_files} of {$record->total_files}"
                             ),
                         TextEntry::make('processed_schools')
                             ->label('Schools Processed')
-                            ->formatStateUsing(fn (BulkImport $record) => 
+                            ->formatStateUsing(
+                                fn(BulkImport $record) =>
                                 "{$record->processed_schools} of {$record->total_schools}"
                             ),
                     ]),
@@ -180,9 +193,9 @@ class BulkImportResource extends Resource
                         TextEntry::make('error_summary')
                             ->label('Errors')
                             ->columnSpanFull()
-                            ->formatStateUsing(fn ($state) => $state ? nl2br(e($state)) : 'No errors'),
+                            ->formatStateUsing(fn($state) => $state ? nl2br(e($state)) : 'No errors'),
                     ])
-                    ->visible(fn (BulkImport $record) => !empty($record->error_summary)),
+                    ->visible(fn(BulkImport $record) => !empty($record->error_summary)),
             ]);
     }
 

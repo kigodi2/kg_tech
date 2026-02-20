@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Resources\FinalGradeResource\Pages;
 
 use App\Filament\Admin\Resources\FinalGradeResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewFinalGrade extends ViewRecord
@@ -12,8 +11,6 @@ class ViewFinalGrade extends ViewRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\EditAction::make(),
-        ];
+        return [];
     }
 }

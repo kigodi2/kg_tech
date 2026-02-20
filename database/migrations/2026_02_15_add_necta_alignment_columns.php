@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -87,15 +88,23 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('candidate_subject_selections', function (Blueprint $table) {
-            $table->dropIndex('idx_allocation_source');
-            $table->dropIndex('idx_principal_subjects');
-            $table->dropForeignKeyIfExists(['created_by']);
-            $table->dropColumn(['created_by', 'source', 'is_principal']);
+            if (Schema::hasColumn('candidate_subject_selections', 'source')) {
+                if (DB::getDriverName() !== 'sqlite') {
+                    try { $table->dropIndex('idx_allocation_source'); } catch (\Exception $e) {}
+                    try { $table->dropIndex('idx_principal_subjects'); } catch (\Exception $e) {}
+                    try { $table->dropForeign(['created_by']); } catch (\Exception $e) {}
+                }
+                $table->dropColumn(['created_by', 'source', 'is_principal']);
+            }
         });
 
         Schema::table('candidates', function (Blueprint $table) {
-            $table->dropForeignKeyIfExists(['combination_id']);
-            $table->dropColumn(['combination_id', 'candidate_type']);
+            if (Schema::hasColumn('candidates', 'combination_id')) {
+                if (DB::getDriverName() !== 'sqlite') {
+                    try { $table->dropForeign(['combination_id']); } catch (\Exception $e) {}
+                }
+                $table->dropColumn(['combination_id', 'candidate_type']);
+            }
         });
     }
 };

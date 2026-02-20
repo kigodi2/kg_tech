@@ -45,7 +45,7 @@ class CandidateImportService
     ): array {
         $handle = fopen($file->getRealPath(), 'r');
         $header = fgetcsv($handle);
-        
+
         if (!$header) {
             fclose($handle);
             return [
@@ -177,6 +177,8 @@ class CandidateImportService
                 'row_number' => $rowNumber,
                 'candidate_id' => $record['candidate_id'] ?? '',
                 'full_name' => $record['full_name'] ?? '',
+                'csv_combination' => $record['combination'] ?? '',
+                'resolved_combination' => empty($rowErrors) && !empty($record['combination']) ? strtoupper(trim($record['combination'])) : null,
                 'status' => $rowStatus,
                 'messages' => $rowErrors
             ];
@@ -222,7 +224,7 @@ class CandidateImportService
 
             $handle = fopen($file->getRealPath(), 'r');
             $header = fgetcsv($handle);
-            
+
             if (!$header) {
                 fclose($handle);
                 DB::rollBack();
@@ -243,7 +245,7 @@ class CandidateImportService
             $schools = School::all()->keyBy('code');
             $acseeType = ExamType::where('code', 'ACSEE')->first();
             $resolvedExamYear = $this->resolveExamYear($examYear);
-            
+
             // Preload existing candidate IDs for batch checking
             $existingCandidateIds = Candidate::pluck('id', 'candidate_id');
 
@@ -267,27 +269,27 @@ class CandidateImportService
 
                 try {
                     $record = $this->mapRowToRecord($row, $header);
-                    
+
                     // Re-validate
-                     $rowErrors = [];
-                     $this->validateCandidateId($record['candidate_id'] ?? null, $rowErrors, [], $rowNumber);
-                     $this->validateFullName($record['full_name'] ?? null, $rowErrors);
-                     $this->validateGender($record['gender'] ?? null, $rowErrors);
-                     $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                    $rowErrors = [];
+                    $this->validateCandidateId($record['candidate_id'] ?? null, $rowErrors, [], $rowNumber);
+                    $this->validateFullName($record['full_name'] ?? null, $rowErrors);
+                    $this->validateGender($record['gender'] ?? null, $rowErrors);
+                    $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
 
-                     // Determine candidate type for validation
-                     $candidateType = strtoupper($record['candidate_type'] ?? 'SCHOOL');
+                    // Determine candidate type for validation
+                    $candidateType = strtoupper($record['candidate_type'] ?? 'SCHOOL');
 
-                     $finalExamType = $record['exam_type'] ?? $examType ?? 'ACSEE';
-                     if (strtoupper($finalExamType) === 'ACSEE') {
-                         if ($candidateType === 'SCHOOL') {
-                             // SCHOOL candidates require combination
-                             $this->validateCombination($record['combination'] ?? null, $rowErrors, 'SCHOOL');
-                         } else {
-                             // PRIVATE candidates require subjects
-                             $this->validateSubjects($record['subjects'] ?? null, $rowErrors);
-                         }
-                     }
+                    $finalExamType = $record['exam_type'] ?? $examType ?? 'ACSEE';
+                    if (strtoupper($finalExamType) === 'ACSEE') {
+                        if ($candidateType === 'SCHOOL') {
+                            // SCHOOL candidates require combination
+                            $this->validateCombination($record['combination'] ?? null, $rowErrors, 'SCHOOL');
+                        } else {
+                            // PRIVATE candidates require subjects
+                            $this->validateSubjects($record['subjects'] ?? null, $rowErrors);
+                        }
+                    }
 
                     if (!empty($rowErrors)) {
                         $errors[] = [
@@ -314,13 +316,13 @@ class CandidateImportService
                     }
 
                     // Collect for batch processing
-                     $chunk[] = [
-                         'record' => $record,
-                         'examYear' => $resolvedExamYear,
-                         'examType' => $finalExamType,
-                         'schools' => $schools,
-                         'acseeType' => $acseeType
-                     ];
+                    $chunk[] = [
+                        'record' => $record,
+                        'examYear' => $resolvedExamYear,
+                        'examType' => $finalExamType,
+                        'schools' => $schools,
+                        'acseeType' => $acseeType
+                    ];
 
                     // Process chunk when it reaches batch size
                     if (count($chunk) >= $chunkSize) {
@@ -329,7 +331,6 @@ class CandidateImportService
                         $allocationsCreated += $result['allocations'];
                         $chunk = [];
                     }
-
                 } catch (\Exception $e) {
                     Log::warning("Row $rowNumber import error: " . $e->getMessage());
                     $errors[] = [
@@ -351,8 +352,8 @@ class CandidateImportService
 
             DB::commit();
 
-            $message = "Imported $importedCount candidates" 
-                . ($updatedCount > 0 ? ", updated $updatedCount" : '') 
+            $message = "Imported $importedCount candidates"
+                . ($updatedCount > 0 ? ", updated $updatedCount" : '')
                 . ($skippedCount > 0 ? ", skipped $skippedCount" : '')
                 . ($allocationsCreated > 0 ? ", allocated subjects for $allocationsCreated" : '');
 
@@ -367,7 +368,6 @@ class CandidateImportService
                 'errors' => array_slice($errors, 0, 100),
                 'allocation_errors' => array_slice($allocationErrors, 0, 50)
             ];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Candidate import commit error', [
@@ -487,41 +487,21 @@ class CandidateImportService
             return;
         }
 
-        $combinationValue = trim($combination);
+        $combinationValue = strtoupper(trim($combination));
 
-        // First try: Check if it's a registered combination code (e.g., HGL, HGK, HKL)
-        // Case-insensitive comparison to handle codes like PMCs
+        // Strict rule: CSV is source of truth. Only accept exact combination codes
+        // (case-insensitive). Do NOT attempt to parse subjects or guess.
         $combinationExists = DB::table('combinations')
             ->where('exam_type_id', $acsee->id)
-            ->whereRaw('LOWER(code) = LOWER(?)', [$combinationValue])
+            ->whereRaw('UPPER(code) = ?', [$combinationValue])
             ->exists();
 
         if ($combinationExists) {
-            return; // Valid combination code found
+            return; // Valid exact combination code
         }
 
-        // Second try: Check if it's comma-separated subjects (e.g., "History,Geography,Literature")
-        $parts = array_map('trim', explode(',', $combinationValue));
-        $parts = array_filter($parts);
-
-        if (count($parts) > 1) {
-            // Treat as comma-separated subjects
-            $foundSubjects = Subject::where('exam_type_id', $acsee->id)
-                ->where(function ($q) use ($parts) {
-                    foreach ($parts as $part) {
-                        $q->orWhere('code', strtoupper($part))
-                          ->orWhere('name', 'like', "%$part%");
-                    }
-                })
-                ->count();
-
-            if ($foundSubjects !== count($parts)) {
-                $errors[] = "combination has invalid subjects: $combinationValue";
-            }
-        } else {
-            // Single value that's not a registered combination
-            $errors[] = "combination code not found: $combinationValue";
-        }
+        // Not found: treat as validation error (no guessing)
+        $errors[] = "Unknown combination code: $combinationValue";
     }
 
     /**
@@ -566,7 +546,9 @@ class CandidateImportService
             // SCHOOL candidate: requires school_code and combination
             $school = School::where('code', $record['school_code'])->firstOrFail();
             $candidateData['school_id'] = $school->id;
-            $candidateData['combination_id'] = $this->getCombinationId($record['combination'] ?? null);
+            $comboCode = isset($record['combination']) ? strtoupper(trim($record['combination'])) : null;
+            $candidateData['combination'] = $comboCode;
+            $candidateData['combination_id'] = $this->getCombinationId($comboCode);
         } else {
             // PRIVATE candidate: requires district
             $district = District::where('name', 'like', "%{$record['district']}%")->firstOrFail();
@@ -575,10 +557,19 @@ class CandidateImportService
 
         $candidate = Candidate::create($candidateData);
 
+        // Integrity guard: ensure saved combination matches CSV (if provided)
+        if (!empty($comboCode)) {
+            $savedComboCode = strtoupper(trim($candidate->combination ?? ''));
+            $savedComboId = $candidate->combination_id;
+            if ($savedComboCode !== $comboCode || $savedComboId !== ($candidateData['combination_id'] ?? null)) {
+                throw new \Exception("Combination mismatch detected for {$candidate->candidate_id}. CSV='{$comboCode}' Saved='{$savedComboCode}'");
+            }
+        }
+
         // Register for ACSEE if needed
         if ($finalExamType === 'ACSEE') {
-            if ($candidateType === 'SCHOOL' && $record['combination']) {
-                $this->registerForACSEE($candidate, $record['combination'], $examYear);
+            if ($candidateType === 'SCHOOL' && !empty($comboCode)) {
+                $this->registerForACSEE($candidate, $comboCode, $examYear);
             } elseif ($candidateType === 'PRIVATE' && $record['subjects']) {
                 $this->registerForACSEEPrivate($candidate, $record['subjects'], $examYear);
             }
@@ -596,19 +587,37 @@ class CandidateImportService
     private function updateCandidate(Candidate $candidate, array $record, ?string $examYear = null, ?string $examType = null): void
     {
         $school = School::where('code', $record['school_code'])->first();
-        
+
         if (!$school) {
             Log::warning("Cannot update candidate {$candidate->candidate_id}: school {$record['school_code']} not found");
             return;
         }
 
-        // Safe update: name, gender, school only
-        // Immutable: candidate_id, exam_type, combination (to protect exam allocations)
-        $candidate->update([
+        // Safe update: name, gender, school. For replace mode we also update combination
+        $updateData = [
             'school_id' => $school->id,
             'full_name' => $record['full_name'],
             'gender' => strtoupper($record['gender'][0] ?? 'M'),
-        ]);
+        ];
+
+        // If CSV provided a combination, apply it (replace mode semantics)
+        if (!empty($record['combination'])) {
+            $comboCode = strtoupper(trim($record['combination']));
+            $comboId = $this->getCombinationId($comboCode);
+            $updateData['combination'] = $comboCode;
+            $updateData['combination_id'] = $comboId;
+        }
+
+        $candidate->update($updateData);
+
+        // Integrity guard: ensure updated candidate matches CSV combination if provided
+        if (!empty($record['combination'])) {
+            $savedComboCode = strtoupper(trim($candidate->combination ?? ''));
+            $savedComboId = $candidate->combination_id;
+            if (($comboCode ?? null) && ($savedComboCode !== ($comboCode ?? '') || $savedComboId !== ($comboId ?? null))) {
+                throw new \Exception("Combination mismatch on update for {$candidate->candidate_id}. CSV='{$comboCode}' Saved='{$savedComboCode}'");
+            }
+        }
 
         Log::info("Updated candidate via import", [
             'candidate_id' => $candidate->candidate_id,
@@ -667,7 +676,7 @@ class CandidateImportService
             ->where(function ($q) use ($parts) {
                 foreach ($parts as $part) {
                     $q->orWhere('code', strtoupper($part))
-                      ->orWhere('name', 'like', "%$part%");
+                        ->orWhere('name', 'like', "%$part%");
                 }
             })
             ->get();
@@ -790,9 +799,8 @@ class CandidateImportService
             return null;
         }
 
-        $combo = Combination::where('code', strtoupper($combination))
-            ->orWhere('name', $combination)
-            ->first();
+        $code = strtoupper(trim($combination));
+        $combo = Combination::whereRaw('UPPER(code) = ?', [$code])->first();
 
         return $combo ? $combo->id : null;
     }
@@ -906,36 +914,48 @@ class CandidateImportService
                 }
 
                 // Use candidate_type from CSV if provided, otherwise auto-detect from index number
-                 if (!empty($record['candidate_type'])) {
-                     $candidateType = strtoupper($record['candidate_type']);
-                 } else {
-                     // Auto-detect from index number prefix
-                     $validator = new IndexNumberValidator();
-                     $parsed = $validator->parse($record['candidate_id']);
-                     $candidateType = $parsed?->candidate_type ?? 'SCHOOL'; // Default to SCHOOL if parsing fails
-                 }
-                 
-                  // Create candidate
-                  $candidate = Candidate::create([
-                      'school_id' => $school->id,
-                      'candidate_id' => $record['candidate_id'],
-                      'full_name' => $record['full_name'],
-                      'gender' => strtoupper($record['gender'][0] ?? 'M'),
-                      'exam_type' => $examType,
-                      'combination' => $record['combination'] ?? null,
-                      'candidate_type' => $candidateType,
-                      'status' => 'registered',
-                      'is_active' => true,
-                  ]);
+                if (!empty($record['candidate_type'])) {
+                    $candidateType = strtoupper($record['candidate_type']);
+                } else {
+                    // Auto-detect from index number prefix
+                    $validator = new IndexNumberValidator();
+                    $parsed = $validator->parse($record['candidate_id']);
+                    $candidateType = $parsed?->candidate_type ?? 'SCHOOL'; // Default to SCHOOL if parsing fails
+                }
+
+                // Normalize combination code and resolve ID (strict exact match)
+                $comboCode = isset($record['combination']) ? strtoupper(trim($record['combination'])) : null;
+                $comboId = $this->getCombinationId($comboCode);
+
+                // Create candidate with both code and FK to avoid later guessing
+                $candidate = Candidate::create([
+                    'school_id' => $school->id,
+                    'candidate_id' => $record['candidate_id'],
+                    'full_name' => $record['full_name'],
+                    'gender' => strtoupper($record['gender'][0] ?? 'M'),
+                    'exam_type' => $examType,
+                    'combination' => $comboCode,
+                    'combination_id' => $comboId,
+                    'candidate_type' => $candidateType,
+                    'status' => 'registered',
+                    'is_active' => true,
+                ]);
+
+                // Integrity guard: ensure saved candidate matches CSV combination exactly
+                $savedComboCode = strtoupper(trim($candidate->combination ?? ''));
+                $savedComboId = $candidate->combination_id;
+                if ($comboCode && ($savedComboCode !== $comboCode || $savedComboId !== $comboId)) {
+                    throw new \Exception("Combination mismatch detected for {$candidate->candidate_id}. CSV='{$comboCode}' Saved='{$savedComboCode}'");
+                }
 
                 // Register for ACSEE if needed
                 if (strtoupper($examType) === 'ACSEE' && $acseeType && $examYear) {
-                    if ($candidateType === 'SCHOOL' && $record['combination']) {
-                        $this->registerForACSEEBatch($candidate, $record['combination'], $acseeType, $examYear);
+                    if ($candidateType === 'SCHOOL' && $comboCode) {
+                        $this->registerForACSEEBatch($candidate, $comboCode, $acseeType, $examYear);
                     } elseif ($candidateType === 'PRIVATE' && !empty($record['subjects'])) {
                         // First create exam registration, then allocate subjects
                         $this->createExamRegistrationIfNotExists($candidate, $acseeType, $examYear);
-                        
+
                         // Allocate specific subjects for PRIVATE candidates
                         $allocationErrors = [];
                         $allocCount = $this->allocateSubjectsForPrivateCandidate($candidate, $record['subjects'], $acseeType, $examYear, $allocationErrors);
@@ -948,7 +968,6 @@ class CandidateImportService
                 }
 
                 $imported++;
-
             } catch (\Exception $e) {
                 Log::error("Batch process error: " . $e->getMessage(), [
                     'record' => $record['candidate_id'] ?? 'unknown'
@@ -992,7 +1011,7 @@ class CandidateImportService
             ->where(function ($q) use ($parts) {
                 foreach ($parts as $part) {
                     $q->orWhere('code', strtoupper($part))
-                      ->orWhere('name', 'like', "%$part%");
+                        ->orWhere('name', 'like', "%$part%");
                 }
             })
             ->get();
@@ -1091,7 +1110,7 @@ class CandidateImportService
                 $errors[] = "No valid subjects found for candidate {$candidate->candidate_id}";
                 return 0;
             }
-            
+
             // For PRIVATE candidates, no additional validation needed
             // They can choose any combination of subjects (unlike SCHOOL candidates with NECTA rules)
 
@@ -1130,7 +1149,6 @@ class CandidateImportService
             }
 
             return 0;
-
         } catch (\Exception $e) {
             $errors[] = "Candidate {$candidate->candidate_id}: " . $e->getMessage();
             return 0;

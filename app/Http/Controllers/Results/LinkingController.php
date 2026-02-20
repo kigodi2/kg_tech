@@ -59,7 +59,7 @@ class LinkingController extends Controller
             ->where('combination', '!=', '')
             ->whereNotExists(function ($q) {
                 $q->select('id')->from('combinations')
-                  ->whereRaw('UPPER(combinations.code) = UPPER(candidates.combination)');
+                    ->whereRaw('UPPER(combinations.code) = UPPER(candidates.combination)');
             })
             ->count();
 
@@ -98,9 +98,18 @@ class LinkingController extends Controller
                 ->first();
 
             if ($defaultCombo) {
-                $fixed = Candidate::whereNull('combination')
+                // Update both combination code and combination_id FK together
+                $candidates = Candidate::whereNull('combination')
                     ->whereHas('examRegistrations', fn($q) => $q->where('exam_type_id', $acsee->id)->where('exam_year_id', $examYear->id))
-                    ->update(['combination' => $defaultCombo->code]);
+                    ->get();
+
+                foreach ($candidates as $candidate) {
+                    $candidate->update([
+                        'combination' => $defaultCombo->code,
+                        'combination_id' => $defaultCombo->id,
+                    ]);
+                    $fixed++;
+                }
             }
         }
 
@@ -123,7 +132,8 @@ class LinkingController extends Controller
 
     private function generateLinkingReport($acsee, $examYear)
     {
-        $totalCandidates = Candidate::whereHas('examRegistrations', 
+        $totalCandidates = Candidate::whereHas(
+            'examRegistrations',
             fn($q) => $q->where('exam_type_id', $acsee->id)->where('exam_year_id', $examYear->id)
         )->count();
 
@@ -137,9 +147,24 @@ class LinkingController extends Controller
         ];
     }
 
-    private function countMissingSchools($acsee, $examYear) { return 0; }
-    private function countMissingCombinations($acsee, $examYear) { return 0; }
-    private function countInvalidCombinations($acsee, $examYear) { return 0; }
-    private function countMissingSubjects($acsee, $examYear) { return 0; }
-    private function isLinkingComplete($acsee, $examYear) { return true; }
+    private function countMissingSchools($acsee, $examYear)
+    {
+        return 0;
+    }
+    private function countMissingCombinations($acsee, $examYear)
+    {
+        return 0;
+    }
+    private function countInvalidCombinations($acsee, $examYear)
+    {
+        return 0;
+    }
+    private function countMissingSubjects($acsee, $examYear)
+    {
+        return 0;
+    }
+    private function isLinkingComplete($acsee, $examYear)
+    {
+        return true;
+    }
 }

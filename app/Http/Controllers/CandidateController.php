@@ -93,7 +93,7 @@ class CandidateController extends Controller
             // NECTA Index Number Validation (if index_number field provided or exam_type is ACSEE)
             if ($validated['exam_type'] === 'ACSEE' && !empty($validated['candidate_id'])) {
                 $validator = new IndexNumberValidator();
-                
+
                 // Resolve exam year and type for context
                 $examYear = null;
                 if (!empty($validated['exam_year'])) {
@@ -156,14 +156,19 @@ class CandidateController extends Controller
             }
 
             // Create candidate
-             $candidate = Candidate::create($candidateData);
+            $candidate = Candidate::create($candidateData);
 
-              // Register for ACSEE if specified
-              if ($validated['exam_type'] === 'ACSEE') {
-                  $this->registerForACSEE($candidate, $validated['combination'] ?? null, $validated['exam_year'] ?? null);
-              }
+            // Verify candidate saved successfully
+            if (!$candidate || !$candidate->id) {
+                throw new \Exception('Failed to create candidate record');
+            }
 
-             DB::commit();
+            // Register for ACSEE if specified
+            if ($validated['exam_type'] === 'ACSEE') {
+                $this->registerForACSEE($candidate, $validated['combination'] ?? null, $validated['exam_year'] ?? null);
+            }
+
+            DB::commit();
 
             // Log successful candidate registration
             \App\Models\GovernanceAuditLog::log(
@@ -188,7 +193,6 @@ class CandidateController extends Controller
             }
 
             return redirect('/candidates')->with('success', 'Candidate created successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -245,7 +249,7 @@ class CandidateController extends Controller
             // NECTA Index Number Validation (if updating to ACSEE or index_number changed)
             if ($validated['exam_type'] === 'ACSEE' && $validated['candidate_id'] !== $candidate->candidate_id) {
                 $validator = new IndexNumberValidator();
-                
+
                 // Resolve exam year and type for context
                 $examYear = $candidate->examRegistrations()->first()?->examYear;
                 if (!$examYear) {
@@ -327,7 +331,6 @@ class CandidateController extends Controller
             }
 
             return redirect('/candidates')->with('success', 'Candidate updated successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -369,7 +372,6 @@ class CandidateController extends Controller
             }
 
             return redirect('/candidates')->with('success', 'Candidate deleted successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -525,7 +527,7 @@ class CandidateController extends Controller
                 foreach ($parts as $part) {
                     // Match by code (case-insensitive) or name (contains)
                     $query->orWhere(DB::raw('UPPER(code)'), '=', strtoupper($part))
-                          ->orWhere(DB::raw('UPPER(name)'), 'LIKE', '%' . strtoupper($part) . '%');
+                        ->orWhere(DB::raw('UPPER(name)'), 'LIKE', '%' . strtoupper($part) . '%');
                 }
             })
             ->get();

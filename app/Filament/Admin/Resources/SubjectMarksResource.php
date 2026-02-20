@@ -14,6 +14,21 @@ class SubjectMarksResource extends Resource
 {
     protected static ?string $model = SubjectMarks::class;
 
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return false;
+    }
+
     protected static ?string $slug = 'subject-marks';
 
     protected static ?string $navigationIcon = 'heroicon-o-pencil';
@@ -154,14 +169,8 @@ class SubjectMarksResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ])
+            ->bulkActions([])
             ->defaultSort('created_at', 'desc');
     }
 
@@ -176,9 +185,7 @@ class SubjectMarksResource extends Resource
     {
         return [
             'index' => Pages\ListSubjectMarks::route('/'),
-            'create' => Pages\CreateSubjectMarks::route('/create'),
             'view' => Pages\ViewSubjectMarks::route('/{record}'),
-            'edit' => Pages\EditSubjectMarks::route('/{record}/edit'),
         ];
     }
 }

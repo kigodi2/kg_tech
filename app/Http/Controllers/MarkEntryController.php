@@ -11,6 +11,7 @@ use App\Models\Subject;
 use App\Models\ExamType;
 use App\Models\ExamYear;
 use App\Services\MarkImport\MarkImportService;
+use App\Services\MarkImport\MarkImportRunService;
 use App\Services\MarkImport\MarkValidationService;
 use App\Services\MarkImport\MarkTemplateService;
 use App\Services\MarkImport\SubjectFilterService;
@@ -19,7 +20,9 @@ use App\Services\MarkImport\CsvIntegrityService;
 use App\Services\MarkImport\MarkRowLockingService;
 use App\Services\MarkImport\ScoresheetService;
 use App\Services\MarkImport\BulkCsvExportService;
+use App\Services\MarkImport\ZipPreviewService;
 use App\Services\ExamYear\ExamYearValidationService;
+use App\Models\MarkImportRun;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -30,6 +33,7 @@ use ZipArchive;
 class MarkEntryController extends Controller
 {
     private MarkImportService $importService;
+    private MarkImportRunService $runService;
     private MarkValidationService $validationService;
     private MarkTemplateService $templateService;
     private SubjectFilterService $subjectFilterService;
@@ -40,8 +44,12 @@ class MarkEntryController extends Controller
     private ScoresheetService $scoresheetService;
     private BulkCsvExportService $bulkExportService;
 
+    // DEPRECATION NOTICE: uploadMarks is superseded by validate/commit endpoints
+    // Keep uploadMarks for backward compatibility until UI fully migrates.
+
     public function __construct(
         MarkImportService $importService,
+        MarkImportRunService $runService,
         MarkValidationService $validationService,
         MarkTemplateService $templateService,
         SubjectFilterService $subjectFilterService,
@@ -53,6 +61,7 @@ class MarkEntryController extends Controller
         BulkCsvExportService $bulkExportService
     ) {
         $this->importService = $importService;
+        $this->runService = $runService;
         $this->validationService = $validationService;
         $this->templateService = $templateService;
         $this->subjectFilterService = $subjectFilterService;
@@ -521,6 +530,16 @@ class MarkEntryController extends Controller
             // Validate batch
             $validationResult = $this->importService->validateBatch($batch);
 
+            // Advance batch status: draft → validated → awaiting_moderation
+            if (($validationResult['valid'] ?? 0) > 0) {
+                $batch->update([
+                    'status' => MarkImportBatch::STATUS_VALIDATED,
+                    'lifecycle_state' => 'awaiting_moderation',
+                    'validated_by' => auth()->id(),
+                    'validated_at' => now(),
+                ]);
+            }
+
             // Lock all successfully processed rows (after validation)
             if ($validationResult['valid'] > 0) {
                 $lockResult = $this->lockingService->lockBatchRows($batch, auth()->id() ?? 1);
@@ -554,6 +573,14 @@ class MarkEntryController extends Controller
                 'batch_id' => $batch->id,
                 'batch_code' => $batch->batch_code,
                 'message' => "{$result['imported_records']} records imported",
+                'batch' => [
+                    'id' => $batch->id,
+                    'status' => $batch->status,
+                    'total_records' => $batch->total_records,
+                    'valid_records' => $batch->valid_records,
+                    'error_records' => $batch->error_records,
+                    'candidate_count' => $batch->rawMarks()->distinct('candidate_index_number')->count('candidate_index_number'),
+                ],
                 'validation' => $validationResult,
                 'locking' => [
                     'locked_count' => $this->lockingService->getLockedRowsCount($batch),
@@ -607,6 +634,7 @@ class MarkEntryController extends Controller
                 'total_records' => $batch->total_records,
                 'valid_records' => $batch->valid_records,
                 'error_records' => $batch->error_records,
+                'candidate_count' => $batch->rawMarks()->distinct('candidate_index_number')->count('candidate_index_number'),
                 'imported_at' => $batch->imported_at?->format('Y-m-d H:i'),
                 'validated_at' => $batch->validated_at?->format('Y-m-d H:i'),
                 'locked_at' => $batch->locked_at?->format('Y-m-d H:i'),
@@ -1339,4 +1367,1032 @@ class MarkEntryController extends Controller
                 'filename' => $zipFilename,
             ];
         }
+
+    /**
+     * Single CSV validate (two-phase: validate only, no commit)
+     *
+     * Creates a MarkImportRun, performs structured validation,
+     * populates mark_import_run_errors and mark_import_run_rows.
+     */
+    public function singleValidate(Request $request)
+    {
+        $examYear = $request->input('exam_year');
+        $schoolId = $request->input('school_id');
+        $subjectId = $request->input('subject_id');
+
+        if (!$examYear || !$schoolId || !$subjectId || !$request->hasFile('file')) {
+            return response()->json(['success' => false, 'message' => 'Missing required fields: exam_year, school_id, subject_id, file'], 422);
+        }
+
+        $file = $request->file('file');
+
+        // Resolve exam_year_id from year label
+        $examYearObj = ExamYear::where('year_label', (string) $examYear)->first();
+        $examYearId = $examYearObj ? $examYearObj->id : 0;
+
+        // Create import run for tracking
+        $run = $this->runService->startRun(
+            auth()->id() ?? 1,
+            $examYearId,
+            (int) $schoolId,
+            (int) $subjectId,
+            'single_subject',
+            $file->getClientOriginalName(),
+            $file->getSize()
+        );
+
+        try {
+            $result = $this->runService->validateSingleCsv(
+                $run, $file, (int) $examYear, (int) $schoolId, (int) $subjectId
+            );
+
+            return response()->json($result);
+        } catch (\Exception $e) {
+            $run->fail('Unexpected error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Validation error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Single CSV commit (two-phase: commit validated batch)
+     *
+     * Creates a MarkImportRun, validates via the run service,
+     * then commits valid rows into the existing batch pipeline.
+     * NEVER overwrites locked/approved marks.
+     */
+    public function singleCommit(Request $request)
+    {
+        $examYear = $request->input('exam_year');
+        $schoolId = $request->input('school_id');
+        $subjectId = $request->input('subject_id');
+
+        if (!$examYear || !$schoolId || !$subjectId || !$request->hasFile('file')) {
+            return response()->json(['success' => false, 'message' => 'Missing required fields'], 422);
+        }
+
+        $file = $request->file('file');
+        $examYearObj = ExamYear::where('year_label', (string) $examYear)->first();
+        $examYearId = $examYearObj ? $examYearObj->id : 0;
+        $examYearLabel = (int) $examYear;
+
+        // Create import run
+        $run = $this->runService->startRun(
+            auth()->id() ?? 1,
+            $examYearId,
+            (int) $schoolId,
+            (int) $subjectId,
+            'single_subject',
+            $file->getClientOriginalName(),
+            $file->getSize()
+        );
+
+        try {
+            // Validate first
+            $validationResult = $this->runService->validateSingleCsv(
+                $run, $file, $examYearLabel, (int) $schoolId, (int) $subjectId
+            );
+
+            // If no valid rows, do not commit
+            if (!($validationResult['can_commit'] ?? false)) {
+                return response()->json(array_merge($validationResult, [
+                    'message' => 'Cannot commit: no valid rows or blocking errors exist.',
+                ]));
+            }
+
+            // Commit: create batch and process via existing pipeline
+            DB::beginTransaction();
+
+            $batch = $this->importService->createBatch($examYearLabel, (int) $schoolId, (int) $subjectId, auth()->id() ?? 1);
+            $result = $this->importService->processCSVUpload($batch, $file, $examYearLabel, (int) $schoolId, (int) $subjectId);
+
+            if (!$result['success']) {
+                DB::rollBack();
+                $run->fail('Batch processing failed: ' . ($result['error'] ?? 'unknown'));
+                return response()->json(['success' => false, 'message' => $result['error'] ?? 'Import failed'], 400);
+            }
+
+            $validation = $this->importService->validateBatch($batch);
+
+            if (($validation['valid'] ?? 0) > 0) {
+                $batch->update([
+                    'status' => MarkImportBatch::STATUS_VALIDATED,
+                    'lifecycle_state' => 'awaiting_moderation',
+                    'validated_by' => auth()->id(),
+                    'validated_at' => now(),
+                ]);
+                $this->lockingService->lockBatchRows($batch, auth()->id() ?? 1);
+            }
+
+            // Link run to batch
+            $run->update([
+                'mark_import_batch_id' => $batch->id,
+                'status' => MarkImportRun::STATUS_COMPLETED,
+                'completed_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => ($result['imported_records'] ?? 0) . ' records committed',
+                'run_id' => $run->id,
+                'batch_id' => $batch->id,
+                'batch' => [
+                    'id' => $batch->id,
+                    'status' => $batch->status,
+                    'total_records' => $batch->total_records,
+                    'valid_records' => $batch->valid_records,
+                    'error_records' => $batch->error_records,
+                    'candidate_count' => $batch->rawMarks()->distinct('candidate_index_number')->count('candidate_index_number'),
+                ],
+                'totals' => [
+                    'total_rows' => $result['imported_records'] ?? 0,
+                    'valid_rows' => $validation['valid'] ?? 0,
+                    'invalid_rows' => $validation['invalid'] ?? 0,
+                ],
+                'links' => [
+                    'batch_details_url' => "/mark-entry/acsee/batch/{$batch->id}",
+                    'error_report_url' => "/api/mark-entry/acsee/import/runs/{$run->id}/errors.csv",
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $run->fail('Unexpected error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Validate a school bulk ZIP (preview + structure check, no commit)
+     */
+    public function schoolValidateZip(Request $request)
+    {
+        if (!$request->hasFile('file')) {
+            return response()->json(['success' => false, 'message' => 'No ZIP file uploaded'], 422);
+        }
+
+        $file = $request->file('file');
+        if (strtolower($file->getClientOriginalExtension()) !== 'zip') {
+            return response()->json(['success' => false, 'message' => 'Only ZIP files are allowed'], 422);
+        }
+
+        try {
+            // Move uploaded file to a persistent temp location
+            $destDir = storage_path('app/temp/imports');
+            if (!is_dir($destDir)) {
+                mkdir($destDir, 0755, true);
+            }
+            $destName = uniqid('school_zip_') . '.zip';
+            $fullPath = $destDir . '/' . $destName;
+            $file->move($destDir, $destName);
+
+            $zip = new ZipArchive();
+            if ($zip->open($fullPath) !== true) {
+                @unlink($fullPath);
+                return response()->json(['success' => false, 'message' => 'Cannot open ZIP file'], 422);
+            }
+
+            // Check if manifest exists (also search in subdirectories)
+            $hasManifest = ($zip->locateName('manifest.json') !== false)
+                || ($zip->locateName('manifest.json', ZipArchive::FL_NODIR) !== false);
+            $subjects = [];
+            $totalCandidates = 0;
+            $issues = [];
+
+            if ($hasManifest) {
+                $zip->close();
+                $zipPreview = app(ZipPreviewService::class);
+                $preview = $zipPreview->preview($fullPath);
+                $subjects = $preview['subjects'] ?? [];
+                $totalCandidates = $preview['total_candidates'] ?? 0;
+                $issues = $preview['issues'] ?? [];
+            } else {
+                // Scan ZIP for CSV files directly
+                $hasNestedZips = false;
+                for ($i = 0; $i < $zip->numFiles; $i++) {
+                    $filename = $zip->getNameIndex($i);
+
+                    // Skip macOS resource fork files
+                    if (str_starts_with($filename, '__MACOSX/') || str_contains($filename, '/__MACOSX/')) {
+                        continue;
+                    }
+
+                    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+                    if ($ext === 'zip') {
+                        $hasNestedZips = true;
+                        continue;
+                    }
+
+                    if ($ext !== 'csv' && $ext !== 'txt') {
+                        continue;
+                    }
+
+                    $basename = pathinfo($filename, PATHINFO_FILENAME);
+                    $subjectCode = explode('_', $basename)[0];
+
+                    // Count rows (subtract header)
+                    $content = $zip->getFromIndex($i);
+                    $lines = array_filter(explode("\n", $content), fn($l) => trim($l) !== '');
+                    $rowCount = max(0, count($lines) - 1);
+
+                    $subjects[] = [
+                        'filename' => $filename,
+                        'subject_code' => strtoupper($subjectCode),
+                        'subject_name' => $subjectCode,
+                        'candidates' => $rowCount,
+                    ];
+                    $totalCandidates += $rowCount;
+                }
+                $zip->close();
+
+                if (empty($subjects)) {
+                    if ($hasNestedZips) {
+                        $issues[] = 'This ZIP contains school ZIPs — please use District Import instead';
+                    } else {
+                        $issues[] = 'No CSV files found in ZIP';
+                    }
+                }
+            }
+
+            // Store temp path in session for commit step
+            session(['school_zip_temp_path' => $fullPath]);
+
+            $status = empty($issues) && $totalCandidates > 0 ? 'completed' : (empty($issues) ? 'partial' : 'failed');
+
+            return response()->json([
+                'success' => true,
+                'status' => $status,
+                'can_commit' => $totalCandidates > 0 && empty($issues),
+                'totals' => [
+                    'total_rows' => $totalCandidates,
+                    'valid_rows' => $totalCandidates,
+                    'invalid_rows' => 0,
+                    'warnings' => count($issues),
+                ],
+                'preview' => [
+                    'scope_type' => 'school',
+                    'subjects' => $subjects,
+                    'total_files' => count($subjects),
+                    'total_candidates' => $totalCandidates,
+                    'issues' => $issues,
+                    'is_valid' => empty($issues),
+                ],
+                'errors' => collect($issues)->map(fn($issue) => [
+                    'row' => '-',
+                    'field' => 'structure',
+                    'message' => $issue,
+                ])->toArray(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error validating ZIP: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Validate a district bulk ZIP
+     */
+    public function districtValidateZip(Request $request)
+    {
+        if (!$request->hasFile('file')) {
+            return response()->json(['success' => false, 'message' => 'No ZIP file uploaded'], 422);
+        }
+
+        $file = $request->file('file');
+        if (strtolower($file->getClientOriginalExtension()) !== 'zip') {
+            return response()->json(['success' => false, 'message' => 'Only ZIP files are allowed'], 422);
+        }
+
+        try {
+            $destDir = storage_path('app/temp/imports');
+            if (!is_dir($destDir)) {
+                mkdir($destDir, 0755, true);
+            }
+            $destName = uniqid('district_zip_') . '.zip';
+            $fullPath = $destDir . '/' . $destName;
+            $file->move($destDir, $destName);
+
+            $zip = new ZipArchive();
+            if ($zip->open($fullPath) !== true) {
+                @unlink($fullPath);
+                return response()->json(['success' => false, 'message' => 'Cannot open ZIP file'], 422);
+            }
+
+            $hasManifest = ($zip->locateName('manifest.json') !== false)
+                || ($zip->locateName('manifest.json', ZipArchive::FL_NODIR) !== false);
+            $schools = [];
+            $totalCandidates = 0;
+            $issues = [];
+
+            if ($hasManifest) {
+                $zip->close();
+                $zipPreview = app(ZipPreviewService::class);
+                $preview = $zipPreview->preview($fullPath);
+                $schools = $preview['schools'] ?? [];
+                $totalCandidates = $preview['total_candidates'] ?? 0;
+                $issues = $preview['issues'] ?? [];
+            } else {
+                // District ZIP = ZIP of school ZIPs or CSVs
+                // Check for nested ZIPs (school-level ZIPs inside district ZIP)
+                $hasNestedZips = false;
+                $hasCsvFiles = false;
+                for ($i = 0; $i < $zip->numFiles; $i++) {
+                    $fn = $zip->getNameIndex($i);
+                    // Skip macOS resource fork files
+                    if (str_starts_with($fn, '__MACOSX/') || str_contains($fn, '/__MACOSX/')) {
+                        continue;
+                    }
+                    $ext = strtolower(pathinfo($fn, PATHINFO_EXTENSION));
+                    if ($ext === 'zip') $hasNestedZips = true;
+                    if ($ext === 'csv' || $ext === 'txt') $hasCsvFiles = true;
+                }
+
+                if ($hasNestedZips) {
+                    // Extract each school ZIP and preview it
+                    $tmpExtract = storage_path('app/temp/imports/extract_' . uniqid());
+                    @mkdir($tmpExtract, 0755, true);
+
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        $filename = $zip->getNameIndex($i);
+                        if (strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== 'zip') {
+                            continue;
+                        }
+
+                        $schoolZipContent = $zip->getFromIndex($i);
+                        $schoolZipPath = $tmpExtract . '/' . basename($filename);
+                        file_put_contents($schoolZipPath, $schoolZipContent);
+
+                        $schoolCandidates = 0;
+                        $schoolSubjects = [];
+                        $schoolDisplayName = pathinfo($filename, PATHINFO_FILENAME);
+                        $schoolDisplayCode = $schoolDisplayName;
+
+                        $innerZip = new ZipArchive();
+                        if ($innerZip->open($schoolZipPath) === true) {
+                            // Try to read manifest for school info
+                            $innerManifestContent = $innerZip->getFromName('manifest.json');
+                            if ($innerManifestContent) {
+                                $innerManifest = json_decode($innerManifestContent, true);
+                                if (!empty($innerManifest['school_name'])) $schoolDisplayName = $innerManifest['school_name'];
+                                if (!empty($innerManifest['school_code'])) $schoolDisplayCode = $innerManifest['school_code'];
+                            }
+
+                            for ($j = 0; $j < $innerZip->numFiles; $j++) {
+                                $innerFile = $innerZip->getNameIndex($j);
+                                $innerExt = strtolower(pathinfo($innerFile, PATHINFO_EXTENSION));
+                                if ($innerExt !== 'csv' && $innerExt !== 'txt') continue;
+
+                                $content = $innerZip->getFromIndex($j);
+                                $lines = array_filter(explode("\n", $content), fn($l) => trim($l) !== '');
+                                $rowCount = max(0, count($lines) - 1);
+                                $subjectCode = explode('_', pathinfo($innerFile, PATHINFO_FILENAME))[0];
+
+                                $schoolSubjects[] = ['code' => strtoupper($subjectCode), 'candidates' => $rowCount];
+                                $schoolCandidates += $rowCount;
+                            }
+                            $innerZip->close();
+                        }
+
+                        $schools[] = [
+                            'school_name' => $schoolDisplayName,
+                            'school_code' => $schoolDisplayCode,
+                            'total_subjects' => count($schoolSubjects),
+                            'total_candidates' => $schoolCandidates,
+                            'subjects' => $schoolSubjects,
+                        ];
+                        $totalCandidates += $schoolCandidates;
+                        @unlink($schoolZipPath);
+                    }
+
+                    // Cleanup
+                    @rmdir($tmpExtract);
+                } elseif ($hasCsvFiles) {
+                    // Flat CSV structure - detect subject code from filename
+                    $schoolEntry = ['school_name' => 'All Files', 'school_code' => '-', 'total_subjects' => 0, 'total_candidates' => 0, 'subjects' => []];
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        $filename = $zip->getNameIndex($i);
+                        if (str_starts_with($filename, '__MACOSX/') || str_contains($filename, '/__MACOSX/')) continue;
+                        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                        if ($ext !== 'csv' && $ext !== 'txt') continue;
+
+                        $content = $zip->getFromIndex($i);
+                        $lines = array_filter(explode("\n", $content), fn($l) => trim($l) !== '');
+                        $rowCount = max(0, count($lines) - 1);
+
+                        // Detect subject code: try first segment, then last, then all
+                        $basename = pathinfo($filename, PATHINFO_FILENAME);
+                        $parts = explode('_', $basename);
+                        $detectedSubject = Subject::where('code', $parts[0])->orWhere('code', strtoupper($parts[0]))->first();
+                        if (!$detectedSubject && count($parts) > 1) {
+                            $lastPart = end($parts);
+                            $detectedSubject = Subject::where('code', $lastPart)->orWhere('code', strtoupper($lastPart))->first();
+                        }
+                        if (!$detectedSubject && count($parts) > 2) {
+                            foreach ($parts as $part) {
+                                $detectedSubject = Subject::where('code', $part)->orWhere('code', strtoupper($part))->first();
+                                if ($detectedSubject) break;
+                            }
+                        }
+
+                        $subjectCode = $detectedSubject ? $detectedSubject->code : strtoupper($parts[0]);
+                        if (!$detectedSubject) {
+                            $issues[] = "Cannot detect subject from filename: {$filename}";
+                        }
+
+                        $schoolEntry['subjects'][] = ['code' => $subjectCode, 'candidates' => $rowCount];
+                        $schoolEntry['total_candidates'] += $rowCount;
+                        $totalCandidates += $rowCount;
+                    }
+                    $schoolEntry['total_subjects'] = count($schoolEntry['subjects']);
+                    $schools[] = $schoolEntry;
+                }
+
+                $zip->close();
+
+                if (empty($schools)) {
+                    $issues[] = 'No school ZIPs or CSV files found in district ZIP';
+                }
+            }
+
+            session(['district_zip_temp_path' => $fullPath]);
+
+            $status = empty($issues) && $totalCandidates > 0 ? 'completed' : (empty($issues) ? 'partial' : 'failed');
+
+            return response()->json([
+                'success' => true,
+                'status' => $status,
+                'can_commit' => $totalCandidates > 0 && empty($issues),
+                'totals' => [
+                    'total_rows' => $totalCandidates,
+                    'valid_rows' => $totalCandidates,
+                    'invalid_rows' => 0,
+                    'warnings' => count($issues),
+                ],
+                'preview' => [
+                    'scope_type' => 'district',
+                    'schools' => $schools,
+                    'total_schools' => count($schools),
+                    'total_candidates' => $totalCandidates,
+                    'issues' => $issues,
+                    'is_valid' => empty($issues),
+                ],
+                'errors' => collect($issues)->map(fn($issue) => [
+                    'row' => '-',
+                    'field' => 'structure',
+                    'message' => $issue,
+                ])->toArray(),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error validating ZIP: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Commit school bulk ZIP (process all CSVs inside the ZIP)
+     *
+     * Creates a parent MarkImportRun for the ZIP, with per-file error tracking.
+     * Checks locked/approved conflicts per subject before commit.
+     */
+    public function schoolCommitZip(Request $request)
+    {
+        $schoolId = $request->input('school_id');
+        $examYearId = $request->input('exam_year_id');
+        $zipPath = session('school_zip_temp_path');
+
+        if (!$zipPath || !file_exists($zipPath)) {
+            return response()->json(['success' => false, 'message' => 'No validated ZIP found. Please validate first.'], 422);
+        }
+
+        $examYearObj = $examYearId ? ExamYear::find($examYearId) : null;
+        $school = School::find($schoolId);
+
+        // Create parent import run for the ZIP
+        $parentRun = $this->runService->startRun(
+            auth()->id() ?? 1,
+            $examYearId ?? 0,
+            (int) $schoolId,
+            0,
+            'school_zip',
+            basename($zipPath),
+            filesize($zipPath),
+            $school->region_id ?? null,
+            $school->district_id ?? null
+        );
+
+        try {
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath) !== true) {
+                $parentRun->fail('Cannot open ZIP file');
+                return response()->json(['success' => false, 'message' => 'Cannot open ZIP file'], 500);
+            }
+
+            $manifestContent = $zip->getFromName('manifest.json');
+            $manifest = $manifestContent ? json_decode($manifestContent, true) : null;
+            $examYear = $manifest['exam_year'] ?? ($examYearObj ? $examYearObj->year_label : date('Y'));
+            $results = [];
+            $batchIds = [];
+            $totalSuccess = 0;
+            $totalErrors = 0;
+            $totalRows = 0;
+
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $filename = $zip->getNameIndex($i);
+                $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                if ($filename === 'manifest.json' || ($ext !== 'csv' && $ext !== 'txt')) {
+                    continue;
+                }
+
+                $subjectCode = explode('_', pathinfo($filename, PATHINFO_FILENAME))[0];
+                $subject = Subject::where('code', $subjectCode)->orWhere('code', strtoupper($subjectCode))->first();
+                if (!$subject) {
+                    $this->runService->addRunError($parentRun, 0, null, null, null, null, 'INVALID_SUBJECT', 'error',
+                        "Subject not found: {$subjectCode} (file: {$filename})", $subjectCode, $filename);
+                    $results[] = ['subject_code' => $subjectCode, 'status' => 'failed', 'message' => "Subject not found: {$subjectCode}"];
+                    $totalErrors++;
+                    continue;
+                }
+
+                // Check locked conflict
+                $lockedBatch = MarkImportBatch::where('school_id', $schoolId)
+                    ->where('subject_id', $subject->id)
+                    ->where('exam_year', (int) $examYear)
+                    ->whereIn('status', [MarkImportBatch::STATUS_LOCKED, MarkImportBatch::STATUS_APPROVED])
+                    ->first();
+
+                if ($lockedBatch) {
+                    $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'LOCKED_CONFLICT', 'error',
+                        "Subject {$subjectCode} already has " . strtoupper($lockedBatch->status) . " marks (batch {$lockedBatch->batch_code}). Skipped.",
+                        $lockedBatch->batch_code, $filename);
+                    $results[] = ['subject_code' => $subjectCode, 'status' => 'skipped', 'message' => 'Locked/approved conflict'];
+                    $totalErrors++;
+                    continue;
+                }
+
+                $csvContent = $zip->getFromIndex($i);
+                $tmpCsv = tempnam(sys_get_temp_dir(), 'csv_');
+                file_put_contents($tmpCsv, $csvContent);
+
+                try {
+                    DB::beginTransaction();
+                    $batch = $this->importService->createBatch((int)$examYear, (int)$schoolId, (int)$subject->id, auth()->id() ?? 1);
+                    $uploadedFile = new \Illuminate\Http\UploadedFile($tmpCsv, $filename, 'text/csv', null, true);
+                    $result = $this->importService->processCSVUpload($batch, $uploadedFile, (int)$examYear, (int)$schoolId, (int)$subject->id);
+
+                    if ($result['success']) {
+                        $validation = $this->importService->validateBatch($batch);
+                        if (($validation['valid'] ?? 0) > 0) {
+                            $batch->update([
+                                'status' => MarkImportBatch::STATUS_VALIDATED,
+                                'lifecycle_state' => 'awaiting_moderation',
+                                'validated_by' => auth()->id(),
+                                'validated_at' => now(),
+                            ]);
+                            $this->lockingService->lockBatchRows($batch, auth()->id() ?? 1);
+                        }
+                        DB::commit();
+                        $batchIds[] = $batch->id;
+                        $fileRows = $result['imported_records'] ?? 0;
+                        $fileValid = $validation['valid'] ?? 0;
+                        $totalRows += $fileRows;
+                        $totalSuccess += $fileValid;
+                        $results[] = ['subject_code' => $subjectCode, 'status' => 'success', 'rows_total' => $fileRows, 'rows_success' => $fileValid];
+                    } else {
+                        DB::rollBack();
+                        $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'PROCESSING_FAILED', 'error',
+                            $result['error'] ?? 'Processing failed', null, $filename);
+                        $results[] = ['subject_code' => $subjectCode, 'status' => 'failed', 'message' => $result['error'] ?? 'Processing failed'];
+                        $totalErrors++;
+                    }
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    $this->runService->addRunError($parentRun, 0, null, $subject->id ?? null, null, null, 'EXCEPTION', 'error',
+                        $e->getMessage(), null, $filename);
+                    $results[] = ['subject_code' => $subjectCode, 'status' => 'failed', 'message' => $e->getMessage()];
+                    $totalErrors++;
+                }
+
+                @unlink($tmpCsv);
+            }
+
+            $zip->close();
+            @unlink($zipPath);
+            session()->forget('school_zip_temp_path');
+
+            // Finalize parent run
+            $parentRun->complete($totalRows, $totalSuccess, $totalErrors, 0,
+                count($results) . " files processed, {$totalSuccess} rows committed");
+
+            return response()->json([
+                'success' => true,
+                'run_id' => $parentRun->id,
+                'batch' => ['id' => $batchIds[0] ?? null],
+                'files' => $results,
+            ]);
+        } catch (\Exception $e) {
+            $parentRun->fail('Error committing ZIP: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error committing ZIP: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Commit district bulk ZIP
+     *
+     * Creates a parent MarkImportRun for the ZIP with per-school/subject error tracking.
+     * Checks locked/approved conflicts before processing each file.
+     */
+    public function districtCommitZip(Request $request)
+    {
+        $districtId = $request->input('district_id');
+        $examYearId = $request->input('exam_year_id');
+        $zipPath = session('district_zip_temp_path');
+
+        if (!$zipPath || !file_exists($zipPath)) {
+            return response()->json(['success' => false, 'message' => 'No validated ZIP found. Please validate first.'], 422);
+        }
+
+        $district = District::find($districtId);
+        $parentRun = $this->runService->startRun(
+            auth()->id() ?? 1,
+            $examYearId ?? 0,
+            0,
+            0,
+            'district_zip',
+            basename($zipPath),
+            filesize($zipPath),
+            $district->region_id ?? null,
+            (int) $districtId
+        );
+
+        try {
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath) !== true) {
+                $parentRun->fail('Cannot open ZIP file');
+                return response()->json(['success' => false, 'message' => 'Cannot open ZIP file'], 500);
+            }
+
+            $examYearObj = $examYearId ? ExamYear::find($examYearId) : null;
+            $results = [];
+            $batchIds = [];
+            $totalSuccess = 0;
+            $totalErrors = 0;
+            $totalRows = 0;
+
+            $hasManifest = ($zip->locateName('manifest.json') !== false);
+            $hasNestedZips = false;
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                if (strtolower(pathinfo($zip->getNameIndex($i), PATHINFO_EXTENSION)) === 'zip') {
+                    $hasNestedZips = true;
+                    break;
+                }
+            }
+
+            // Helper closure for processing a single CSV in the district context
+            $processCsv = function (string $csvContent, string $csvName, $school, $subject, string $examYear) use (&$results, &$batchIds, &$totalSuccess, &$totalErrors, &$totalRows, $parentRun) {
+                // Check locked conflict
+                $lockedBatch = MarkImportBatch::where('school_id', $school->id)
+                    ->where('subject_id', $subject->id)
+                    ->where('exam_year', (int) $examYear)
+                    ->whereIn('status', [MarkImportBatch::STATUS_LOCKED, MarkImportBatch::STATUS_APPROVED])
+                    ->first();
+
+                if ($lockedBatch) {
+                    $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'LOCKED_CONFLICT', 'error',
+                        "{$school->code}/{$subject->code}: Already " . strtoupper($lockedBatch->status) . ". Skipped.", $lockedBatch->batch_code, $csvName);
+                    $results[] = ['school_code' => $school->code, 'school_id' => $school->id, 'school_name' => $school->name, 'status' => 'skipped', 'message' => 'Locked/approved conflict'];
+                    $totalErrors++;
+                    return;
+                }
+
+                $tmpCsv = tempnam(sys_get_temp_dir(), 'csv_');
+                file_put_contents($tmpCsv, $csvContent);
+
+                try {
+                    DB::beginTransaction();
+                    $batch = $this->importService->createBatch((int) $examYear, (int) $school->id, (int) $subject->id, auth()->id() ?? 1);
+                    $uploadedFile = new \Illuminate\Http\UploadedFile($tmpCsv, $csvName, 'text/csv', null, true);
+                    $result = $this->importService->processCSVUpload($batch, $uploadedFile, (int) $examYear, (int) $school->id, (int) $subject->id);
+
+                    if ($result['success']) {
+                        $validation = $this->importService->validateBatch($batch);
+                        if (($validation['valid'] ?? 0) > 0) {
+                            $batch->update([
+                                'status' => MarkImportBatch::STATUS_VALIDATED,
+                                'lifecycle_state' => 'awaiting_moderation',
+                                'validated_by' => auth()->id(),
+                                'validated_at' => now(),
+                            ]);
+                            $this->lockingService->lockBatchRows($batch, auth()->id() ?? 1);
+                        }
+                        DB::commit();
+                        $batchIds[] = $batch->id;
+                        $fileRows = $result['imported_records'] ?? 0;
+                        $fileValid = $validation['valid'] ?? 0;
+                        $totalRows += $fileRows;
+                        $totalSuccess += $fileValid;
+                        $results[] = ['school_code' => $school->code, 'school_id' => $school->id, 'school_name' => $school->name, 'status' => 'success', 'successful_candidates' => $fileValid, 'total_candidates' => $fileRows];
+                    } else {
+                        DB::rollBack();
+                        $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'PROCESSING_FAILED', 'error',
+                            $result['error'] ?? 'Processing failed', null, $csvName);
+                        $results[] = ['school_code' => $school->code, 'school_id' => $school->id, 'school_name' => $school->name, 'status' => 'failed', 'message' => $result['error'] ?? 'Processing failed'];
+                        $totalErrors++;
+                    }
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    $this->runService->addRunError($parentRun, 0, null, $subject->id ?? null, null, null, 'EXCEPTION', 'error',
+                        $e->getMessage(), null, $csvName);
+                    $results[] = ['school_code' => $school->code, 'school_id' => $school->id, 'school_name' => $school->name ?? '', 'status' => 'failed', 'message' => $e->getMessage()];
+                    $totalErrors++;
+                }
+
+                @unlink($tmpCsv);
+            };
+
+            if ($hasNestedZips) {
+                $tmpExtract = storage_path('app/temp/imports/commit_' . uniqid());
+                @mkdir($tmpExtract, 0755, true);
+
+                for ($i = 0; $i < $zip->numFiles; $i++) {
+                    $filename = $zip->getNameIndex($i);
+                    if (strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== 'zip') continue;
+
+                    $schoolZipContent = $zip->getFromIndex($i);
+                    $schoolZipPath = $tmpExtract . '/' . basename($filename);
+                    file_put_contents($schoolZipPath, $schoolZipContent);
+
+                    $innerZip = new ZipArchive();
+                    if ($innerZip->open($schoolZipPath) !== true) {
+                        $this->runService->addRunError($parentRun, 0, null, null, null, null, 'ZIP_OPEN_FAILED', 'error',
+                            'Cannot open school ZIP: ' . basename($filename), null, $filename);
+                        $results[] = ['school_code' => basename($filename, '.zip'), 'school_name' => basename($filename, '.zip'), 'status' => 'failed', 'message' => 'Cannot open school ZIP'];
+                        $totalErrors++;
+                        @unlink($schoolZipPath);
+                        continue;
+                    }
+
+                    $innerManifest = null;
+                    $innerManifestContent = $innerZip->getFromName('manifest.json');
+                    if ($innerManifestContent) {
+                        $innerManifest = json_decode($innerManifestContent, true);
+                    }
+
+                    $examYear = $innerManifest['exam_year'] ?? ($examYearObj ? $examYearObj->year_label : date('Y'));
+                    $schoolCode = $innerManifest['school_code'] ?? null;
+                    $school = $schoolCode ? School::where('code', $schoolCode)->first() : null;
+
+                    // Fallback: match school by name from manifest or ZIP filename
+                    if (!$school) {
+                        $schoolName = $innerManifest['school_name'] ?? null;
+                        if ($schoolName) {
+                            $school = School::where('name', $schoolName)->first();
+                        }
+                    }
+                    if (!$school) {
+                        // Try to match school name from ZIP filename (e.g. IGOWOLE_SECONDARY_SCHOOL_ACSEE_2026_MarkTemplate.zip)
+                        $zipBasename = pathinfo($filename, PATHINFO_FILENAME);
+                        // Remove common suffixes: _ACSEE_YYYY_MarkTemplate
+                        $cleanedName = preg_replace('/_ACSEE_\d{4}_MarkTemplate$/i', '', $zipBasename);
+                        $cleanedName = str_replace('_', ' ', $cleanedName);
+                        if ($cleanedName) {
+                            // Exact name match
+                            $school = School::whereRaw('LOWER(name) = ?', [strtolower($cleanedName)])->first();
+                            // Partial match: school name starts with the cleaned filename
+                            if (!$school) {
+                                $school = School::whereRaw('LOWER(name) LIKE ?', [strtolower($cleanedName) . '%'])->first();
+                            }
+                        }
+                    }
+
+                    if (!$school) {
+                        $label = $schoolCode ?? basename($filename, '.zip');
+                        $this->runService->addRunError($parentRun, 0, null, null, null, null, 'SCHOOL_NOT_FOUND', 'error',
+                            'School not found: ' . $label, $schoolCode, $filename);
+                        $results[] = ['school_code' => $label, 'school_name' => $label, 'status' => 'failed', 'message' => 'School not found'];
+                        $totalErrors++;
+                        $innerZip->close();
+                        @unlink($schoolZipPath);
+                        continue;
+                    }
+
+                    for ($j = 0; $j < $innerZip->numFiles; $j++) {
+                        $csvName = $innerZip->getNameIndex($j);
+                        $csvExt = strtolower(pathinfo($csvName, PATHINFO_EXTENSION));
+                        if ($csvExt !== 'csv' && $csvExt !== 'txt') continue;
+
+                        $subjectCode = explode('_', pathinfo($csvName, PATHINFO_FILENAME))[0];
+                        $subject = Subject::where('code', $subjectCode)->orWhere('code', strtoupper($subjectCode))->first();
+                        if (!$subject) {
+                            $this->runService->addRunError($parentRun, 0, null, null, null, null, 'INVALID_SUBJECT', 'error',
+                                "Subject not found: {$subjectCode}", $subjectCode, $csvName);
+                            $results[] = ['school_code' => $school->code, 'school_id' => $school->id, 'school_name' => $school->name, 'status' => 'failed', 'message' => "Subject not found: {$subjectCode}"];
+                            $totalErrors++;
+                            continue;
+                        }
+
+                        $csvContent = $innerZip->getFromIndex($j);
+                        $processCsv($csvContent, $csvName, $school, $subject, $examYear);
+                    }
+
+                    $innerZip->close();
+                    @unlink($schoolZipPath);
+                }
+
+                @rmdir($tmpExtract);
+            } elseif ($hasManifest) {
+                $manifestContent = $zip->getFromName('manifest.json');
+                $manifest = json_decode($manifestContent, true);
+                $examYear = $manifest['exam_year'] ?? ($examYearObj ? $examYearObj->year_label : date('Y'));
+
+                foreach ($manifest['schools'] ?? [] as $schoolData) {
+                    $schoolCode = $schoolData['school_code'] ?? null;
+                    $school = School::where('code', $schoolCode)->first();
+                    if (!$school) {
+                        $this->runService->addRunError($parentRun, 0, null, null, null, null, 'SCHOOL_NOT_FOUND', 'error',
+                            "School not found: {$schoolCode}", $schoolCode);
+                        $results[] = ['school_code' => $schoolCode, 'school_name' => $schoolCode, 'status' => 'failed', 'message' => "School not found: {$schoolCode}"];
+                        $totalErrors++;
+                        continue;
+                    }
+
+                    foreach ($schoolData['subjects'] ?? [] as $subjectData) {
+                        $subjectCode = $subjectData['code'] ?? null;
+                        $subject = Subject::where('code', $subjectCode)->first();
+                        if (!$subject) {
+                            $this->runService->addRunError($parentRun, 0, null, null, null, null, 'INVALID_SUBJECT', 'error',
+                                "Subject not found: {$subjectCode}", $subjectCode);
+                            $results[] = ['school_code' => $schoolCode, 'school_id' => $school->id, 'school_name' => $school->name, 'status' => 'failed', 'message' => "Subject not found: {$subjectCode}"];
+                            $totalErrors++;
+                            continue;
+                        }
+
+                        $csvFilename = "{$schoolCode}/{$subjectCode}.csv";
+                        $altFilename = "{$schoolCode}_{$subjectCode}.csv";
+                        $csvContent = $zip->getFromName($csvFilename) ?: $zip->getFromName($altFilename);
+
+                        if (!$csvContent) {
+                            $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'FILE_NOT_FOUND', 'error',
+                                "CSV file not found in ZIP for {$schoolCode}/{$subjectCode}", null, $csvFilename);
+                            $results[] = ['school_code' => $schoolCode, 'school_id' => $school->id, 'school_name' => $school->name, 'status' => 'failed', 'message' => "CSV file not found in ZIP"];
+                            $totalErrors++;
+                            continue;
+                        }
+
+                        $processCsv($csvContent, $csvFilename, $school, $subject, $examYear);
+                    }
+                }
+            } else {
+                // Flat CSV files directly in the district ZIP
+                // Supports two naming conventions:
+                //   1. {SUBJECT_CODE}_{name}.csv  (e.g. 131_Economics.csv)
+                //   2. {SCHOOL_NAME}_{SUBJECT_CODE}.csv  (e.g. KAWAWA_SECONDARY_SCHOOL_131.csv)
+                // The school is inferred from the CSV data (candidate index numbers)
+                $examYear = $examYearObj ? $examYearObj->year_label : date('Y');
+                $districtSchools = $district ? School::where('district_id', $district->id)->get()->keyBy('code') : collect();
+
+                for ($i = 0; $i < $zip->numFiles; $i++) {
+                    $filename = $zip->getNameIndex($i);
+                    // Skip macOS resource fork files and non-CSV files
+                    if (str_starts_with($filename, '__MACOSX/') || str_contains($filename, '/__MACOSX/')) continue;
+                    $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                    if ($ext !== 'csv' && $ext !== 'txt') continue;
+
+                    $basename = pathinfo($filename, PATHINFO_FILENAME);
+                    $parts = explode('_', $basename);
+                    $subject = null;
+
+                    // Detect if this is a school-level MarkTemplate file uploaded to district import by mistake
+                    if (str_contains(strtolower($basename), 'marktemplate')) {
+                        $this->runService->addRunError($parentRun, 0, null, null, null, null, 'WRONG_IMPORT_TYPE', 'error',
+                            "File '{$filename}' appears to be a school-level MarkTemplate. Please use 'School Bulk ZIP' import instead, or upload a District ZIP containing school ZIPs.", null, $filename);
+                        $results[] = ['school_code' => '-', 'school_name' => $filename, 'status' => 'failed', 'message' => "This is a school-level template. Use 'School Bulk ZIP' import instead."];
+                        $totalErrors++;
+                        continue;
+                    }
+
+                    // Strategy 1: First segment is subject code (e.g. 131_Economics.csv)
+                    $firstPart = $parts[0];
+                    $subject = Subject::where('code', $firstPart)->orWhere('code', strtoupper($firstPart))->first();
+
+                    // Strategy 2: Last segment is subject code (e.g. SCHOOL_NAME_131.csv from template)
+                    if (!$subject && count($parts) > 1) {
+                        $lastPart = end($parts);
+                        $subject = Subject::where('code', $lastPart)->orWhere('code', strtoupper($lastPart))->first();
+                    }
+
+                    // Strategy 3: Try all segments (handles SCHOOL_NAME_CODE_YEAR patterns)
+                    if (!$subject && count($parts) > 2) {
+                        foreach ($parts as $part) {
+                            $subject = Subject::where('code', $part)->orWhere('code', strtoupper($part))->first();
+                            if ($subject) break;
+                        }
+                    }
+
+                    if (!$subject) {
+                        $this->runService->addRunError($parentRun, 0, null, null, null, null, 'INVALID_SUBJECT', 'error',
+                            "Cannot determine subject from filename: {$filename}. Expected format: SUBJECTCODE_name.csv or SCHOOLNAME_SUBJECTCODE.csv", null, $filename);
+                        $results[] = ['school_code' => '-', 'school_name' => $filename, 'status' => 'failed', 'message' => "No valid subject code found in filename: {$basename}"];
+                        $totalErrors++;
+                        continue;
+                    }
+
+                    // Read CSV content and try to detect school from the first data row's index number
+                    $csvContent = $zip->getFromIndex($i);
+                    $school = null;
+
+                    // Try to detect school from candidate index numbers in the CSV
+                    $lines = array_filter(explode("\n", $csvContent), fn($l) => trim($l) !== '');
+                    if (count($lines) > 1) {
+                        // Skip header, read first data row
+                        $firstDataRow = str_getcsv($lines[1] ?? '');
+                        $indexNumber = trim($firstDataRow[0] ?? '');
+                        if ($indexNumber) {
+                            $candidate = \App\Models\Candidate::where('candidate_id', $indexNumber)->first();
+                            if ($candidate && $candidate->school_id) {
+                                $school = School::find($candidate->school_id);
+                            }
+                        }
+                    }
+
+                    if (!$school && $districtSchools->count() === 1) {
+                        $school = $districtSchools->first();
+                    }
+
+                    // Strategy: try to match school name from filename against district schools
+                    if (!$school && $districtSchools->isNotEmpty()) {
+                        $filenameLower = strtolower(str_replace('_', ' ', $basename));
+                        foreach ($districtSchools as $ds) {
+                            if (str_contains($filenameLower, strtolower($ds->name))) {
+                                $school = $ds;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!$school) {
+                        $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'SCHOOL_NOT_FOUND', 'error',
+                            "Cannot determine school for file: {$filename}. Ensure candidates are registered or use School Bulk ZIP.", null, $filename);
+                        $results[] = ['school_code' => '-', 'school_name' => $filename, 'status' => 'failed', 'message' => 'Cannot determine school from CSV data or filename'];
+                        $totalErrors++;
+                        continue;
+                    }
+
+                    $processCsv($csvContent, $filename, $school, $subject, $examYear);
+                }
+            }
+
+            $zip->close();
+            @unlink($zipPath);
+            session()->forget('district_zip_temp_path');
+
+            $allFailed = $totalSuccess === 0 && $totalErrors > 0;
+            if ($allFailed) {
+                $parentRun->fail(count($results) . " entries processed, all failed");
+            } else {
+                $parentRun->complete($totalRows, $totalSuccess, $totalErrors, 0,
+                    count($results) . " entries processed, {$totalSuccess} rows committed");
+            }
+
+            return response()->json([
+                'success' => !$allFailed,
+                'run_id' => $parentRun->id,
+                'batch' => ['id' => $batchIds[0] ?? null],
+                'schools' => $results,
+                'message' => $allFailed ? 'All files failed to import. Check the error details.' : null,
+            ]);
+        } catch (\Exception $e) {
+            $parentRun->fail('Error committing ZIP: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error committing ZIP: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get bulk import progress
+     */
+    public function bulkProgress($id)
+    {
+        $batch = MarkImportBatch::find($id);
+        if (!$batch) {
+            return response()->json(['success' => false, 'message' => 'Batch not found'], 404);
+        }
+
+        $totalRows = RawMark::where('batch_id', $batch->id)->count();
+        $validRows = RawMark::where('batch_id', $batch->id)->where('is_valid', true)->count();
+        $invalidRows = RawMark::where('batch_id', $batch->id)->where('is_valid', false)->count();
+
+        $status = 'completed';
+        if ($batch->status === MarkImportBatch::STATUS_DRAFT) {
+            $status = 'processing';
+        }
+
+        return response()->json([
+            'success' => true,
+            'progress' => [
+                'status' => $status,
+                'progress_percentage' => 100,
+                'total_rows' => $totalRows,
+                'valid_rows' => $validRows,
+                'invalid_rows' => $invalidRows,
+            ],
+        ]);
+    }
 }

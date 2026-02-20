@@ -3,7 +3,6 @@
 namespace App\Filament\Admin\Resources\SubjectMarksResource\Pages;
 
 use App\Filament\Admin\Resources\SubjectMarksResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewSubjectMarks extends ViewRecord
@@ -12,8 +11,6 @@ class ViewSubjectMarks extends ViewRecord
 
     protected function getHeaderActions(): array
     {
-        return [
-            Actions\EditAction::make(),
-        ];
+        return [];
     }
 }

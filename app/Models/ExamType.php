@@ -15,10 +15,7 @@ class ExamType extends Model
         'code',
         'name',
         'description',
-        'level',
         'education_level',
-        'min_candidates',
-        'max_papers',
         'is_active',
     ];
 

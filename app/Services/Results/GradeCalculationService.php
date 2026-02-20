@@ -69,8 +69,16 @@ class GradeCalculationService
             $totalMarks = 0;
             $totalPoints = 0;
             $validSubjectCount = 0;
+            $incSubjectCount = 0;
 
             foreach ($marks as $mark) {
+                // Skip INC and X/ABS subjects — they must NOT be graded as 0
+                $subjectStatus = $mark->subject_status ?? null;
+                if (in_array($subjectStatus, ['INC', 'X', 'ABS'], true)) {
+                    if ($subjectStatus === 'INC') $incSubjectCount++;
+                    continue;
+                }
+
                 // Get the final mark - use marks_obtained if available, otherwise use percentage
                 $finalMark = $mark->marks_obtained ?? $mark->percentage;
                 

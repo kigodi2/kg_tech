@@ -9,16 +9,17 @@ use Illuminate\Support\Facades\DB;
 class LifecycleStateService {
     
     private const VALID_TRANSITIONS = [
-        'draft' => ['validating', 'rejected'],
+        'draft' => ['validating', 'validated', 'rejected'],
         'validating' => ['validated', 'validation_failed'],
-        'validated' => ['awaiting_moderation', 'draft'],
+        'validated' => ['submitted', 'awaiting_moderation', 'draft', 'rejected'],
         'validation_failed' => ['draft'],
         'awaiting_moderation' => ['approved', 'rejected'],
-        'approved' => ['submitted', 'draft'],
-        'rejected' => ['draft'],
+        'submitted' => ['approved', 'rejected', 'archived'],
+        'approved' => ['locked', 'submitted', 'draft'],
+        'rejected' => ['draft', 'validated'],
+        'locked' => ['submitted', 'processed'],
         'processing' => ['processed'],
-        'processed' => ['submitted'],
-        'submitted' => ['archived'],
+        'processed' => ['submitted', 'archived'],
         'archived' => [],
     ];
 

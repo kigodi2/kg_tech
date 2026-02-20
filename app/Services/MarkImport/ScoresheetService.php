@@ -206,21 +206,22 @@ class ScoresheetService
     {
         $acsee = ExamType::where('code', 'ACSEE')->firstOrFail();
 
-        // Get subjects that have registered candidates through combinations
+        // Get subjects from candidate_subject_selections (works for all schools including private)
         return Subject::query()
             ->distinct()
             ->select('subjects.id', 'subjects.code', 'subjects.name', 
                      'subjects.written_papers', 'subjects.has_practical', 'subjects.has_project')
-            ->join('combination_subject', 'subjects.id', '=', 'combination_subject.subject_id')
-            ->join('combinations', 'combination_subject.combination_id', '=', 'combinations.id')
-            ->join('candidates', 'combinations.code', '=', 'candidates.combination')
+            ->join('candidate_subject_selections', 'subjects.id', '=', 'candidate_subject_selections.subject_id')
             ->join('candidate_exam_registrations', function ($join) use ($acsee, $examYearId) {
-                $join->on('candidates.id', '=', 'candidate_exam_registrations.candidate_id')
+                $join->on('candidate_subject_selections.candidate_id', '=', 'candidate_exam_registrations.candidate_id')
+                     ->on('candidate_subject_selections.exam_year_id', '=', 'candidate_exam_registrations.exam_year_id')
                      ->where('candidate_exam_registrations.exam_type_id', '=', $acsee->id)
                      ->where('candidate_exam_registrations.exam_year_id', '=', $examYearId);
             })
+            ->join('candidates', 'candidate_exam_registrations.candidate_id', '=', 'candidates.id')
             ->where('candidates.school_id', '=', $schoolId)
-            ->where('candidates.exam_type', '=', $acsee->code)
+            ->where('candidate_subject_selections.exam_type_id', '=', $acsee->id)
+            ->where('candidate_subject_selections.exam_year_id', '=', $examYearId)
             ->where('subjects.exam_type_id', '=', $acsee->id)
             ->where('subjects.is_active', true)
             ->orderBy('subjects.code')

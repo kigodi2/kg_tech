@@ -44,12 +44,12 @@ class UnlockBatchController extends Controller {
             
             // Check authorization
             $user = auth()->user();
-            $isAdmin = $user && ($user->hasRole('admin') || $user->hasPermissionTo('mark-entry.admin'));
+            $isAdmin = $user && ($user->isAdmin() || \Illuminate\Support\Facades\Gate::allows('mark-entry.admin'));
             
             \Log::info('Admin check', [
                 'user_id' => $user->id,
                 'is_admin' => $isAdmin,
-                'roles' => $user->roles->pluck('name')->toArray(),
+                'role' => $user->role?->code,
             ]);
             
             if (!$isAdmin) {

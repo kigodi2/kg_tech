@@ -42,7 +42,19 @@ class AcseeAllocationCSVImporter
     {
         try {
             $handle = fopen($file->getRealPath(), 'r');
-            $header = fgetcsv($handle);
+            
+            // Skip comment lines starting with #
+            $header = null;
+            while (($line = fgets($handle)) !== false) {
+                $trimmed = ltrim($line);
+                if ($trimmed === '' || $trimmed[0] === '#') {
+                    continue;
+                }
+                // Rewind to start of this line and parse as CSV
+                fseek($handle, ftell($handle) - strlen($line));
+                $header = fgetcsv($handle);
+                break;
+            }
             
             if (!$header) {
                 fclose($handle);
@@ -307,7 +319,19 @@ class AcseeAllocationCSVImporter
             }
 
             $handle = fopen($file->getRealPath(), 'r');
-            $header = fgetcsv($handle);
+            
+            // Skip comment lines starting with #
+            $header = null;
+            while (($line = fgets($handle)) !== false) {
+                $trimmed = ltrim($line);
+                if ($trimmed === '' || $trimmed[0] === '#') {
+                    continue;
+                }
+                fseek($handle, ftell($handle) - strlen($line));
+                $header = fgetcsv($handle);
+                break;
+            }
+            
             $header = array_map('strtolower', $header);
             $header = array_map('trim', $header);
 

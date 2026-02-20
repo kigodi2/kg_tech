@@ -76,8 +76,12 @@ class MarkSubmissionService {
      * Get submission-ready batches
      */
     public function getSubmissionReadyBatches(int $perPage = 20) {
-        return MarkImportBatch::where('lifecycle_state', 'approved')
+        return MarkImportBatch::select('mark_import_batches.*')
+            ->where('lifecycle_state', 'approved')
             ->with(['school', 'subject', 'examType', 'latestReview.reviewer'])
+            ->addSelect(['candidate_count' => \App\Models\RawMark::selectRaw('COUNT(DISTINCT candidate_index_number)')
+                ->whereColumn('mark_import_batch_id', 'mark_import_batches.id')
+            ])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -86,8 +90,12 @@ class MarkSubmissionService {
      * Get submitted batches
      */
     public function getSubmittedBatches(int $perPage = 20) {
-        return MarkImportBatch::where('lifecycle_state', 'submitted')
+        return MarkImportBatch::select('mark_import_batches.*')
+            ->where('lifecycle_state', 'submitted')
             ->with(['school', 'subject', 'examType'])
+            ->addSelect(['candidate_count' => \App\Models\RawMark::selectRaw('COUNT(DISTINCT candidate_index_number)')
+                ->whereColumn('mark_import_batch_id', 'mark_import_batches.id')
+            ])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }

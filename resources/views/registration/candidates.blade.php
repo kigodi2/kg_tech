@@ -2170,6 +2170,8 @@ function handleQuickImport(fileInput) {
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">Name</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">CSV Combination</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Resolved Combination</th>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
                                     </tr>
                                 </thead>
@@ -2179,6 +2181,29 @@ function handleQuickImport(fileInput) {
                                             <td class="px-3 py-2 text-gray-600 text-xs" x-text="row.row_number"></td>
                                             <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="row.candidate_id || '-'"></td>
                                             <td class="px-3 py-2 text-gray-600 text-xs" x-text="row.full_name || '-'"></td>
+                                            
+                                            <!-- CSV Combination Column -->
+                                            <td class="px-3 py-2 text-gray-600 text-xs">
+                                                <span x-text="row.csv_combination || '-'"></span>
+                                                <template x-if="row.csv_combination_error">
+                                                    <div class="text-red-600 text-xs mt-1 font-semibold" x-text="row.csv_combination_error"></div>
+                                                </template>
+                                            </td>
+                                            
+                                            <!-- Resolved Combination Column -->
+                                            <td class="px-3 py-2 text-gray-600 text-xs">
+                                                <template x-if="row.resolved_combination">
+                                                    <span class="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold" x-text="row.resolved_combination"></span>
+                                                </template>
+                                                <template x-if="!row.resolved_combination && row.status !== 'ERROR'">
+                                                    <span class="text-gray-400">-</span>
+                                                </template>
+                                                <template x-if="row.error_message && row.status === 'ERROR'">
+                                                    <div class="text-red-600 text-xs mt-1 font-semibold" x-text="row.error_message"></div>
+                                                </template>
+                                            </td>
+                                            
+                                            <!-- Status Column -->
                                             <td class="px-3 py-2">
                                                 <template x-if="row.status === 'NEW'">
                                                     <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">✓ NEW</span>
