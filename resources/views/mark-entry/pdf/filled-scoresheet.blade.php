@@ -2,9 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{{ $school->code }} - {{ $subject->code }} - ACSEE {{ $examYear->year_label }} (Filled)</title>
+    @php
+        $examYear = $examYear ?? $exam_year ?? null;
+        $paperStructure = $paper_structure ?? ['written_papers' => 0, 'has_practical' => false, 'has_project' => false];
+        $paperKeys = [];
+        for ($i = 1; $i <= (int) ($paperStructure['written_papers'] ?? 0); $i++) { $paperKeys[] = "P{$i}"; }
+        if (!empty($paperStructure['has_practical'])) { $paperKeys[] = 'PRAC'; }
+        if (!empty($paperStructure['has_project'])) { $paperKeys[] = 'PROJ'; }
+    @endphp
+    <title>{{ $school->code }} - {{ $subject->code }} - ACSEE {{ optional($examYear)->year_label }} (Filled)</title>
     <style>
-        @page { size: A4 landscape; margin: 15mm; }
+        @page { size: A4 portrait; margin: 15mm; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'DejaVu Sans', Arial, sans-serif; font-size: 10pt; color: #000; background: #fff; line-height: 1.3; padding: 4mm; }
         .pdf-title { text-align: center; font-size: 13pt; font-weight: bold; margin-bottom: 4pt; }
@@ -19,7 +27,6 @@
         tbody td { border: 1pt solid #999; padding: 2pt 2pt; text-align: center; font-size: 9pt; height: 14pt; }
         tbody tr:nth-child(even) { background-color: #f5f5f5; }
         .col-index { width: 35mm; text-align: center; font-weight: 500; }
-        .col-name { width: 45mm; text-align: left; padding-left: 3pt; overflow: hidden; text-overflow: ellipsis; }
         .col-sex { width: 10mm; text-align: center; }
         .col-comb { width: 14mm; text-align: center; }
         .col-paper { text-align: center; font-weight: 500; }
@@ -36,7 +43,7 @@
 
     <div class="pdf-header">
         <div class="pdf-header-line"><span class="pdf-header-label">School:</span> {{ $school->code }} – {{ $school->name }}</div>
-        <div class="pdf-header-line"><span class="pdf-header-label">Year:</span> {{ $examYear->year_label }}</div>
+        <div class="pdf-header-line"><span class="pdf-header-label">Year:</span> {{ optional($examYear)->year_label }}</div>
         <div class="pdf-header-line"><span class="pdf-header-label">Generated:</span> {{ $timestamp->format('d M Y H:i') }}</div>
         <div class="pdf-header-line"><span class="pdf-header-label">Total:</span> {{ $total_candidates }} candidates</div>
     </div>
@@ -45,15 +52,8 @@
         <thead>
             <tr>
                 <th class="col-index">INDEX NO.</th>
-                <th class="col-name">CANDIDATE NAME</th>
                 <th class="col-sex">SEX</th>
                 <th class="col-comb">COMB</th>
-                @php
-                    $paperKeys = [];
-                    for ($i = 1; $i <= $paper_structure['written_papers']; $i++) { $paperKeys[] = "P{$i}"; }
-                    if ($paper_structure['has_practical']) { $paperKeys[] = 'PRAC'; }
-                    if ($paper_structure['has_project']) { $paperKeys[] = 'PROJ'; }
-                @endphp
                 @foreach ($paperKeys as $key)
                     <th class="col-paper">{{ $key }}</th>
                 @endforeach
@@ -64,7 +64,6 @@
             @foreach ($candidates as $candidate)
                 <tr>
                     <td class="col-index">{{ $candidate['index_number'] }}</td>
-                    <td class="col-name">{{ $candidate['full_name'] }}</td>
                     <td class="col-sex">{{ $candidate['gender'] }}</td>
                     <td class="col-comb">{{ $candidate['combination'] }}</td>
                     @foreach ($paperKeys as $key)

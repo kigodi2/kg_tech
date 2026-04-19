@@ -24,6 +24,8 @@ class SubjectMarks extends Model
         'percentage',
         'grade',
         'subject_status',
+        'process_id',
+        'snapshot_id',
     ];
 
     protected $casts = [

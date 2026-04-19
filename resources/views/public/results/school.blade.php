@@ -1,12 +1,12 @@
 @extends('layout')
 
 @section('content')
-<div style="background-color: #B0E0E6; min-height: 100vh; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: 'Maiandra GD', sans-serif;">
+<div style="background-color: #B0E0E6; min-height: 100vh; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: 'Maiandra GD', sans-serif; font-weight: 700; white-space: nowrap;">
     <div class="container mx-auto px-4">
         
         <!-- Breadcrumb Navigation -->
         <div style="margin-bottom: 1rem;">
-            <a href="/results/{{ $examYear }}/{{ strtolower($examType) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 0.9rem;">
+            <a href="/results/{{ $examYear }}/{{ strtolower($examType) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
                 ← Back to Results Search
             </a>
         </div>
@@ -36,6 +36,14 @@
         </div>
 
         @php
+            $displayCombination = function (?string $combination): string {
+                $value = trim((string) $combination);
+                if ($value === '') {
+                    return '-';
+                }
+                return strtoupper($value) === 'PMCS' ? 'PMCs' : $value;
+            };
+
             // Calculate division statistics by sex and overall
             $divisionStatsBySex = [
                 'F' => ['I' => 0, 'II' => 0, 'III' => 0, 'IV' => 0, '0' => 0],
@@ -56,54 +64,59 @@
                 'M' => 0,
             ];
             
-            // Count by gender and division
+            // Count by gender, status, and division
             foreach($candidatesWithMetrics as $data) {
                 $candidate = $data['candidate'];
-                $gender = $candidate->gender;
+                $gender = strtoupper((string) ($candidate->gender ?? ''));
                 $division = $data['division'];
-                $totalPoints = $data['totalPoints'];
-                
-                $genderCounts[$gender]++;
-                
-                if ($totalPoints === 0) {
-                    // Mark as ABS
+                $candidateStatus = $data['candidateStatus'] ?? 'COMPLETE';
+                if (!isset($genderCounts[$gender])) {
+                    continue;
+                }
+
+                if ($candidateStatus === 'ABS') {
                     $absIncStatsBySex[$gender]['ABS']++;
+                } elseif ($candidateStatus === 'INC') {
+                    $absIncStatsBySex[$gender]['INC']++;
                 } else {
-                    // Count by division
                     if ($division === 'I') {
-                        $divisionStatsBySex[$gender]['I']++;
                         $totalDivisions['I']++;
+                        $divisionStatsBySex[$gender]['I']++;
                     } elseif ($division === 'II') {
-                        $divisionStatsBySex[$gender]['II']++;
                         $totalDivisions['II']++;
+                        $divisionStatsBySex[$gender]['II']++;
                     } elseif ($division === 'III') {
-                        $divisionStatsBySex[$gender]['III']++;
                         $totalDivisions['III']++;
+                        $divisionStatsBySex[$gender]['III']++;
                     } elseif ($division === 'IV') {
-                        $divisionStatsBySex[$gender]['IV']++;
                         $totalDivisions['IV']++;
+                        $divisionStatsBySex[$gender]['IV']++;
                     } else {
-                        $divisionStatsBySex[$gender]['0']++;
                         $totalDivisions['0']++;
+                        $divisionStatsBySex[$gender]['0']++;
                     }
                 }
+
+                $genderCounts[$gender]++;
             }
             
             // Calculate averages
             $totalCandidates = count($candidatesWithMetrics);
             $totalPassed = $totalDivisions['I'] + $totalDivisions['II'] + $totalDivisions['III'] + $totalDivisions['IV'];
             $totalFailed = $totalDivisions['0'];
+            $totalInc = $absIncStatsBySex['F']['INC'] + $absIncStatsBySex['M']['INC'];
             $totalAbsent = $absIncStatsBySex['F']['ABS'] + $absIncStatsBySex['M']['ABS'];
-            $overallGpa = 0;
-            $completeCount = 0;
+            $overallGpaPoints = 0;
+            $overallGpaSubjects = 0;
             
             foreach($candidatesWithMetrics as $data) {
-                if ($data['totalPoints'] > 0) {
-                    $overallGpa += $data['gpa'];
-                    $completeCount++;
+                if (($data['candidateStatus'] ?? 'COMPLETE') === 'COMPLETE') {
+                    $overallGpaPoints += (float) ($data['gpaPointsSum'] ?? 0);
+                    $overallGpaSubjects += (int) ($data['gpaSubjectCount'] ?? 0);
                 }
             }
-            $overallGpa = $completeCount > 0 ? $overallGpa / $completeCount : 0;
+            $overallGpa = $overallGpaSubjects > 0 ? $overallGpaPoints / $overallGpaSubjects : 0;
+            $overallGpaInfo = app(\App\Services\Results\NectaGradingService::class)->getGpaCompetence((float) $overallGpa);
         @endphp
 
         <!-- SECTION 1: DIVISION PERFORMANCE SUMMARY -->
@@ -111,53 +124,53 @@
             <table class="w-full" style="table-layout: fixed; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
                 <thead>
                     <tr style="background-color: #003366;">
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left; color: #FFFFFF;" colspan="8">DIVISION PERFORMANCE SUMMARY</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF;" colspan="8">DIVISION PERFORMANCE SUMMARY</th>
                     </tr>
                     <tr style="background-color: LIGHTYELLOW;">
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #000080;">SEX</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #000080;">I</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #000080;">II</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #000080;">III</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #000080;">IV</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #000080;">0</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #000080;">INC</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #000080;">ABS</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #000080;">SEX</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #000080;">I</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #000080;">II</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #000080;">III</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #000080;">IV</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #000080;">0</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #000080;">INC</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #000080;">ABS</th>
                     </tr>
                 </thead>
                 <tbody style="background-color: LIGHTYELLOW;">
                     @if($genderCounts['F'] > 0)
                     <tr style="color: #000080;">
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">F</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['I'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['II'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['III'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['IV'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['0'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['F']['INC'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['F']['ABS'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">F</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['I'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['II'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['III'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['IV'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['F']['0'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['F']['INC'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['F']['ABS'] }}</td>
                     </tr>
                     @endif
                     @if($genderCounts['M'] > 0)
                     <tr style="color: #000080;">
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">M</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['I'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['II'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['III'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['IV'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['0'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['M']['INC'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['M']['ABS'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">M</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['I'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['II'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['III'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['IV'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $divisionStatsBySex['M']['0'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['M']['INC'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['M']['ABS'] }}</td>
                     </tr>
                     @endif
                     <tr style="background-color: LIGHTYELLOW; color: #000080;">
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">T</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['I'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['II'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['III'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['IV'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['0'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['F']['INC'] + $absIncStatsBySex['M']['INC'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['F']['ABS'] + $absIncStatsBySex['M']['ABS'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">T</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['I'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['II'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['III'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['IV'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['0'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['F']['INC'] + $absIncStatsBySex['M']['INC'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $absIncStatsBySex['F']['ABS'] + $absIncStatsBySex['M']['ABS'] }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -169,87 +182,78 @@
             <table class="w-full" style="table-layout: fixed; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
                 <thead>
                     <tr style="background-color: #003366;">
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">CNO</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 3%;">SEX</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 3%;">COMB</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left; color: #FFFFFF; width: 50%;">DETAILED SUBJECTS RESULT</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">TOTAL</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">AVG</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 4%;">GRD</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 4%;">PTS</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 3%;">DIV</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 4%;">GPA</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 3%;">POS</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 7%;">CNO</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 3%;">SEX</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 3%;">COMB</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF; width: 48%;">DETAILED SUBJECTS RESULT</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">TOTAL</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">AVG</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 4%;">GRD</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 4%;">AGGT</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 3%;">DIV</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 4%;">GPA</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 3%;">POS</th>
                     </tr>
                 </thead>
                 <tbody style="background-color: LIGHTYELLOW;">
                     @php
-                        // Separate candidates into passed and abs
-                        $passedCandidates = array_filter($candidatesWithMetrics, fn($d) => $d['totalPoints'] > 0);
-                        $absCandidates = array_filter($candidatesWithMetrics, fn($d) => $d['totalPoints'] === 0);
+                        $completeCandidates = array_filter($candidatesWithMetrics, fn($d) => ($d['candidateStatus'] ?? 'COMPLETE') === 'COMPLETE');
+                        $incCandidates = array_filter($candidatesWithMetrics, fn($d) => ($d['candidateStatus'] ?? '') === 'INC');
+                        $absCandidates = array_filter($candidatesWithMetrics, fn($d) => ($d['candidateStatus'] ?? '') === 'ABS');
                         
                         $positionCounter = 1;
                     @endphp
                     
-                    @forelse($passedCandidates as $data)
+                    @forelse($completeCandidates as $data)
                         @php 
                             $candidate = $data['candidate'];
                             $totalMarks = $data['totalMarks'];
                             $averageMarks = $data['average'];
                             $gpa = $data['gpa'];
+                            $gpaDisplay = abs($gpa - round($gpa)) < 0.00005
+                                ? number_format($gpa, 0)
+                                : number_format($gpa, 4);
                             $gpaInfo = $data['gpaInfo'];
                             $division = $data['division'];
                             $totalPoints = $data['totalPoints'];
                             
-                            // Get detailed subjects
-                            $subjectResults = [];
-                            foreach($candidate->marks as $mark) {
-                                $subject = $mark->subject;
-                                $average = $mark->average ?? 0;
-                                $grade = $mark->grade_from_average ?? '-';
-                                $subjectResults[] = ($subject?->name ?? '-') . '=' . $average . " '" . $grade . "'";
-                            }
-                            $subjectResultsStr = implode(', ', $subjectResults) ?: '-';
+                            $subjectResultsStr = $data['subjectResultsStr'] ?: '-';
                         @endphp
                         <tr style="color: #000080; border: 1px solid #999;">
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $candidate->candidate_id }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $candidate->gender }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $candidate->combination ?? '-' }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $candidate->candidate_id }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $candidate->gender }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $displayCombination($candidate->combination) }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 {{ $subjectResultsStr }}
                             </td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">
-                                {{ $totalMarks > 0 ? number_format($totalMarks, 2) : '-' }}
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">
+                                {{ number_format($totalMarks, 0) }}
                             </td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">
-                                {{ $averageMarks > 0 ? number_format($averageMarks, 2) : '-' }}
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">
+                                {{ number_format($averageMarks, 2) }}
                             </td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">
-                                @if($averageMarks > 0)
-                                    @php
-                                        if ($averageMarks >= 79.5) $grd = 'A';
-                                        elseif ($averageMarks >= 69.5) $grd = 'B';
-                                        elseif ($averageMarks >= 59.5) $grd = 'C';
-                                        elseif ($averageMarks >= 49.5) $grd = 'D';
-                                        elseif ($averageMarks >= 39.5) $grd = 'E';
-                                        elseif ($averageMarks >= 34.5) $grd = 'S';
-                                        else $grd = 'F';
-                                    @endphp
-                                    {{ $grd }}
-                                @else
-                                    -
-                                @endif
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">
+                                @php
+                                    if ($averageMarks >= 80) $grd = 'A';
+                                    elseif ($averageMarks >= 70) $grd = 'B';
+                                    elseif ($averageMarks >= 60) $grd = 'C';
+                                    elseif ($averageMarks >= 50) $grd = 'D';
+                                    elseif ($averageMarks >= 45) $grd = 'E';
+                                    elseif ($averageMarks >= 35) $grd = 'S';
+                                    else $grd = 'F';
+                                @endphp
+                                {{ $grd }}
                             </td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">
-                                {{ $totalPoints > 0 ? $totalPoints : '-' }}
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">
+                                {{ $totalPoints }}
                             </td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">
                                 {{ $division }}
                             </td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">
-                                {{ number_format($gpa, 4) }}
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">
+                                {{ $gpaDisplay }}
                             </td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">
                                 {{ $positionCounter++ }}
                             </td>
                         </tr>
@@ -259,22 +263,46 @@
                         </tr>
                     @endforelse
 
+                    @foreach($incCandidates as $data)
+                        @php
+                            $candidate = $data['candidate'];
+                            $subjectResultsStr = $data['subjectResultsStr'] ?: 'INC';
+                            $totalMarks = (float) ($data['totalMarks'] ?? 0);
+                            $averageMarks = (float) ($data['average'] ?? 0);
+                        @endphp
+                        <tr style="color: #000080; border: 1px solid #999;">
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $candidate->candidate_id }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $candidate->gender }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $displayCombination($candidate->combination) }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                {{ $subjectResultsStr }}
+                            </td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $totalMarks > 0 ? number_format($totalMarks, 0) : 'INC' }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $averageMarks > 0 ? number_format($averageMarks, 2) : 'INC' }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">INC</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">INC</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">INC</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">INC</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">-</td>
+                        </tr>
+                    @endforeach
+
                     @forelse($absCandidates as $data)
                         @php 
                             $candidate = $data['candidate'];
                         @endphp
                         <tr style="color: #000080; border: 1px solid #999;">
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $candidate->candidate_id }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $candidate->gender }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $candidate->combination ?? '-' }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem;">ABS</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">ABS</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">ABS</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">ABS</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">ABS</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">ABS</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">ABS</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">ABS</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $candidate->candidate_id }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $candidate->gender }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $displayCombination($candidate->combination) }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem;">ABS</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">ABS</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">ABS</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">ABS</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">ABS</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">ABS</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">ABS</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">ABS</td>
                         </tr>
                     @empty
                         <tr>
@@ -291,29 +319,40 @@
             <table class="w-full" style="table-layout: fixed; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
                 <thead>
                     <tr style="background-color: #003366;">
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left; color: #FFFFFF;" colspan="2">EXAMINATION CENTRE OVERALL PERFORMANCE</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF;" colspan="3">EXAMINATION CENTRE OVERALL PERFORMANCE</th>
                     </tr>
                 </thead>
                 <tbody style="background-color: LIGHTYELLOW;">
                     <tr>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold;" colspan="1">EXAMINATION CENTRE SCHOOL</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left;">{{ $school->name }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold;" colspan="1">EXAMINATION CENTRE SCHOOL</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left;" colspan="2">{{ $school->name }}</td>
                     </tr>
                     <tr>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold;" colspan="1">TOTAL REGISTERED CANDIDATES</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left;">{{ $totalCandidates }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold;" colspan="1">TOTAL REGISTERED CANDIDATES</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left;" colspan="2">{{ $totalCandidates }}</td>
                     </tr>
                     <tr>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold;" colspan="1">TOTAL PASSED CANDIDATES</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left;">{{ $totalPassed }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold;" colspan="1">TOTAL PASSED CANDIDATES</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left;" colspan="2">{{ $totalPassed }}</td>
                     </tr>
                     <tr>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold;" colspan="1">TOTAL FAILED CANDIDATES</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left;">{{ $totalFailed }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold;" colspan="1">TOTAL FAILED CANDIDATES</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left;" colspan="2">{{ $totalFailed }}</td>
                     </tr>
+                    @php
+                        $overallGpaBg = ($overallGpa > 0 && !empty($overallGpaInfo['color']))
+                            ? (string) $overallGpaInfo['color']
+                            : '#CCCCCC';
+                        $overallGpaTextColor = in_array(strtoupper($overallGpaBg), ['#DEF043', '#1FEE0B'], true) ? '#000000' : '#FFFFFF';
+                    @endphp
                     <tr>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold;" colspan="1">EXAMINATION CENTRE GPA</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left; background-color: {{ $overallGpa > 0 ? '#DEF043' : '#CCCCCC' }};">{{ number_format($overallGpa, 4) }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold;" colspan="1">EXAMINATION CENTRE GPA</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; background-color: {{ $overallGpaBg }}; color: {{ $overallGpaTextColor }};">
+                            {{ abs($overallGpa - round($overallGpa)) < 0.00005 ? number_format($overallGpa, 0) : number_format($overallGpa, 4) }}
+                        </td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; background-color: {{ $overallGpaBg }}; color: {{ $overallGpaTextColor }};">
+                            @if($overallGpa > 0)Grade {{ $overallGpaInfo['grade'] ?? '-' }} - {{ $overallGpaInfo['competence'] ?? '-' }}@else-@endif
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -325,32 +364,32 @@
             <table class="w-full" style="table-layout: fixed; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
                 <thead>
                     <tr style="background-color: #003366;">
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">REGIST</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">ABSENT</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">SAT</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">WITHHELD</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">INC</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">CLEAN</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV I</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV II</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV III</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV IV</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV 0</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">REGIST</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">ABSENT</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">SAT</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">WITHHELD</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">INC</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">CLEAN</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV I</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV II</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV III</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV IV</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">DIV 0</th>
                     </tr>
                 </thead>
                 <tbody style="background-color: LIGHTYELLOW;">
                     <tr>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalCandidates }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalAbsent }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalCandidates - $totalAbsent }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">0</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">0</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalCandidates - $totalAbsent }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['I'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['II'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['III'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['IV'] }}</td>
-                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center; font-weight: bold;">{{ $totalDivisions['0'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalCandidates }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalAbsent }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalCandidates - $totalAbsent }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">0</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalInc }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ ($totalCandidates - $totalAbsent) - $totalInc }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['I'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['II'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['III'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['IV'] }}</td>
+                        <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center; font-weight: bold;">{{ $totalDivisions['0'] }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -363,19 +402,19 @@
             <table class="w-full" style="table-layout: fixed; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
                 <thead>
                     <tr style="background-color: #003366;">
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">CODE</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left; color: #FFFFFF; width: 20%;">SUBJECT NAME</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">A</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">B</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">C</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">D</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">E</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">S</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">F</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">ABS</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">TOTAL</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 8%;">GPA</th>
-                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; font-weight: bold; text-align: left; color: #FFFFFF; width: 20%;">COMPETENCY LEVEL</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">CODE</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF; width: 20%;">SUBJECT NAME</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">A</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">B</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">C</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">D</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">E</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">S</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">F</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">ABS</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 5%;">TOTAL</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: 8%;">GPA</th>
+                        <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF; width: 20%;">COMPETENCY LEVEL</th>
                     </tr>
                 </thead>
                 <tbody style="background-color: LIGHTYELLOW;">
@@ -384,9 +423,11 @@
                         $subjectPerformance = [];
                         foreach($candidatesWithMetrics as $data) {
                             $candidate = $data['candidate'];
-                            foreach($candidate->marks as $mark) {
+                            $latestMarks = collect($data['latestMarks'] ?? $candidate->marks->sortByDesc('id')->unique('subject_id'));
+                            foreach($latestMarks as $mark) {
                                 $subjectId = $mark->subject_id;
-                                $grade = $mark->grade_from_average ?? '-';
+                                $status = strtoupper((string) ($mark->subject_status ?? ''));
+                                $grade = strtoupper((string) ($mark->grade ?? $mark->grade_from_average ?? ''));
                                 
                                 if (!isset($subjectPerformance[$subjectId])) {
                                     $subjectPerformance[$subjectId] = [
@@ -396,10 +437,10 @@
                                     ];
                                 }
                                 
-                                if ($grade && in_array($grade, ['A', 'B', 'C', 'D', 'E', 'S', 'F'])) {
-                                    $subjectPerformance[$subjectId][$grade]++;
-                                } elseif ($grade === '-') {
+                                if (in_array($status, ['ABS', 'X'], true) || $mark->marks_obtained === null) {
                                     $subjectPerformance[$subjectId]['ABS']++;
+                                } elseif ($grade && in_array($grade, ['A', 'B', 'C', 'D', 'E', 'S', 'F'], true)) {
+                                    $subjectPerformance[$subjectId][$grade]++;
                                 }
                             }
                         }
@@ -407,36 +448,35 @@
                     
                     @forelse($subjectPerformance as $subjectId => $data)
                         @php
+                            $gradeService = app(\App\Services\Results\NectaGradingService::class);
                             $total = $data['A'] + $data['B'] + $data['C'] + $data['D'] + $data['E'] + $data['S'] + $data['F'] + $data['ABS'];
-                            $passed = $data['A'] + $data['B'] + $data['C'] + $data['D'] + $data['E'];
-                            $subjectGpa = $passed > 0 ? round(($data['A']*5 + $data['B']*4 + $data['C']*3 + $data['D']*2 + $data['E']*1) / $passed, 4) : 0;
+                            $graded = $data['A'] + $data['B'] + $data['C'] + $data['D'] + $data['E'] + $data['S'] + $data['F'];
+                            // NECTA subject GPA (grade-point average): A=1 ... F=7, ABS excluded.
+                            $subjectGpa = $graded > 0 ? round(($data['A']*1 + $data['B']*2 + $data['C']*3 + $data['D']*4 + $data['E']*5 + $data['S']*6 + $data['F']*7) / $graded, 4) : 0;
                             
                             // Determine competency color
                             $competencyColor = '#f0f0f0';
                             $competencyText = '-';
                             if ($subjectGpa > 0) {
-                                if ($subjectGpa >= 4.51) { $competencyColor = '#90EE90'; $competencyText = 'Grade A (Excellent)'; }
-                                elseif ($subjectGpa >= 3.51) { $competencyColor = '#FFD700'; $competencyText = 'Grade B (Very Good)'; }
-                                elseif ($subjectGpa >= 2.51) { $competencyColor = '#87CEEB'; $competencyText = 'Grade C (Good)'; }
-                                elseif ($subjectGpa >= 1.51) { $competencyColor = '#FFA500'; $competencyText = 'Grade D (Average)'; }
-                                elseif ($subjectGpa >= 1) { $competencyColor = '#FF6347'; $competencyText = 'Grade E (Below Average)'; }
-                                else { $competencyColor = '#FF0000'; $competencyText = 'Grade F (Fail)'; }
+                                $gpaInfo = $gradeService->getGpaCompetence($subjectGpa);
+                                $competencyColor = $gpaInfo['color'] ?? '#f0f0f0';
+                                $competencyText = "Grade {$gpaInfo['grade']} ({$gpaInfo['competence']})";
                             }
                         @endphp
                         <tr>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['code'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: left;">{{ $data['name'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['A'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['B'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['C'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['D'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['E'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['S'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['F'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $data['ABS'] }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ $total }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: center;">{{ number_format($subjectGpa, 4) }}</td>
-                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.75rem; text-align: left; background-color: {{ $competencyColor }}; color: white; font-weight: bold;">{{ $competencyText }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['code'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: left;">{{ $data['name'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['A'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['B'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['C'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['D'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['E'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['S'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['F'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $data['ABS'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ $total }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: center;">{{ abs($subjectGpa - round($subjectGpa)) < 0.00005 ? number_format($subjectGpa, 0) : number_format($subjectGpa, 4) }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; text-align: left; background-color: {{ $competencyColor }}; color: #000080; font-weight: bold;">{{ $competencyText }}</td>
                         </tr>
                     @empty
                         <tr>
@@ -450,7 +490,7 @@
 
         <!-- Print Button -->
         <div style="margin-top: 1.5rem; text-align: center;">
-            <button onclick="window.print()" style="background-color: #003366; color: white; padding: 0.75rem 2rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: 600; cursor: pointer;">
+            <button onclick="window.print()" style="background-color: #003366; color: white; padding: 0.90rem 2rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: 600; cursor: pointer;">
                 <i class="fas fa-print"></i> Print Results
             </button>
         </div>

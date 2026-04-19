@@ -1,0 +1,388 @@
+<style>
+    .registration-shell {
+        width: 100%;
+        padding: 28px 28px 10px;
+        background:
+            radial-gradient(circle at top right, rgba(53, 92, 154, 0.07), transparent 26%),
+            linear-gradient(180deg, #f4f7fb 0%, #eef3f9 100%);
+    }
+
+    .registration-page-stack {
+        display: grid;
+        gap: 20px;
+    }
+
+    .registration-page-header {
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        padding: 28px 28px 24px;
+        background:
+            linear-gradient(135deg, rgba(20, 48, 88, 0.97) 0%, rgba(37, 82, 145, 0.94) 58%, rgba(16, 116, 95, 0.9) 100%);
+        color: #ffffff;
+        box-shadow: 0 24px 54px rgba(15, 23, 42, 0.14);
+    }
+
+    .registration-page-header::before,
+    .registration-page-header::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        pointer-events: none;
+    }
+
+    .registration-page-header::before {
+        width: 320px;
+        height: 320px;
+        right: -90px;
+        top: -140px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 70%);
+    }
+
+    .registration-page-header::after {
+        width: 250px;
+        height: 250px;
+        left: -80px;
+        bottom: -110px;
+        background: radial-gradient(circle, rgba(252, 209, 22, 0.18) 0%, rgba(252, 209, 22, 0) 70%);
+    }
+
+    .registration-page-header-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr);
+        gap: 20px;
+        align-items: center;
+    }
+
+    .registration-page-kicker {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.78);
+    }
+
+    .registration-page-kicker::before {
+        content: "";
+        width: 36px;
+        height: 4px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #1EB53A 0%, #FCD116 55%, #00A3DD 100%);
+    }
+
+    .registration-page-title {
+        margin: 0 0 10px;
+        font-size: clamp(1.95rem, 3.6vw, 3rem);
+        line-height: 1.03;
+        letter-spacing: -0.04em;
+        color: #ffffff;
+    }
+
+    .registration-page-subtitle {
+        margin: 0;
+        max-width: 760px;
+        color: rgba(255, 255, 255, 0.86);
+        font-size: 0.98rem;
+        line-height: 1.75;
+    }
+
+    .registration-page-highlights {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .registration-page-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        min-height: 38px;
+        padding: 0 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        color: rgba(255, 255, 255, 0.92);
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .registration-page-chip i {
+        color: #fcd116;
+    }
+
+    .registration-page-aside {
+        display: grid;
+        gap: 12px;
+    }
+
+    .registration-page-note {
+        border-radius: 22px;
+        padding: 18px 18px 16px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        backdrop-filter: blur(6px);
+    }
+
+    .registration-page-note h2 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        color: #ffffff;
+    }
+
+    .registration-page-note p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.88rem;
+        line-height: 1.7;
+    }
+
+    .registration-page-note-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .registration-page-note-item {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        gap: 10px;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .registration-page-note-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+    }
+
+    .registration-page-note-item strong {
+        display: block;
+        color: #ffffff;
+        font-size: 0.88rem;
+    }
+
+    .registration-page-note-item span {
+        display: block;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 0.78rem;
+        margin-top: 2px;
+    }
+
+    .registration-surface {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(203, 213, 225, 0.88);
+        border-radius: 24px;
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.05);
+    }
+
+    .registration-toolbar-card {
+        padding: 24px;
+    }
+
+    .registration-toolbar-card .registration-toolbar-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: flex-end;
+    }
+
+    .registration-shell input[type="text"],
+    .registration-shell input[type="file"],
+    .registration-shell input[type="email"],
+    .registration-shell select,
+    .registration-shell textarea,
+    .registration-shell .filter-input,
+    .registration-shell .filter-dropdown-btn {
+        min-height: 42px;
+        border-radius: 14px !important;
+        border: 1px solid #cfd6df !important;
+        background: #ffffff;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    }
+
+    .registration-shell input:focus,
+    .registration-shell select:focus,
+    .registration-shell textarea:focus,
+    .registration-shell .filter-dropdown-btn:focus {
+        outline: none;
+        border-color: #355c9a !important;
+        box-shadow: 0 0 0 3px rgba(53, 92, 154, 0.12) !important;
+    }
+
+    .registration-shell .filter-search-input {
+        border-radius: 0 !important;
+    }
+
+    .registration-shell .filter-search-input:focus {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        outline: none;
+    }
+
+    .registration-shell label,
+    .registration-shell .filter-label {
+        color: #334155;
+        font-weight: 700;
+        font-size: 0.84rem;
+        letter-spacing: 0.01em;
+    }
+
+    .registration-shell .filter-dropdown-menu,
+    .registration-shell [x-show] .bg-white.border.border-gray-300.rounded-lg.shadow-lg,
+    .registration-shell [x-show] .bg-white.border.border-gray-300.rounded.shadow-lg {
+        border-radius: 16px !important;
+        border-color: rgba(203, 213, 225, 0.9) !important;
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.09) !important;
+    }
+
+    .registration-shell table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .registration-table-card {
+        overflow: hidden;
+    }
+
+    .registration-table-card thead {
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%) !important;
+    }
+
+    .registration-table-card thead th {
+        padding-top: 16px !important;
+        padding-bottom: 16px !important;
+        color: #334155 !important;
+        font-size: 0.76rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border-bottom: 1px solid rgba(203, 213, 225, 0.9);
+    }
+
+    .registration-table-card tbody tr {
+        transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .registration-table-card tbody tr:hover {
+        background: rgba(239, 246, 255, 0.9) !important;
+    }
+
+    .registration-table-card tbody td {
+        padding-top: 18px !important;
+        padding-bottom: 18px !important;
+        border-color: rgba(226, 232, 240, 0.9) !important;
+        color: #334155 !important;
+        font-size: 0.94rem;
+    }
+
+    .registration-status-pill,
+    .registration-shell .bg-green-100.text-green-800,
+    .registration-shell .bg-blue-100.text-blue-800,
+    .registration-shell .bg-orange-100.text-orange-800 {
+        border-radius: 999px !important;
+        padding: 0.35rem 0.8rem !important;
+        font-weight: 700 !important;
+        font-size: 0.75rem !important;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .registration-bulk-bar {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(239, 246, 255, 0.96) 0%, rgba(219, 234, 254, 0.9) 100%);
+        border: 1px solid rgba(147, 197, 253, 0.55);
+    }
+
+    .registration-shell .bg-blue-600,
+    .registration-shell .hover\:bg-blue-700:hover {
+        background-color: #2d62d6 !important;
+    }
+
+    .registration-shell .bg-green-600,
+    .registration-shell .hover\:bg-green-700:hover {
+        background-color: #1b9448 !important;
+    }
+
+    .registration-shell .bg-red-600,
+    .registration-shell .hover\:bg-red-700:hover {
+        background-color: #cc3a3a !important;
+    }
+
+    .registration-shell .rounded-lg {
+        border-radius: 18px !important;
+    }
+
+    .registration-shell .shadow,
+    .registration-shell .shadow-lg,
+    .registration-shell .shadow-xl,
+    .registration-shell .shadow-2xl {
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.07) !important;
+    }
+
+    .registration-mini-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .registration-empty {
+        padding: 28px 18px;
+        text-align: center;
+        color: #64748b;
+        background: #f8fafc;
+        border: 1px dashed rgba(191, 219, 254, 0.95);
+        border-radius: 18px;
+    }
+
+    @media (max-width: 1100px) {
+        .registration-page-header-grid,
+        .registration-mini-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .registration-shell {
+            padding: 18px 16px 0;
+        }
+
+        .registration-page-header,
+        .registration-toolbar-card,
+        .registration-surface {
+            border-radius: 22px;
+        }
+
+        .registration-page-header {
+            padding: 22px 20px;
+        }
+
+        .registration-toolbar-card {
+            padding: 18px;
+        }
+
+        .registration-page-highlights {
+            display: grid;
+        }
+    }
+</style>

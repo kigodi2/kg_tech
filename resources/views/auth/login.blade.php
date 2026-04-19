@@ -1,31 +1,101 @@
-@extends('layout')
+@extends('layouts.auth-rms')
+
+@section('title', 'IRMS Login')
 
 @section('content')
-<div class="max-w-md mx-auto mt-10 bg-white p-6 rounded shadow">
-    <h2 class="text-2xl font-bold mb-6">Login</h2>
-    
-    <form method="POST" action="/login" id="loginForm">
-        @csrf
-        
-        <div class="mb-4">
-            <label class="block text-gray-700 mb-2">Email</label>
-            <input type="email" name="email" value="{{ old('email') }}" class="w-full border p-2 rounded" required autofocus>
-            @if ($errors->has('email'))
-                <span class="text-red-500 text-sm">{{ $errors->first('email') }}</span>
-            @endif
+<div class="login-shell">
+    <div class="login-card">
+        <div class="login-card-header">
+            <div class="login-emblem-wrap">
+                <img src="{{ asset('assets/rms-login/images/kigodi.png') }}" alt="System login illustration" class="login-emblem">
+                <div class="login-stripes" aria-hidden="true">
+                    <span style="background:#1eb53a;"></span>
+                    <span style="background:#fcd116;"></span>
+                    <span style="background:#000000;"></span>
+                    <span style="background:#00a3dd;"></span>
+                </div>
+            </div>
+            <h1>Login</h1>
+            <p>Provide your email and password to login</p>
         </div>
 
-        <div class="mb-4">
-            <label class="block text-gray-700 mb-2">Password</label>
-            <input type="password" name="password" class="w-full border p-2 rounded" required>
-            @if ($errors->has('password'))
-                <span class="text-red-500 text-sm">{{ $errors->first('password') }}</span>
-            @endif
+        <div class="login-card-body">
+            <form action="{{ route('login') }}" method="POST" novalidate>
+                @csrf
+
+                @if ($errors->any())
+                    <div class="login-error" role="alert">
+                        {{ $errors->first('email') ?? $errors->first() }}
+                    </div>
+                @endif
+
+                <div class="form-group">
+                    <label for="email" class="form-label">Email</label>
+                    <div class="field-wrap">
+                        <span class="field-icon" aria-hidden="true">
+                            <img src="{{ asset('assets/rms-icons/mail.png') }}" alt="">
+                        </span>
+                        <input
+                            type="email"
+                            id="email"
+                            name="email"
+                            value="{{ old('email') }}"
+                            class="form-input @error('email') is-invalid @enderror"
+                            placeholder="Enter your email"
+                            autocomplete="username"
+                            required
+                            autofocus
+                        >
+                    </div>
+                    @error('email')
+                        <span class="field-error">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="field-wrap">
+                        <span class="field-icon" aria-hidden="true">
+                            <img src="{{ asset('assets/rms-icons/keys.png') }}" alt="">
+                        </span>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            class="form-input @error('password') is-invalid @enderror"
+                            placeholder="Enter your password"
+                            autocomplete="current-password"
+                            required
+                        >
+                        <button type="button" class="password-toggle" onclick="togglePassword()" aria-label="Show or hide password">
+                            <svg class="icon-eye" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></circle>
+                            </svg>
+                            <svg class="icon-eye-off" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="m3 3 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                <path d="M10.58 10.58a2 2 0 0 0 2.83 2.83" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                <path d="M9.88 4.24A10.94 10.94 0 0 1 12 4c7 0 10 8 10 8a17.45 17.45 0 0 1-2.16 3.19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                <path d="M6.71 6.72A17.34 17.34 0 0 0 2 12s3 8 10 8a9.77 9.77 0 0 0 5.29-1.53" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    @error('password')
+                        <span class="field-error">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <div class="login-meta">
+                    <span>Forgot Password? Contact Administrator</span>
+                </div>
+
+                <button type="submit" class="login-button">Login</button>
+
+                <div class="login-footer">
+                    Need access? <strong>Contact the system administrator</strong>
+                </div>
+            </form>
         </div>
-
-        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Login</button>
-    </form>
-
-    <p class="mt-4">Don't have an account? <a href="/register" class="text-blue-600">Register</a></p>
+    </div>
 </div>
 @endsection

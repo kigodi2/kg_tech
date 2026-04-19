@@ -26,6 +26,8 @@ class FinalGrade extends Model
         'published_at',
         'is_locked',
         'locked_at',
+        'process_id',
+        'snapshot_id',
     ];
 
     protected $casts = [

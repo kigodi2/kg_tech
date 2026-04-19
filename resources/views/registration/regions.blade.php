@@ -1,44 +1,48 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full px-8 py-8">
-    <!-- Page Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Regions Management</h1>
-        <p class="text-gray-600">Manage examination regions across all zones</p>
-    </div>
+@include('registration.partials.theme')
+<div class="registration-shell">
+    <div class="registration-page-stack">
+    @include('registration.partials.header', [
+        'title' => 'Regions Management',
+        'subtitle' => 'Manage examination regions across all zones, review hierarchy totals, and control imports or exports from one operational surface.',
+        'highlights' => [
+            ['icon' => 'fas fa-globe-africa', 'text' => 'National region structure'],
+            ['icon' => 'fas fa-file-arrow-up', 'text' => 'CSV import and export tools'],
+            ['icon' => 'fas fa-layer-group', 'text' => 'Region-to-candidate coverage'],
+        ],
+        'noteTitle' => 'Management Focus',
+        'noteText' => 'Use this screen to maintain the top level of the registration hierarchy before working on districts, schools, and candidates.',
+        'noteItems' => [
+            ['icon' => 'fas fa-table-columns', 'title' => 'Bulk Operations', 'text' => 'Select multiple regions for controlled deletion.'],
+            ['icon' => 'fas fa-circle-check', 'title' => 'Operational Status', 'text' => 'Region records remain visible with clear active status.'],
+        ],
+    ])
 
     <!-- Regions Component -->
     <div x-data="regionsManager()" @init="init()" class="space-y-6">
         <!-- Toolbar -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex gap-4 items-center">
+        <div class="registration-surface registration-toolbar-card">
+            <div class="registration-toolbar-grid">
                 <!-- Search Input -->
-                <input 
-                    x-model="search" 
-                    @input="filterRegions()"
-                    type="text" 
-                    placeholder="Search regions by name or code..." 
-                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
+                <div class="flex flex-col flex-1">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Search</label>
+                    <input 
+                        x-model="search" 
+                        @input="filterRegions()"
+                        type="text" 
+                        placeholder="Search regions by name or code..." 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                </div>
                 
-                <!-- Tools Dropdown -->
-                <div class="relative" @click.outside="showToolsMenu = false">
-                    <button @click="showToolsMenu = !showToolsMenu" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-colors text-sm flex items-center gap-2 font-medium">
+                <!-- Tools Modal Trigger -->
+                <div>
+                    <button @click="openToolsModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-colors text-sm flex items-center gap-2 font-medium shadow-sm shadow-blue-200/80">
                          <i class="fas fa-wrench"></i> Tools
-                         <i :class="showToolsMenu ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-xs"></i>
+                         <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
                      </button>
-                    <div x-show="showToolsMenu" class="absolute top-full right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 min-w-48" @click="showToolsMenu = false">
-                        <button @click="downloadTemplate()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200">
-                            <i class="fas fa-download text-blue-600"></i> CSV Template
-                        </button>
-                        <button @click="document.getElementById('importInput').click()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200">
-                            <i class="fas fa-upload text-blue-600"></i> Import CSV
-                        </button>
-                        <button @click="exportCSV()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
-                            <i class="fas fa-file-csv text-blue-600"></i> Export CSV
-                        </button>
-                    </div>
                     <input id="importInput" type="file" accept=".csv" @change="importCSV($event)" class="hidden">
                 </div>
                 
@@ -52,7 +56,7 @@
             </div>
             
             <!-- Bulk Actions (shown when items are selected) -->
-            <div x-show="selectedItems.size > 0" class="mt-4 flex gap-2 items-center bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <div x-show="selectedItems.size > 0" class="registration-bulk-bar">
                 <span class="text-sm font-medium text-gray-700">
                     <span x-text="selectedItems.size"></span> region(s) selected
                 </span>
@@ -65,8 +69,61 @@
             </div>
         </div>
 
+        <!-- Tools Modal -->
+        <div
+            x-show="toolsModalOpen"
+            class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4"
+            style="display: none;"
+            @click.self="closeToolsModal()"
+            @keydown.escape.window="closeToolsModal()"
+            x-transition.opacity
+        >
+            <div class="w-full max-w-3xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20" x-transition>
+                <div class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-800 px-6 py-6 text-white">
+                    <div class="absolute inset-y-0 right-0 w-56 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_68%)]"></div>
+                    <div class="relative flex items-start justify-between gap-4">
+                        <div>
+                            <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                                <i class="fas fa-screwdriver-wrench text-[0.7rem] text-amber-300"></i>
+                                Region Tools
+                            </span>
+                            <h2 class="mt-4 text-2xl font-bold tracking-tight text-white">Region import and export workspace</h2>
+                            <p class="mt-2 max-w-2xl text-sm leading-6 text-white/80">
+                                Run template downloads, bulk import, and export actions from one controlled panel.
+                            </p>
+                        </div>
+                        <button @click="closeToolsModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-lg text-white/80 transition hover:bg-white/15 hover:text-white" type="button" aria-label="Close tools">&times;</button>
+                    </div>
+                </div>
+                <div class="grid gap-4 bg-slate-50 p-6 md:grid-cols-3">
+                    <button type="button" @click="triggerRegionImport()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><i class="fas fa-file-import text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">Import Regions</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Select a CSV file and submit it through the existing region import process.</p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">Choose file<i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i></span>
+                    </button>
+                    <button type="button" @click="downloadRegionTemplate()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><i class="fas fa-download text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">CSV Template</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Download the approved structure before preparing region records for import.</p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-amber-700">Download template<i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i></span>
+                    </button>
+                    <button type="button" @click="exportRegionsCsv()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-file-csv text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">Export CSV</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Generate a current extract of the region hierarchy and related totals.</p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">Export current data<i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i></span>
+                    </button>
+                </div>
+                <div class="flex flex-col gap-3 border-t border-slate-200 bg-white px-6 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="leading-6">The region import and export logic is unchanged. This modal only replaces the old compact dropdown.</p>
+                    <button type="button" @click="closeToolsModal()" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-100">Close</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Regions Table -->
-        <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="registration-surface registration-table-card overflow-hidden">
             <div x-show="loading" class="p-6 text-center text-gray-500">
                 <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
             </div>
@@ -145,35 +202,29 @@
                 </table>
                 
                 <!-- Pagination -->
-                <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-                    <div class="text-sm text-gray-600">
-                        Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span>, showing <span x-text="filteredRegions.length"></span> record(s) out of <span x-text="totalCount"></span> total
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <button 
-                            @click="currentPage > 1 && (currentPage--, loadRegions())"
-                            :disabled="currentPage <= 1"
-                            class="px-2 py-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            title="Previous"
-                        >
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <template x-for="page in Array.from({length: totalPages}, (_, i) => i + 1)" :key="page">
-                            <button 
-                                @click="currentPage = page; loadRegions()"
-                                :class="currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'"
-                                class="px-3 py-1 rounded text-sm font-medium transition-colors"
-                                x-text="page"
-                            ></button>
-                        </template>
-                        <button 
-                            @click="currentPage < totalPages && (currentPage++, loadRegions())"
-                            :disabled="currentPage >= totalPages"
-                            class="px-2 py-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            title="Next"
-                        >
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
+                <div class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                            <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                <i class="fas fa-layer-group text-xs"></i>
+                                <span>Page <span x-text="currentPage"></span> of <span x-text="Math.max(totalPages, 1)"></span></span>
+                            </div>
+                            <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                <span>Showing <span class="font-semibold text-slate-800" x-text="filteredRegions.length"></span> of <span class="font-semibold text-slate-800" x-text="totalCount"></span> regions</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                            <button @click="currentPage > 1 && (currentPage = 1, loadRegions())" :disabled="currentPage <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" title="First page"><i class="fas fa-angles-left text-xs"></i></button>
+                            <button @click="currentPage > 1 && (currentPage--, loadRegions())" :disabled="currentPage <= 1" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" title="Previous page"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                            <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                <template x-for="page in visiblePages" :key="page">
+                                    <button @click="currentPage = page; loadRegions()" :class="currentPage === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" x-text="page"></button>
+                                </template>
+                            </div>
+                            <button @click="currentPage < totalPages && (currentPage++, loadRegions())" :disabled="currentPage >= totalPages" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" title="Next page"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                            <button @click="currentPage < totalPages && (currentPage = totalPages, loadRegions())" :disabled="currentPage >= totalPages" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" title="Last page"><i class="fas fa-angles-right text-xs"></i></button>
+                        </div>
                     </div>
                 </div>
                 </div>
@@ -181,28 +232,40 @@
         <!-- Modal (Add/Edit/View) -->
          <div 
             x-show="modalOpen || viewModalOpen" 
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+            class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4"
             style="display: none;"
             @click.self="modalOpen = false; viewModalOpen = false;"
             x-transition
         >
-            <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800">
-                        <span x-show="viewModalOpen && !editingId">Region Details</span>
-                        <span x-show="!viewModalOpen && !editingId">Add New Region</span>
-                        <span x-show="!viewModalOpen && editingId">Edit Region</span>
-                    </h2>
-                    <button 
-                        @click="modalOpen = false; viewModalOpen = false;" 
-                        class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                    >
-                        &times;
-                    </button>
+            <div class="registration-modal-shell max-w-2xl" x-transition>
+                <div class="registration-modal-header">
+                    <div class="registration-modal-header-content">
+                        <div>
+                            <span class="registration-modal-kicker">
+                                <i class="fas fa-globe-africa text-amber-300"></i>
+                                Region Record
+                            </span>
+                            <h2 class="registration-modal-title">
+                                <span x-show="viewModalOpen && !editingId">Region Details</span>
+                                <span x-show="!viewModalOpen && !editingId">Add New Region</span>
+                                <span x-show="!viewModalOpen && editingId">Edit Region</span>
+                            </h2>
+                            <p class="registration-modal-subtitle" x-show="viewModalOpen">Review region identity and hierarchy totals from one panel.</p>
+                            <p class="registration-modal-subtitle" x-show="!viewModalOpen">Maintain the top-level registration geography without leaving the management table.</p>
+                        </div>
+                        <button 
+                            @click="modalOpen = false; viewModalOpen = false;" 
+                            class="registration-modal-close"
+                            aria-label="Close region modal"
+                        >
+                            &times;
+                        </button>
+                    </div>
                 </div>
 
                 <!-- View Mode -->
-                <div x-show="viewModalOpen" class="p-4 space-y-2">
+                <div x-show="viewModalOpen" class="registration-modal-body">
+                    <div class="registration-modal-panel p-6 space-y-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Region Code</label>
                         <input 
@@ -248,18 +311,27 @@
                             class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
                         >
                     </div>
-                    <div class="flex gap-2 pt-3">
-                        <button @click="viewModalOpen = false" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1.5 rounded text-sm transition-colors font-medium">
+                    <div class="registration-modal-actions">
+                        <button @click="viewModalOpen = false" class="registration-modal-button registration-modal-button-secondary">
                             Close
                         </button>
-                        <button @click="openEditModal(viewingRegion); viewModalOpen = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm transition-colors font-medium">
+                        <button @click="openEditModal(viewingRegion); viewModalOpen = false;" class="registration-modal-button registration-modal-button-primary">
                             Edit
                         </button>
+                    </div>
                     </div>
                 </div>
 
                 <!-- Edit/Add Mode -->
-                <form x-show="!viewModalOpen" @submit.prevent="saveRegion()" class="p-6 space-y-4">
+                <form x-show="!viewModalOpen" @submit.prevent="saveRegion()" class="registration-modal-body space-y-5">
+                    <div class="registration-modal-note">
+                        <span class="registration-modal-note-icon"><i class="fas fa-circle-info"></i></span>
+                        <div>
+                            <strong>Form Guidance</strong>
+                            <p>Region codes are generated automatically from the name to keep national registration data consistent.</p>
+                        </div>
+                    </div>
+                    <div class="registration-modal-panel p-6 space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Region Code <span class="text-xs text-gray-500">(Auto-generated)</span></label>
                         <input 
@@ -281,21 +353,22 @@
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                     </div>
-                    <div class="flex gap-3 pt-4">
+                    <div class="registration-modal-actions">
                         <button 
                             type="button" 
                             @click="modalOpen = false" 
-                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-secondary"
                         >
                             Cancel
                         </button>
                         <button 
                             type="submit" 
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-primary"
                         >
                             <span x-show="!editingId">Add Region</span>
                             <span x-show="editingId">Update Region</span>
                         </button>
+                    </div>
                     </div>
                 </form>
             </div>
@@ -316,8 +389,19 @@ function regionsManager() {
         viewingRegion: {},
         formData: { code: '', name: '' },
         selectedItems: new Set(),
-        showToolsMenu: false,
+        toolsModalOpen: false,
         currentPage: 1,
+        get visiblePages() {
+            const total = this.totalPages || 1;
+            const current = this.currentPage || 1;
+            const windowSize = 5;
+            let start = Math.max(1, current - Math.floor(windowSize / 2));
+            let end = Math.min(total, start + windowSize - 1);
+            if (end - start + 1 < windowSize) {
+                start = Math.max(1, end - windowSize + 1);
+            }
+            return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+        },
         pageSize: 10,
         totalCount: 0,
         totalPages: 0,
@@ -329,7 +413,7 @@ function regionsManager() {
         async loadRegions() {
              this.loading = true;
              try {
-                 const response = await fetch(`/api/regions?page=${this.currentPage}&page_size=${this.pageSize}&search=${this.search}`);
+                 const response = await fetch(`/admin/api/regions?page=${this.currentPage}&page_size=${this.pageSize}&search=${this.search}`);
                  const data = await response.json();
                  this.regions = data.data || [];
                  this.filteredRegions = this.regions;
@@ -412,9 +496,32 @@ function regionsManager() {
             this.modalOpen = true;
         },
 
+        openToolsModal() {
+            this.toolsModalOpen = true;
+        },
+
+        closeToolsModal() {
+            this.toolsModalOpen = false;
+        },
+
+        triggerRegionImport() {
+            this.closeToolsModal();
+            document.getElementById('importInput')?.click();
+        },
+
+        downloadRegionTemplate() {
+            this.closeToolsModal();
+            this.downloadTemplate();
+        },
+
+        exportRegionsCsv() {
+            this.closeToolsModal();
+            this.exportCSV();
+        },
+
         async saveRegion() {
             try {
-                const url = this.editingId ? `/api/regions/${this.editingId}` : '/api/regions';
+                const url = this.editingId ? `/admin/api/regions/${this.editingId}` : '/admin/api/regions';
                 const method = this.editingId ? 'PUT' : 'POST';
                 
                 const response = await fetch(url, {
@@ -451,7 +558,7 @@ function regionsManager() {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]');
                 const token = csrfToken ? csrfToken.content : '';
                 
-                const response = await fetch(`/api/regions/${id}`, {
+                const response = await fetch(`/admin/api/regions/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -523,7 +630,7 @@ function regionsManager() {
             formData.append('file', file);
 
             try {
-                const response = await fetch('/api/regions/import', {
+                const response = await fetch('/admin/api/regions/import', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -581,7 +688,7 @@ function regionsManager() {
 
             try {
                 const ids = Array.from(this.selectedItems);
-                const response = await fetch('/api/regions/bulk-delete', {
+                const response = await fetch('/admin/api/regions/bulk-delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -619,4 +726,6 @@ function regionsManager() {
     };
 }
 </script>
+</div>
+</div>
 @endsection

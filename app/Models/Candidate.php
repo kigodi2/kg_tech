@@ -12,6 +12,7 @@ class Candidate extends Model
     protected $fillable = [
         'school_id',
         'candidate_id',
+        'prem_no',
         'full_name',
         'gender',
         'exam_type',

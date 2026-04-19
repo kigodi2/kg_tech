@@ -33,9 +33,9 @@ class GradeLookupService
      *   getGradeFromMarks(85) → 'A'
      *   getGradeFromMarks(45) → 'E'
      */
-    public function getGradeFromMarks(float $marks): string
+    public function getGradeFromMarks(float $marks, string $examTypeCode = 'ACSEE'): string
     {
-        return $this->gradingService->calculateGrade($marks);
+        return $this->gradingService->calculateGradeForExamType($marks, $examTypeCode);
     }
 
     /**
@@ -48,9 +48,9 @@ class GradeLookupService
      *   getCompetenceLevel('A') → 'Excellent'
      *   getCompetenceLevel('F') → 'Fail'
      */
-    public function getCompetenceLevel(string $grade): string
+    public function getCompetenceLevel(string $grade, string $examTypeCode = 'ACSEE'): string
     {
-        return $this->gradingService->getCompetenceLevel($grade);
+        return $this->gradingService->getCompetenceLevelForExamType($grade, $examTypeCode);
     }
 
     /**
@@ -62,9 +62,9 @@ class GradeLookupService
      * Example:
      *   getGradeColor('A') → '#00AA7A'
      */
-    public function getGradeColor(string $grade): string
+    public function getGradeColor(string $grade, string $examTypeCode = 'ACSEE'): string
     {
-        return $this->gradingService->getGradeColor($grade);
+        return $this->gradingService->getGradeColorForExamType($grade, $examTypeCode);
     }
 
     /**
@@ -77,9 +77,9 @@ class GradeLookupService
      *   getGradePoints('A') → 1
      *   getGradePoints('F') → 7
      */
-    public function getGradePoints(string $grade): int
+    public function getGradePoints(string $grade, string $examTypeCode = 'ACSEE'): int
     {
-        return $this->gradingService->getGradePoints($grade);
+        return $this->gradingService->getGradePointsForExamType($grade, $examTypeCode);
     }
 
     /**
@@ -94,9 +94,9 @@ class GradeLookupService
      *   getDivisionFromPoints(15) → 
      *     ['division' => 3, 'name' => 'III', 'competence' => 'Good']
      */
-    public function getDivisionFromPoints(int $totalPoints): array
+    public function getDivisionFromPoints(int $totalPoints, string $examTypeCode = 'ACSEE'): array
     {
-        $divisionInfo = $this->gradingService->calculateDivision($totalPoints);
+        $divisionInfo = $this->gradingService->calculateDivisionForExamType($totalPoints, $examTypeCode);
         
         if (!$divisionInfo) {
             return [

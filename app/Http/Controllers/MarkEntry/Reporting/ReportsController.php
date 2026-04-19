@@ -55,7 +55,7 @@ class ReportsController extends Controller
 
             $viewName = $mode === 'all' ? 'mark-entry.pdf.filled-scoresheet-draft' : 'mark-entry.pdf.filled-scoresheet';
             $pdf = Pdf::loadView($viewName, $data)
-                ->setPaper('a4', 'landscape')
+                ->setPaper('a4', 'portrait')
                 ->setOption('enable-local-file-access', true);
 
             $filename = sprintf('%s_%s_%s_filled_scoresheet.pdf',

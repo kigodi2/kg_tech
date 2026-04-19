@@ -4,6 +4,7 @@ namespace App\Services\Results;
 
 use App\Models\Candidate;
 use App\Models\CandidateExamRegistration;
+use App\Models\CandidateSubjectSelection;
 use App\Models\SubjectMarks;
 use Illuminate\Support\Facades\Log;
 
@@ -68,8 +69,25 @@ class GradeCalculationService
             // Calculate grades for each subject mark
             $totalMarks = 0;
             $totalPoints = 0;
+            $gpaPoints = 0;
             $validSubjectCount = 0;
             $incSubjectCount = 0;
+            $subjectGrades = [];
+            $principalSubjectIds = CandidateSubjectSelection::query()
+                ->where('candidate_id', $candidateId)
+                ->where('exam_type_id', $examTypeId)
+                ->where(function ($q) use ($examYearId, $yearValue) {
+                    $q->where('exam_year_id', $examYearId)
+                      ->orWhere('year', $yearValue);
+                })
+                ->where('is_active', true)
+                ->where('is_principal', true)
+                ->pluck('subject_id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+            $coreSubjectIds = !empty($principalSubjectIds) ? $principalSubjectIds : null;
 
             foreach ($marks as $mark) {
                 // Skip INC and X/ABS subjects — they must NOT be graded as 0
@@ -100,16 +118,31 @@ class GradeCalculationService
                 $subjectName = $mark->subject?->name ?? '';
                 if (!$this->gradingService->isExcludedSubject($subjectName)) {
                     $points = $this->gradingService->getGradePoints($grade);
-                    $totalPoints += $points;
+                    $gpaPoints += $points;
                     $validSubjectCount++;
+                    $subjectGrades[] = [
+                        'subject_id' => $mark->subject_id,
+                        'subject_name' => $subjectName,
+                        'grade' => $grade,
+                        'points' => $points,
+                    ];
                 }
             }
 
-            // Calculate GPA (4 decimal places for precision)
-            $gpa = $validSubjectCount > 0 ? round($totalPoints / $validSubjectCount, 4) : 0;
+            $aggtPoints = $this->gradingService->calculateAggtFromSubjectGrades($subjectGrades, $coreSubjectIds);
+            $totalPoints = $aggtPoints ?? 0;
+            $principalPassCount = $this->gradingService->countPrincipalPassesFromSubjectGrades($subjectGrades, $coreSubjectIds);
 
-            // Calculate division
-            $divisionInfo = $totalPoints > 0 ? $this->gradingService->calculateDivision($totalPoints) : null;
+            // Calculate GPA (4 decimal places for precision)
+            $gpa = $validSubjectCount > 0 ? round($gpaPoints / $validSubjectCount, 4) : 0;
+
+            // Calculate division using AGGT division bands.
+            $divisionInfo = $totalPoints > 0
+                ? $this->gradingService->calculateDivisionWithEligibility(
+                    (float) $totalPoints,
+                    (int) $principalPassCount
+                )
+                : ['division' => 0, 'competence' => 'Fail', 'points' => 0];
             $division = $divisionInfo ? $divisionInfo['division'] : 'O';
 
             // Update the exam registration with calculated values
@@ -208,7 +241,23 @@ class GradeCalculationService
         $bestPoints = 7;
 
         foreach ($marks as $mark) {
-            $grade = $mark->grade ?? $this->gradingService->calculateGrade($mark->marks_obtained);
+            $subjectStatus = strtoupper((string) ($mark->subject_status ?? ''));
+            if (in_array($subjectStatus, ['INC', 'ABS', 'X'], true)) {
+                continue;
+            }
+
+            $grade = $mark->grade;
+            if (!$grade) {
+                if ($mark->marks_obtained === null) {
+                    continue;
+                }
+                $grade = $this->gradingService->calculateGrade((float) $mark->marks_obtained);
+            }
+
+            if (in_array(strtoupper((string) $grade), ['INC', 'ABS', 'X'], true)) {
+                continue;
+            }
+
             $points = $this->gradingService->getGradePoints($grade);
 
             if ($points < $bestPoints) {

@@ -2,10 +2,12 @@
 
 @section('content')
 @include('mark-entry.partials.import-modal')
-<div class="w-full flex gap-0" x-data="markEntryManager()" x-init="init()">
+@include('registration.partials.theme')
+<div class="registration-shell mark-entry-shell">
+<div class="w-full flex flex-col lg:flex-row gap-0 lg:gap-4" x-data="markEntryManager()" x-init="init()">
     <!-- SIDEBAR MENU -->
-    <aside class="w-64 bg-gray-900 text-gray-100 min-h-screen sticky top-[140px] overflow-y-auto">
-        <div class="p-6">
+    <aside class="mark-entry-sidebar hidden lg:block w-64 text-gray-100 min-h-screen sticky top-[140px] overflow-y-auto">
+        <div class="mark-entry-sidebar-inner p-6">
             <h2 class="text-lg font-bold text-white mb-6">Mark Entry Lifecycle</h2>
             
             <!-- 1. ENTRY & VALIDATION -->
@@ -14,10 +16,10 @@
                     <i class="fas fa-chart-bar"></i> Entry & Validation
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#" @click.prevent="navigateToView('upload-marks')" :class="activeView === 'upload-marks' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📤 Upload Marks</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('single-subject-csv')" :class="activeView === 'single-subject-csv' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📊 Single Subject CSV</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('school-bulk-zip')" :class="activeView === 'school-bulk-zip' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📦 School Bulk ZIP</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('district-bulk-zip')" :class="activeView === 'district-bulk-zip' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📋 District Bulk ZIP</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('upload-marks')" :class="activeView === 'upload-marks' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-cloud-upload-alt mark-entry-sidebar-icon"></i><span>Upload Marks</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('single-subject-csv')" :class="activeView === 'single-subject-csv' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-file-csv mark-entry-sidebar-icon"></i><span>Single Subject CSV</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('school-bulk-zip')" :class="activeView === 'school-bulk-zip' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-box-open mark-entry-sidebar-icon"></i><span>School Bulk ZIP</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('district-bulk-zip')" :class="activeView === 'district-bulk-zip' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-archive mark-entry-sidebar-icon"></i><span>District Bulk ZIP</span></span></a></li>
                 </ul>
             </div>
 
@@ -27,10 +29,11 @@
                     <i class="fas fa-search"></i> Moderation & Review
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#" @click.prevent="navigateToView('review-dashboard')" :class="activeView === 'review-dashboard' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📋 Review Dashboard</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('pending-review')" :class="activeView === 'pending-review' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">⏳ Pending Review</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('approve-marks')" :class="activeView === 'approve-marks' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">✅ Approve Marks</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('reject-feedback')" :class="activeView === 'reject-feedback' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">❌ Reject & Feedback</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('review-dashboard')" :class="activeView === 'review-dashboard' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-clipboard-check mark-entry-sidebar-icon"></i><span>Review Dashboard</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('pending-review')" :class="activeView === 'pending-review' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-hourglass-half mark-entry-sidebar-icon"></i><span>Pending Review</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('entry-outliers-qa')" :class="activeView === 'entry-outliers-qa' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-flag mark-entry-sidebar-icon"></i><span>Entry Outliers (QA)</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('approve-marks')" :class="activeView === 'approve-marks' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-check-circle mark-entry-sidebar-icon"></i><span>Approve Marks</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('reject-feedback')" :class="activeView === 'reject-feedback' ? 'bg-yellow-600 text-white pl-3 border-l-4 border-yellow-400' : 'text-gray-300 hover:text-yellow-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-times-circle mark-entry-sidebar-icon"></i><span>Reject & Feedback</span></span></a></li>
                 </ul>
             </div>
 
@@ -40,10 +43,10 @@
                     <i class="fas fa-lock"></i> Submission & Locking
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#" @click.prevent="navigateToView('lock-status')" :class="activeView === 'lock-status' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">🔒 Lock Status</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('submit-marks')" :class="activeView === 'submit-marks' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📤 Submit Marks</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('admin-unlock')" :class="activeView === 'admin-unlock' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">(Admin) Unlock</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('history')" :class="activeView === 'history' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📜 History</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('lock-status')" :class="activeView === 'lock-status' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-lock mark-entry-sidebar-icon"></i><span>Lock Status</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('submit-marks')" :class="activeView === 'submit-marks' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-paper-plane mark-entry-sidebar-icon"></i><span>Submit Marks</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('admin-unlock')" :class="activeView === 'admin-unlock' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-lock-open mark-entry-sidebar-icon"></i><span>(Admin) Unlock</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('history')" :class="activeView === 'history' ? 'bg-green-600 text-white pl-3 border-l-4 border-green-400' : 'text-gray-300 hover:text-green-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-history mark-entry-sidebar-icon"></i><span>History</span></span></a></li>
                 </ul>
             </div>
 
@@ -53,10 +56,10 @@
                     <i class="fas fa-file-alt"></i> Reports & Exports
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#" @click.prevent="navigateToView('scoresheets-pdf')" :class="activeView === 'scoresheets-pdf' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📄 Scoresheets (PDF)</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('csv-export')" :class="activeView === 'csv-export' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📊 CSV Export</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('analytics')" :class="activeView === 'analytics' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📈 Analytics</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('summary-report')" :class="activeView === 'summary-report' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📋 Summary Report</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('scoresheets-pdf')" :class="activeView === 'scoresheets-pdf' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-file-pdf mark-entry-sidebar-icon"></i><span>Scoresheets (PDF)</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('csv-export')" :class="activeView === 'csv-export' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-file-export mark-entry-sidebar-icon"></i><span>CSV Export</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('analytics')" :class="activeView === 'analytics' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-chart-line mark-entry-sidebar-icon"></i><span>Analytics</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('summary-report')" :class="activeView === 'summary-report' ? 'bg-purple-600 text-white pl-3 border-l-4 border-purple-400' : 'text-gray-300 hover:text-purple-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-clipboard-list mark-entry-sidebar-icon"></i><span>Summary Report</span></span></a></li>
                 </ul>
             </div>
 
@@ -66,10 +69,10 @@
                     <i class="fas fa-clock"></i> Monitoring & Audit
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#" @click.prevent="navigateToView('lifecycle-dashboard')" :class="activeView === 'lifecycle-dashboard' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📊 Lifecycle Dashboard</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('change-log')" :class="activeView === 'change-log' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📝 Change Log</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('audit-trail')" :class="activeView === 'audit-trail' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">🔍 Audit Trail</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('activity-log')" :class="activeView === 'activity-log' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">👥 Activity Log</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('lifecycle-dashboard')" :class="activeView === 'lifecycle-dashboard' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-project-diagram mark-entry-sidebar-icon"></i><span>Lifecycle Dashboard</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('change-log')" :class="activeView === 'change-log' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-pen-nib mark-entry-sidebar-icon"></i><span>Change Log</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('audit-trail')" :class="activeView === 'audit-trail' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-search-plus mark-entry-sidebar-icon"></i><span>Audit Trail</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('activity-log')" :class="activeView === 'activity-log' ? 'bg-blue-600 text-white pl-3 border-l-4 border-blue-400' : 'text-gray-300 hover:text-blue-300'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-users mark-entry-sidebar-icon"></i><span>Activity Log</span></span></a></li>
                 </ul>
             </div>
 
@@ -79,10 +82,10 @@
                     <i class="fas fa-cog"></i> Administration
                 </h3>
                 <ul class="space-y-2">
-                    <li><a href="#" @click.prevent="navigateToView('configuration')" :class="activeView === 'configuration' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">⚙️ Configuration</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('permissions')" :class="activeView === 'permissions' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">🔐 Permissions</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('batch-management')" :class="activeView === 'batch-management' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">📦 Batch Management</a></li>
-                    <li><a href="#" @click.prevent="navigateToView('system-logs')" :class="activeView === 'system-logs' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1">🖥️ System Logs</a></li>
+                    <li><a href="#" @click.prevent="navigateToView('configuration')" :class="activeView === 'configuration' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-sliders-h mark-entry-sidebar-icon"></i><span>Configuration</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('permissions')" :class="activeView === 'permissions' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-user-shield mark-entry-sidebar-icon"></i><span>Permissions</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('batch-management')" :class="activeView === 'batch-management' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-boxes-stacked mark-entry-sidebar-icon"></i><span>Batch Management</span></span></a></li>
+                    <li><a href="#" @click.prevent="navigateToView('system-logs')" :class="activeView === 'system-logs' ? 'bg-indigo-600 text-white pl-3 border-l-4 border-indigo-400' : 'text-gray-300 hover:text-indigo-400'" class="sidebar-link text-sm transition cursor-pointer block rounded px-2 py-1"><span class="mark-entry-sidebar-link-inner"><i class="fas fa-server mark-entry-sidebar-icon"></i><span>System Logs</span></span></a></li>
                 </ul>
             </div>
 
@@ -92,37 +95,84 @@
     </aside>
 
     <!-- MAIN CONTENT AREA -->
-    <div class="flex-1 flex flex-col">
+    <div class="flex-1 flex flex-col min-w-0">
         <!-- Page Header -->
-        <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-[140px] z-40 shadow-sm">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-2xl font-bold text-gray-800">ACSEE Mark Entry</h1>
-                    <p class="text-sm text-gray-600 mt-1" x-text="'→ ' + (viewRegistry[activeView]?.label || 'Unknown View')"></p>
+        <div class="px-4 sm:px-6 lg:px-8 pt-0 sm:pt-0">
+            <div class="registration-page-header px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+                <div class="lg:hidden mb-3">
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">Navigate Section</label>
+                    <select
+                        x-model="activeView"
+                        @change="navigateToView(activeView)"
+                        class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                    >
+                        <template x-for="(cfg, key) in viewRegistry" :key="'mv-' + key">
+                            <option :value="key" x-text="displayViewLabel(key)"></option>
+                        </template>
+                    </select>
                 </div>
-                <button x-show="activeView !== 'upload-marks' && activeView !== 'single-subject-csv'" @click="navigateToView('upload-marks')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-                    <i class="fas fa-home"></i> Back to Upload
-                </button>
+                <div class="mark-entry-hero">
+                    <div class="mark-entry-hero-grid">
+                        <div>
+                            <span class="registration-page-kicker">ACSEE Operations Workspace</span>
+                            <h1 class="registration-page-title">ACSEE Mark Entry</h1>
+                            <p class="registration-page-subtitle">Move from context selection to upload, moderation, locking, and reporting in one controlled workflow.</p>
+                            <div class="registration-page-highlights">
+                                <span class="registration-page-chip">
+                                    <i class="fas fa-layer-group"></i>
+                                    <span x-text="viewRegistry[activeView]?.category || 'Workspace'"></span>
+                                </span>
+                                <span class="registration-page-chip">
+                                    <i class="fas fa-location-arrow"></i>
+                                    <span x-text="displayViewLabel(activeView)"></span>
+                                </span>
+                                <span class="registration-page-chip">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span x-text="examYear || 'Select Year'"></span>
+                                </span>
+                            </div>
+                        </div>
+                        <aside class="mark-entry-hero-side">
+                            <div class="registration-page-note">
+                                <h2>Workflow Guidance</h2>
+                                <p>Use the lifecycle panel to keep uploads, review queues, approvals, and audit activity inside a single governed workspace.</p>
+                            </div>
+                            <button x-show="activeView !== 'upload-marks' && activeView !== 'single-subject-csv'" @click="navigateToView('upload-marks')" class="mark-entry-hero-action px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2">
+                                <i class="fas fa-home"></i> Back to Upload
+                            </button>
+                        </aside>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Main Content -->
-        <div class="px-8 py-8 flex-1 overflow-y-auto">
+        <div class="mark-entry-main px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 flex-1 overflow-y-auto">
             <div class="space-y-6">
 
             <!-- UPLOAD SECTION (View: upload-marks, single-subject-csv, school-bulk-zip, district-bulk-zip) -->
             <div x-show="['upload-marks', 'single-subject-csv', 'school-bulk-zip', 'district-bulk-zip'].includes(activeView)">
-                <div x-show="activeView === 'upload-marks' || activeView === 'single-subject-csv'" id="upload" class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-lg font-bold text-gray-800 mb-4">1. Select Context</h2>
+                <div x-show="activeView === 'upload-marks' || activeView === 'single-subject-csv'" id="upload" class="registration-surface mark-entry-context-card p-6">
+                    <div class="mark-entry-step-heading">
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-800">1. Select Context</h2>
+                            <p class="mark-entry-step-copy">Set the working year, geography, school, and subject before downloading templates or uploading marks.</p>
+                        </div>
+                        <div class="mark-entry-step-badges">
+                            <span class="mark-entry-step-badge"><i class="fas fa-calendar-alt"></i> Exam cycle</span>
+                            <span class="mark-entry-step-badge"><i class="fas fa-school"></i> School scope</span>
+                            <span class="mark-entry-step-badge"><i class="fas fa-book-open"></i> Subject target</span>
+                        </div>
+                    </div>
                     
-                    <div class="grid grid-cols-12 gap-3 items-start">
+                    <div class="mark-entry-context-grid">
                      <!-- Exam Year -->
-                     <div class="col-span-1 flex flex-col h-full">
+                     <div class="mark-entry-context-field mark-entry-context-field-year flex flex-col h-full">
                          <label class="block text-sm font-semibold text-gray-700 mb-2">Year *</label>
                          <select 
                              x-model="examYear"
                              @change="onContextChange()"
-                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm h-10"
+                             class="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm h-10"
                          >
                              <option value="">Select Year</option>
                              <template x-for="year in examYears" :key="year.id">
@@ -132,22 +182,22 @@
                      </div>
 
                     <!-- Region -->
-                    <div class="col-span-1 flex flex-col h-full">
+                    <div class="mark-entry-context-field mark-entry-context-field-region flex flex-col h-full">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
                         <div class="relative flex-1 flex flex-col" @click.outside="regionOpen = false">
                             <button 
                                 @click="regionOpen = !regionOpen"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10"
                             >
                                 <span x-text="selectedRegion ? regions.find(r => r.id == selectedRegion)?.name : 'All Regions'" class="text-gray-700 whitespace-nowrap"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="regionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col">
+                            <div x-show="regionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col">
                                 <input 
                                     x-model="regionSearch"
                                     type="text"
                                     placeholder="Search regions..."
-                                    class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                    class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                 >
                                 <div class="max-h-48 overflow-y-auto">
                                     <div @click="selectedRegion = ''; regionOpen = false; onRegionChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">
@@ -167,23 +217,23 @@
                     </div>
 
                     <!-- District -->
-                    <div class="col-span-2 flex flex-col h-full">
+                    <div class="mark-entry-context-field mark-entry-context-field-district flex flex-col h-full">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">District</label>
                         <div class="relative flex-1 flex flex-col" @click.outside="districtOpen = false">
                             <button 
                                 @click="selectedRegion && (districtOpen = !districtOpen)"
                                 :disabled="!selectedRegion"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
                             >
                                 <span x-text="selectedDistrict ? (filteredDistricts.find(d => d.id == selectedDistrict)?.name || 'Unknown District') : (selectedRegion ? 'All Districts' : 'Select Region First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="districtOpen && selectedRegion" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col">
+                            <div x-show="districtOpen && selectedRegion" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col">
                                 <input 
                                     x-model="districtSearch"
                                     type="text"
                                     placeholder="Search districts..."
-                                    class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                    class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                 >
                                 <div class="max-h-48 overflow-y-auto">
                                     <div @click="selectedDistrict = ''; districtOpen = false; onDistrictChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">
@@ -203,23 +253,23 @@
                     </div>
 
                     <!-- School -->
-                    <div class="col-span-3 flex flex-col h-full">
+                    <div class="mark-entry-context-field mark-entry-context-field-school flex flex-col h-full">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">School</label>
                         <div class="relative flex-1 flex flex-col" @click.outside="schoolOpen = false">
                             <button 
                                 @click="selectedDistrict && (schoolOpen = !schoolOpen)"
                                 :disabled="!selectedDistrict"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
                             >
                                 <span x-text="selectedSchool ? (filteredSchools.find(s => s.id == selectedSchool)?.code + ' - ' + filteredSchools.find(s => s.id == selectedSchool)?.name) : (selectedDistrict ? 'All Schools' : 'Select District First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="schoolOpen && selectedDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col">
+                            <div x-show="schoolOpen && selectedDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col">
                                 <input 
                                     x-model="schoolSearch"
                                     type="text"
                                     placeholder="Search schools..."
-                                    class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                    class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                 >
                                 <div class="max-h-48 overflow-y-auto">
                                     <div @click="selectedSchool = ''; schoolOpen = false; onContextChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">
@@ -244,14 +294,14 @@
                     </div>
 
                     <!-- Subject (Dynamically filtered by school) -->
-                    <div class="col-span-4 flex flex-col h-full">
+                    <div class="mark-entry-context-field mark-entry-context-field-subject flex flex-col h-full">
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Subject *</label>
                         <div class="relative flex-1 flex flex-col" @click.outside="subjectOpen = false">
                             <button 
                                 @click="selectedSchool && !subjectLoading && (subjectOpen = !subjectOpen)"
                                 :disabled="!selectedSchool"
                                 :class="!selectedSchool ? 'bg-gray-100 cursor-not-allowed text-gray-400' : 'hover:bg-gray-50'"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:text-gray-400"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:text-gray-400"
                             >
                                 <span x-show="!subjectLoading" x-text="selectedSubject ? filteredSubjects.find(s => s.id == selectedSubject)?.code : (selectedSchool ? 'Select Subject' : 'Select School First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <span x-show="subjectLoading" class="text-gray-500 text-sm italic flex items-center gap-2">
@@ -279,12 +329,12 @@
                                              </div>
 
                             <!-- Dropdown menu -->
-                            <div x-show="subjectOpen && selectedSchool && filteredSubjects.length > 0" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                            <div x-show="subjectOpen && selectedSchool && filteredSubjects.length > 0" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
                                 <input 
                                     x-model="subjectSearch"
                                     type="text"
                                     placeholder="Search subjects..."
-                                    class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                    class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                 >
                                 <div class="max-h-48 overflow-y-auto">
                                     <template x-for="subject in filteredSubjects.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(subjectSearch.toLowerCase()))" :key="subject.id">
@@ -306,10 +356,10 @@
                     </div>
 
                     <!-- Reset Button -->
-                    <div class="col-span-1 flex items-end h-full">
+                    <div class="mark-entry-context-field mark-entry-context-field-reset flex items-end h-full">
                         <button type="button"
                             @click="resetContext()"
-                            class="w-full px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium text-sm rounded-lg transition-colors h-10"
+                            class="mark-entry-secondary-btn w-full px-4 py-2 text-gray-800 font-medium text-sm transition-colors h-10"
                         >
                             Reset
                         </button>
@@ -318,15 +368,15 @@
             </div>
 
             <!-- Tabs Navigation -->
-            <div id="csv-tab" class="bg-white rounded-lg shadow border-b border-gray-200 scroll-mt-32">
-                <div class="flex gap-8 px-6">
-                    <button type="button" @click="navigateToView('single-subject-csv')" :class="importMode === 'single' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+            <div id="csv-tab" class="registration-surface mark-entry-tab-shell scroll-mt-32">
+                <div class="mark-entry-mode-bar">
+                    <button type="button" @click="navigateToView('single-subject-csv')" :class="importMode === 'single' ? 'mark-entry-mode-button-active' : 'text-gray-600'" class="mark-entry-mode-button py-4 font-medium transition-colors">
                         <i class="fas fa-file-csv mr-2"></i>Single Subject CSV
                     </button>
-                    <button type="button" @click="navigateToView('school-bulk-zip')" :class="importMode === 'schoolBulk' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+                    <button type="button" @click="navigateToView('school-bulk-zip')" :class="importMode === 'schoolBulk' ? 'mark-entry-mode-button-active' : 'text-gray-600'" class="mark-entry-mode-button py-4 font-medium transition-colors">
                         <i class="fas fa-box mr-2"></i>School Bulk ZIP
                     </button>
-                    <button type="button" @click="navigateToView('district-bulk-zip')" :class="importMode === 'district' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="py-4 font-medium transition-colors">
+                    <button type="button" @click="navigateToView('district-bulk-zip')" :class="importMode === 'district' ? 'mark-entry-mode-button-active' : 'text-gray-600'" class="mark-entry-mode-button py-4 font-medium transition-colors">
                         <i class="fas fa-archive mr-2"></i>District Bulk ZIP
                     </button>
                 </div>
@@ -336,12 +386,17 @@
 
             <!-- Upload Section (Single Subject) -->
             <template x-if="importMode === 'single'">
-            <div id="csv-upload" class="bg-white rounded-lg shadow p-6 scroll-mt-32">
-                <h2 class="text-lg font-bold text-gray-800 mb-4">2. Single Subject Mark Upload</h2>
+            <div id="csv-upload" class="registration-surface mark-entry-upload-card p-6 scroll-mt-32">
+                <div class="mark-entry-step-heading">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800">2. Single Subject Mark Upload</h2>
+                        <p class="mark-entry-step-copy">Use the guided instructions, action tools, and upload area below to complete one controlled subject submission.</p>
+                    </div>
+                </div>
                 
                 <div class="space-y-4">
                     <!-- Template Info -->
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div class="mark-entry-instruction-card p-4">
                         <p class="text-sm text-blue-900 mb-2">
                             <strong>Important Instructions for Single Subject CSV:</strong>
                         </p>
@@ -356,86 +411,22 @@
                         </ul>
                     </div>
 
-                    <!-- Download Template, Print Scoresheet, Bulk Export Buttons -->
-                    <div class="flex gap-2 flex-wrap">
-                        <!-- Single Subject Mark Template -->
-                         <button type="button"
-                             @click="downloadTemplate()"
-                             :disabled="!selectedSubject"
-                             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                         >
-                             <i class="fas fa-download"></i> Mark Template (CSV)
-                         </button>
-
-                         <!-- Single Subject Scoresheet -->
-                         <button type="button"
-                             @click="printScoresheet()"
-                             :disabled="!selectedSubject"
-                             class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                         >
-                             <i class="fas fa-file-pdf"></i> Single Scoresheet (PDF)
-                         </button>
-
-                         <!-- Upload via Modal (Single CSV) -->
-                         <button type="button"
-                             @click="openImportModal('single_csv')"
-                             :disabled="!selectedSubject || !selectedSchool || !examYear"
-                             class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                         >
-                             <i class="fas fa-upload"></i> Upload via Modal
-                         </button>
-
-                         <!-- School Scoresheets -->
-                         <button type="button"
-                             @click="bulkExport()"
-                             :disabled="!selectedSchool || !examYear"
-                             class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                         >
-                             <i class="fas fa-file-pdf"></i> School Scoresheets (ZIP)
-                         </button>
-
-                         <!-- School Mark Templates -->
-                         <button type="button"
-                             @click="downloadBulkCsv()"
-                             :disabled="!selectedSchool || !examYear || !filteredSubjects.length"
-                             :class="bulkCsvLoading ? 'opacity-75 cursor-wait' : ''"
-                             class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                         >
-                             <i :class="bulkCsvLoading ? 'fas fa-spinner fa-spin' : 'fas fa-download'"></i>
-                             <span x-text="bulkCsvLoading ? 'Preparing...' : 'School Mark Templates (ZIP)'"></span>
-                         </button>
-
-                         <!-- District Mark Templates -->
-                         <button type="button"
-                             @click="downloadDistrictBulkCsv()"
-                             :disabled="!selectedDistrict || selectedDistrict === '' || !examYear"
-                             :class="districtBulkCsvLoading ? 'opacity-75 cursor-wait' : ''"
-                             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                             :title="!selectedDistrict || selectedDistrict === '' ? 'Select a specific district (not All Districts)' : ''"
-                         >
-                             <i :class="districtBulkCsvLoading ? 'fas fa-spinner fa-spin' : 'fas fa-download'"></i>
-                             <span x-text="districtBulkCsvLoading ? 'Preparing...' : 'District Mark Templates (ZIP)'"></span>
-                         </button>
-
-                         <!-- District Scoresheets -->
-                         <button type="button"
-                             @click="downloadDistrictBulkScoresheet()"
-                             :disabled="!selectedDistrict || selectedDistrict === '' || !examYear"
-                             :class="districtBulkScoresheetLoading ? 'opacity-75 cursor-wait' : ''"
-                             class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                             :title="!selectedDistrict || selectedDistrict === '' ? 'Select a specific district (not All Districts)' : ''"
-                         >
-                             <i :class="districtBulkScoresheetLoading ? 'fas fa-spinner fa-spin' : 'fas fa-file-pdf'"></i>
-                             <span x-text="districtBulkScoresheetLoading ? 'Preparing...' : 'District Scoresheets (ZIP)'"></span>
-                         </button>
-
+                    <!-- Action Center -->
+                    <div class="mark-entry-inline-tools flex flex-wrap items-center gap-3">
+                        <button type="button"
+                            @click.stop.prevent="openToolsModal('single')"
+                            class="mark-entry-primary-btn px-4 py-2 text-white font-medium text-sm transition-colors flex items-center gap-2"
+                        >
+                            <i class="fas fa-wrench"></i> Single Subject Tools
+                            <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
+                        </button>
                         <span class="text-xs text-gray-500 flex items-center" x-show="!selectedSubject && !selectedSchool">
                             Select subject for single scoresheet, or school + year for bulk export
                         </span>
                     </div>
 
                     <!-- CSV Upload Area -->
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors cursor-pointer" @click="document.getElementById('csvInput').click()">
+                    <div class="mark-entry-dropzone p-6 text-center transition-colors cursor-pointer" @click="document.getElementById('csvInput').click()">
                         <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
                         <p class="text-gray-700 font-medium">Click to upload or drag and drop</p>
                         <p class="text-sm text-gray-500">CSV file (max. 5MB)</p>
@@ -450,14 +441,14 @@
 
                     <!-- Selected File Info -->
                     <template x-if="selectedFile">
-                        <div class="bg-gray-50 rounded-lg p-4 mt-4">
+                        <div class="mark-entry-file-card p-4 mt-4">
                             <p class="text-sm text-gray-700 mb-3">
                                 <strong>Selected file:</strong> <span x-text="selectedFile?.name" class="text-blue-600 font-semibold"></span>
                             </p>
                             <button type="button"
                                 @click="uploadFile()"
                                 :disabled="uploading"
-                                class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                class="mark-entry-success-btn mark-entry-success-btn-3d px-6 py-3 text-white font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 <template x-if="!uploading">
                                     <><i class="fas fa-upload"></i> Upload Subject Marks</>
@@ -470,6 +461,7 @@
                     </template>
                 </div>
             </div>
+
 
             <!-- Import Result -->
             <div x-show="importResult" class="bg-white rounded-lg shadow p-6">
@@ -702,7 +694,7 @@
             <!-- School Bulk ZIP Section -->
             <div id="school-bulk" x-show="importMode === 'schoolBulk'" class="space-y-6 scroll-mt-32">
                 <!-- Upload Section -->
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="bg-white rounded-lg shadow p-4 sm:p-6">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">📦 Upload School Bulk Marks ZIP</h2>
                     
                     <div class="grid grid-cols-3 gap-4">
@@ -724,21 +716,21 @@
                         <!-- School -->
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">School *</label>
-                            <div class="relative" @click.outside="schoolBulkSchoolOpen = false">
+                            <div class="relative" @click.outside="schoolBulkSchoolOpen = false; schoolBulkSchoolSearch = ''">
                                 <button 
-                                    @click="!schoolBulkExamYear ? (schoolBulkSchoolOpen = false) : (schoolBulkSchoolOpen = !schoolBulkSchoolOpen)"
+                                    @click="!schoolBulkExamYear ? (schoolBulkSchoolOpen = false) : (schoolBulkSchoolOpen = !schoolBulkSchoolOpen); if (schoolBulkSchoolOpen) schoolBulkSchoolSearch = ''"
                                     :disabled="!schoolBulkExamYear"
-                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
                                 >
                                     <span x-text="schoolBulkId ? filteredSchoolBulkSchools.find(s => s.id == schoolBulkId)?.name : (schoolBulkExamYear ? 'Select School' : 'Select Exam Year First')" class="text-gray-700 whitespace-nowrap"></span>
                                     <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                                 </button>
-                                <div x-show="schoolBulkSchoolOpen && schoolBulkExamYear" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
+                                <div x-show="schoolBulkSchoolOpen && schoolBulkExamYear" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
                                     <input 
                                         x-model="schoolBulkSchoolSearch"
                                         type="text"
                                         placeholder="Search schools..."
-                                        class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                        class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                     >
                                     <div class="max-h-48 overflow-y-auto">
                                         <template x-if="filteredSchoolBulkSchools.length === 0">
@@ -746,9 +738,14 @@
                                                 No schools with ACSEE candidates
                                             </div>
                                         </template>
+                                        <template x-if="filteredSchoolBulkSchools.length > 0 && filteredSchoolBulkSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(schoolBulkSchoolSearch.toLowerCase())).length === 0">
+                                            <div class="px-3 py-2 text-gray-500 text-sm">
+                                                No matching schools
+                                            </div>
+                                        </template>
                                         <template x-for="school in filteredSchoolBulkSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(schoolBulkSchoolSearch.toLowerCase()))" :key="school.id">
                                             <div 
-                                                @click="schoolBulkId = school.id; schoolBulkSchoolOpen = false"
+                                                @click="schoolBulkId = school.id; schoolBulkSchoolOpen = false; schoolBulkSchoolSearch = ''"
                                                 :class="schoolBulkId == school.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
                                                 class="px-3 py-2 cursor-pointer text-sm transition-colors"
                                                 x-text="school.code + ' - ' + school.name"
@@ -760,10 +757,11 @@
                         </div>
                     </div>
 
-                    <!-- Use Modal for Upload/Validate -->
-                    <div class="mt-6">
-                        <button type="button" @click="openImportModal('school_zip')" :disabled="!schoolBulkExamYear || !schoolBulkId" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
-                            <i class="fas fa-upload"></i> Upload & Validate in Modal
+                    <!-- Action Center -->
+                    <div class="mt-6 flex flex-wrap items-center gap-3">
+                        <button type="button" @click.stop.prevent="openImportModal('school_zip')" class="mark-entry-primary-btn px-6 py-2 text-white transition-colors font-medium flex items-center gap-2">
+                            <i class="fas fa-wrench"></i> School Bulk Tools
+                            <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
                         </button>
                     </div>
                 </div>
@@ -882,53 +880,112 @@
                          </button>
                     </div>
                 </template>
+
             </div>
 
             <!-- District Bulk Import Section -->
             <div id="district-bulk" x-show="importMode === 'district'" class="space-y-6 scroll-mt-32">
                     <!-- Upload Section -->
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4">📦 Upload District Marks ZIP</h2>
+                    <div class="registration-surface mark-entry-context-card p-6">
+                        <div class="mark-entry-step-heading">
+                            <div>
+                                <h2 class="text-lg font-bold text-gray-800">📦 Upload District Marks ZIP</h2>
+                                <p class="mark-entry-step-copy">Choose the exam year, optional region filter, and target district before launching the district ZIP import workflow.</p>
+                            </div>
+                        </div>
                         
-                        <div class="grid grid-cols-3 gap-4">
+                        <div class="mark-entry-bulk-grid">
                             <!-- Exam Year -->
-                             <div>
-                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Year *</label>
-                                 <select x-model="districtExamYear" @change="onDistrictExamYearChange()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-10">
-                                    <option value="">Select Exam Year</option>
-                                    <template x-for="year in examYears" :key="year.id">
-                                        <option :value="year.year_label" x-text="year.year_label"></option>
-                                    </template>
-                                </select>
+                            <div class="relative mark-entry-context-field" @click.outside="districtYearOpen = false">
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Year *</label>
+                                <button type="button"
+                                    @click="districtYearOpen = !districtYearOpen"
+                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none">
+                                    <span x-text="districtExamYear || 'Select Exam Year'" class="text-gray-700 whitespace-nowrap"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="districtYearOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col">
+                                    <input x-model="districtYearSearch" type="text" placeholder="Search years..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <div @click="districtExamYear = ''; districtYearOpen = false; districtYearSearch = ''; onDistrictExamYearChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">Select Exam Year</div>
+                                        <template x-if="(examYears || []).filter(y => String(y.year_label || '').toLowerCase().includes((districtYearSearch || '').toLowerCase())).length === 0">
+                                            <div class="px-3 py-2 text-gray-500 text-sm">No matching years</div>
+                                        </template>
+                                        <template x-for="year in (examYears || []).filter(y => String(y.year_label || '').toLowerCase().includes((districtYearSearch || '').toLowerCase()))" :key="year.id">
+                                            <div
+                                                @click="districtExamYear = year.year_label; districtYearOpen = false; districtYearSearch = ''; onDistrictExamYearChange()"
+                                                :class="districtExamYear == year.year_label ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                                class="px-3 py-2 cursor-pointer text-sm transition-colors"
+                                                x-text="year.year_label">
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Region (filters districts) -->
-                            <div>
+                            <div class="relative mark-entry-context-field" @click.outside="districtRegionOpen = false">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
-                                <select x-model.number="districtBulkRegionId" @change="districtId = ''" :disabled="!districtExamYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-10 disabled:bg-gray-100 disabled:cursor-not-allowed">
-                                    <option value="">All Regions</option>
-                                    <template x-for="region in districtBulkRegions" :key="region.id">
-                                        <option :value="region.id" x-text="region.name"></option>
-                                    </template>
-                                </select>
+                                <button type="button"
+                                    @click="districtExamYear && (districtRegionOpen = !districtRegionOpen)"
+                                    :disabled="!districtExamYear"
+                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none disabled:bg-gray-100 disabled:cursor-not-allowed">
+                                    <span x-text="districtBulkRegionId ? (districtBulkRegions.find(r => r.id == districtBulkRegionId)?.name || 'All Regions') : 'All Regions'" class="text-gray-700 whitespace-nowrap"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="districtRegionOpen && districtExamYear" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col">
+                                    <input x-model="districtBulkRegionSearch" type="text" placeholder="Search regions..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <div @click="districtBulkRegionId = ''; districtId = ''; districtRegionOpen = false; districtBulkRegionSearch = ''" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Regions</div>
+                                        <template x-if="districtBulkRegions.filter(r => (r.name || '').toLowerCase().includes((districtBulkRegionSearch || '').toLowerCase())).length === 0">
+                                            <div class="px-3 py-2 text-gray-500 text-sm">No matching regions</div>
+                                        </template>
+                                        <template x-for="region in districtBulkRegions.filter(r => (r.name || '').toLowerCase().includes((districtBulkRegionSearch || '').toLowerCase()))" :key="region.id">
+                                            <div
+                                                @click="districtBulkRegionId = Number(region.id); districtId = ''; districtRegionOpen = false; districtBulkRegionSearch = ''"
+                                                :class="districtBulkRegionId == region.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                                class="px-3 py-2 cursor-pointer text-sm transition-colors"
+                                                x-text="region.name">
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- District -->
-                            <div>
+                            <div class="relative mark-entry-context-field" @click.outside="districtBulkDistrictOpen = false">
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">District *</label>
-                                <select x-model.number="districtId" :disabled="!districtExamYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-10 disabled:bg-gray-100 disabled:cursor-not-allowed">
-                                    <option value="">Select District</option>
-                                    <template x-for="district in filteredDistrictBulkList" :key="district.id">
-                                        <option :value="district.id" x-text="`${district.code} - ${district.name}`"></option>
-                                    </template>
-                                </select>
+                                <button type="button"
+                                    @click="districtExamYear && (districtBulkDistrictOpen = !districtBulkDistrictOpen)"
+                                    :disabled="!districtExamYear"
+                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none disabled:bg-gray-100 disabled:cursor-not-allowed">
+                                    <span x-text="districtId ? (filteredDistrictBulkList.find(d => d.id == districtId)?.name || 'Select District') : 'Select District'" class="text-gray-700 whitespace-nowrap"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="districtBulkDistrictOpen && districtExamYear" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col">
+                                    <input x-model="districtBulkDistrictSearch" type="text" placeholder="Search districts..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <template x-if="filteredDistrictBulkList.filter(d => (`${d.code || ''} ${d.name || ''}`).toLowerCase().includes((districtBulkDistrictSearch || '').toLowerCase())).length === 0">
+                                            <div class="px-3 py-2 text-gray-500 text-sm">No matching districts</div>
+                                        </template>
+                                        <template x-for="district in filteredDistrictBulkList.filter(d => (`${d.code || ''} ${d.name || ''}`).toLowerCase().includes((districtBulkDistrictSearch || '').toLowerCase()))" :key="district.id">
+                                            <div
+                                                @click="districtId = Number(district.id); districtBulkDistrictOpen = false; districtBulkDistrictSearch = ''"
+                                                :class="districtId == district.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                                class="px-3 py-2 cursor-pointer text-sm transition-colors"
+                                                x-text="`${district.code} - ${district.name}`">
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Use Modal for Upload/Validate -->
-                        <div class="mt-6">
-                            <button @click="openImportModal('district_zip')" :disabled="!districtExamYear || !districtId" class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
-                                <i class="fas fa-upload"></i> Upload & Validate in Modal
+                        <!-- Action Center -->
+                        <div class="mt-6 flex flex-wrap items-center gap-3">
+                            <button @click.stop.prevent="openImportModal('district_zip')" class="mark-entry-primary-btn px-6 py-2 text-white transition-colors font-medium flex items-center gap-2">
+                                <i class="fas fa-wrench"></i> District Bulk Tools
+                                <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
                             </button>
                         </div>
                     </div>
@@ -1086,7 +1143,7 @@
             <!-- ===== END UPLOAD SECTION ===== -->
 
             <!-- ===== MODERATION & REVIEW SECTIONS ===== -->
-            <div x-show="['review-dashboard', 'pending-review', 'approve-marks', 'reject-feedback'].includes(activeView)">
+            <div x-show="['review-dashboard', 'pending-review', 'entry-outliers-qa', 'approve-marks', 'reject-feedback'].includes(activeView)">
 
             <!-- Review Dashboard Section -->
             <template x-if="activeView === 'review-dashboard'">
@@ -1225,51 +1282,112 @@
                 <div class="bg-white rounded-lg shadow p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-2xl font-bold text-gray-800">⏳ Pending Review Queue</h2>
-                        <button @click="loadPendingQueue(1)" :disabled="pendingQueueLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2">
-                            <i :class="pendingQueueLoading ? 'fas fa-spinner fa-spin' : 'fas fa-sync-alt'"></i>
-                            Refresh
-                        </button>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button @click="openBulkApproveModal('selected')"
+                                    :disabled="pendingQueueLoading || pendingSelectedEligibleCount() === 0 || isBulkApproving"
+                                    class="px-4 py-2 bg-teal-600 hover:bg-teal-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 text-sm">
+                                <i class="fas fa-check-square"></i>
+                                Approve Selected (<span x-text="pendingSelectedEligibleCount()"></span>)
+                            </button>
+                            <button @click="openBulkApproveModal('visible')"
+                                    :disabled="pendingQueueLoading || pendingApprovableVisibleCount() === 0 || isBulkApproving"
+                                    class="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 text-sm">
+                                <i class="fas fa-check-double"></i>
+                                Approve All Visible (<span x-text="pendingApprovableVisibleCount()"></span>)
+                            </button>
+                            <button @click="openBulkApproveModal('scope')"
+                                    :disabled="pendingQueueLoading || pendingQueueTotal === 0 || isBulkApproving"
+                                    class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 text-sm">
+                                <i class="fas fa-layer-group"></i>
+                                Approve All (Filtered Scope)
+                            </button>
+                            <button @click="loadPendingQueue(1)" :disabled="pendingQueueLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2">
+                                <i :class="pendingQueueLoading ? 'fas fa-spinner fa-spin' : 'fas fa-sync-alt'"></i>
+                                Refresh
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Filters -->
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
-                        <div>
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
+                        <div class="relative md:col-span-2" @click.outside="pendingYearOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
-                            <select x-model="pendingFilters.exam_year" @change="loadPendingQueue(1)" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Years</option>
-                                <template x-for="yr in examYears" :key="yr.id">
-                                    <option :value="yr.year_label" x-text="yr.year_label"></option>
-                                </template>
-                            </select>
+                            <button @click="pendingYearOpen = !pendingYearOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span x-text="pendingSelectedYearLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="pendingYearOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="pendingYearSearch" type="text" placeholder="Search year..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="pendingSelectYear('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Years</div>
+                                    <template x-for="yr in pendingFilteredYears()" :key="'pyr-' + yr.id">
+                                        <div @click="pendingSelectYear(String(yr.year_label || ''))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="yr.year_label"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="relative md:col-span-2" @click.outside="pendingRegionOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Region</label>
-                            <select x-model="pendingFilters.region_id" @change="loadPendingQueue(1)" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Regions</option>
-                                <template x-for="r in regions" :key="r.id">
-                                    <option :value="r.id" x-text="r.name"></option>
-                                </template>
-                            </select>
+                            <button @click="pendingRegionOpen = !pendingRegionOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span x-text="pendingSelectedRegionLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="pendingRegionOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="pendingRegionSearch" type="text" placeholder="Search region..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="pendingSelectRegion('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Regions</div>
+                                    <template x-for="r in pendingFilteredRegions()" :key="'prg-' + r.id">
+                                        <div @click="pendingSelectRegion(String(r.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="r.name"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="relative md:col-span-4" @click.outside="pendingSchoolOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
-                            <input type="text" x-model="pendingFilters.school_search" @input.debounce.300ms="loadPendingQueue(1)" placeholder="Search school..." class="w-full border rounded px-2 py-1.5 text-sm">
+                            <button @click="pendingSchoolOpen = !pendingSchoolOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span class="block whitespace-nowrap overflow-x-auto overflow-y-hidden school-select-label" x-text="pendingSelectedSchoolLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="pendingSchoolOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="pendingSchoolSearch" type="text" placeholder="Search school..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="pendingSelectSchool('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap">All Schools</div>
+                                    <template x-for="school in pendingFilteredSchools()" :key="'psc-' + school.id">
+                                        <div @click="pendingSelectSchool(String(school.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap" x-text="school.code ? `${school.code} - ${school.name}` : school.name"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="relative md:col-span-2" @click.outside="pendingSubjectOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Subject</label>
-                            <select x-model="pendingFilters.subject_id" @change="loadPendingQueue(1)" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Subjects</option>
-                                <template x-for="sub in subjects" :key="sub.id">
-                                    <option :value="sub.id" x-text="sub.code + ' - ' + sub.name"></option>
-                                </template>
-                            </select>
+                            <button @click="pendingSubjectOpen = !pendingSubjectOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span class="block whitespace-nowrap overflow-x-auto overflow-y-hidden school-select-label" x-text="pendingSelectedSubjectLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="pendingSubjectOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="pendingSubjectSearch" type="text" placeholder="Search subject..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="pendingSelectSubject('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Subjects</div>
+                                    <template x-for="sub in pendingFilteredSubjects()" :key="'psu-' + sub.id">
+                                        <div @click="pendingSelectSubject(String(sub.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="sub.code ? `${sub.code} - ${sub.name}` : sub.name"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="relative md:col-span-2" @click.outside="pendingStatusOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                            <select x-model="pendingFilters.status" @change="loadPendingQueue(1)" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All</option>
-                                <option value="errors">With Errors Only</option>
-                            </select>
+                            <button @click="pendingStatusOpen = !pendingStatusOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span x-text="pendingSelectedStatusLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="pendingStatusOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="pendingStatusSearch" type="text" placeholder="Search status..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <template x-for="st in pendingFilteredStatuses()" :key="'pst-' + st.value">
+                                        <div @click="pendingSelectStatus(st.value)" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="st.label"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -1300,6 +1418,14 @@
                                 <table class="w-full text-sm">
                                     <thead class="bg-gray-100 sticky top-0">
                                         <tr>
+                                            <th class="px-2 py-3 text-center font-semibold text-gray-700">
+                                                <input type="checkbox"
+                                                       :checked="pendingSelectAllFilteredActive"
+                                                       @change="togglePendingSelectAllFiltered($event.target.checked)"
+                                                       :disabled="pendingQueueLoading || isBulkApproving"
+                                                       class="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                                       title="Select all eligible batches in current filters">
+                                            </th>
                                             <th class="px-3 py-3 text-left font-semibold text-gray-700">Batch</th>
                                             <th class="px-3 py-3 text-left font-semibold text-gray-700">School</th>
                                             <th class="px-3 py-3 text-left font-semibold text-gray-700">Subject</th>
@@ -1316,6 +1442,14 @@
                                     <tbody class="divide-y">
                                         <template x-for="batch in pendingQueueBatches" :key="batch.id">
                                             <tr class="hover:bg-gray-50 transition-colors">
+                                                <td class="px-2 py-3 text-center align-top">
+                                                    <input type="checkbox"
+                                                           :checked="pendingSelectedBatchIds.includes(batch.id)"
+                                                           :disabled="!isPendingApprovalEligible(batch)"
+                                                           @change="togglePendingBatchSelection(batch, $event.target.checked)"
+                                                           class="rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                                                           title="Select batch for bulk approval">
+                                                </td>
                                                 <td class="px-3 py-3 font-mono font-semibold text-xs" x-text="batch.batch_code"></td>
                                                 <td class="px-3 py-3 text-sm text-gray-700" x-text="batch.school?.name || 'N/A'"></td>
                                                 <td class="px-3 py-3 text-sm text-gray-700" x-text="(batch.subject?.code || '') + ' - ' + (batch.subject?.name || '')"></td>
@@ -1327,29 +1461,30 @@
                                                     <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold" x-text="batch.pending_marks_count ?? batch.valid_records ?? 0"></span>
                                                 </td>
                                                 <td class="px-3 py-3 text-sm text-right">
-                                                    <span :class="(batch.error_marks_count || batch.error_records || 0) > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'" class="px-2 py-1 rounded-full text-xs font-semibold" x-text="batch.error_marks_count ?? batch.error_records ?? 0"></span>
+                                                    <span :class="pendingBatchErrorCount(batch) > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-500'" class="px-2 py-1 rounded-full text-xs font-semibold" x-text="pendingBatchErrorCount(batch)"></span>
                                                 </td>
                                                 <td class="px-3 py-3 text-sm text-right">
                                                     <span :class="(batch.warning_marks_count || 0) > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-500'" class="px-2 py-1 rounded-full text-xs font-semibold" x-text="batch.warning_marks_count ?? 0"></span>
                                                 </td>
                                                 <td class="px-3 py-3 text-sm text-right font-semibold" x-text="batch.total_records ?? 0"></td>
                                                 <td class="px-3 py-3 text-xs text-gray-600" x-text="formatDate(batch.imported_at)"></td>
-                                                <td class="px-3 py-3 text-center">
-                                                    <div class="flex items-center justify-center gap-1 flex-wrap">
-                                                        <button @click="viewBatchErrors(batch.id)" x-show="(batch.error_marks_count || batch.error_records || batch.warning_marks_count || 0) > 0" class="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors" title="View Errors & Warnings">
+                                                <td class="px-3 py-3 text-center whitespace-nowrap">
+                                                    <div class="inline-flex items-center gap-1">
+                                                        <button @click="viewBatchErrors(batch.id)" x-show="(pendingBatchErrorCount(batch) + pendingBatchWarningCount(batch)) > 0" class="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors" title="View Errors & Warnings">
                                                             <i class="fas fa-bug"></i>
                                                         </button>
                                                         <button @click="openBatchDetail(batch.id)" class="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium transition-colors" title="Preview Marks">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
-                                                        <button @click="openApproveBatchModal(batch.id)" :disabled="(batch.error_marks_count || batch.error_records || 0) > 0" class="px-2 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition-colors" title="Approve">
+                                                        <button @click="openApproveBatchModal(batch.id)" :disabled="!isPendingApprovalEligible(batch)" class="px-2 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition-colors" title="Approve">
                                                             <i class="fas fa-check"></i>
                                                         </button>
                                                         <button @click="openRejectBatchModal(batch.id)" class="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-xs font-medium transition-colors" title="Reject">
                                                             <i class="fas fa-times"></i>
                                                         </button>
                                                     </div>
-                                                    <p x-show="(batch.error_marks_count || batch.error_records || 0) > 0" class="text-[10px] text-red-500 mt-1">Resolve errors to approve</p>
+                                                    <p x-show="pendingBatchErrorCount(batch) > 0" class="text-[10px] text-red-500 mt-1">Resolve errors to approve</p>
+                                                    <p x-show="pendingBatchErrorCount(batch) === 0 && !isApprovalStateEligible(batch)" class="text-[10px] text-amber-600 mt-1">Submit batch before approval</p>
                                                 </td>
                                             </tr>
                                         </template>
@@ -1358,11 +1493,29 @@
                             </div>
 
                             <!-- Pagination -->
-                            <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
-                                <span>Page <span x-text="pendingQueuePage"></span> of <span x-text="pendingQueueLastPage"></span> (<span x-text="pendingQueueTotal"></span> total)</span>
-                                <div class="space-x-2">
-                                    <button @click="loadPendingQueue(pendingQueuePage - 1)" :disabled="pendingQueuePage <= 1" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">← Prev</button>
-                                    <button @click="loadPendingQueue(pendingQueuePage + 1)" :disabled="!pendingQueueHasMore" class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">Next →</button>
+                            <div class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5">
+                                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                    <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                                        <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                            <i class="fas fa-layer-group text-xs"></i>
+                                            <span>Page <span x-text="pendingQueuePage"></span> of <span x-text="Math.max(pendingQueueLastPage, 1)"></span></span>
+                                        </div>
+                                        <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                            <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                            <span>Showing <span class="font-semibold text-slate-800" x-text="pendingQueueBatches.length"></span> of <span class="font-semibold text-slate-800" x-text="pendingQueueTotal"></span> batches</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                                        <button @click="pendingQueuePage > 1 && loadPendingQueue(1)" :disabled="pendingQueuePage <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-left text-xs"></i></button>
+                                        <button @click="pendingQueuePage > 1 && loadPendingQueue(pendingQueuePage - 1)" :disabled="pendingQueuePage <= 1" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                                        <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                            <template x-for="page in pendingQueuePageWindow()" :key="'pq-' + page">
+                                                <button @click="pendingQueuePage = page; loadPendingQueue(page)" :class="pendingQueuePage === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" x-text="page"></button>
+                                            </template>
+                                        </div>
+                                        <button @click="pendingQueuePage < pendingQueueLastPage && loadPendingQueue(pendingQueuePage + 1)" :disabled="pendingQueuePage >= pendingQueueLastPage" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                                        <button @click="pendingQueuePage < pendingQueueLastPage && loadPendingQueue(pendingQueueLastPage)" :disabled="pendingQueuePage >= pendingQueueLastPage" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-right text-xs"></i></button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1374,6 +1527,363 @@
                 <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-3">
                     <i class="fas fa-info-circle text-amber-500 mt-0.5"></i>
                     <p class="text-xs text-amber-700">Marks with <strong>blocking errors</strong> (red) cannot be approved until resolved. <strong>Warnings</strong> (yellow, e.g. absent 'X') are non-blocking — batches with only warnings can be approved. Use "View Errors" to see details or download CSV.</p>
+                </div>
+
+                <!-- Bulk Approve Confirmation Modal -->
+                <div x-show="showBulkApproveModal" class="fixed inset-0 bg-black/50 z-[1200] flex items-center justify-center p-4" x-cloak>
+                    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full" @click.outside="showBulkApproveModal = false">
+                        <div class="bg-gradient-to-r from-green-600 to-green-700 text-white p-6 rounded-t-lg">
+                            <h3 class="text-xl font-bold">✅ Bulk Approve Batches</h3>
+                            <p class="text-sm text-green-100" x-text="bulkApproveMode === 'selected' ? 'Approve selected eligible batches' : (bulkApproveMode === 'visible' ? 'Approve all visible eligible batches' : 'Approve all eligible batches in current filters')"></p>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                                <p class="text-xs text-gray-600 mb-1">Batches to approve</p>
+                                <p class="text-3xl font-bold text-green-700" x-text="bulkApproveCount"></p>
+                            </div>
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                <p class="text-xs text-amber-800">Only batches without blocking errors will be approved. Others are skipped automatically.</p>
+                            </div>
+                            <div>
+                                <label class="flex items-start gap-2 cursor-pointer">
+                                    <input type="checkbox" x-model="bulkApproveAcknowledged" class="mt-1 rounded border-gray-300 text-green-600 focus:ring-green-500">
+                                    <span class="text-sm text-gray-700">I understand this will approve multiple batches at once.</span>
+                                </label>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    Confirmation <span class="text-red-600">*</span>
+                                </label>
+                                <p class="text-xs text-gray-600 mb-2">Type <span class="font-bold">APPROVE ALL</span> to confirm:</p>
+                                <input x-model="bulkApproveConfirmText"
+                                       type="text"
+                                       placeholder="Type APPROVE ALL"
+                                       class="w-full border border-gray-300 rounded-lg p-3 text-sm uppercase focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                       @input="bulkApproveConfirmText = bulkApproveConfirmText.toUpperCase()">
+                            </div>
+                        </div>
+                        <div class="border-t p-6 flex gap-3 justify-end">
+                            <button @click="showBulkApproveModal = false; bulkApproveConfirmText = ''; bulkApproveAcknowledged = false"
+                                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                                Cancel
+                            </button>
+                            <button @click="executeBulkApprove()"
+                                    :disabled="isBulkApproving || !bulkApproveAcknowledged || bulkApproveConfirmText.toUpperCase() !== 'APPROVE ALL'"
+                                    class="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition disabled:opacity-50">
+                                <span x-show="!isBulkApproving">✅ Approve All</span>
+                                <span x-show="isBulkApproving"><i class="fas fa-spinner fa-spin mr-1"></i> Processing...</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </template>
+
+            <template x-if="activeView === 'entry-outliers-qa'">
+            <section class="space-y-6" x-data="entryOutliersView()" x-init="init()">
+                <div class="bg-white rounded-lg shadow p-6 space-y-5">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">🚩 Entry Outliers (QA)</h2>
+                        <p class="text-sm text-gray-600">Pre-submission QA checks for entry anomalies. Read-only flags only; no marks are auto-edited.</p>
+                    </div>
+
+                    <div class="bg-white border rounded-lg p-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                            <div class="relative" @click.outside="yearOpen = false">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
+                                <button @click="yearOpen = !yearOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                    <span x-text="selectedYearLabel()"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="yearOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                    <input x-model="yearSearch" type="text" placeholder="Search year..." class="w-full border-b px-2 py-1.5 text-sm">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <div @click="selectYear('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Years</div>
+                                        <template x-for="yr in filteredYears()" :key="'oyf-' + yr.id">
+                                            <div @click="selectYear(String(yr.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="yr.year_label"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative" @click.outside="statusOpen = false">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                                <button @click="statusOpen = !statusOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                    <span x-text="selectedStatusLabel()"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="statusOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                    <input x-model="statusSearch" type="text" placeholder="Search status..." class="w-full border-b px-2 py-1.5 text-sm">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <template x-for="st in filteredStatuses()" :key="'ost-' + st.value">
+                                            <div @click="selectStatus(st.value)" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="st.label"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative" @click.outside="schoolOpen = false">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
+                                <button @click="schoolOpen = !schoolOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                    <span class="block whitespace-nowrap overflow-x-auto overflow-y-hidden school-select-label" x-text="selectedSchoolLabel()"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="schoolOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                    <input x-model="schoolSearch" type="text" placeholder="Search school..." class="w-full border-b px-2 py-1.5 text-sm">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <div @click="selectSchool('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap">All Schools</div>
+                                        <template x-for="school in filteredSchools()" :key="'osf-' + school.id">
+                                            <div @click="selectSchool(String(school.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap" x-text="school.code ? `${school.code} - ${school.name}` : school.name"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative" @click.outside="subjectOpen = false">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                                <button @click="subjectOpen = !subjectOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                    <span class="block whitespace-nowrap overflow-x-auto overflow-y-hidden school-select-label" x-text="selectedSubjectLabel()"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="subjectOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                    <input x-model="subjectSearch" type="text" placeholder="Search subject..." class="w-full border-b px-2 py-1.5 text-sm">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <div @click="selectSubject('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Subjects</div>
+                                        <template x-for="subject in filteredSubjects()" :key="'osj-' + subject.id">
+                                            <div @click="selectSubject(String(subject.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="subject.code ? `${subject.code} - ${subject.name}` : subject.name"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                            <input type="text" x-model="filters.q" @input.debounce.400ms="applyFilters()" placeholder="Batch, school, subject, candidate index..." class="w-full border rounded px-2 py-1.5 text-sm">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4"><p class="text-xs text-gray-500">Batches flagged</p><p class="text-2xl font-bold text-yellow-800" x-text="summary.batches_flagged || 0"></p></div>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4"><p class="text-xs text-gray-500">Candidates flagged</p><p class="text-2xl font-bold text-yellow-800" x-text="summary.candidates_flagged || 0"></p></div>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4"><p class="text-xs text-gray-500">Paper-level issues</p><p class="text-2xl font-bold text-yellow-800" x-text="summary.paper_level_issues || 0"></p></div>
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4"><p class="text-xs text-gray-500">Max/Min violations</p><p class="text-2xl font-bold text-yellow-800" x-text="summary.max_min_violations || 0"></p></div>
+                    </div>
+
+                    <div class="rounded-lg border p-4"
+                         :class="readyGate.is_ready ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-wide"
+                                   :class="readyGate.is_ready ? 'text-green-700' : 'text-red-700'">Ready To Proceed</p>
+                                <p class="text-sm font-semibold"
+                                   :class="readyGate.is_ready ? 'text-green-800' : 'text-red-800'"
+                                   x-text="readyGate.is_ready ? 'YES - all blocking conditions are clear.' : 'NO - blocking QA conditions remain.'"></p>
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold"
+                                  :class="readyGate.is_ready ? 'bg-green-600 text-white' : 'bg-red-600 text-white'"
+                                  x-text="readyGate.is_ready ? 'CLEAR' : 'BLOCKED'"></span>
+                        </div>
+                        <div class="mt-2 text-xs text-gray-700 flex flex-wrap gap-4">
+                            <span><strong>Blocking:</strong> <span x-text="readyGate.blocking"></span></span>
+                            <span><strong>Actionable:</strong> <span x-text="readyGate.actionable"></span></span>
+                            <span><strong>Manual:</strong> <span x-text="readyGate.manual"></span></span>
+                            <span><strong>Resolved:</strong> <span x-text="readyGate.resolved"></span></span>
+                        </div>
+                    </div>
+
+                    <div class="border rounded-lg overflow-hidden">
+                        <div class="bg-gray-50 border-b px-4 py-3 flex flex-wrap items-center gap-2">
+                            <button type="button" @click="changeTab('integrity')" class="px-3 py-1.5 rounded text-sm border" :class="activeTab === 'integrity' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'">
+                                <span class="block">Data Integrity Flags</span>
+                                <span class="block text-[10px] mt-0.5" :class="activeTab === 'integrity' ? 'text-blue-100' : 'text-gray-500'" x-text="tabCounterLabel('integrity')"></span>
+                            </button>
+                            <button type="button" @click="changeTab('missing')" class="px-3 py-1.5 rounded text-sm border" :class="activeTab === 'missing' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'">
+                                <span class="block">Missing Required Paper Marks</span>
+                                <span class="block text-[10px] mt-0.5" :class="activeTab === 'missing' ? 'text-blue-100' : 'text-gray-500'" x-text="tabCounterLabel('missing')"></span>
+                            </button>
+                            <button type="button" @click="changeTab('swings')" class="px-3 py-1.5 rounded text-sm border" :class="activeTab === 'swings' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300'">
+                                <span class="block">Extreme Score Swings</span>
+                                <span class="block text-[10px] mt-0.5" :class="activeTab === 'swings' ? 'text-blue-100' : 'text-gray-500'" x-text="tabCounterLabel('swings')"></span>
+                            </button>
+                            <div class="ml-auto">
+                                <button type="button"
+                                        @click="exportOutliersPdf()"
+                                        :disabled="exportPdfLoading || loading"
+                                        class="px-3 py-1.5 rounded text-sm border font-semibold transition mr-2"
+                                        :class="(exportPdfLoading || loading) ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed' : 'bg-white text-blue-700 border-blue-300 hover:bg-blue-50'"
+                                        title="Export current tab as PDF">
+                                    <span x-show="!exportPdfLoading">Export PDF</span>
+                                    <span x-show="exportPdfLoading"><i class="fas fa-spinner fa-spin mr-1"></i> Exporting...</span>
+                                </button>
+                                <button type="button"
+                                        @click="openBulkApproveModal('selected')"
+                                        :disabled="bulkApproving || loading || selectedCountForActiveTab() === 0"
+                                        class="px-3 py-1.5 rounded text-sm border font-semibold transition mr-2"
+                                        :class="(bulkApproving || loading || selectedCountForActiveTab() === 0) ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed' : 'bg-teal-600 text-white border-teal-600 hover:bg-teal-700'"
+                                        title="Approve selected flags for current tab">
+                                    <span x-show="!bulkApproving">Approve Selected (<span x-text="selectedCountForActiveTab()"></span>)</span>
+                                    <span x-show="bulkApproving"><i class="fas fa-spinner fa-spin mr-1"></i> Approving...</span>
+                                </button>
+                                <button type="button"
+                                        @click="openBulkApproveModal()"
+                                        :disabled="bulkApproving || loading"
+                                        class="px-3 py-1.5 rounded text-sm border font-semibold transition"
+                                        :class="(bulkApproving || loading) ? 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed' : 'bg-green-600 text-white border-green-600 hover:bg-green-700'"
+                                        title="Approve all actionable flags for current filters">
+                                    <span x-show="!bulkApproving">Approve All Flags</span>
+                                    <span x-show="bulkApproving"><i class="fas fa-spinner fa-spin mr-1"></i> Approving...</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="p-4 space-y-3">
+                            <div x-show="loading" class="text-center py-8"><i class="fas fa-spinner animate-spin text-blue-500 text-xl"></i></div>
+                            <div x-show="error && !loading" class="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700" x-text="error"></div>
+
+                            <div x-show="!loading && !error" class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-100 border-b">
+                                        <tr>
+                                            <th class="px-2 py-2 text-center text-xs font-semibold text-gray-600">
+                                                <input type="checkbox"
+                                                       :checked="isSelectAllActiveTabChecked()"
+                                                       :disabled="loading || bulkApproving"
+                                                       @change="toggleSelectAllFilteredForActiveTab($event.target.checked)"
+                                                       class="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                                       title="Select all rows in current tab and filters">
+                                            </th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Batch</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">School</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Subject</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Candidate</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Issue</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Message</th>
+                                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template x-for="row in filteredRows()" :key="row.id">
+                                            <tr class="border-b hover:bg-gray-50">
+                                                <td class="px-2 py-2 text-center align-top">
+                                                    <input type="checkbox"
+                                                           :checked="isRowSelected(row.id)"
+                                                           @change="toggleRowSelection(row.id, $event.target.checked)"
+                                                           class="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                                           title="Select row">
+                                                </td>
+                                                <td class="px-3 py-2 text-xs font-mono" x-text="row.batch_code || '—'"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="row.school_name || '—'"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="row.subject_name || '—'"></td>
+                                                <td class="px-3 py-2 text-xs" x-text="row.candidate_index_number || '—'"></td>
+                                                <td class="px-3 py-2 text-xs"><span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-semibold" x-text="row.issue_type"></span></td>
+                                                <td class="px-3 py-2 text-xs text-gray-600" x-text="row.message"></td>
+                                                <td class="px-3 py-2 text-xs text-gray-700" x-text="row.review_action || 'Manual review'"></td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div x-show="!loading && !error && filteredRows().length === 0" class="text-center py-8 text-gray-500">No outliers found for the selected filters.</div>
+
+                            <div x-show="meta.total > 0" class="mt-3 border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5 rounded-b-2xl">
+                                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                    <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                                        <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                            <i class="fas fa-layer-group text-xs"></i>
+                                            <span>Page <span x-text="meta.current_page"></span> of <span x-text="Math.max(meta.last_page, 1)"></span></span>
+                                        </div>
+                                        <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                            <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                            <span>Showing <span class="font-semibold text-slate-800" x-text="filteredRows().length"></span> of <span class="font-semibold text-slate-800" x-text="meta.total"></span> records</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                                        <button type="button" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" :disabled="meta.current_page === 1" @click.prevent="goToPage(1)"><i class="fas fa-angles-left text-xs"></i></button>
+                                        <button type="button" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" :disabled="meta.current_page === 1" @click.prevent="goToPage(meta.current_page - 1)"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                                        <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                            <template x-for="p in pageWindow()" :key="'oqp-' + p">
+                                                <button type="button" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" :class="p === meta.current_page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" @click.prevent="goToPage(p)" x-text="p"></button>
+                                            </template>
+                                        </div>
+                                        <button type="button" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" :disabled="meta.current_page === meta.last_page" @click.prevent="goToPage(meta.current_page + 1)"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                                        <button type="button" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" :disabled="meta.current_page === meta.last_page" @click.prevent="goToPage(meta.last_page)"><i class="fas fa-angles-right text-xs"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div x-show="bulkApproveModalOpen" x-cloak class="fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4">
+                        <div class="bg-white rounded-lg shadow-xl w-full max-w-xl" @click.outside="closeBulkApproveModal()">
+                            <div class="px-5 py-4 border-b">
+                                <h3 class="text-lg font-bold text-gray-900">Approve All Flags</h3>
+                                <p class="text-sm text-gray-600 mt-1" x-text="bulkApproveMode === 'selected' ? 'Approve selected flags for current Entry Outliers tab.' : 'Approve all actionable flags for current Entry Outliers filters.'"></p>
+                            </div>
+                            <div class="px-5 py-4 space-y-3 text-sm">
+                                <div class="bg-amber-50 border border-amber-200 rounded p-3 text-amber-800">
+                                    <p class="font-semibold">What will happen</p>
+                                    <p>All actionable <span class="font-semibold">Missing Required Paper</span> flags will be accepted as <span class="font-semibold">INC</span>, and actionable <span class="font-semibold">Suspicious Spike</span> flags will be marked as <span class="font-semibold">Approved</span> for this tab/filter scope.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div class="border rounded p-3 bg-gray-50">
+                                        <p class="text-xs text-gray-500">Visible rows (current page)</p>
+                                        <p class="text-xl font-bold text-gray-800" x-text="filteredRows().length"></p>
+                                    </div>
+                                    <div class="border rounded p-3 bg-gray-50">
+                                        <p class="text-xs text-gray-500">Total rows (current filters)</p>
+                                        <p class="text-xl font-bold text-gray-800" x-text="meta.total || 0"></p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 mb-1">Note (optional)</label>
+                                    <textarea x-model="bulkApproveNote" rows="2" class="w-full border border-gray-300 rounded px-3 py-2 text-sm" placeholder="Optional note for audit trail..."></textarea>
+                                </div>
+                                <label class="flex items-start gap-2 text-sm text-gray-700">
+                                    <input type="checkbox" x-model="bulkApproveAcknowledge" class="mt-0.5 rounded border-gray-300">
+                                    <span>I understand this action applies to the current filters and may process multiple pages.</span>
+                                </label>
+
+                                <template x-if="bulkApproveResult">
+                                    <div class="rounded border p-3"
+                                         :class="bulkApproveResult.ok ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'">
+                                        <p class="font-semibold" x-text="bulkApproveResult.message"></p>
+                                        <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                                            <div class="bg-white/70 border border-current/20 rounded px-2 py-1">
+                                                <span class="font-semibold">Resolved:</span>
+                                                <span x-text="bulkApproveResult.stats.resolved ?? 0"></span>
+                                            </div>
+                                            <div class="bg-white/70 border border-current/20 rounded px-2 py-1">
+                                                <span class="font-semibold">Skipped:</span>
+                                                <span x-text="bulkApproveResult.stats.skipped ?? 0"></span>
+                                            </div>
+                                            <div class="bg-white/70 border border-current/20 rounded px-2 py-1">
+                                                <span class="font-semibold">Failed:</span>
+                                                <span x-text="bulkApproveResult.stats.failed ?? 0"></span>
+                                            </div>
+                                        </div>
+                                        <template x-if="(bulkApproveResult.reasons || []).length > 0">
+                                            <div class="mt-2 text-xs">
+                                                <p class="font-semibold mb-1">Sample reasons</p>
+                                                <ul class="list-disc list-inside space-y-0.5">
+                                                    <template x-for="(reason, idx) in bulkApproveResult.reasons" :key="'bulk-reason-' + idx">
+                                                        <li x-text="reason"></li>
+                                                    </template>
+                                                </ul>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="px-5 py-4 border-t flex items-center justify-end gap-2">
+                                <button type="button" @click="closeBulkApproveModal()" class="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50">Cancel</button>
+                                <button type="button"
+                                        @click="approveAllFlags()"
+                                        :disabled="bulkApproving || !bulkApproveAcknowledge"
+                                        class="px-4 py-2 rounded text-white font-semibold"
+                                        :class="(bulkApproving || !bulkApproveAcknowledge) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'">
+                                    <span x-show="!bulkApproving">Confirm Approve All</span>
+                                    <span x-show="bulkApproving"><i class="fas fa-spinner fa-spin mr-1"></i> Processing...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
             </template>
@@ -1529,30 +2039,25 @@
             <template x-if="activeView === 'approve-marks'">
             <section id="approve-marks" class="bg-white rounded-lg shadow p-6 scroll-mt-32" x-init="loadApprovableBatches(1)">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800">✅ Approve & Lock Marks</h2>
+                    <h2 class="text-2xl font-bold text-gray-800">✅ Approve Marks</h2>
                     <button @click="loadApprovableBatches(1)" :disabled="approvableLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg flex items-center gap-2">
                         <i :class="approvableLoading ? 'fas fa-spinner fa-spin' : 'fas fa-refresh'"></i>
                         Refresh
                     </button>
                 </div>
-                <p class="text-gray-600 mb-4">Approve submitted batches or lock approved batches for final submission to the exam authority.</p>
+                <p class="text-gray-600 mb-4">Approve submitted batches here. Approved batches are managed in <strong>Lock Status</strong>.</p>
 
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-3 gap-4 mb-6">
-                    <div @click="setApprovableFilter('all')" :class="approvableFilter === 'all' ? 'ring-2 ring-blue-500' : ''" class="cursor-pointer bg-blue-50 border border-blue-200 rounded-lg p-4 transition-shadow hover:shadow-md">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                         <i class="fas fa-layer-group text-blue-600 text-xl mb-2"></i>
                         <p class="text-xs text-gray-600 mb-1">All Batches</p>
                         <p class="text-3xl font-bold text-blue-600" x-text="approvableTotalBatches"></p>
                     </div>
-                    <div @click="setApprovableFilter('submitted')" :class="approvableFilter === 'submitted' ? 'ring-2 ring-yellow-500' : ''" class="cursor-pointer bg-yellow-50 border border-yellow-200 rounded-lg p-4 transition-shadow hover:shadow-md">
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                         <i class="fas fa-hourglass-half text-yellow-600 text-xl mb-2"></i>
                         <p class="text-xs text-gray-600 mb-1">Awaiting Approval</p>
-                        <p class="text-3xl font-bold text-yellow-600" x-text="approvableBatches.filter(b => b._stage === 'submitted').length"></p>
-                    </div>
-                    <div @click="setApprovableFilter('approved')" :class="approvableFilter === 'approved' ? 'ring-2 ring-green-500' : ''" class="cursor-pointer bg-green-50 border border-green-200 rounded-lg p-4 transition-shadow hover:shadow-md">
-                        <i class="fas fa-check-circle text-green-600 text-xl mb-2"></i>
-                        <p class="text-xs text-gray-600 mb-1">Ready to Lock</p>
-                        <p class="text-3xl font-bold text-green-600" x-text="approvableBatches.filter(b => b._stage === 'approved').length"></p>
+                        <p class="text-3xl font-bold text-yellow-600" x-text="approvableTotalBatches"></p>
                     </div>
                 </div>
 
@@ -1571,8 +2076,8 @@
                 <template x-if="!approvableLoading && !approvableError && approvableBatches.length === 0">
                     <div class="text-center py-12">
                         <i class="fas fa-check-double text-green-400 text-4xl mb-3"></i>
-                        <p class="text-gray-600 text-lg">No batches awaiting approval or locking</p>
-                        <p class="text-gray-500 text-sm mt-1">All batches have been processed or are still pending review</p>
+                        <p class="text-gray-600 text-lg">No batches awaiting approval</p>
+                        <p class="text-gray-500 text-sm mt-1">Approved batches appear in Lock Status only.</p>
                     </div>
                 </template>
 
@@ -1610,24 +2115,31 @@
                                             <span x-show="batch._stage === 'submitted'" class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
                                                 <i class="fas fa-hourglass-half mr-1"></i> Awaiting Approval
                                             </span>
-                                            <span x-show="batch._stage === 'approved'" class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                                                <i class="fas fa-check mr-1"></i> Approved
-                                            </span>
                                         </td>
                                         <td class="px-4 py-3 text-sm text-gray-600" x-text="formatDate(batch.imported_at || batch.created_at)"></td>
-                                        <td class="px-4 py-3 text-center space-x-1">
-                                            <button @click="openBatchDetail(batch.id)" class="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs font-medium transition-colors" title="View Details">
-                                                <i class="fas fa-eye mr-1"></i> View
-                                            </button>
-                                            <button x-show="batch._stage === 'submitted'" @click="openApproveBatchModal(batch.id)" class="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium transition-colors" title="Approve Batch">
-                                                <i class="fas fa-check mr-1"></i> Approve
-                                            </button>
-                                            <button x-show="batch._stage === 'submitted'" @click="openRejectBatchModal(batch.id)" class="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors" title="Reject Batch">
-                                                <i class="fas fa-times mr-1"></i> Reject
-                                            </button>
-                                            <button x-show="batch._stage === 'approved'" @click="openLockBatchModal(batch.id)" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors" title="Lock Batch">
-                                                <i class="fas fa-lock mr-1"></i> Lock
-                                            </button>
+                                        <td class="px-4 py-3 text-center">
+                                            <div class="inline-flex items-center gap-1">
+                                                <button @click="openBatchDetail(batch.id)"
+                                                        class="w-7 h-7 inline-flex items-center justify-center bg-gray-500 hover:bg-gray-600 text-white rounded text-xs transition-colors"
+                                                        title="View Details"
+                                                        aria-label="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button x-show="batch._stage === 'submitted'"
+                                                        @click="openApproveBatchModal(batch.id)"
+                                                        class="w-7 h-7 inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white rounded text-xs transition-colors"
+                                                        title="Approve Batch"
+                                                        aria-label="Approve Batch">
+                                                    <i class="fas fa-check"></i>
+                                                </button>
+                                                <button x-show="batch._stage === 'submitted'"
+                                                        @click="openRejectBatchModal(batch.id)"
+                                                        class="w-7 h-7 inline-flex items-center justify-center bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors"
+                                                        title="Reject Batch"
+                                                        aria-label="Reject Batch">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </template>
@@ -1747,48 +2259,83 @@
 
             <!-- ========== SUBMIT MARKS PAGE ========== -->
             <template x-if="activeView === 'submit-marks'">
-            <section id="submit-marks" class="space-y-6" x-data="submitMarksView()" x-init="loadBatches()">
+            <section id="submit-marks" class="space-y-6" x-data="submitMarksView()" x-init="init()">
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-1">📤 Submit Marks for Review</h2>
                     <p class="text-sm text-gray-500 mb-6">Submit validated batches to moderators for approval</p>
 
                     <!-- Filters -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
-                            <select x-model="filters.exam_year" @change="loadBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Years</option>
-                                <template x-for="yr in filterYears" :key="yr">
-                                    <option :value="yr" x-text="yr"></option>
-                                </template>
-                            </select>
+                    <div class="bg-white border rounded-lg p-4 mb-6">
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div class="relative w-full sm:w-[140px]" @click.outside="yearOpen = false">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
+                                <button @click="yearOpen = !yearOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                    <span x-text="selectedYearLabel()"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="yearOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                    <input x-model="yearSearch" type="text" placeholder="Search year..." class="w-full border-b px-2 py-1.5 text-sm">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <div @click="selectYear('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Years</div>
+                                        <template x-for="yr in filteredYears()" :key="yr.value">
+                                            <div @click="selectYear(yr.value)" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="yr.label"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative w-full sm:w-[180px]" @click.outside="statusOpen = false">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                                <button @click="statusOpen = !statusOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                    <span x-text="selectedStatusLabel()"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="statusOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                    <input x-model="statusSearch" type="text" placeholder="Search status..." class="w-full border-b px-2 py-1.5 text-sm">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <template x-for="st in filteredStatuses()" :key="st.value">
+                                            <div @click="selectStatus(st.value)" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="st.label"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative w-full sm:flex-1 sm:min-w-[320px]" @click.outside="schoolOpen = false">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
+                                <button @click="schoolOpen = !schoolOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                    <span class="block whitespace-nowrap overflow-x-auto overflow-y-hidden school-select-label" x-text="selectedSchoolLabel()"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="schoolOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                    <input x-model="schoolSearch" type="text" placeholder="Search school..." class="w-full border-b px-2 py-1.5 text-sm">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <div @click="selectSchool('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap">All Schools</div>
+                                        <template x-for="s in filteredSchools()" :key="s.id">
+                                            <div @click="selectSchool(String(s.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap" x-text="s.code ? `${s.code} - ${s.name}` : s.name"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative w-full sm:flex-1 sm:min-w-[320px]" @click.outside="subjectOpen = false">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                                <button @click="subjectOpen = !subjectOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                    <span class="block whitespace-nowrap overflow-x-auto overflow-y-hidden school-select-label" x-text="selectedSubjectLabel()"></span>
+                                    <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                                </button>
+                                <div x-show="subjectOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                    <input x-model="subjectSearch" type="text" placeholder="Search subject..." class="w-full border-b px-2 py-1.5 text-sm">
+                                    <div class="max-h-48 overflow-y-auto">
+                                        <div @click="selectSubject('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Subjects</div>
+                                        <template x-for="sub in filteredSubjects()" :key="sub.id">
+                                            <div @click="selectSubject(String(sub.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="sub.code ? `${sub.code} - ${sub.name}` : sub.name"></div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                            <select x-model="filters.status" @change="loadBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="validated">Validated / Ready</option>
-                                <option value="submitted">Submitted</option>
-                                <option value="rejected">Rejected</option>
-                                <option value="all">All</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
-                            <select x-model="filters.school_id" @change="loadBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Schools</option>
-                                <template x-for="s in filterSchools" :key="s.id">
-                                    <option :value="s.id" x-text="s.name"></option>
-                                </template>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-600 mb-1">Subject</label>
-                            <select x-model="filters.subject_id" @change="loadBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Subjects</option>
-                                <template x-for="sub in filterSubjects" :key="sub.id">
-                                    <option :value="sub.id" x-text="sub.name"></option>
-                                </template>
-                            </select>
+                        <div class="mt-3">
+                            <div class="w-full">
+                                <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                                <input type="text" x-model="filters.q" @input.debounce.400ms="applyFilters()" placeholder="Batch code, school or subject..." class="w-full border rounded px-2 py-1.5 text-sm">
+                            </div>
                         </div>
                     </div>
 
@@ -1805,7 +2352,7 @@
 
                     <!-- Table -->
                     <div x-show="!isLoading && !errorMsg" class="overflow-x-auto">
-                        <table class="w-full text-sm">
+                        <table class="w-full min-w-[980px] text-sm">
                             <thead class="bg-gray-100 border-b">
                                 <tr>
                                     <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600">Batch Code</th>
@@ -1823,7 +2370,7 @@
                             <tbody>
                                 <template x-for="b in batches" :key="b.id">
                                     <tr class="border-b hover:bg-blue-50/30 transition">
-                                        <td class="px-3 py-2 font-mono text-xs" x-text="b.batch_code"></td>
+                                        <td class="px-3 py-2 font-mono text-xs break-all" x-text="b.batch_code"></td>
                                         <td class="px-3 py-2 text-xs" x-text="b.exam_year"></td>
                                         <td class="px-3 py-2 text-xs" x-text="b.school?.name || '—'"></td>
                                         <td class="px-3 py-2 text-xs" x-text="b.subject?.name || '—'"></td>
@@ -1859,18 +2406,35 @@
 
                         <!-- Empty -->
                         <div x-show="batches.length === 0 && !isLoading" class="text-center py-10 text-gray-400">
-                            <p class="text-lg">No batches found</p>
-                            <p class="text-sm mt-1">Upload and validate marks first, then they will appear here.</p>
+                            <p class="text-lg">No batches match your filters.</p>
+                            <p class="text-sm mt-1">Adjust filters and try again.</p>
                         </div>
 
                         <!-- Pagination -->
-                        <div x-show="pagination.last_page > 1" class="flex justify-between items-center mt-4 text-sm text-gray-600">
-                            <span>Page <span x-text="pagination.current_page"></span> of <span x-text="pagination.last_page"></span> (<span x-text="pagination.total"></span> total)</span>
-                            <div class="space-x-2">
-                                <button @click="loadBatches(pagination.current_page - 1)" :disabled="pagination.current_page <= 1"
-                                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">← Prev</button>
-                                <button @click="loadBatches(pagination.current_page + 1)" :disabled="!pagination.has_more"
-                                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">Next →</button>
+                        <div x-show="pagination.total > 0" class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5 mt-3">
+                            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                                    <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                        <i class="fas fa-layer-group text-xs"></i>
+                                        <span>Page <span x-text="pagination.current_page"></span> of <span x-text="Math.max(pagination.last_page, 1)"></span></span>
+                                    </div>
+                                    <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                        <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                        <span>Showing <span class="font-semibold text-slate-800" x-text="rows.length"></span> of <span class="font-semibold text-slate-800" x-text="pagination.total"></span> records</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                                    <button type="button" @click="firstPage()" :disabled="pagination.current_page <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-left text-xs"></i></button>
+                                    <button type="button" @click="prevPage()" :disabled="pagination.current_page <= 1" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                                    <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                        <template x-for="page in pageWindow()" :key="'sp-' + page">
+                                            <button type="button" @click="goToPage(page)" :class="pagination.current_page === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" x-text="page"></button>
+                                        </template>
+                                    </div>
+                                    <button type="button" @click="nextPage()" :disabled="pagination.current_page >= pagination.last_page" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                                    <button type="button" @click="lastPage()" :disabled="pagination.current_page >= pagination.last_page" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-right text-xs"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1947,10 +2511,25 @@
 
                         <!-- Approved Ready to Lock -->
                         <div class="mb-8">
-                            <h3 class="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                                <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" x-text="approvedBatches.length"></span>
-                                Approved — Ready to Lock
-                            </h3>
+                            <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                                <h3 class="text-md font-semibold text-gray-700 flex items-center gap-2">
+                                    <span class="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" x-text="approvedBatches.length"></span>
+                                    Approved — Ready to Lock
+                                </h3>
+                                <div class="flex flex-wrap gap-2">
+                                    <button @click="lockAllVisible()"
+                                            :disabled="approvedBatches.length === 0 || isBulkLocking"
+                                            class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition-colors">
+                                        <span x-show="!isBulkLocking">🔒 Lock & Promote All Visible (<span x-text="approvedBatches.length"></span>)</span>
+                                        <span x-show="isBulkLocking"><i class="fas fa-spinner animate-spin mr-1"></i>Processing...</span>
+                                    </button>
+                                    <button @click="lockAllInScope()"
+                                            :disabled="stats.approved_ready === 0 || isBulkLocking"
+                                            class="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded text-xs font-medium transition-colors">
+                                        🔒 Lock & Promote All (Scope)
+                                    </button>
+                                </div>
+                            </div>
                             <div x-show="approvedBatches.length === 0" class="text-center py-6 text-gray-400 bg-gray-50 rounded">
                                 <p>No approved batches waiting to be locked</p>
                             </div>
@@ -1991,47 +2570,12 @@
                             </div>
                         </div>
 
-                        <!-- Locked Batches -->
-                        <div>
-                            <h3 class="text-md font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                                <span class="bg-yellow-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs" x-text="lockedBatches.length"></span>
-                                Locked Batches
-                            </h3>
-                            <div x-show="lockedBatches.length === 0" class="text-center py-6 text-gray-400 bg-gray-50 rounded">
-                                <p>No locked batches yet</p>
-                            </div>
-                            <div x-show="lockedBatches.length > 0" class="overflow-x-auto">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-yellow-50 border-b">
-                                        <tr>
-                                            <th class="px-3 py-2 text-left text-xs">Batch Code</th>
-                                            <th class="px-3 py-2 text-left text-xs">School</th>
-                                            <th class="px-3 py-2 text-left text-xs">Subject</th>
-                                            <th class="px-3 py-2 text-center text-xs">Promoted</th>
-                                            <th class="px-3 py-2 text-left text-xs">Locked By</th>
-                                            <th class="px-3 py-2 text-left text-xs">Locked At</th>
-                                            <th class="px-3 py-2 text-center text-xs">Details</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <template x-for="b in lockedBatches" :key="b.id">
-                                            <tr class="border-b hover:bg-yellow-50/50 transition">
-                                                <td class="px-3 py-2 font-mono text-xs" x-text="b.batch_code"></td>
-                                                <td class="px-3 py-2 text-xs" x-text="b.school?.name || '—'"></td>
-                                                <td class="px-3 py-2 text-xs" x-text="b.subject?.name || '—'"></td>
-                                                <td class="px-3 py-2 text-center">
-                                                    <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-semibold" x-text="b.promoted_count ?? '—'"></span>
-                                                </td>
-                                                <td class="px-3 py-2 text-xs" x-text="b.locked_by_user?.name || '—'"></td>
-                                                <td class="px-3 py-2 text-xs text-gray-500" x-text="b.locked_at ? new Date(b.locked_at).toLocaleString() : '—'"></td>
-                                                <td class="px-3 py-2 text-center">
-                                                    <button @click="viewHistory(b.id)" class="text-blue-600 hover:text-blue-800 text-xs underline">History</button>
-                                                </td>
-                                            </tr>
-                                        </template>
-                                    </tbody>
-                                </table>
-                            </div>
+                        <!-- Locked/Promoted items are completed; review them in History/Audit -->
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <p class="text-sm text-yellow-800">
+                                Locked and promoted batches are completed and removed from the active lock queue.
+                                Use <strong>History</strong> or <strong>Audit Trail</strong> for past records.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -2061,6 +2605,50 @@
                                         class="px-4 py-2 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50">
                                     <span x-show="!lockingId">🔒 Lock & Promote</span>
                                     <span x-show="lockingId"><i class="fas fa-spinner animate-spin"></i> Processing...</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Lock Confirmation Modal -->
+                <div x-show="showBulkLockModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center" x-cloak>
+                    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4" @click.outside="showBulkLockModal = false">
+                        <div class="p-6">
+                            <h3 class="text-lg font-bold text-gray-800 mb-2">🔒 Confirm Bulk Lock & Promote</h3>
+                            <p class="text-sm text-gray-600 mb-4" x-text="bulkLockMode === 'visible' ? 'Lock all visible approved batches' : 'Lock all approved batches in current scope'"></p>
+
+                            <div class="bg-red-50 border border-red-300 rounded p-3 mb-4">
+                                <p class="text-red-800 text-sm"><strong>Warning:</strong> This action locks multiple batches and promotes marks to final results.</p>
+                            </div>
+
+                            <div class="bg-indigo-50 border border-indigo-200 rounded p-3 mb-4 text-center">
+                                <p class="text-xs text-gray-600 mb-1" x-text="bulkLockMode === 'visible' ? 'Approved batches to lock' : 'Approved batches in scope'"></p>
+                                <p class="text-2xl font-bold text-indigo-700" x-text="bulkLockCount"></p>
+                            </div>
+
+                            <label class="flex items-start gap-2 cursor-pointer mb-4">
+                                <input type="checkbox" x-model="bulkLockAcknowledged" class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                <span class="text-sm text-gray-700">I understand this action is irreversible without administrator intervention.</span>
+                            </label>
+
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Type <strong>LOCK ALL</strong> to confirm:</label>
+                                <input type="text"
+                                       x-model="bulkLockConfirmText"
+                                       @input="bulkLockConfirmText = bulkLockConfirmText.toUpperCase().replace(/\s+/g, ' ')"
+                                       placeholder="LOCK ALL"
+                                       class="w-full border rounded px-3 py-2 text-sm uppercase">
+                            </div>
+
+                            <div class="flex justify-end gap-2">
+                                <button @click="showBulkLockModal = false; bulkLockConfirmText=''; bulkLockAcknowledged=false"
+                                        class="px-4 py-2 border rounded text-sm hover:bg-gray-50">Cancel</button>
+                                <button @click="executeBulkLock()"
+                                        :disabled="isBulkLocking || bulkLockConfirmText.trim().toUpperCase() !== 'LOCK ALL' || !bulkLockAcknowledged"
+                                        class="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700 disabled:opacity-50">
+                                    <span x-show="!isBulkLocking">🔒 Lock All</span>
+                                    <span x-show="isBulkLocking"><i class="fas fa-spinner animate-spin"></i> Processing...</span>
                                 </button>
                             </div>
                         </div>
@@ -2114,7 +2702,7 @@
 
             <!-- ========== ADMIN UNLOCK PAGE ========== -->
             <template x-if="activeView === 'admin-unlock'">
-            <section id="admin-unlock" class="space-y-6" x-data="adminUnlockView()" x-init="loadLockedBatches()">
+            <section id="admin-unlock" class="space-y-6" x-data="adminUnlockView()" x-init="init()">
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-1">🔓 (Admin) Unlock Batches</h2>
                     <p class="text-sm text-gray-500 mb-2">Unlock locked batches to allow re-review (admin only)</p>
@@ -2125,33 +2713,54 @@
                     </div>
 
                     <!-- Filters -->
-                    <div class="grid grid-cols-3 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
-                        <div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
+                        <div class="relative" @click.outside="yearOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
-                            <select x-model="filters.exam_year" @change="loadLockedBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Years</option>
-                                <template x-for="yr in $root.examYears" :key="yr.id">
-                                    <option :value="yr.year_label" x-text="yr.year_label"></option>
-                                </template>
-                            </select>
+                            <button @click="yearOpen = !yearOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span x-text="selectedYearLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="yearOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="yearSearch" type="text" placeholder="Search year..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="selectYear('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Years</div>
+                                    <template x-for="yr in filteredYears()" :key="'auy-' + yr">
+                                        <div @click="selectYear(yr)" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="yr"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="relative" @click.outside="districtOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">District</label>
-                            <select x-model="filters.district_id" @change="loadLockedBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Districts</option>
-                                <template x-for="d in $root.districts" :key="d.id">
-                                    <option :value="d.id" x-text="d.name"></option>
-                                </template>
-                            </select>
+                            <button @click="districtOpen = !districtOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span x-text="selectedDistrictLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="districtOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="districtSearch" type="text" placeholder="Search district..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="selectDistrict('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Districts</div>
+                                    <template x-for="d in filteredDistricts()" :key="'aud-' + d.id">
+                                        <div @click="selectDistrict(String(d.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="d.code ? `${d.code} - ${d.name}` : d.name"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="relative" @click.outside="schoolOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
-                            <select x-model="filters.school_id" @change="loadLockedBatches()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Schools</option>
-                                <template x-for="s in $root.schools" :key="s.id">
-                                    <option :value="s.id" x-text="s.name"></option>
-                                </template>
-                            </select>
+                            <button @click="schoolOpen = !schoolOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span class="block whitespace-nowrap overflow-x-auto overflow-y-hidden school-select-label" x-text="selectedSchoolLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="schoolOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="schoolSearch" type="text" placeholder="Search school..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="selectSchool('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap">All Schools</div>
+                                    <template x-for="s in filteredSchools()" :key="'aus-' + s.id">
+                                        <div @click="selectSchool(String(s.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap" x-text="s.code ? `${s.code} - ${s.name}` : s.name"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2206,13 +2815,29 @@
                         </div>
 
                         <!-- Pagination -->
-                        <div x-show="pagination.last_page > 1" class="flex justify-between items-center mt-4 text-sm text-gray-600">
-                            <span>Page <span x-text="pagination.current_page"></span> of <span x-text="pagination.last_page"></span></span>
-                            <div class="space-x-2">
-                                <button @click="loadLockedBatches(pagination.current_page - 1)" :disabled="pagination.current_page <= 1"
-                                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">← Prev</button>
-                                <button @click="loadLockedBatches(pagination.current_page + 1)" :disabled="!pagination.has_more"
-                                        class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">Next →</button>
+                        <div x-show="pagination.last_page > 1" class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 sm:px-6 py-5">
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-slate-600">
+                                    <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                        <i class="fas fa-layer-group text-xs"></i>
+                                        <span>Page <span x-text="pagination.current_page"></span> of <span x-text="Math.max(pagination.last_page, 1)"></span></span>
+                                    </div>
+                                    <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                        <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                        <span>Showing <span class="font-semibold text-slate-800" x-text="batches.length"></span> of <span class="font-semibold text-slate-800" x-text="pagination.total"></span> records</span>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap items-center gap-2 justify-end">
+                                    <button @click="pagination.current_page > 1 && loadLockedBatches(1)" :disabled="pagination.current_page <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-left text-xs"></i></button>
+                                    <button @click="pagination.current_page > 1 && loadLockedBatches(pagination.current_page - 1)" :disabled="pagination.current_page <= 1" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                                    <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                        <template x-for="page in lockedBatchPageWindow()" :key="'ls-' + page">
+                                            <button @click="pagination.current_page = page; loadLockedBatches(page)" :class="pagination.current_page === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" x-text="page"></button>
+                                        </template>
+                                    </div>
+                                    <button @click="pagination.current_page < pagination.last_page && loadLockedBatches(pagination.current_page + 1)" :disabled="pagination.current_page >= pagination.last_page" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                                    <button @click="pagination.current_page < pagination.last_page && loadLockedBatches(pagination.last_page)" :disabled="pagination.current_page >= pagination.last_page" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-right text-xs"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2252,41 +2877,59 @@
 
             <!-- ========== HISTORY PAGE ========== -->
             <template x-if="activeView === 'history'">
-            <section id="submission-history" class="space-y-6" x-data="historyView()" x-init="loadHistory()">
+            <section id="submission-history" class="space-y-6" x-data="historyView()" x-init="init()">
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-1">📜 Submission & Locking History</h2>
                     <p class="text-sm text-gray-500 mb-6">Complete audit trail of all state transitions</p>
 
                     <!-- Filters -->
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 p-4 bg-gray-50 rounded-lg border">
-                        <div>
+                        <div class="relative" @click.outside="yearOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Exam Year</label>
-                            <select x-model="filters.exam_year" @change="loadHistory()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Years</option>
-                                <template x-for="yr in filterYears" :key="yr">
-                                    <option :value="yr" x-text="yr"></option>
-                                </template>
-                            </select>
+                            <button @click="yearOpen = !yearOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span x-text="selectedYearLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="yearOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="yearSearch" type="text" placeholder="Search year..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="selectYear('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50">All Years</div>
+                                    <template x-for="yr in filteredYears()" :key="'hy-' + yr">
+                                        <div @click="selectYear(yr)" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="yr"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="relative" @click.outside="schoolOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">School</label>
-                            <select x-model="filters.school_id" @change="loadHistory()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Schools</option>
-                                <template x-for="s in filterSchools" :key="s.id">
-                                    <option :value="s.id" x-text="s.name"></option>
-                                </template>
-                            </select>
+                            <button @click="schoolOpen = !schoolOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span class="block whitespace-nowrap overflow-x-auto overflow-y-hidden school-select-label" x-text="selectedSchoolLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="schoolOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="schoolSearch" type="text" placeholder="Search school..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <div @click="selectSchool('')" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap">All Schools</div>
+                                    <template x-for="s in filteredSchools()" :key="'hs-' + s.id">
+                                        <div @click="selectSchool(String(s.id))" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50 whitespace-nowrap" x-text="s.code ? `${s.code} - ${s.name}` : s.name"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
-                        <div>
+                        <div class="relative" @click.outside="actionOpen = false">
                             <label class="block text-xs font-medium text-gray-600 mb-1">Action</label>
-                            <select x-model="filters.action" @change="loadHistory()" class="w-full border rounded px-2 py-1.5 text-sm">
-                                <option value="">All Actions</option>
-                                <option value="submitted">Submitted</option>
-                                <option value="approved">Approved</option>
-                                <option value="rejected">Rejected</option>
-                                <option value="locked">Locked</option>
-                                <option value="unlocked">Unlocked</option>
-                            </select>
+                            <button @click="actionOpen = !actionOpen" type="button" class="w-full border rounded px-2 py-1.5 text-sm bg-white text-left flex items-center justify-between">
+                                <span x-text="selectedActionLabel()"></span>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            <div x-show="actionOpen" x-cloak class="absolute z-50 mt-1 w-full bg-white border rounded shadow-lg">
+                                <input x-model="actionSearch" type="text" placeholder="Search action..." class="w-full border-b px-2 py-1.5 text-sm">
+                                <div class="max-h-48 overflow-y-auto">
+                                    <template x-for="a in filteredActions()" :key="'ha-' + a.value">
+                                        <div @click="selectAction(a.value)" class="px-2 py-1.5 text-sm cursor-pointer hover:bg-blue-50" x-text="a.label"></div>
+                                    </template>
+                                </div>
+                            </div>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-gray-600 mb-1">From Date</label>
@@ -2364,13 +3007,29 @@
                             </template>
 
                             <!-- Pagination -->
-                            <div x-show="pagination.last_page > 1" class="flex justify-between items-center mt-4 text-sm text-gray-600 pt-4 border-t">
-                                <span>Page <span x-text="pagination.current_page"></span> of <span x-text="pagination.last_page"></span> (<span x-text="pagination.total"></span> events)</span>
-                                <div class="space-x-2">
-                                    <button @click="loadHistory(pagination.current_page - 1)" :disabled="pagination.current_page <= 1"
-                                            class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">← Prev</button>
-                                    <button @click="loadHistory(pagination.current_page + 1)" :disabled="!pagination.has_more"
-                                            class="px-3 py-1 border rounded hover:bg-gray-100 disabled:opacity-40">Next →</button>
+                            <div x-show="pagination.last_page > 1" class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5 mt-4">
+                                <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                    <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600 leading-relaxed">
+                                        <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                            <i class="fas fa-layer-group text-xs"></i>
+                                            <span>Page <span x-text="pagination.current_page"></span> of <span x-text="Math.max(pagination.last_page, 1)"></span></span>
+                                        </div>
+                                        <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                            <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                            <span>Showing <span class="font-semibold text-slate-800" x-text="events.length"></span> of <span class="font-semibold text-slate-800" x-text="pagination.total"></span> records</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2 flex-wrap md:flex-nowrap">
+                                        <button @click="pagination.current_page > 1 && loadHistory(1)" :disabled="pagination.current_page <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-left text-xs"></i></button>
+                                        <button @click="pagination.current_page > 1 && loadHistory(pagination.current_page - 1)" :disabled="pagination.current_page <= 1" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                                        <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                            <template x-for="page in historyPageWindow()" :key="'hs-' + page">
+                                                <button @click="pagination.current_page = page; loadHistory(page)" :class="pagination.current_page === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" x-text="page"></button>
+                                            </template>
+                                        </div>
+                                        <button @click="pagination.current_page < pagination.last_page && loadHistory(pagination.current_page + 1)" :disabled="pagination.current_page >= pagination.last_page" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                                        <button @click="pagination.current_page < pagination.last_page && loadHistory(pagination.last_page)" :disabled="pagination.current_page >= pagination.last_page" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-right text-xs"></i></button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2423,12 +3082,12 @@
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
                         <div class="relative flex-1 flex flex-col" @click.outside="rptRegionOpen = false">
                             <button @click="rptRegionOpen = !rptRegionOpen"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10">
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10">
                                 <span x-text="reportRegion ? regions.find(r => r.id == reportRegion)?.name : 'All'" class="text-gray-700 whitespace-nowrap"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="rptRegionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
-                                <input x-model="rptRegionSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                            <div x-show="rptRegionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
+                                <input x-model="rptRegionSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
                                 <div class="max-h-48 overflow-y-auto">
                                     <div @click="reportRegion = ''; rptRegionOpen = false; onReportRegionChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Regions</div>
                                     <template x-for="region in regions.filter(r => r.name.toLowerCase().includes(rptRegionSearch.toLowerCase()))" :key="region.id">
@@ -2447,12 +3106,12 @@
                         <div class="relative flex-1 flex flex-col" @click.outside="rptDistrictOpen = false">
                             <button @click="reportRegion && (rptDistrictOpen = !rptDistrictOpen)"
                                 :disabled="!reportRegion"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
                                 <span x-text="reportDistrict ? (rptDistricts.find(d => d.id == reportDistrict)?.name || 'Unknown') : (reportRegion ? 'All Districts' : 'Select Region First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="rptDistrictOpen && reportRegion" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
-                                <input x-model="rptDistrictSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                            <div x-show="rptDistrictOpen && reportRegion" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
+                                <input x-model="rptDistrictSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
                                 <div class="max-h-48 overflow-y-auto">
                                     <div @click="reportDistrict = ''; rptDistrictOpen = false; onReportDistrictChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Districts</div>
                                     <template x-for="district in rptDistricts.filter(d => d.name.toLowerCase().includes(rptDistrictSearch.toLowerCase()))" :key="district.id">
@@ -2471,12 +3130,12 @@
                         <div class="relative flex-1 flex flex-col" @click.outside="rptSchoolOpen = false">
                             <button @click="reportDistrict && (rptSchoolOpen = !rptSchoolOpen)"
                                 :disabled="!reportDistrict"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
                                 <span x-text="reportSchool ? (rptSchools.find(s => s.id == reportSchool)?.code + ' - ' + rptSchools.find(s => s.id == reportSchool)?.name) : (reportDistrict ? 'Select School' : 'Select District First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="rptSchoolOpen && reportDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
-                                <input x-model="rptSchoolSearch" type="text" placeholder="Search schools..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                            <div x-show="rptSchoolOpen && reportDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
+                                <input x-model="rptSchoolSearch" type="text" placeholder="Search schools..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
                                 <div class="max-h-48 overflow-y-auto">
                                     <template x-for="school in rptSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSchoolSearch.toLowerCase()))" :key="school.id">
                                         <div @click="reportSchool = school.id; rptSchoolOpen = false; onReportSchoolChange()"
@@ -2497,7 +3156,7 @@
                         <div class="relative flex-1 flex flex-col" @click.outside="rptSubjectOpen = false">
                             <button @click="reportSchool && reportSubjects.length > 0 && (rptSubjectOpen = !rptSubjectOpen)"
                                 :disabled="!reportSchool || reportSubjects.length === 0"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
                                 <span x-text="reportSubject ? reportSubjects.find(s => s.id == reportSubject)?.code + ' - ' + reportSubjects.find(s => s.id == reportSubject)?.name : (reportSchool ? 'Select Subject' : 'Select School First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
@@ -2509,8 +3168,8 @@
                                 <i class="fas fa-exclamation-triangle flex-shrink-0"></i>
                                 <span>No subjects with imported marks found for this school</span>
                             </div>
-                            <div x-show="rptSubjectOpen && reportSubjects.length > 0" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
-                                <input x-model="rptSubjectSearch" type="text" placeholder="Search subjects..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                            <div x-show="rptSubjectOpen && reportSubjects.length > 0" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
+                                <input x-model="rptSubjectSearch" type="text" placeholder="Search subjects..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
                                 <div class="max-h-48 overflow-y-auto">
                                     <template x-for="subj in reportSubjects.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSubjectSearch.toLowerCase()))" :key="subj.id">
                                         <div @click="reportSubject = subj.id; rptSubjectOpen = false"
@@ -2621,12 +3280,12 @@
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
                         <div class="relative flex-1 flex flex-col" @click.outside="rptRegionOpen = false">
                             <button @click="rptRegionOpen = !rptRegionOpen"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10">
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10">
                                 <span x-text="reportRegion ? regions.find(r => r.id == reportRegion)?.name : 'All'" class="text-gray-700 whitespace-nowrap"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="rptRegionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
-                                <input x-model="rptRegionSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                            <div x-show="rptRegionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
+                                <input x-model="rptRegionSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
                                 <div class="max-h-48 overflow-y-auto">
                                     <div @click="reportRegion = ''; rptRegionOpen = false; onReportRegionChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Regions</div>
                                     <template x-for="region in regions.filter(r => r.name.toLowerCase().includes(rptRegionSearch.toLowerCase()))" :key="region.id">
@@ -2645,12 +3304,12 @@
                         <div class="relative flex-1 flex flex-col" @click.outside="rptDistrictOpen = false">
                             <button @click="reportRegion && (rptDistrictOpen = !rptDistrictOpen)"
                                 :disabled="!reportRegion"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
                                 <span x-text="reportDistrict ? (rptDistricts.find(d => d.id == reportDistrict)?.name || 'Unknown') : (reportRegion ? 'All Districts' : 'Select Region First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="rptDistrictOpen && reportRegion" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
-                                <input x-model="rptDistrictSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                            <div x-show="rptDistrictOpen && reportRegion" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
+                                <input x-model="rptDistrictSearch" type="text" placeholder="Search..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
                                 <div class="max-h-48 overflow-y-auto">
                                     <div @click="reportDistrict = ''; rptDistrictOpen = false; onReportDistrictChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Districts</div>
                                     <template x-for="district in rptDistricts.filter(d => d.name.toLowerCase().includes(rptDistrictSearch.toLowerCase()))" :key="district.id">
@@ -2669,12 +3328,12 @@
                         <div class="relative flex-1 flex flex-col" @click.outside="rptSchoolOpen = false">
                             <button @click="reportDistrict && (rptSchoolOpen = !rptSchoolOpen)"
                                 :disabled="!reportDistrict"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
                                 <span x-text="reportSchool ? (rptSchools.find(s => s.id == reportSchool)?.code + ' - ' + rptSchools.find(s => s.id == reportSchool)?.name) : (reportDistrict ? 'All Schools' : 'Select District First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="rptSchoolOpen && reportDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
-                                <input x-model="rptSchoolSearch" type="text" placeholder="Search schools..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                            <div x-show="rptSchoolOpen && reportDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
+                                <input x-model="rptSchoolSearch" type="text" placeholder="Search schools..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
                                 <div class="max-h-48 overflow-y-auto">
                                     <div @click="reportSchool = ''; rptSchoolOpen = false; onReportSchoolChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Schools</div>
                                     <template x-for="school in rptSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSchoolSearch.toLowerCase()))" :key="school.id">
@@ -2696,7 +3355,7 @@
                         <div class="relative flex-1 flex flex-col" @click.outside="rptSubjectOpen = false">
                             <button @click="reportSchool && reportSubjects.length > 0 && (rptSubjectOpen = !rptSubjectOpen)"
                                 :disabled="!reportSchool || reportSubjects.length === 0"
-                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400">
                                 <span x-text="reportSubject ? reportSubjects.find(s => s.id == reportSubject)?.code + ' - ' + reportSubjects.find(s => s.id == reportSubject)?.name : (reportSchool ? 'All Subjects (ZIP)' : 'Select School First')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
@@ -2704,8 +3363,8 @@
                                 <i class="fas fa-info-circle flex-shrink-0"></i>
                                 <span x-text="reportSubjects.length + ' subject(s) with marks available'"></span>
                             </div>
-                            <div x-show="rptSubjectOpen && reportSubjects.length > 0" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg">
-                                <input x-model="rptSubjectSearch" type="text" placeholder="Search subjects..." class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                            <div x-show="rptSubjectOpen && reportSubjects.length > 0" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-none flex flex-col shadow-lg">
+                                <input x-model="rptSubjectSearch" type="text" placeholder="Search subjects..." class="px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
                                 <div class="max-h-48 overflow-y-auto">
                                     <template x-for="subj in reportSubjects.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(rptSubjectSearch.toLowerCase()))" :key="subj.id">
                                         <div @click="reportSubject = subj.id; rptSubjectOpen = false"
@@ -2972,6 +3631,7 @@
                                     <tr>
                                         <th class="px-4 py-2 text-left">School Code</th>
                                         <th class="px-4 py-2 text-left">School Name</th>
+                                        <th class="px-4 py-2 text-center">Candidates</th>
                                         <th class="px-4 py-2 text-center">Batches</th>
                                         <th class="px-4 py-2 text-center">Total Records</th>
                                         <th class="px-4 py-2 text-center">Errors</th>
@@ -2983,6 +3643,7 @@
                                         <tr class="border-b">
                                             <td class="px-4 py-2 font-mono text-sm" x-text="school.school_code"></td>
                                             <td class="px-4 py-2" x-text="school.school_name"></td>
+                                            <td class="px-4 py-2 text-center" x-text="school.candidate_count ?? 0"></td>
                                             <td class="px-4 py-2 text-center" x-text="school.batch_count"></td>
                                             <td class="px-4 py-2 text-center" x-text="school.total_records"></td>
                                             <td class="px-4 py-2 text-center text-red-600 font-semibold" x-text="school.total_errors"></td>
@@ -3540,11 +4201,29 @@
                     </div>
 
                     <!-- Pagination -->
-                    <div x-show="batchPagination.last_page > 1" class="flex items-center justify-between mt-4 text-sm">
-                        <span class="text-gray-500" x-text="'Page ' + batchPagination.current_page + ' of ' + batchPagination.last_page + ' (' + batchPagination.total + ' batches)'"></span>
-                        <div class="flex gap-2">
-                            <button @click="batchPage(batchPagination.current_page - 1)" :disabled="batchPagination.current_page <= 1" class="px-3 py-1 border rounded disabled:opacity-50">← Prev</button>
-                            <button @click="batchPage(batchPagination.current_page + 1)" :disabled="batchPagination.current_page >= batchPagination.last_page" class="px-3 py-1 border rounded disabled:opacity-50">Next →</button>
+                    <div x-show="batchPagination.last_page > 1" class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5 mt-4">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                                <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                    <i class="fas fa-layer-group text-xs"></i>
+                                    <span>Page <span x-text="batchPagination.current_page"></span> of <span x-text="Math.max(batchPagination.last_page, 1)"></span></span>
+                                </div>
+                                <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                    <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                    <span>Showing <span class="font-semibold text-slate-800" x-text="batchList.length"></span> of <span class="font-semibold text-slate-800" x-text="batchPagination.total"></span> records</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                                <button @click="batchPagination.current_page > 1 && batchPage(1)" :disabled="batchPagination.current_page <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-left text-xs"></i></button>
+                                <button @click="batchPagination.current_page > 1 && batchPage(batchPagination.current_page - 1)" :disabled="batchPagination.current_page <= 1" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                                <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                    <template x-for="page in batchPageWindow()" :key="'ab-' + page">
+                                        <button @click="batchPage(page)" :class="batchPagination.current_page === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" x-text="page"></button>
+                                    </template>
+                                </div>
+                                <button @click="batchPagination.current_page < batchPagination.last_page && batchPage(batchPagination.current_page + 1)" :disabled="batchPagination.current_page >= batchPagination.last_page" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                                <button @click="batchPagination.current_page < batchPagination.last_page && batchPage(batchPagination.last_page)" :disabled="batchPagination.current_page >= batchPagination.last_page" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-right text-xs"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3712,11 +4391,29 @@
                     </div>
 
                     <!-- Pagination -->
-                    <div x-show="logPagination.last_page > 1" class="flex items-center justify-between mt-4 text-sm">
-                        <span class="text-gray-500" x-text="'Page ' + logPagination.current_page + ' of ' + logPagination.last_page + ' (' + logPagination.total + ' logs)'"></span>
-                        <div class="flex gap-2">
-                            <button @click="logPage(logPagination.current_page - 1)" :disabled="logPagination.current_page <= 1" class="px-3 py-1 border rounded disabled:opacity-50">← Prev</button>
-                            <button @click="logPage(logPagination.current_page + 1)" :disabled="logPagination.current_page >= logPagination.last_page" class="px-3 py-1 border rounded disabled:opacity-50">Next →</button>
+                    <div x-show="logPagination.last_page > 1" class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5 mt-4">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                                <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                    <i class="fas fa-layer-group text-xs"></i>
+                                    <span>Page <span x-text="logPagination.current_page"></span> of <span x-text="Math.max(logPagination.last_page, 1)"></span></span>
+                                </div>
+                                <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                    <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                    <span>Showing <span class="font-semibold text-slate-800" x-text="logList.length"></span> of <span class="font-semibold text-slate-800" x-text="logPagination.total"></span> records</span>
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                                <button @click="logPagination.current_page > 1 && logPage(1)" :disabled="logPagination.current_page <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-left text-xs"></i></button>
+                                <button @click="logPagination.current_page > 1 && logPage(logPagination.current_page - 1)" :disabled="logPagination.current_page <= 1" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                                <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                    <template x-for="page in logPageWindow()" :key="'al-' + page">
+                                        <button @click="logPage(page)" :class="logPagination.current_page === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" x-text="page"></button>
+                                    </template>
+                                </div>
+                                <button @click="logPagination.current_page < logPagination.last_page && logPage(logPagination.current_page + 1)" :disabled="logPagination.current_page >= logPagination.last_page" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                                <button @click="logPagination.current_page < logPagination.last_page && logPage(logPagination.last_page)" :disabled="logPagination.current_page >= logPagination.last_page" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-right text-xs"></i></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -3768,7 +4465,7 @@
 <!-- Batch Detail Modal -->
 <div x-show="showBatchDetailModal" x-cloak class="fixed inset-0 z-[1050] flex items-center justify-center p-4"
      style="background: rgba(0,0,0,0.5);" @click.self="closeBatchDetailModal()" x-transition>
-    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-xl w-[96vw] max-w-[96vw] max-h-[92vh] overflow-y-auto">
         <!-- Modal Header -->
         <div class="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex justify-between items-center">
             <div>
@@ -3903,20 +4600,113 @@
                             <thead class="bg-red-50 border-b">
                                 <tr>
                                     <th class="px-4 py-2 text-left">Row #</th>
-                                    <th class="px-4 py-2 text-left">Index Number</th>
+                                    <th class="px-4 py-2 text-left whitespace-nowrap">Index Number</th>
+                                    <th class="px-4 py-2 text-left whitespace-nowrap">Candidate</th>
+                                    <th class="px-4 py-2 text-left whitespace-nowrap">Registered Subjects</th>
+                                    <th class="px-4 py-2 text-left whitespace-nowrap">School Name</th>
+                                    <th class="px-4 py-2 text-left whitespace-nowrap">Subject</th>
+                                    <th class="px-4 py-2 text-left">Marks</th>
                                     <th class="px-4 py-2 text-left">Errors</th>
+                                    <th class="px-4 py-2 text-left">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <template x-for="mark in batchRawMarks" :key="mark.id">
                                     <tr class="border-b hover:bg-red-50">
                                         <td class="px-4 py-2 font-mono text-xs" x-text="mark.row_number"></td>
-                                        <td class="px-4 py-2 font-mono text-xs" x-text="mark.candidate_index_number"></td>
+                                        <td class="px-4 py-2 font-mono text-xs whitespace-nowrap" x-text="mark.candidate_index_number"></td>
+                                        <td class="px-4 py-2 text-xs whitespace-nowrap" x-text="mark.full_name || '-'"></td>
+                                        <td class="px-4 py-2 text-xs min-w-[320px]">
+                                            <div class="space-y-2">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700"
+                                                          x-text="`${mark.entered_subject_count || 0}/${mark.registered_subject_count || 0} entered`"></span>
+                                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                                                          :class="mark.current_subject_registered ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
+                                                          x-text="mark.current_subject_registered ? 'Batch subject registered' : 'Batch subject not registered'"></span>
+                                                </div>
+                                                <div class="flex flex-wrap gap-1.5" x-show="(mark.registered_subjects || []).length > 0">
+                                                    <template x-for="subject in (mark.registered_subjects || [])" :key="`${mark.row_id}-registered-${subject.id}`">
+                                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                                                              :class="subject.entered ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'"
+                                                              :title="subject.name">
+                                                            <span x-text="subject.code"></span>
+                                                            <span class="ml-1 text-[10px]" x-text="subject.entered ? 'Entered' : 'Pending'"></span>
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                                <p x-show="(mark.registered_subjects || []).length === 0" class="text-[11px] text-amber-700">
+                                                    No registered subjects found for this candidate in the selected year.
+                                                </p>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-2 text-xs whitespace-nowrap" x-text="batchDetail?.school?.name || '-'"></td>
+                                        <td class="px-4 py-2 text-xs whitespace-nowrap" x-text="batchDetail?.subject ? `${batchDetail.subject.code} - ${batchDetail.subject.name}` : '-'"></td>
+                                        <td class="px-4 py-2">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 min-w-[560px]">
+                                                <template x-for="paper in mark.papers" :key="`${mark.row_id}-${paper.code}`">
+                                                    <div>
+                                                        <label class="block text-[11px] font-semibold text-gray-600 mb-1" x-text="paper.label"></label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.5"
+                                                            :min="paper.min"
+                                                            :max="paper.max"
+                                                            :disabled="!mark.can_edit || getBatchRowEdit(mark.row_id).saving"
+                                                            :value="getBatchRowEditValue(mark.row_id, paper.code)"
+                                                            @input="setBatchRowEditValue(mark.row_id, paper.code, $event.target.value)"
+                                                            @keydown.enter.prevent="saveBatchRow(mark)"
+                                                            @keydown.escape.prevent="cancelBatchRowEdit(mark)"
+                                                            class="w-full rounded border px-2 py-1 text-xs focus:outline-none focus:ring-2 disabled:bg-gray-100 disabled:text-gray-500"
+                                                            :class="mark.invalid_fields?.includes(paper.code)
+                                                                ? 'border-red-400 focus:ring-red-400 bg-red-50'
+                                                                : 'border-gray-300 focus:ring-blue-500 bg-white'">
+                                                        <div class="mt-1 flex justify-between text-[10px]">
+                                                            <span class="text-gray-500" x-text="`${paper.min}–${paper.max}`"></span>
+                                                            <span x-show="mark.invalid_fields?.includes(paper.code) && (getBatchRowEditValue(mark.row_id, paper.code) === '' || getBatchRowEditValue(mark.row_id, paper.code) === null)"
+                                                                  class="text-red-600 font-semibold">Required</span>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                        </td>
                                         <td class="px-4 py-2 text-xs">
                                             <div class="space-y-1">
-                                                <template x-for="error in mark.error_messages" :key="error">
+                                                <template x-for="error in mark.errors" :key="error">
                                                     <div class="text-red-700 text-xs" x-text="error"></div>
                                                 </template>
+                                                <p x-show="getBatchRowEdit(mark.row_id).dirty" class="text-amber-600 font-medium">
+                                                    Pending save...
+                                                </p>
+                                                <p x-show="getBatchRowEdit(mark.row_id).error" class="text-red-700 font-medium" x-text="getBatchRowEdit(mark.row_id).error"></p>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-2 align-top">
+                                            <div class="space-y-2 min-w-[260px]">
+                                                <input
+                                                    type="text"
+                                                    maxlength="500"
+                                                    placeholder="Reason (optional)"
+                                                    :disabled="!mark.can_edit || getBatchRowEdit(mark.row_id).saving"
+                                                    x-model="getBatchRowEdit(mark.row_id).reason"
+                                                    class="w-full rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500">
+                                                <div class="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    class="px-3 py-1 rounded bg-green-600 hover:bg-green-700 text-white text-xs font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                                    :disabled="!mark.can_edit || !getBatchRowEdit(mark.row_id).dirty || getBatchRowEdit(mark.row_id).saving"
+                                                    @click="saveBatchRow(mark)">
+                                                    <span x-show="!getBatchRowEdit(mark.row_id).saving">Save</span>
+                                                    <span x-show="getBatchRowEdit(mark.row_id).saving">Saving...</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    :disabled="!mark.can_edit || !getBatchRowEdit(mark.row_id).dirty || getBatchRowEdit(mark.row_id).saving"
+                                                    @click="cancelBatchRowEdit(mark)">
+                                                    Cancel
+                                                </button>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
@@ -3945,6 +4735,8 @@
                                 <tr>
                                     <th class="px-4 py-2 text-left">Row #</th>
                                     <th class="px-4 py-2 text-left">Index Number</th>
+                                    <th class="px-4 py-2 text-left">Candidate</th>
+                                    <th class="px-4 py-2 text-left">Registered Subjects</th>
                                     <th class="px-4 py-2 text-left">Papers</th>
                                 </tr>
                             </thead>
@@ -3953,6 +4745,31 @@
                                     <tr class="border-b hover:bg-green-50">
                                         <td class="px-4 py-2 font-mono text-xs" x-text="mark.row_number"></td>
                                         <td class="px-4 py-2 font-mono text-xs" x-text="mark.candidate_index_number"></td>
+                                        <td class="px-4 py-2 text-xs whitespace-nowrap" x-text="mark.full_name || '-'"></td>
+                                        <td class="px-4 py-2 text-xs min-w-[320px]">
+                                            <div class="space-y-2">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700"
+                                                          x-text="`${mark.entered_subject_count || 0}/${mark.registered_subject_count || 0} entered`"></span>
+                                                    <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                                                          :class="mark.current_subject_registered ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'"
+                                                          x-text="mark.current_subject_registered ? 'Batch subject registered' : 'Batch subject not registered'"></span>
+                                                </div>
+                                                <div class="flex flex-wrap gap-1.5" x-show="(mark.registered_subjects || []).length > 0">
+                                                    <template x-for="subject in (mark.registered_subjects || [])" :key="`${mark.row_id}-valid-registered-${subject.id}`">
+                                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
+                                                              :class="subject.entered ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'"
+                                                              :title="subject.name">
+                                                            <span x-text="subject.code"></span>
+                                                            <span class="ml-1 text-[10px]" x-text="subject.entered ? 'Entered' : 'Pending'"></span>
+                                                        </span>
+                                                    </template>
+                                                </div>
+                                                <p x-show="(mark.registered_subjects || []).length === 0" class="text-[11px] text-amber-700">
+                                                    No registered subjects found for this candidate in the selected year.
+                                                </p>
+                                            </div>
+                                        </td>
                                         <td class="px-4 py-2 text-xs">
                                             <span class="bg-green-100 text-green-800 px-2 py-1 rounded">Valid</span>
                                         </td>
@@ -4137,6 +4954,226 @@
     </div>
 </div>
 
+<!-- Bulk Lock Confirmation Modal -->
+<div x-show="showBulkLockModal" x-cloak class="fixed inset-0 z-[1100] flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.6);" @click.self="showBulkLockModal = false" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-lg w-full">
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 text-white p-6">
+            <h3 class="text-xl font-bold">🔒 Bulk Lock Batches</h3>
+            <p class="text-sm text-indigo-100" x-text="bulkLockMode === 'visible' ? 'Lock all visible approved batches' : 'Lock all approved batches in current scope'"></p>
+        </div>
+
+        <div class="p-6 space-y-4">
+            <div class="bg-red-50 border border-red-300 rounded-lg p-4">
+                <p class="text-sm font-semibold text-red-800 flex items-start gap-2">
+                    <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                    <span>This action will lock multiple batches at once</span>
+                </p>
+                <ul class="text-sm text-red-700 mt-3 ml-6 space-y-1">
+                    <li>✓ Locked batches cannot be modified</li>
+                    <li>✓ Only an administrator can unlock them</li>
+                    <li>✓ Marks will be promoted to final results</li>
+                </ul>
+            </div>
+
+            <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4 text-center">
+                <p class="text-xs text-gray-600 mb-1" x-text="bulkLockMode === 'visible' ? 'Approved batches to lock' : 'Approved batches in scope'"></p>
+                <p class="text-3xl font-bold text-indigo-700" x-text="bulkLockCount"></p>
+            </div>
+
+            <div>
+                <label class="flex items-start gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="bulkLockAcknowledged" class="mt-1 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                    <span class="text-sm text-gray-700">I understand this will lock <strong x-text="bulkLockCount"></strong> batch(es) and this action is irreversible without administrator intervention.</span>
+                </label>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                    Confirmation <span class="text-red-600">*</span>
+                </label>
+                <p class="text-xs text-gray-600 mb-2">Type <span class="font-bold">LOCK ALL</span> to confirm:</p>
+                <input x-model="bulkLockConfirmText"
+                       type="text"
+                       placeholder="Type LOCK ALL to confirm"
+                       class="w-full border border-gray-300 rounded-lg p-3 text-sm uppercase focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                       @input="bulkLockConfirmText = bulkLockConfirmText.toUpperCase()">
+            </div>
+        </div>
+
+        <div class="border-t p-6 flex gap-3 justify-end">
+            <button @click="showBulkLockModal = false; bulkLockConfirmText = ''; bulkLockAcknowledged = false"
+                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
+                Cancel
+            </button>
+            <button @click="executeBulkLock()"
+                    :disabled="isBulkLocking || bulkLockConfirmText.toUpperCase() !== 'LOCK ALL' || !bulkLockAcknowledged"
+                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition disabled:opacity-50">
+                <span x-show="!isBulkLocking">🔒 Lock All</span>
+                <span x-show="isBulkLocking" class="flex items-center gap-2"><i class="fas fa-spinner fa-spin"></i> Processing...</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Lock Results Modal -->
+<div x-show="showBulkLockResults" x-cloak class="fixed inset-0 z-[1200] flex items-center justify-center p-4"
+     style="background: rgba(0,0,0,0.6);" @click.self="showBulkLockResults = false" x-transition>
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+        <div class="bg-gradient-to-r from-green-600 to-green-700 text-white p-6">
+            <h3 class="text-xl font-bold">📊 Bulk Lock Results</h3>
+            <p class="text-sm text-green-100" x-text="bulkLockResultMessage"></p>
+        </div>
+
+        <div class="p-6 space-y-4 overflow-y-auto flex-1">
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                    <p class="text-2xl font-bold text-green-700" x-text="bulkLockResultData.locked?.length || 0"></p>
+                    <p class="text-xs text-green-600">Locked</p>
+                </div>
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                    <p class="text-2xl font-bold text-yellow-700" x-text="bulkLockResultData.skipped?.length || 0"></p>
+                    <p class="text-xs text-yellow-600">Skipped</p>
+                </div>
+                <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+                    <p class="text-2xl font-bold text-red-700" x-text="bulkLockResultData.failed?.length || 0"></p>
+                    <p class="text-xs text-red-600">Failed</p>
+                </div>
+            </div>
+
+            <!-- Detailed Results Table -->
+            <template x-if="(bulkLockResultData.locked?.length || 0) > 0">
+                <div>
+                    <h4 class="text-sm font-semibold text-green-700 mb-2">✅ Locked Successfully</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-green-50"><tr><th class="px-2 py-1 text-left">Batch Code</th><th class="px-2 py-1 text-left">School</th><th class="px-2 py-1 text-left">Subject</th></tr></thead>
+                            <tbody>
+                                <template x-for="r in bulkLockResultData.locked" :key="r.batch_id">
+                                    <tr class="border-b"><td class="px-2 py-1 font-mono" x-text="r.batch_code"></td><td class="px-2 py-1" x-text="r.school"></td><td class="px-2 py-1" x-text="r.subject"></td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="(bulkLockResultData.skipped?.length || 0) > 0">
+                <div>
+                    <h4 class="text-sm font-semibold text-yellow-700 mb-2">⏭️ Skipped</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-yellow-50"><tr><th class="px-2 py-1 text-left">Batch Code</th><th class="px-2 py-1 text-left">School</th><th class="px-2 py-1 text-left">Reason</th></tr></thead>
+                            <tbody>
+                                <template x-for="r in bulkLockResultData.skipped" :key="r.batch_id">
+                                    <tr class="border-b"><td class="px-2 py-1 font-mono" x-text="r.batch_code"></td><td class="px-2 py-1" x-text="r.school"></td><td class="px-2 py-1 text-yellow-700" x-text="r.reason"></td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="(bulkLockResultData.failed?.length || 0) > 0">
+                <div>
+                    <h4 class="text-sm font-semibold text-red-700 mb-2">❌ Failed</h4>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-xs">
+                            <thead class="bg-red-50"><tr><th class="px-2 py-1 text-left">Batch Code</th><th class="px-2 py-1 text-left">School</th><th class="px-2 py-1 text-left">Error</th></tr></thead>
+                            <tbody>
+                                <template x-for="r in bulkLockResultData.failed" :key="r.batch_id">
+                                    <tr class="border-b"><td class="px-2 py-1 font-mono" x-text="r.batch_code"></td><td class="px-2 py-1" x-text="r.school"></td><td class="px-2 py-1 text-red-700" x-text="r.reason"></td></tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div class="border-t p-6 flex gap-3 justify-end">
+            <button @click="downloadBulkLockReport()"
+                    class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 transition-colors">
+                <i class="fas fa-download"></i> Download Report CSV
+            </button>
+            <button @click="showBulkLockResults = false"
+                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<div
+    x-show="activeToolsModal"
+    x-cloak
+    class="fixed inset-0 z-[10050] flex items-center justify-center bg-slate-950/55 p-4"
+    style="display: none;"
+    @click.self="closeToolsModal()"
+    @keydown.escape.window="closeToolsModal()"
+    x-transition.opacity
+>
+    <div class="w-full max-w-5xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20" x-transition>
+        <div class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-800 px-6 py-6 text-white">
+            <div class="absolute inset-y-0 right-0 w-56 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_68%)]"></div>
+            <div class="relative flex items-start justify-between gap-4">
+                <div>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                        <i :class="toolsModalConfig.kickerIcon" class="text-[0.7rem] text-amber-300"></i>
+                        <span x-text="toolsModalConfig.kicker"></span>
+                    </span>
+                    <h2 class="mt-4 text-2xl font-bold tracking-tight text-white" x-text="toolsModalConfig.title"></h2>
+                    <p class="mt-2 max-w-3xl text-sm leading-6 text-white/80" x-text="toolsModalConfig.description"></p>
+                </div>
+                <button @click="closeToolsModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-lg text-white/80 transition hover:bg-white/15 hover:text-white" type="button" aria-label="Close tools modal">&times;</button>
+            </div>
+        </div>
+        <div class="grid gap-4 bg-slate-50 p-6 md:grid-cols-2 xl:grid-cols-3" :class="activeToolsModal === 'single' ? '' : 'md:grid-cols-1 xl:grid-cols-1'">
+            <template x-if="activeToolsModal === 'single'">
+                <div class="contents">
+                    <button type="button" @click="runSingleSubjectTemplate()" :disabled="!selectedSubject" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><i class="fas fa-download text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">Mark Template (CSV)</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Download the subject-specific mark-entry template for the selected school and subject.</p>
+                    </button>
+                    <button type="button" @click="runSingleScoresheet()" :disabled="!selectedSubject" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-file-pdf text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">Single Scoresheet</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Generate the PDF scoresheet for the currently selected single subject.</p>
+                    </button>
+                    <button type="button" @click="runSingleCsvUpload()" :disabled="!selectedSubject || !selectedSchool || !examYear" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-100 text-teal-700"><i class="fas fa-upload text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">Upload via Modal</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Open the existing single-subject upload modal with the current context applied.</p>
+                    </button>
+                    <button type="button" @click="runSchoolScoresheets()" :disabled="!selectedSchool || !examYear" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100 text-purple-700"><i class="fas fa-file-zipper text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">School Scoresheets</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Export school-level scoresheets as a ZIP package for the selected school and year.</p>
+                    </button>
+                    <button type="button" @click="runSchoolTemplatesZip()" :disabled="!selectedSchool || !examYear || !filteredSubjects.length" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><i :class="bulkCsvLoading ? 'fas fa-spinner fa-spin text-lg' : 'fas fa-file-zipper text-lg'"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">School Mark Templates</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Generate ZIP-based school mark templates for all relevant subjects in the current context.</p>
+                    </button>
+                    <button type="button" @click="runDistrictTemplatesZip()" :disabled="!selectedDistrict || selectedDistrict === '' || !examYear" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70 disabled:cursor-not-allowed disabled:opacity-50">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700"><i :class="districtBulkCsvLoading ? 'fas fa-spinner fa-spin text-lg' : 'fas fa-download text-lg'"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">District Mark Templates</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Prepare district-wide ZIP templates for all schools in the selected district and year.</p>
+                    </button>
+                    <button type="button" @click="runDistrictScoresheetsZip()" :disabled="!selectedDistrict || selectedDistrict === '' || !examYear" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70 disabled:cursor-not-allowed disabled:opacity-50 md:col-span-2 xl:col-span-3">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-700"><i :class="districtBulkScoresheetLoading ? 'fas fa-spinner fa-spin text-lg' : 'fas fa-file-pdf text-lg'"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">District Scoresheets</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Generate district-wide scoresheet ZIP exports for the selected district and exam year.</p>
+                    </button>
+                </div>
+            </template>
+
+        </div>
+    </div>
+</div>
+
 <!-- Unlock Batch Modal (Admin Only) -->
 <div x-show="showUnlockBatchModal" x-cloak class="fixed inset-0 z-[1100] flex items-center justify-center p-4"
      style="background: rgba(0,0,0,0.6);" @click.self="closeUnlockModal()" x-transition>
@@ -4190,6 +5227,724 @@
 </div>
 
 </div> <!-- Close main x-data="markEntryManager()" div -->
+</div>
+
+<style>
+.mark-entry-shell {
+    width: 100%;
+}
+
+.mark-entry-sidebar {
+    background:
+        linear-gradient(180deg, rgba(8, 20, 43, 0.98) 0%, rgba(9, 27, 53, 0.98) 54%, rgba(9, 33, 57, 0.98) 100%);
+    border-right: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+.mark-entry-sidebar-inner {
+    min-height: calc(100vh - 140px);
+}
+
+.mark-entry-sidebar h2 {
+    font-size: 1.3rem;
+    letter-spacing: -0.03em;
+}
+
+.mark-entry-sidebar .sidebar-link {
+    border-radius: 16px;
+    padding: 0.72rem 0.9rem;
+    line-height: 1.35;
+    border: 1px solid transparent;
+}
+
+.mark-entry-sidebar-link-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.mark-entry-sidebar-icon {
+    width: 1.05rem;
+    text-align: center;
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.78);
+    transition: color 160ms ease;
+}
+
+.mark-entry-sidebar .sidebar-link:hover {
+    background: rgba(51, 65, 85, 0.55);
+    border-color: rgba(96, 165, 250, 0.18);
+}
+
+.mark-entry-sidebar .sidebar-link:hover .mark-entry-sidebar-icon,
+.mark-entry-sidebar .sidebar-link.text-white .mark-entry-sidebar-icon {
+    color: #ffffff;
+}
+
+.mark-entry-page-header {
+    border-bottom: 1px solid rgba(203, 213, 225, 0.9);
+    background:
+        linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.98) 100%);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+    backdrop-filter: blur(10px);
+}
+
+.mark-entry-hero {
+    display: block;
+}
+
+.mark-entry-hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.mark-entry-hero-side {
+    display: grid;
+    gap: 16px;
+    align-content: start;
+    justify-items: start;
+}
+
+.mark-entry-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #315586;
+}
+
+.mark-entry-kicker::before {
+    content: "";
+    width: 36px;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #1eb53a 0%, #fcd116 58%, #00a3dd 100%);
+}
+
+.mark-entry-hero h1 {
+    margin: 0;
+    font-size: clamp(1.95rem, 3.2vw, 2.9rem);
+    letter-spacing: -0.04em;
+    color: #ffffff;
+}
+
+.mark-entry-hero-subtitle {
+    margin: 0.7rem 0 0;
+    max-width: 52rem;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.98rem;
+    line-height: 1.75;
+}
+
+.mark-entry-hero .registration-page-subtitle {
+    color: rgba(255, 255, 255, 0.86);
+}
+
+.mark-entry-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.mark-entry-meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(255, 255, 255, 0.88);
+    color: #334155;
+    box-shadow: 0 8px 18px rgba(148, 163, 184, 0.14);
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.mark-entry-meta-chip i {
+    color: #2563eb;
+}
+
+.mark-entry-hero-note {
+    border-radius: 24px;
+    padding: 18px 18px 16px;
+    background: linear-gradient(135deg, rgba(21, 47, 86, 0.98) 0%, rgba(30, 64, 175, 0.94) 58%, rgba(15, 118, 110, 0.92) 100%);
+    color: #fff;
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.12);
+}
+
+.mark-entry-hero-note h2 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: #fff;
+}
+
+.mark-entry-hero-note p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 0.88rem;
+    line-height: 1.7;
+}
+
+.mark-entry-hero-action {
+    align-self: start;
+    justify-self: start;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(29, 78, 216, 0.95);
+    box-shadow: 0 14px 26px rgba(15, 23, 42, 0.16);
+    backdrop-filter: blur(8px);
+}
+
+.mark-entry-hero-action:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+}
+
+.mark-entry-main {
+    padding-bottom: 2rem;
+}
+
+.mark-entry-surface {
+    border: 1px solid rgba(203, 213, 225, 0.92);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.mark-entry-context-card,
+.mark-entry-upload-card {
+    position: relative;
+    background:
+        linear-gradient(90deg, #1eb53a 0%, #fcd116 48%, #00a3dd 100%) top / 100% 4px no-repeat,
+        rgba(255, 255, 255, 0.96);
+}
+
+.mark-entry-context-card {
+    overflow: visible;
+}
+
+.mark-entry-upload-card {
+    overflow: hidden;
+}
+
+.mark-entry-context-card h2,
+.mark-entry-upload-card h2 {
+    letter-spacing: -0.03em;
+}
+
+.mark-entry-step-heading {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: start;
+    margin-bottom: 1.15rem;
+}
+
+.mark-entry-step-copy {
+    margin: 0.42rem 0 0;
+    color: #64748b;
+    font-size: 0.92rem;
+    line-height: 1.65;
+    max-width: 52rem;
+}
+
+.mark-entry-step-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.mark-entry-step-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 13px;
+    border-radius: 999px;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    background: rgba(239, 246, 255, 0.92);
+    color: #1e3a8a;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.mark-entry-context-grid {
+    display: grid;
+    grid-template-columns: minmax(110px, 0.9fr) minmax(140px, 1fr) minmax(220px, 1.45fr) minmax(260px, 1.75fr) minmax(260px, 1.75fr) minmax(110px, 0.8fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.mark-entry-bulk-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+.mark-entry-context-field {
+    min-width: 0;
+}
+
+.mark-entry-context-field-year select {
+    border-radius: 0 !important;
+}
+
+.mark-entry-context-field-year select:focus {
+    border-radius: 0 !important;
+}
+
+.mark-entry-shell .filter-dropdown-btn,
+.mark-entry-shell .filter-input,
+.mark-entry-shell select,
+.mark-entry-shell input.filter-search-input[type="text"],
+.mark-entry-shell .relative > button[class*="rounded-none"],
+.mark-entry-shell .relative > div.absolute,
+.mark-entry-shell .relative > div.absolute input[type="text"] {
+    border-radius: 0 !important;
+}
+
+.mark-entry-shell .filter-dropdown-btn:focus,
+.mark-entry-shell .filter-input:focus,
+.mark-entry-shell select:focus,
+.mark-entry-shell input.filter-search-input[type="text"]:focus,
+.mark-entry-shell .relative > button[class*="rounded-none"]:focus,
+.mark-entry-shell .relative > div.absolute input[type="text"]:focus {
+    border-radius: 0 !important;
+}
+
+.mark-entry-shell .relative > div.absolute {
+    top: calc(100% - 1px);
+}
+
+.mark-entry-shell .relative > div.absolute {
+    overflow: hidden;
+}
+
+.mark-entry-context-field .whitespace-nowrap {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mark-entry-tab-shell {
+    overflow: hidden;
+}
+
+.mark-entry-mode-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 18px;
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.98) 100%);
+}
+
+.mark-entry-mode-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    font-weight: 700;
+    background: transparent;
+}
+
+.mark-entry-mode-button:hover {
+    background: rgba(239, 246, 255, 0.78);
+    color: #1d4ed8;
+}
+
+.mark-entry-mode-button-active {
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.98) 0%, rgba(219, 234, 254, 0.98) 100%);
+    color: #1d4ed8 !important;
+    border-color: rgba(147, 197, 253, 0.95);
+    box-shadow: inset 0 -2px 0 #2563eb;
+}
+
+.mark-entry-instruction-card {
+    border-radius: 20px;
+    border: 1px solid rgba(147, 197, 253, 0.8);
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.96) 0%, rgba(226, 238, 255, 0.92) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.mark-entry-inline-tools {
+    border-radius: 18px;
+    border: 1px solid rgba(191, 219, 254, 0.9);
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.92) 100%);
+    padding: 12px 14px;
+}
+
+.mark-entry-primary-btn {
+    border-radius: 16px;
+    border: 1px solid rgba(37, 99, 235, 0.14);
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    box-shadow: 0 14px 26px rgba(37, 99, 235, 0.18);
+}
+
+.mark-entry-primary-btn:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+}
+
+.mark-entry-secondary-btn {
+    border-radius: 16px;
+    border: 1px solid rgba(203, 213, 225, 0.95);
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.mark-entry-secondary-btn:hover {
+    background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
+}
+
+.mark-entry-success-btn {
+    border-radius: 16px;
+    border: 1px solid rgba(21, 128, 61, 0.32);
+    background: linear-gradient(180deg, #3fe07c 0%, #1faa55 42%, #16803f 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.38),
+        inset 0 -2px 0 rgba(11, 78, 34, 0.35),
+        0 14px 22px rgba(22, 128, 61, 0.26),
+        0 4px 0 rgba(11, 78, 34, 0.95);
+    text-shadow: 0 1px 0 rgba(8, 54, 24, 0.45);
+    position: relative;
+    transform: translateY(0);
+    transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.mark-entry-success-btn:hover {
+    filter: brightness(1.03);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.42),
+        inset 0 -2px 0 rgba(11, 78, 34, 0.35),
+        0 18px 28px rgba(22, 128, 61, 0.28),
+        0 5px 0 rgba(11, 78, 34, 0.95);
+}
+
+.mark-entry-success-btn:active {
+    transform: translateY(3px);
+    box-shadow:
+        inset 0 2px 4px rgba(11, 78, 34, 0.28),
+        0 7px 14px rgba(22, 128, 61, 0.22),
+        0 1px 0 rgba(11, 78, 34, 0.95);
+}
+
+.mark-entry-success-btn:disabled {
+    transform: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        0 8px 14px rgba(148, 163, 184, 0.18);
+}
+
+.mark-entry-success-btn-3d {
+    min-width: 220px;
+    justify-content: center;
+    letter-spacing: 0.02em;
+}
+
+.mark-entry-success-btn-3d i {
+    font-size: 0.95rem;
+}
+
+.mark-entry-dropzone {
+    border: 2px dashed rgba(148, 163, 184, 0.55);
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.96) 100%);
+}
+
+.mark-entry-dropzone:hover {
+    border-color: rgba(59, 130, 246, 0.6);
+    background: linear-gradient(180deg, rgba(239, 246, 255, 0.96) 0%, rgba(226, 238, 255, 0.94) 100%);
+}
+
+.mark-entry-file-card {
+    border-radius: 18px;
+    border: 1px solid rgba(203, 213, 225, 0.86);
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.94) 100%);
+}
+
+.mark-entry-main section.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #moderation-dashboard > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #pending-review > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #reject-feedback > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #submit-marks > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #lock-status > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #admin-unlock > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #submission-history > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #upload-bulk > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #district-bulk > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #scoresheets > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #csv-export > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #analytics > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #summary-report > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #lifecycle-dashboard > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #change-log > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #audit-trail > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main #activity-log > div.bg-white.rounded-lg.shadow.p-6,
+.mark-entry-main section.bg-white.rounded-lg.shadow.p-4.sm\:p-6,
+.mark-entry-main #upload-bulk > div.bg-white.rounded-lg.shadow.p-4.sm\:p-6 {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(203, 213, 225, 0.92);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 18px 38px rgba(15, 23, 42, 0.06);
+}
+
+.mark-entry-main section.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #moderation-dashboard > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #pending-review > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #reject-feedback > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #submit-marks > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #lock-status > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #admin-unlock > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #submission-history > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #upload-bulk > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #district-bulk > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #scoresheets > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #csv-export > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #analytics > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #summary-report > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #lifecycle-dashboard > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #change-log > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #audit-trail > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main #activity-log > div.bg-white.rounded-lg.shadow.p-6::before,
+.mark-entry-main section.bg-white.rounded-lg.shadow.p-4.sm\:p-6::before,
+.mark-entry-main #upload-bulk > div.bg-white.rounded-lg.shadow.p-4.sm\:p-6::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #1eb53a 0%, #fcd116 50%, #00a3dd 100%);
+}
+
+.mark-entry-main section[id].bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #moderation-dashboard > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #pending-review > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #reject-feedback > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #submit-marks > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #lock-status > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #admin-unlock > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #submission-history > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #upload-bulk > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #district-bulk > div.bg-white.rounded-lg.shadow.p-6 > h2,
+.mark-entry-main #scoresheets > h2,
+.mark-entry-main #csv-export > h2,
+.mark-entry-main #analytics > h2,
+.mark-entry-main #summary-report > h2,
+.mark-entry-main #lifecycle-dashboard > h2,
+.mark-entry-main #change-log > h2,
+.mark-entry-main #audit-trail > h2,
+.mark-entry-main #activity-log > h2 {
+    letter-spacing: -0.03em;
+    color: #172554;
+}
+
+.mark-entry-main table thead {
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.96) 100%);
+}
+
+.mark-entry-main table thead th {
+    color: #334155;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+}
+
+.mark-entry-main table tbody tr:hover {
+    background: rgba(239, 246, 255, 0.8);
+}
+
+.mark-entry-main .bg-gray-50.rounded-lg,
+.mark-entry-main .bg-blue-50.rounded-lg,
+.mark-entry-main .bg-green-50.rounded-lg,
+.mark-entry-main .bg-red-50.rounded-lg,
+.mark-entry-main .bg-yellow-50.rounded-lg,
+.mark-entry-main .bg-purple-50.rounded-lg {
+    border-radius: 18px;
+}
+
+.mark-entry-main .px-6.py-2.bg-blue-600,
+.mark-entry-main .px-4.py-2.bg-blue-600,
+.mark-entry-main .px-6.py-2.bg-green-600,
+.mark-entry-main .px-4.py-2.bg-green-600,
+.mark-entry-main .px-6.py-2.bg-purple-600 {
+    border-radius: 16px;
+    box-shadow: 0 14px 26px rgba(37, 99, 235, 0.15);
+}
+
+.mark-entry-shell .fixed.inset-0.bg-black\/50,
+.mark-entry-shell .fixed.inset-0.bg-black\/60 {
+    backdrop-filter: blur(8px);
+}
+
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.max-w-lg.w-full,
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.max-w-md.w-full,
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.max-w-2xl.w-full.mx-4.max-h-\[80vh\].overflow-y-auto,
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.max-w-lg.w-full.mx-4.max-h-\[70vh\].overflow-y-auto,
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.max-w-3xl.w-full.max-h-\[85vh\].overflow-y-auto,
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.w-full.max-w-xl,
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.max-w-7xl.w-full.mx-4.max-h-\[65vh\].flex.flex-col,
+.mark-entry-shell .bg-white.rounded-lg.shadow-2xl.max-w-lg.w-full.mx-4.p-6,
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.w-\[96vw\].max-w-\[96vw\].max-h-\[92vh\].overflow-y-auto,
+.mark-entry-shell .bg-white.rounded-lg.shadow-xl.max-w-2xl.w-full.max-h-\[80vh\].flex.flex-col {
+    border-radius: 28px;
+    border: 1px solid rgba(203, 213, 225, 0.92);
+    background: #ffffff;
+    box-shadow: 0 28px 60px rgba(15, 23, 42, 0.24);
+    overflow: hidden;
+}
+
+.mark-entry-shell .bg-gradient-to-r.from-green-600.to-green-700.text-white.p-6.rounded-t-lg,
+.mark-entry-shell .bg-gradient-to-r.from-green-600.to-green-700.text-white.p-6,
+.mark-entry-shell .bg-gradient-to-r.from-red-600.to-red-700.text-white.p-6,
+.mark-entry-shell .bg-gradient-to-r.from-orange-600.to-orange-700.text-white.p-6,
+.mark-entry-shell .bg-gradient-to-r.from-indigo-600.to-indigo-700.text-white.p-6,
+.mark-entry-shell .bg-gradient-to-r.from-blue-600.to-blue-700.text-white.p-6 {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background-image: linear-gradient(135deg, rgba(20, 48, 88, 0.97) 0%, rgba(37, 82, 145, 0.94) 58%, rgba(16, 116, 95, 0.9) 100%) !important;
+}
+
+.mark-entry-shell .fixed.inset-0 .px-6.py-4.border-b.flex.items-center.justify-between {
+    border-bottom: 1px solid rgba(203, 213, 225, 0.92);
+    background: linear-gradient(135deg, rgba(20, 48, 88, 0.97) 0%, rgba(37, 82, 145, 0.94) 58%, rgba(16, 116, 95, 0.9) 100%);
+    color: #fff;
+    padding-top: 1.15rem;
+    padding-bottom: 1.15rem;
+}
+
+.mark-entry-shell .fixed.inset-0 .px-6.py-4.border-b.flex.items-center.justify-between h3 {
+    color: #fff;
+}
+
+.mark-entry-shell .fixed.inset-0 .px-6.py-4.border-b.flex.items-center.justify-between .text-gray-400,
+.mark-entry-shell .fixed.inset-0 .px-6.py-4.border-b.flex.items-center.justify-between .text-gray-600 {
+    color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.mark-entry-shell .fixed.inset-0 .p-6.space-y-4,
+.mark-entry-shell .fixed.inset-0 .p-6.space-y-4.overflow-y-auto.flex-1,
+.mark-entry-shell .fixed.inset-0 .p-6,
+.mark-entry-shell .fixed.inset-0 .px-6.py-4.overflow-y-auto.flex-1 {
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.94) 100%);
+}
+
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end {
+    border-top: 1px solid rgba(203, 213, 225, 0.92);
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end .border.border-gray-300,
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end button[class*='border-gray-300'] {
+    border-radius: 16px;
+    border-color: rgba(203, 213, 225, 0.95);
+    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end .bg-green-600,
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end .bg-red-600,
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end .bg-orange-600,
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end .bg-purple-600,
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end .bg-indigo-600,
+.mark-entry-shell .fixed.inset-0 .border-t.p-6.flex.gap-3.justify-end .bg-blue-600 {
+    border-radius: 16px;
+    box-shadow: 0 14px 26px rgba(37, 99, 235, 0.18);
+}
+
+.mark-entry-shell .fixed.inset-0 .bg-green-50.border.border-green-200.rounded-lg,
+.mark-entry-shell .fixed.inset-0 .bg-amber-50.border.border-amber-200.rounded-lg,
+.mark-entry-shell .fixed.inset-0 .bg-amber-50.border.border-amber-200.rounded,
+.mark-entry-shell .fixed.inset-0 .bg-red-50.border.border-red-200.rounded,
+.mark-entry-shell .fixed.inset-0 .bg-blue-50.border.border-blue-200.rounded-lg {
+    border-radius: 18px;
+}
+
+.mark-entry-shell select,
+.mark-entry-shell input[type="text"],
+.mark-entry-shell input[type="file"] {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.mark-entry-shell #upload .grid > div > label,
+.mark-entry-shell #csv-upload label {
+    color: #1e293b;
+}
+
+.select2-results__option {
+    white-space: nowrap !important;
+}
+
+.school-select-label {
+    text-overflow: clip !important;
+}
+
+@media (max-width: 1279px) {
+    .mark-entry-hero-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mark-entry-hero-side {
+        justify-items: start;
+    }
+
+    .mark-entry-context-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mark-entry-bulk-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .mark-entry-context-field-subject,
+    .mark-entry-context-field-school,
+    .mark-entry-context-field-district {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 1023px) {
+    .mark-entry-shell {
+        background: linear-gradient(180deg, #eff4fb 0%, #e8eef6 100%);
+    }
+
+    .mark-entry-context-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mark-entry-bulk-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mark-entry-context-field-subject,
+    .mark-entry-context-field-school,
+    .mark-entry-context-field-district {
+        grid-column: span 1;
+    }
+
+    .mark-entry-mode-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .mark-entry-mode-button {
+        justify-content: flex-start;
+    }
+}
+</style>
 
 <script>
 function markEntryManager() {
@@ -4219,6 +5974,7 @@ function markEntryManager() {
         bulkCsvLoading: false,
         districtBulkCsvLoading: false,
         districtBulkScoresheetLoading: false,
+        activeToolsModal: '',
         // Reports & Exports states
         reportExamYear: '',
         reportRegion: '',
@@ -4256,6 +6012,65 @@ function markEntryManager() {
         districtSearch: '',
         schoolSearch: '',
         subjectSearch: '',
+
+        openToolsModal(type) {
+            this.activeToolsModal = type;
+        },
+
+        closeToolsModal() {
+            this.activeToolsModal = '';
+        },
+
+        launchImportModalAfterClose(type) {
+            this.closeToolsModal();
+            requestAnimationFrame(() => {
+                setTimeout(() => this.openImportModal(type), 60);
+            });
+        },
+
+        get toolsModalConfig() {
+            return {
+                kicker: 'Single Subject Tools',
+                kickerIcon: 'fas fa-file-csv',
+                title: 'Mark upload action center',
+                description: 'Use one structured panel for templates, scoresheets, upload, and school or district ZIP exports.',
+            };
+        },
+
+        runSingleSubjectTemplate() {
+            this.closeToolsModal();
+            this.downloadTemplate();
+        },
+
+        runSingleScoresheet() {
+            this.closeToolsModal();
+            this.printScoresheet();
+        },
+
+        runSingleCsvUpload() {
+            this.launchImportModalAfterClose('single_csv');
+        },
+
+        runSchoolScoresheets() {
+            this.closeToolsModal();
+            this.bulkExport();
+        },
+
+        runSchoolTemplatesZip() {
+            this.closeToolsModal();
+            this.downloadBulkCsv();
+        },
+
+        runDistrictTemplatesZip() {
+            this.closeToolsModal();
+            this.downloadDistrictBulkCsv();
+        },
+
+        runDistrictScoresheetsZip() {
+            this.closeToolsModal();
+            this.downloadDistrictBulkScoresheet();
+        },
+
 
         // Computed - Filtered Districts
         get filteredDistricts() {
@@ -4330,6 +6145,7 @@ function markEntryManager() {
              'district-bulk-zip': { label: '📋 District Bulk ZIP', category: 'Entry & Validation', lazy: false },
              'review-dashboard': { label: '📋 Review Dashboard', category: 'Moderation & Review', lazy: true },
              'pending-review': { label: '⏳ Pending Review', category: 'Moderation & Review', lazy: true },
+             'entry-outliers-qa': { label: '🚩 Entry Outliers (QA)', category: 'Moderation & Review', lazy: true },
              'approve-marks': { label: '✅ Approve Marks', category: 'Moderation & Review', lazy: true },
              'reject-feedback': { label: '❌ Reject & Feedback', category: 'Moderation & Review', lazy: true },
              'lock-status': { label: '🔒 Lock Status', category: 'Submission & Locking', lazy: true },
@@ -4348,6 +6164,11 @@ function markEntryManager() {
              'permissions': { label: '🔐 Permissions', category: 'Administration', lazy: false },
              'batch-management': { label: '📦 Batch Management', category: 'Administration', lazy: false },
              'system-logs': { label: '🖥️ System Logs', category: 'Administration', lazy: false },
+         },
+
+         displayViewLabel(viewKey) {
+             const raw = this.viewRegistry[viewKey]?.label || 'Unknown View';
+             return String(raw).replace(/^[^\p{L}\p{N}(]+/u, '').trim();
          },
 
          // Navigate to a view
@@ -4395,6 +6216,7 @@ function markEntryManager() {
              switch(viewKey) {
                  case 'review-dashboard':
                  case 'pending-review':
+                 case 'entry-outliers-qa':
                      this.loadModerationDashboard();
                      break;
                  case 'submit-marks':
@@ -4477,7 +6299,7 @@ function markEntryManager() {
 
         // Update document title and breadcrumb label
         updatePageTitle(viewKey) {
-            const label = this.viewRegistry[viewKey]?.label || 'ACSEE Mark Entry';
+            const label = this.displayViewLabel(viewKey) || 'ACSEE Mark Entry';
             try {
                 document.title = `${label} - ACSEE Mark Entry - IRMS`;
             } catch (e) {}
@@ -4574,16 +6396,31 @@ function markEntryManager() {
                   return;
              }
              try {
-                  const response = await fetch(
-                      `/api/mark-entry/acsee/schools?district_id=${this.selectedDistrict}`
+                  let districtId = this.selectedDistrict;
+                  const normalizedDistrict = this.districts.find(d =>
+                      String(d.id) === String(this.selectedDistrict) ||
+                      String(d.code || '').toUpperCase() === String(this.selectedDistrict || '').toUpperCase() ||
+                      String(d.name || '').toUpperCase() === String(this.selectedDistrict || '').toUpperCase()
                   );
+                  if (normalizedDistrict?.id) {
+                      districtId = normalizedDistrict.id;
+                      this.selectedDistrict = normalizedDistrict.id;
+                  }
+
+                  const url = new URL('/api/mark-entry/acsee/schools', window.location.origin);
+                  url.searchParams.set('district_id', String(districtId));
+
+                  const response = await fetch(url.toString(), {
+                      headers: { 'Accept': 'application/json' },
+                      credentials: 'same-origin'
+                  });
                   if (!response.ok) {
                       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                   }
                   const data = await response.json();
                   this.schools = data.data || [];
              } catch (error) {
-                  console.error('Error loading schools:', error);
+                  console.error('Error loading schools:', { error, selectedDistrict: this.selectedDistrict });
                   this.showMessage('Error loading schools: ' + error.message, 'error');
              }
          },
@@ -5415,14 +7252,26 @@ function markEntryManager() {
          districtId: '',
          districtBulkRegionId: '',
          districtBulkList: [],
+         districtYearOpen: false,
+         districtRegionOpen: false,
+         districtBulkDistrictOpen: false,
+         districtYearSearch: '',
+         districtBulkRegionSearch: '',
+         districtBulkDistrictSearch: '',
 
          get districtBulkRegions() {
              const regionMap = {};
              for (const d of this.districtBulkList) {
                  if (d.region_id && d.region) {
                      regionMap[d.region_id] = d.region;
+                 } else if (d.region_id && d.region_name) {
+                     regionMap[d.region_id] = {
+                         id: d.region_id,
+                         code: d.region_code || '',
+                         name: d.region_name
+                     };
                  } else if (d.region_id) {
-                     const r = (this.regions || []).find(r => r.id === d.region_id);
+                     const r = (this.regions || []).find(r => r.id == d.region_id);
                      if (r) regionMap[d.region_id] = r;
                  }
              }
@@ -5430,7 +7279,7 @@ function markEntryManager() {
              if (Object.keys(regionMap).length === 0) {
                  const regionIds = [...new Set(this.districtBulkList.map(d => d.region_id).filter(Boolean))];
                  for (const id of regionIds) {
-                     const r = (this.regions || []).find(r => r.id === id);
+                     const r = (this.regions || []).find(r => r.id == id);
                      if (r) regionMap[id] = r;
                  }
              }
@@ -5767,17 +7616,43 @@ function markEntryManager() {
             pendingQueueLastPage: 1,
             pendingQueueTotal: 0,
             pendingQueueHasMore: false,
-            pendingFilters: { exam_year: '', region_id: '', school_search: '', subject_id: '', status: '' },
+            pendingFilters: { exam_year: '', region_id: '', school_id: '', subject_id: '', status: '' },
+            pendingSchools: [],
+            pendingSchoolsLoading: false,
+            pendingSchoolOptionsYear: '',
+            pendingYearOpen: false,
+            pendingRegionOpen: false,
+            pendingSchoolOpen: false,
+            pendingSubjectOpen: false,
+            pendingStatusOpen: false,
+            pendingYearSearch: '',
+            pendingRegionSearch: '',
+            pendingSchoolSearch: '',
+            pendingSubjectSearch: '',
+            pendingStatusSearch: '',
+            pendingStatuses: [
+                { value: '', label: 'All' },
+                { value: 'errors', label: 'With Errors Only' },
+            ],
+            pendingSelectedBatchIds: [],
+            pendingSelectAllFilteredActive: false,
+            showBulkApproveModal: false,
+            bulkApproveMode: 'visible', // 'selected' | 'visible' | 'scope'
+            bulkApproveCount: 0,
+            bulkApproveConfirmText: '',
+            bulkApproveAcknowledged: false,
+            isBulkApproving: false,
 
             async loadPendingQueue(page = 1) {
                 this.pendingQueueLoading = true;
                 this.pendingQueueError = null;
                 try {
-                    const params = new URLSearchParams({ page, per_page: 20 });
-                    if (this.pendingFilters.exam_year) params.set('exam_year', this.pendingFilters.exam_year);
-                    if (this.pendingFilters.region_id) params.set('region_id', this.pendingFilters.region_id);
-                    if (this.pendingFilters.subject_id) params.set('subject_id', this.pendingFilters.subject_id);
-                    if (this.pendingFilters.status) params.set('status', this.pendingFilters.status);
+                    if (!this.pendingFilters.exam_year && this.examYear) {
+                        this.pendingFilters.exam_year = String(this.examYear);
+                    }
+                    await this.loadPendingSchools();
+
+                    const params = this.buildPendingParams(page, 20);
 
                     const resp = await fetch(`/api/mark-entry/acsee/moderation/pending?${params}`, {
                         headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
@@ -5796,6 +7671,358 @@ function markEntryManager() {
                     this.pendingQueueError = 'Failed to load: ' + err.message;
                 } finally {
                     this.pendingQueueLoading = false;
+                }
+            },
+
+            buildPendingParams(page = 1, perPage = 20) {
+                const params = new URLSearchParams({ page, per_page: perPage });
+                if (this.pendingFilters.exam_year) params.set('exam_year', this.pendingFilters.exam_year);
+                if (this.pendingFilters.region_id) params.set('region_id', this.pendingFilters.region_id);
+                if (this.pendingFilters.school_id) params.set('school_id', this.pendingFilters.school_id);
+                if (this.pendingFilters.subject_id) params.set('subject_id', this.pendingFilters.subject_id);
+                if (this.pendingFilters.status) params.set('status', this.pendingFilters.status);
+                return params;
+            },
+
+            pendingQueuePageWindow() {
+                const current = Number(this.pendingQueuePage || 1);
+                const last = Number(this.pendingQueueLastPage || 1);
+                const size = 5;
+                let start = Math.max(1, current - Math.floor(size / 2));
+                let end = Math.min(last, start + size - 1);
+                start = Math.max(1, end - size + 1);
+                return Array.from({ length: Math.max(0, end - start + 1) }, (_, i) => start + i);
+            },
+
+            pendingSelectedYearLabel() {
+                if (!this.pendingFilters.exam_year) return 'All Years';
+                const yr = this.examYears.find(y => String(y.year_label) === String(this.pendingFilters.exam_year));
+                return yr?.year_label || 'All Years';
+            },
+
+            pendingSelectedRegionLabel() {
+                if (!this.pendingFilters.region_id) return 'All Regions';
+                const region = this.regions.find(r => String(r.id) === String(this.pendingFilters.region_id));
+                return region?.name || 'All Regions';
+            },
+
+            pendingSelectedSchoolLabel() {
+                if (!this.pendingFilters.school_id) return 'All Schools';
+                const school = this.pendingSchools.find(s => String(s.id) === String(this.pendingFilters.school_id));
+                return school ? (school.code ? `${school.code} - ${school.name}` : school.name) : 'All Schools';
+            },
+
+            pendingSelectedSubjectLabel() {
+                if (!this.pendingFilters.subject_id) return 'All Subjects';
+                const subject = this.subjects.find(s => String(s.id) === String(this.pendingFilters.subject_id));
+                return subject ? (subject.code ? `${subject.code} - ${subject.name}` : subject.name) : 'All Subjects';
+            },
+
+            pendingSelectedStatusLabel() {
+                return this.pendingStatuses.find(s => String(s.value) === String(this.pendingFilters.status))?.label || 'All';
+            },
+
+            pendingFilteredYears() {
+                const q = (this.pendingYearSearch || '').trim().toLowerCase();
+                if (!q) return this.examYears;
+                return this.examYears.filter(y => String(y.year_label || '').toLowerCase().includes(q));
+            },
+
+            pendingFilteredRegions() {
+                const q = (this.pendingRegionSearch || '').trim().toLowerCase();
+                if (!q) return this.regions;
+                return this.regions.filter(r => String(r.name || '').toLowerCase().includes(q));
+            },
+
+            pendingSchoolsByRegion() {
+                if (!this.pendingFilters.region_id) return this.pendingSchools;
+                return this.pendingSchools.filter(s => String(s.region_id) === String(this.pendingFilters.region_id));
+            },
+
+            pendingFilteredSchools() {
+                const q = (this.pendingSchoolSearch || '').trim().toLowerCase();
+                const base = this.pendingSchoolsByRegion();
+                if (!q) return base;
+                return base.filter(s => `${s.code || ''} ${s.name || ''}`.toLowerCase().includes(q));
+            },
+
+            async loadPendingSchools(force = false) {
+                const year = String(this.pendingFilters.exam_year || '');
+                if (!year) {
+                    this.pendingSchools = [];
+                    this.pendingSchoolOptionsYear = '';
+                    return;
+                }
+
+                if (!force && this.pendingSchoolOptionsYear === year && this.pendingSchools.length > 0) {
+                    return;
+                }
+
+                this.pendingSchoolsLoading = true;
+                try {
+                    const response = await fetch(`/api/mark-entry/acsee/schools-by-year?exam_year=${encodeURIComponent(year)}`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    const json = await response.json();
+                    this.pendingSchools = Array.isArray(json.data) ? json.data : [];
+                    this.pendingSchoolOptionsYear = year;
+                } catch (error) {
+                    console.error('Error loading pending schools:', error);
+                    this.pendingSchools = [];
+                    this.pendingSchoolOptionsYear = '';
+                } finally {
+                    this.pendingSchoolsLoading = false;
+                }
+            },
+
+            pendingFilteredSubjects() {
+                const q = (this.pendingSubjectSearch || '').trim().toLowerCase();
+                if (!q) return this.subjects;
+                return this.subjects.filter(s => `${s.code || ''} ${s.name || ''}`.toLowerCase().includes(q));
+            },
+
+            pendingFilteredStatuses() {
+                const q = (this.pendingStatusSearch || '').trim().toLowerCase();
+                if (!q) return this.pendingStatuses;
+                return this.pendingStatuses.filter(s => String(s.label || '').toLowerCase().includes(q));
+            },
+
+            pendingSelectYear(value) {
+                this.pendingFilters.exam_year = String(value || '');
+                this.pendingFilters.school_id = '';
+                this.pendingSchoolSearch = '';
+                this.pendingSelectedBatchIds = [];
+                this.pendingSelectAllFilteredActive = false;
+                this.pendingYearOpen = false;
+                this.loadPendingSchools(true).then(() => this.loadPendingQueue(1));
+            },
+
+            pendingSelectRegion(value) {
+                this.pendingFilters.region_id = String(value || '');
+                if (
+                    this.pendingFilters.school_id &&
+                    !this.pendingSchoolsByRegion().some(s => String(s.id) === String(this.pendingFilters.school_id))
+                ) {
+                    this.pendingFilters.school_id = '';
+                }
+                this.pendingSelectedBatchIds = [];
+                this.pendingSelectAllFilteredActive = false;
+                this.pendingRegionOpen = false;
+                this.loadPendingQueue(1);
+            },
+
+            pendingSelectSchool(value) {
+                this.pendingFilters.school_id = String(value || '');
+                this.pendingSelectedBatchIds = [];
+                this.pendingSelectAllFilteredActive = false;
+                this.pendingSchoolOpen = false;
+                this.loadPendingQueue(1);
+            },
+
+            pendingSelectSubject(value) {
+                this.pendingFilters.subject_id = String(value || '');
+                this.pendingSelectedBatchIds = [];
+                this.pendingSelectAllFilteredActive = false;
+                this.pendingSubjectOpen = false;
+                this.loadPendingQueue(1);
+            },
+
+            pendingSelectStatus(value) {
+                this.pendingFilters.status = String(value || '');
+                this.pendingSelectedBatchIds = [];
+                this.pendingSelectAllFilteredActive = false;
+                this.pendingStatusOpen = false;
+                this.loadPendingQueue(1);
+            },
+
+            pendingBatchErrorCount(batch) {
+                const raw = batch?.error_marks_count ?? batch?.error_records ?? 0;
+                const n = Number(raw);
+                return Number.isFinite(n) ? n : 0;
+            },
+
+            pendingBatchWarningCount(batch) {
+                const raw = batch?.warning_marks_count ?? batch?.warning_records ?? 0;
+                const n = Number(raw);
+                return Number.isFinite(n) ? n : 0;
+            },
+
+            hasBlockingErrors(batch) {
+                return this.pendingBatchErrorCount(batch) > 0;
+            },
+
+            isApprovalStateEligible(batch) {
+                const status = String(batch?.status || '').toLowerCase();
+                const lifecycle = String(batch?.lifecycle_state || '').toLowerCase();
+                return ['validated', 'submitted'].includes(status)
+                    || ['awaiting_moderation', 'validated', 'submitted'].includes(lifecycle);
+            },
+
+            isPendingApprovalEligible(batch) {
+                return this.isApprovalStateEligible(batch) && !this.hasBlockingErrors(batch);
+            },
+
+            pendingApprovableVisibleCount() {
+                return (this.pendingQueueBatches || []).filter(batch => this.isPendingApprovalEligible(batch)).length;
+            },
+
+            pendingSelectedEligibleCount() {
+                const selected = new Set(this.pendingSelectedBatchIds || []);
+                return (this.pendingQueueBatches || []).filter(batch => selected.has(batch.id) && this.isPendingApprovalEligible(batch)).length;
+            },
+
+            async togglePendingSelectAllFiltered(checked) {
+                if (!checked) {
+                    this.pendingSelectedBatchIds = [];
+                    this.pendingSelectAllFilteredActive = false;
+                    return;
+                }
+
+                try {
+                    const scopeRows = await this.fetchScopePendingBatches();
+                    const eligibleIds = (scopeRows || [])
+                        .filter(batch => this.isPendingApprovalEligible(batch))
+                        .map(batch => batch.id);
+
+                    this.pendingSelectedBatchIds = Array.from(new Set(eligibleIds));
+                    this.pendingSelectAllFilteredActive = this.pendingSelectedBatchIds.length > 0;
+
+                    if (this.pendingSelectedBatchIds.length === 0) {
+                        this.showMessage('No eligible batches found in current filters.', 'warning');
+                    }
+                } catch (err) {
+                    this.pendingSelectAllFilteredActive = false;
+                    this.showMessage('Failed to select filtered batches: ' + err.message, 'error');
+                }
+            },
+
+            togglePendingBatchSelection(batch, checked) {
+                if (!batch || !this.isPendingApprovalEligible(batch)) return;
+                const id = batch.id;
+                const selected = new Set(this.pendingSelectedBatchIds || []);
+                if (checked) selected.add(id);
+                else selected.delete(id);
+                this.pendingSelectedBatchIds = Array.from(selected);
+                if (!checked) this.pendingSelectAllFilteredActive = false;
+            },
+
+            async openBulkApproveModal(mode = 'visible') {
+                this.bulkApproveMode = mode;
+                this.bulkApproveConfirmText = '';
+                this.bulkApproveAcknowledged = false;
+
+                if (mode === 'selected') {
+                    this.bulkApproveCount = this.pendingSelectedEligibleCount();
+                } else if (mode === 'visible') {
+                    this.bulkApproveCount = this.pendingApprovableVisibleCount();
+                } else {
+                    const scopeRows = await this.fetchScopePendingBatches();
+                    this.bulkApproveCount = (scopeRows || []).filter(batch => this.isPendingApprovalEligible(batch)).length;
+                }
+
+                if (this.bulkApproveCount === 0) {
+                    this.showMessage('No eligible pending batches to approve.', 'error');
+                    return;
+                }
+                this.showBulkApproveModal = true;
+            },
+
+            async fetchScopePendingBatches() {
+                const collected = [];
+                let page = 1;
+                let lastPage = 1;
+                do {
+                    const params = this.buildPendingParams(page, 100);
+                    const resp = await fetch(`/api/mark-entry/acsee/moderation/pending?${params}`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const json = await resp.json();
+                    if (!json.success) {
+                        throw new Error(json.message || 'Failed to load pending scope.');
+                    }
+                    const rows = json.data || [];
+                    collected.push(...rows);
+                    lastPage = json.pagination?.last_page || 1;
+                    page += 1;
+                } while (page <= lastPage);
+
+                return collected;
+            },
+
+            async approveBatchById(batchId) {
+                const response = await fetch(`/api/mark-entry/moderation/batch/${batchId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ feedback: null })
+                });
+                let data = {};
+                try { data = await response.json(); } catch (_) { data = {}; }
+                if (!response.ok || !data.success) {
+                    return { ok: false, message: data.message || `HTTP ${response.status}` };
+                }
+                return { ok: true };
+            },
+
+            async executeBulkApprove() {
+                if (!this.bulkApproveAcknowledged || this.bulkApproveConfirmText.toUpperCase() !== 'APPROVE ALL') return;
+                this.isBulkApproving = true;
+                try {
+                    let targetBatches = [];
+                    if (this.bulkApproveMode === 'selected') {
+                        const selected = new Set(this.pendingSelectedBatchIds || []);
+                        const scopeRows = await this.fetchScopePendingBatches();
+                        targetBatches = (scopeRows || []).filter(batch => selected.has(batch.id) && this.isPendingApprovalEligible(batch));
+                    } else if (this.bulkApproveMode === 'visible') {
+                        targetBatches = (this.pendingQueueBatches || []).filter(batch => this.isPendingApprovalEligible(batch));
+                    } else {
+                        const scopeRows = await this.fetchScopePendingBatches();
+                        targetBatches = (scopeRows || []).filter(batch => this.isPendingApprovalEligible(batch));
+                    }
+
+                    if (targetBatches.length === 0) {
+                        this.showMessage('No eligible batches to approve (all have blocking errors or none found).', 'error');
+                        return;
+                    }
+
+                    let approved = 0;
+                    let failed = 0;
+                    const approvedIds = [];
+                    for (const batch of targetBatches) {
+                        const result = await this.approveBatchById(batch.id);
+                        if (result.ok) {
+                            approved += 1;
+                            approvedIds.push(batch.id);
+                        } else {
+                            failed += 1;
+                        }
+                    }
+
+                    this.showBulkApproveModal = false;
+                    this.bulkApproveConfirmText = '';
+                    this.bulkApproveAcknowledged = false;
+                    if (this.bulkApproveMode === 'selected') {
+                        const approvedSet = new Set(approvedIds);
+                        this.pendingSelectedBatchIds = (this.pendingSelectedBatchIds || []).filter(id => !approvedSet.has(id));
+                        if (this.pendingSelectedBatchIds.length === 0) {
+                            this.pendingSelectAllFilteredActive = false;
+                        }
+                    }
+                    this.showMessage(`Bulk approval complete: ${approved} approved, ${failed} failed.`, failed > 0 ? 'error' : 'success');
+                    await this.loadPendingQueue(this.pendingQueuePage || 1);
+                    await this.loadReviewDashboard();
+                    if (this.activeView === 'approve-marks') await this.loadApprovableBatches(1);
+                    if (this.activeView === 'lock-status' && this.loadLockStatus) await this.loadLockStatus();
+                } catch (err) {
+                    this.showMessage('Bulk approve failed: ' + err.message, 'error');
+                } finally {
+                    this.isBulkApproving = false;
                 }
             },
 
@@ -5973,6 +8200,7 @@ function markEntryManager() {
             batchRawMarks: [],
             batchRawMarksLoading: false,
             batchAuditTrail: [],
+            batchRowEdits: {},
             
             async openBatchDetail(batchId) {
                 this.selectedBatchId = batchId;
@@ -6004,12 +8232,18 @@ function markEntryManager() {
             async loadBatchRawMarks(batchId, type = 'all') {
                 try {
                     this.batchRawMarksLoading = true;
+                    this.batchDetailsError = null;
                     const response = await this.fetchApi(
                         `/api/mark-entry/moderation/batch/${batchId}/raw-marks?type=${type}&per_page=50`
                     );
                     
                     if (response.success) {
                         this.batchRawMarks = response.data || [];
+                        this.initializeBatchRowEdits(this.batchRawMarks);
+                        if (response.counters && this.batchDetail) {
+                            this.batchDetail.error_count = response.counters.error_rows_count ?? this.batchDetail.error_count;
+                            this.batchDetail.valid_count = response.counters.valid_rows_count ?? this.batchDetail.valid_count;
+                        }
                     } else {
                         this.batchDetailsError = response.message || 'Failed to load marks';
                     }
@@ -6051,6 +8285,112 @@ function markEntryManager() {
                 this.batchDetail = null;
                 this.batchRawMarks = [];
                 this.batchAuditTrail = [];
+                this.batchRowEdits = {};
+            },
+
+            initializeBatchRowEdits(rows = []) {
+                rows.forEach((row) => {
+                    const rowId = row.row_id ?? row.id;
+                    this.batchRowEdits[rowId] = {
+                        marks: { ...(row.marks || {}) },
+                        dirty: false,
+                        saving: false,
+                        error: null,
+                        reason: '',
+                    };
+                });
+            },
+
+            getBatchRowEdit(rowId) {
+                if (!this.batchRowEdits[rowId]) {
+                    this.batchRowEdits[rowId] = { marks: {}, dirty: false, saving: false, error: null, reason: '' };
+                }
+                return this.batchRowEdits[rowId];
+            },
+
+            getBatchRowEditValue(rowId, paperCode) {
+                const edit = this.getBatchRowEdit(rowId);
+                const value = edit.marks?.[paperCode];
+                return value === null || typeof value === 'undefined' ? '' : value;
+            },
+
+            setBatchRowEditValue(rowId, paperCode, value) {
+                const edit = this.getBatchRowEdit(rowId);
+                edit.marks[paperCode] = value;
+                edit.dirty = true;
+                edit.error = null;
+            },
+
+            cancelBatchRowEdit(row) {
+                const rowId = row.row_id ?? row.id;
+                this.batchRowEdits[rowId] = {
+                    marks: { ...(row.marks || {}) },
+                    dirty: false,
+                    saving: false,
+                    error: null,
+                    reason: '',
+                };
+            },
+
+            async saveBatchRow(row) {
+                const rowId = row.row_id ?? row.id;
+                const edit = this.getBatchRowEdit(rowId);
+                if (!row.can_edit || edit.saving || !edit.dirty) {
+                    return;
+                }
+
+                edit.saving = true;
+                edit.error = null;
+
+                try {
+                    const response = await fetch(`/api/mark-entry/moderation/batch/${this.selectedBatchId}/rows/${rowId}/marks`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify({
+                            marks: edit.marks || {},
+                            reason: edit.reason || null,
+                        }),
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || `HTTP ${response.status}`);
+                    }
+
+                    const updatedRow = data.row;
+                    const idx = this.batchRawMarks.findIndex((item) => (item.row_id ?? item.id) === rowId);
+                    if (idx !== -1) {
+                        if ((updatedRow.errors || []).length === 0 && this.batchDetailTab === 'errors') {
+                            this.batchRawMarks.splice(idx, 1);
+                        } else {
+                            this.batchRawMarks.splice(idx, 1, updatedRow);
+                        }
+                    }
+
+                    this.batchRowEdits[rowId] = {
+                        marks: { ...(updatedRow.marks || {}) },
+                        dirty: false,
+                        saving: false,
+                        error: null,
+                        reason: '',
+                    };
+
+                    if (data.counters && this.batchDetail) {
+                        this.batchDetail.error_count = data.counters.error_rows_count ?? this.batchDetail.error_count;
+                        this.batchDetail.valid_count = data.counters.valid_rows_count ?? this.batchDetail.valid_count;
+                    }
+
+                    this.showMessage('Row saved and revalidated.', 'success');
+                } catch (err) {
+                    edit.error = err.message || 'Failed to save row';
+                } finally {
+                    edit.saving = false;
+                }
             },
             
             // =========== LOCK STATUS ===========
@@ -6186,6 +8526,19 @@ function markEntryManager() {
                 }
             },
 
+            async extractDownloadError(response, fallbackMessage = 'Download failed') {
+                try {
+                    const payload = await response.json();
+                    const validationErrors = payload?.errors && typeof payload.errors === 'object'
+                        ? Object.values(payload.errors).flat().join(' ')
+                        : '';
+
+                    return payload?.error || payload?.message || validationErrors || fallbackMessage;
+                } catch (_) {
+                    return fallbackMessage;
+                }
+            },
+
             async downloadScoresheetPdf(level = 'single') {
                 this.reportExporting = true;
                 this.reportMessage = '';
@@ -6214,8 +8567,7 @@ function markEntryManager() {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     if (!response.ok) {
-                        const err = await response.json();
-                        throw new Error(err.error || 'Download failed');
+                        throw new Error(await this.extractDownloadError(response, 'Download failed'));
                     }
                     const blob = await response.blob();
                     const link = document.createElement('a');
@@ -6255,8 +8607,7 @@ function markEntryManager() {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     if (!response.ok) {
-                        const err = await response.json();
-                        throw new Error(err.error || 'Download failed');
+                        throw new Error(await this.extractDownloadError(response, 'Download failed'));
                     }
                     const blob = await response.blob();
                     const link = document.createElement('a');
@@ -6315,8 +8666,7 @@ function markEntryManager() {
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     if (!response.ok) {
-                        const err = await response.json();
-                        throw new Error(err.error || 'Download failed');
+                        throw new Error(await this.extractDownloadError(response, 'Download failed'));
                     }
                     const blob = await response.blob();
                     const link = document.createElement('a');
@@ -6373,6 +8723,11 @@ function markEntryManager() {
             
             // Open approve modal
             openApproveBatchModal(batchId) {
+                const pendingBatch = (this.pendingQueueBatches || []).find(b => b.id === batchId);
+                if (pendingBatch && !this.isPendingApprovalEligible(pendingBatch)) {
+                    this.showMessage('This batch is not eligible for approval yet. Submit it first and resolve blocking errors.', 'warning');
+                    return;
+                }
                 this.selectedBatchId = batchId;
                 this.approveFeedback = '';
                 this.showApproveBatchModal = true;
@@ -6392,6 +8747,7 @@ function markEntryManager() {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'Accept': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
                         body: JSON.stringify({
@@ -6402,11 +8758,17 @@ function markEntryManager() {
                     
                     clearTimeout(timeoutId);
                     
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    let data = null;
+                    try {
+                        data = await response.json();
+                    } catch (_) {
+                        data = null;
                     }
-                    
-                    const data = await response.json();
+
+                    if (!response.ok) {
+                        const serverMessage = data?.message || `HTTP ${response.status}: ${response.statusText}`;
+                        throw new Error(serverMessage);
+                    }
                     
                     if (data.success) {
                         this.showMessage('Batch approved successfully', 'success');
@@ -6453,6 +8815,7 @@ function markEntryManager() {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'Accept': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
                         body: JSON.stringify({
@@ -6501,6 +8864,17 @@ function markEntryManager() {
             unlockReason: '',
             isLocking: false,
             isUnlocking: false,
+
+            // Bulk lock state
+            showBulkLockModal: false,
+            showBulkLockResults: false,
+            bulkLockMode: 'visible', // 'visible' or 'scope'
+            bulkLockCount: 0,
+            bulkLockConfirmText: '',
+            bulkLockAcknowledged: false,
+            isBulkLocking: false,
+            bulkLockResultMessage: '',
+            bulkLockResultData: { locked: [], skipped: [], failed: [] },
             
             // Open lock modal
             openLockBatchModal(batchId) {
@@ -6515,7 +8889,6 @@ function markEntryManager() {
                 this.isLocking = true;
                 
                 try {
-                    // Add 30-second timeout
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 30000);
                     
@@ -6523,6 +8896,7 @@ function markEntryManager() {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
+                            'Accept': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
                         signal: controller.signal
@@ -6530,17 +8904,19 @@ function markEntryManager() {
                     
                     clearTimeout(timeoutId);
                     
+                    let data = {};
+                    try { data = await response.json(); } catch (e) { /* non-JSON response */ }
+                    
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        const errMsg = data.message || `Server error (HTTP ${response.status})`;
+                        this.showMessage(errMsg, 'error');
+                        return;
                     }
                     
-                    const data = await response.json();
-                    
                     if (data.success) {
-                        this.showMessage('Batch locked and submitted successfully', 'success');
                         this.showLockBatchModal = false;
                         this.lockConfirmText = '';
-                        // Refresh the submission dashboard and approve view
+                        this.showMessage('Batch locked and submitted successfully', 'success');
                         await this.loadLockStatus();
                         if (this.activeView === 'approve-marks') await this.loadApprovableBatches(1);
                     } else {
@@ -6557,7 +8933,110 @@ function markEntryManager() {
                     this.isLocking = false;
                 }
             },
-            
+
+            // =========== BULK LOCK WORKFLOW ===========
+            openBulkLockModal(mode) {
+                this.bulkLockMode = mode;
+                this.bulkLockConfirmText = '';
+                this.bulkLockAcknowledged = false;
+                if (mode === 'visible') {
+                    this.bulkLockCount = this.approvableBatches.filter(b => b._stage === 'approved').length;
+                } else {
+                    this.bulkLockCount = this.approvableBatches.filter(b => b._stage === 'approved').length;
+                }
+                if (this.bulkLockCount === 0) {
+                    this.showMessage('No approved batches to lock', 'error');
+                    return;
+                }
+                this.showBulkLockModal = true;
+            },
+
+            async executeBulkLock() {
+                if (!this.bulkLockAcknowledged || this.bulkLockConfirmText.toUpperCase() !== 'LOCK ALL') return;
+                this.isBulkLocking = true;
+
+                try {
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                    let url, body;
+
+                    if (this.bulkLockMode === 'visible') {
+                        const approvedIds = this.approvableBatches
+                            .filter(b => b._stage === 'approved')
+                            .map(b => b.id);
+                        url = '/api/mark-entry/submission/lock-bulk';
+                        body = JSON.stringify({ batch_ids: approvedIds });
+                    } else {
+                        url = '/api/mark-entry/submission/lock-all';
+                        const scopeParams = {};
+                        if (this.examYear) scopeParams.exam_year = this.examYear;
+                        if (this.selectedRegion) scopeParams.region_id = this.selectedRegion;
+                        if (this.selectedDistrict) scopeParams.district_id = this.selectedDistrict;
+                        if (this.selectedSchool) scopeParams.school_id = this.selectedSchool;
+                        body = JSON.stringify(scopeParams);
+                    }
+
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: body,
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    let data = {};
+                    try { data = await response.json(); } catch (e) { /* non-JSON */ }
+
+                    if (!response.ok) {
+                        this.showMessage(data.message || `Server error (HTTP ${response.status})`, 'error');
+                        return;
+                    }
+
+                    // Close confirmation modal and show results
+                    this.showBulkLockModal = false;
+                    this.bulkLockConfirmText = '';
+                    this.bulkLockAcknowledged = false;
+                    this.bulkLockResultMessage = data.message || 'Bulk lock complete';
+                    this.bulkLockResultData = data.data || { locked: [], skipped: [], failed: [] };
+                    this.showBulkLockResults = true;
+
+                    // Refresh the approve marks list
+                    await this.loadApprovableBatches(1);
+
+                } catch (error) {
+                    console.error('Bulk lock error:', error);
+                    if (error.name === 'AbortError') {
+                        this.showMessage('Request timeout. The operation may still be processing.', 'error');
+                    } else {
+                        this.showMessage('Error: ' + error.message, 'error');
+                    }
+                } finally {
+                    this.isBulkLocking = false;
+                }
+            },
+
+            downloadBulkLockReport() {
+                const rows = [['Status', 'Batch Code', 'School', 'Subject', 'Reason']];
+                (this.bulkLockResultData.locked || []).forEach(r => rows.push(['Locked', r.batch_code, r.school, r.subject, '']));
+                (this.bulkLockResultData.skipped || []).forEach(r => rows.push(['Skipped', r.batch_code, r.school, r.subject, r.reason]));
+                (this.bulkLockResultData.failed || []).forEach(r => rows.push(['Failed', r.batch_code, r.school, r.subject, r.reason]));
+
+                const csvContent = rows.map(row => row.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `bulk_lock_report_${new Date().toISOString().slice(0,10)}.csv`;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            },
+
             // Open unlock modal (admin only)
             openUnlockBatchModal(batchId) {
                 this.selectedBatchId = batchId;
@@ -6644,32 +9123,18 @@ function markEntryManager() {
             approvableCurrentPage: 1,
             approvableTotalBatches: 0,
             approvableHasMore: false,
-            approvableFilter: 'all', // 'all', 'submitted', 'approved'
+            approvableFilter: 'submitted',
 
             async loadApprovableBatches(page = 1) {
                 try {
                     this.approvableLoading = true;
                     this.approvableError = null;
 
-                    // Load both submitted (ready for approval) and approved (ready for locking)
-                    const [submittedRes, readyRes] = await Promise.all([
-                        this.fetchApi(`/api/mark-entry/submission/submitted?page=${page}&per_page=${this.perPage}`),
-                        this.fetchApi(`/api/mark-entry/submission/ready?page=${page}&per_page=${this.perPage}`)
-                    ]);
-
-                    const submitted = (submittedRes.data || []).map(b => ({ ...b, _stage: 'submitted' }));
-                    const approved  = (readyRes.data || []).map(b => ({ ...b, _stage: 'approved' }));
-                    const combined  = [...submitted, ...approved];
-
-                    if (this.approvableFilter === 'submitted') {
-                        this.approvableBatches = submitted;
-                    } else if (this.approvableFilter === 'approved') {
-                        this.approvableBatches = approved;
-                    } else {
-                        this.approvableBatches = combined;
-                    }
-
-                    this.approvableTotalBatches = combined.length;
+                    // Approve Marks should reflect moderation pending queue (awaiting moderation / validated / submitted).
+                    const pendingRes = await this.fetchApi(`/api/mark-entry/acsee/moderation/pending?page=${page}&per_page=${this.perPage}`);
+                    const rows = pendingRes?.success ? (pendingRes.data || []) : [];
+                    this.approvableBatches = rows.map(b => ({ ...b, _stage: 'submitted' }));
+                    this.approvableTotalBatches = Number(pendingRes?.pagination?.total || this.approvableBatches.length || 0);
                     this.approvableCurrentPage = page;
                     console.log(`✓ Loaded ${this.approvableBatches.length} approvable batches`);
                 } catch (err) {
@@ -6681,59 +9146,775 @@ function markEntryManager() {
             },
 
             setApprovableFilter(filter) {
-                this.approvableFilter = filter;
+                this.approvableFilter = 'submitted';
                 this.loadApprovableBatches(1);
             },
 
             // =========== TOAST NOTIFICATION SYSTEM ===========
-            toastMessage: '',
-            toastType: 'info', // 'success', 'error', 'info', 'warning'
-            toastDetails: '',
-            toastTimeout: null,
-            
-            showMessage(message, type = 'info', details = '') {
-                this.toastMessage = message;
-                this.toastType = type;
-                this.toastDetails = details;
-                
-                // Auto-hide after 5 seconds
-                clearTimeout(this.toastTimeout);
-                this.toastTimeout = setTimeout(() => {
-                    this.closeToast();
-                }, 5000);
-            },
-            
-            closeToast() {
-                this.toastMessage = '';
-                this.toastType = 'info';
-                this.toastDetails = '';
-                clearTimeout(this.toastTimeout);
+            showMessage(message, type = 'info') {
+                const alertDiv = document.createElement('div');
+                const styles = type === 'success'
+                    ? { bg: 'bg-green-50 border-green-300 text-green-800', icon: '✓', title: 'Success' }
+                    : type === 'warning'
+                        ? { bg: 'bg-amber-50 border-amber-300 text-amber-900', icon: '⚠', title: 'Warning' }
+                        : { bg: 'bg-red-50 border-red-300 text-red-800', icon: '✕', title: 'Error' };
+                alertDiv.style.zIndex = '99999';
+                alertDiv.className = `fixed top-4 right-4 left-4 sm:left-auto sm:w-96 ${styles.bg} p-5 rounded-lg border-2 shadow-xl`;
+                alertDiv.innerHTML = `<div class="flex items-start gap-3">
+                    <span class="text-2xl font-bold">${styles.icon}</span>
+                    <div class="flex-1">
+                        <p class="font-bold text-lg">${styles.title}</p>
+                        <p class="text-sm mt-1 whitespace-pre-wrap">${message}</p>
+                    </div>
+                    <button class="text-lg leading-none opacity-70 hover:opacity-100" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>`;
+                document.body.appendChild(alertDiv);
+                const timeout = type === 'success' ? 5000 : 8000;
+                setTimeout(() => { if (alertDiv.parentElement) alertDiv.remove(); }, timeout);
             },
 
             };
             }
 
+// ==================== ENTRY OUTLIERS VIEW ====================
+function entryOutliersView() {
+    return {
+        years: [],
+        schools: [],
+        subjects: [],
+        filters: { exam_year_id: '', status: '', school_id: '', subject_id: '', q: '' },
+        yearOpen: false,
+        statusOpen: false,
+        schoolOpen: false,
+        subjectOpen: false,
+        yearSearch: '',
+        statusSearch: '',
+        schoolSearch: '',
+        subjectSearch: '',
+        statuses: [
+            { value: '', label: 'All Statuses' },
+            { value: 'validated', label: 'Validated' },
+            { value: 'submitted', label: 'Submitted' },
+            { value: 'approved', label: 'Approved' },
+            { value: 'rejected', label: 'Rejected' },
+            { value: 'locked', label: 'Locked' },
+        ],
+        activeTab: 'integrity',
+        rows: [],
+        summary: {},
+        loading: false,
+        bulkApproving: false,
+        exportPdfLoading: false,
+        bulkApproveModalOpen: false,
+        bulkApproveMode: 'all',
+        bulkApproveAcknowledge: false,
+        bulkApproveNote: '',
+        bulkApproveResult: null,
+        selectedIssueRefsByTab: {
+            integrity: [],
+            missing: [],
+            swings: [],
+        },
+        selectAllFilteredByTab: {
+            integrity: false,
+            missing: false,
+            swings: false,
+        },
+        tabStatsLoading: false,
+        tabStats: {
+            integrity: { total: 0, actionable: 0, resolved: 0, manual: 0 },
+            missing: { total: 0, actionable: 0, resolved: 0, manual: 0 },
+            swings: { total: 0, actionable: 0, resolved: 0, manual: 0 },
+        },
+        readyGate: { is_ready: false, blocking: 0, actionable: 0, manual: 0, resolved: 0 },
+        error: '',
+        meta: { total: 0, per_page: 50, current_page: 1, last_page: 1, from: 0, to: 0 },
+
+        async init() {
+            await this.loadFilterOptions();
+            await Promise.all([
+                this.loadSummary(),
+                this.loadList(),
+                this.loadTabStats(),
+            ]);
+        },
+
+        async loadFilterOptions() {
+            const tasks = [
+                fetch('/api/exam-years/with-acsee', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } }),
+                fetch('/api/mark-entry/acsee/subjects', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } }),
+            ];
+
+            const [yearsRes, subjectsRes] = await Promise.all(tasks);
+            const yearsJson = yearsRes.ok ? await yearsRes.json() : { years: [] };
+            const subjectsJson = subjectsRes.ok ? await subjectsRes.json() : { data: [] };
+
+            this.years = Array.isArray(yearsJson.years) ? yearsJson.years : [];
+            this.subjects = Array.isArray(subjectsJson.data) ? subjectsJson.data : [];
+
+            await this.loadSchoolsForYear(this.filters.exam_year_id || '');
+        },
+
+        async loadSchoolsForYear(examYearId = '') {
+            const yearLabels = [];
+
+            if (examYearId) {
+                const selected = this.years.find(y => String(y.id) === String(examYearId));
+                if (selected?.year_label) yearLabels.push(String(selected.year_label));
+            } else {
+                this.years.forEach(y => {
+                    if (y?.year_label) yearLabels.push(String(y.year_label));
+                });
+            }
+
+            if (yearLabels.length === 0) {
+                this.schools = [];
+                return;
+            }
+
+            const responses = await Promise.all(
+                [...new Set(yearLabels)].map(label =>
+                    fetch(`/api/mark-entry/acsee/schools-by-year?exam_year=${encodeURIComponent(label)}`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    })
+                )
+            );
+
+            const allSchools = [];
+            for (const resp of responses) {
+                if (!resp.ok) continue;
+                const json = await resp.json();
+                if (Array.isArray(json.data)) allSchools.push(...json.data);
+            }
+
+            const deduped = new Map();
+            allSchools.forEach(school => {
+                if (!deduped.has(String(school.id))) {
+                    deduped.set(String(school.id), school);
+                }
+            });
+            this.schools = Array.from(deduped.values());
+        },
+
+        async applyFilters() {
+            this.selectedIssueRefsByTab = { integrity: [], missing: [], swings: [] };
+            this.selectAllFilteredByTab = { integrity: false, missing: false, swings: false };
+            this.meta.current_page = 1;
+            await Promise.all([
+                this.loadSummary(),
+                this.loadList(),
+                this.loadTabStats(),
+            ]);
+        },
+
+        selectedYearLabel() {
+            if (!this.filters.exam_year_id) return 'All Years';
+            const year = this.years.find(y => String(y.id) === String(this.filters.exam_year_id));
+            return year?.year_label || 'All Years';
+        },
+
+        selectedStatusLabel() {
+            return this.statuses.find(s => String(s.value) === String(this.filters.status))?.label || 'All Statuses';
+        },
+
+        selectedSchoolLabel() {
+            if (!this.filters.school_id) return 'All Schools';
+            const school = this.schools.find(s => String(s.id) === String(this.filters.school_id));
+            return school ? (school.code ? `${school.code} - ${school.name}` : school.name) : 'All Schools';
+        },
+
+        selectedSubjectLabel() {
+            if (!this.filters.subject_id) return 'All Subjects';
+            const subject = this.subjects.find(s => String(s.id) === String(this.filters.subject_id));
+            return subject ? (subject.code ? `${subject.code} - ${subject.name}` : subject.name) : 'All Subjects';
+        },
+
+        filteredYears() {
+            const q = (this.yearSearch || '').trim().toLowerCase();
+            if (!q) return this.years;
+            return this.years.filter(y => (y.year_label || '').toLowerCase().includes(q));
+        },
+
+        filteredStatuses() {
+            const q = (this.statusSearch || '').trim().toLowerCase();
+            if (!q) return this.statuses;
+            return this.statuses.filter(s => (s.label || '').toLowerCase().includes(q));
+        },
+
+        filteredSchools() {
+            const q = (this.schoolSearch || '').trim().toLowerCase();
+            if (!q) return this.schools;
+            return this.schools.filter(s => (`${s.code || ''} ${s.name || ''}`).toLowerCase().includes(q));
+        },
+
+        filteredSubjects() {
+            const q = (this.subjectSearch || '').trim().toLowerCase();
+            if (!q) return this.subjects;
+            return this.subjects.filter(s => (`${s.code || ''} ${s.name || ''}`).toLowerCase().includes(q));
+        },
+
+        async selectYear(value) {
+            this.filters.exam_year_id = String(value || '');
+            await this.loadSchoolsForYear(this.filters.exam_year_id);
+            if (this.filters.school_id && !this.schools.find(s => String(s.id) === String(this.filters.school_id))) {
+                this.filters.school_id = '';
+            }
+            this.yearOpen = false;
+            await this.applyFilters();
+        },
+
+        async selectStatus(value) {
+            this.filters.status = String(value || '');
+            this.statusOpen = false;
+            await this.applyFilters();
+        },
+
+        async selectSchool(value) {
+            this.filters.school_id = String(value || '');
+            this.schoolOpen = false;
+            await this.applyFilters();
+        },
+
+        async selectSubject(value) {
+            this.filters.subject_id = String(value || '');
+            this.subjectOpen = false;
+            await this.applyFilters();
+        },
+
+        async goToPage(page) {
+            const target = Number(page);
+            if (!target || target < 1 || target > (this.meta.last_page || 1) || target === this.meta.current_page) {
+                return;
+            }
+            this.meta.current_page = target;
+            await this.loadList();
+        },
+
+        pageWindow() {
+            const current = this.meta.current_page || 1;
+            const last = this.meta.last_page || 1;
+            const size = 9;
+            let start = Math.max(1, current - Math.floor(size / 2));
+            let end = Math.min(last, start + size - 1);
+            start = Math.max(1, end - size + 1);
+            const pages = [];
+            for (let p = start; p <= end; p++) pages.push(p);
+            return pages;
+        },
+
+        filteredRows() {
+            return this.rows;
+        },
+
+        selectedRefsForTab(tab = null) {
+            const key = tab || this.activeTab || 'integrity';
+            return this.selectedIssueRefsByTab[key] || [];
+        },
+
+        selectedCountForActiveTab() {
+            return this.selectedRefsForTab().length;
+        },
+
+        isRowSelected(id) {
+            return this.selectedRefsForTab().includes(id);
+        },
+
+        toggleRowSelection(id, checked) {
+            const key = this.activeTab || 'integrity';
+            const selected = new Set(this.selectedRefsForTab(key));
+            if (checked) selected.add(id);
+            else selected.delete(id);
+            this.selectedIssueRefsByTab[key] = Array.from(selected);
+            if (!checked) this.selectAllFilteredByTab[key] = false;
+        },
+
+        isSelectAllActiveTabChecked() {
+            return !!this.selectAllFilteredByTab[this.activeTab || 'integrity'];
+        },
+
+        async fetchAllRefsForActiveTab() {
+            const collected = [];
+            let page = 1;
+            let lastPage = 1;
+            do {
+                const params = new URLSearchParams({
+                    page,
+                    per_page: 100,
+                });
+                if (this.filters.exam_year_id) params.set('exam_year_id', this.filters.exam_year_id);
+                if (this.filters.status) params.set('status', this.filters.status);
+                if (this.filters.school_id) params.set('school_id', this.filters.school_id);
+                if (this.filters.subject_id) params.set('subject_id', this.filters.subject_id);
+                if (this.filters.q) params.set('q', this.filters.q);
+                if (this.activeTab) params.set('tab', this.activeTab);
+
+                const resp = await fetch(`/api/mark-entry/acsee/outliers/list?${params.toString()}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const json = await resp.json();
+                const rows = json.data || [];
+                collected.push(...rows.map(r => r.id).filter(Boolean));
+                lastPage = Number(json.meta?.last_page || 1);
+                page += 1;
+            } while (page <= lastPage);
+
+            return Array.from(new Set(collected));
+        },
+
+        async toggleSelectAllFilteredForActiveTab(checked) {
+            const key = this.activeTab || 'integrity';
+            if (!checked) {
+                this.selectedIssueRefsByTab[key] = [];
+                this.selectAllFilteredByTab[key] = false;
+                return;
+            }
+            try {
+                const refs = await this.fetchAllRefsForActiveTab();
+                this.selectedIssueRefsByTab[key] = refs;
+                this.selectAllFilteredByTab[key] = refs.length > 0;
+                if (refs.length === 0) {
+                    this.showMessage('No rows found in current tab/filter scope.', 'warning');
+                }
+            } catch (err) {
+                this.selectAllFilteredByTab[key] = false;
+                this.showMessage('Failed to select filtered rows: ' + err.message, 'error');
+            }
+        },
+
+        tabCounterLabel(tab) {
+            const s = this.tabStats?.[tab] || { actionable: 0, resolved: 0, manual: 0 };
+            return `A:${s.actionable || 0}  R:${s.resolved || 0}  M:${s.manual || 0}`;
+        },
+
+        recomputeReadyGate() {
+            const keys = ['integrity', 'missing', 'swings'];
+            const totals = keys.reduce((acc, key) => {
+                const s = this.tabStats?.[key] || {};
+                acc.actionable += Number(s.actionable || 0);
+                acc.manual += Number(s.manual || 0);
+                acc.resolved += Number(s.resolved || 0);
+                return acc;
+            }, { actionable: 0, manual: 0, resolved: 0 });
+
+            const blocking = totals.actionable + totals.manual;
+            this.readyGate = {
+                is_ready: blocking === 0,
+                blocking,
+                actionable: totals.actionable,
+                manual: totals.manual,
+                resolved: totals.resolved,
+            };
+        },
+
+        async changeTab(tab) {
+            if (!tab || tab === this.activeTab) return;
+            this.activeTab = tab;
+            this.meta.current_page = 1;
+            await this.loadList();
+        },
+
+        openBulkApproveModal(mode = 'all') {
+            this.bulkApproveMode = mode;
+            if (mode === 'selected' && this.selectedCountForActiveTab() === 0) {
+                this.showMessage('No selected rows for current tab.', 'warning');
+                return;
+            }
+            this.bulkApproveAcknowledge = false;
+            this.bulkApproveNote = '';
+            this.bulkApproveResult = null;
+            this.bulkApproveModalOpen = true;
+        },
+
+        closeBulkApproveModal() {
+            if (this.bulkApproving) return;
+            this.bulkApproveModalOpen = false;
+            this.bulkApproveAcknowledge = false;
+            this.bulkApproveNote = '';
+            this.bulkApproveResult = null;
+        },
+
+        async approveAllFlags() {
+            if (this.bulkApproving) return;
+            if (!this.bulkApproveAcknowledge) return;
+
+            this.bulkApproving = true;
+            try {
+                const resp = await fetch('/api/mark-entry/acsee/moderation/issues/accept-inc-bulk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        exam_year_id: this.filters.exam_year_id || null,
+                        status: this.filters.status || null,
+                        school_id: this.filters.school_id || null,
+                        subject_id: this.filters.subject_id || null,
+                        q: this.filters.q || null,
+                        tab: this.activeTab || null,
+                        selected_refs: this.bulkApproveMode === 'selected' ? this.selectedRefsForTab() : [],
+                        note: this.bulkApproveNote || 'Bulk approved from Entry Outliers QA',
+                    }),
+                });
+
+                const json = await resp.json();
+                if (!json.ok) {
+                    throw new Error(json.message || `HTTP ${resp.status}`);
+                }
+
+                this.bulkApproveResult = {
+                    ok: true,
+                    message: json.message || 'Bulk approval completed.',
+                    stats: json.stats || {},
+                    reasons: Array.isArray(json.reasons) ? json.reasons : [],
+                };
+
+                await Promise.all([
+                    this.loadSummary(),
+                    this.loadList(),
+                    this.loadTabStats(),
+                ]);
+
+                const resolved = Number(this.bulkApproveResult.stats?.resolved || 0);
+                const skipped = Number(this.bulkApproveResult.stats?.skipped || 0);
+                const failed = Number(this.bulkApproveResult.stats?.failed || 0);
+
+                if (failed === 0) {
+                    if (resolved > 0) {
+                        this.showMessage(`Bulk approval complete: ${resolved} resolved, ${skipped} skipped.`, 'success');
+                    } else {
+                        this.showMessage(`No actionable flags were found for current filters. ${skipped} row(s) skipped.`, 'warning');
+                    }
+                    if (this.bulkApproveMode === 'selected') {
+                        this.selectedIssueRefsByTab[this.activeTab || 'integrity'] = [];
+                        this.selectAllFilteredByTab[this.activeTab || 'integrity'] = false;
+                    }
+                    this.closeBulkApproveModal();
+                }
+            } catch (e) {
+                this.bulkApproveResult = {
+                    ok: false,
+                    message: 'Failed to approve flags: ' + e.message,
+                    stats: {},
+                    reasons: [],
+                };
+            } finally {
+                this.bulkApproving = false;
+            }
+        },
+
+        async exportOutliersPdf() {
+            if (this.exportPdfLoading) return;
+            this.exportPdfLoading = true;
+            try {
+                const res = await fetch('/api/mark-entry/acsee/outliers/export/pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/pdf',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        exam_year_id: this.filters.exam_year_id || null,
+                        status: this.filters.status || null,
+                        school_id: this.filters.school_id || null,
+                        subject_id: this.filters.subject_id || null,
+                        q: this.filters.q || null,
+                        tab: this.activeTab || 'integrity',
+                    }),
+                });
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `entry-outliers-qa-${this.activeTab || 'integrity'}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+            } catch (e) {
+                alert('Export failed: ' + e.message);
+            } finally {
+                this.exportPdfLoading = false;
+            }
+        },
+
+        buildParams() {
+            const params = new URLSearchParams({
+                page: this.meta.current_page || 1,
+                per_page: this.meta.per_page || 50,
+            });
+            if (this.filters.exam_year_id) params.set('exam_year_id', this.filters.exam_year_id);
+            if (this.filters.status) params.set('status', this.filters.status);
+            if (this.filters.school_id) params.set('school_id', this.filters.school_id);
+            if (this.filters.subject_id) params.set('subject_id', this.filters.subject_id);
+            if (this.filters.q) params.set('q', this.filters.q);
+            if (this.activeTab) params.set('tab', this.activeTab);
+            return params.toString();
+        },
+
+        async loadSummary() {
+            try {
+                const res = await fetch(`/api/mark-entry/acsee/outliers/summary?${this.buildParams()}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await res.json();
+                this.summary = data.data || {};
+            } catch (_) {
+                this.summary = {};
+            }
+        },
+
+        async loadList() {
+            this.loading = true;
+            this.error = '';
+            try {
+                const res = await fetch(`/api/mark-entry/acsee/outliers/list?${this.buildParams()}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                this.rows = data.data || [];
+                this.meta = data.meta || this.meta;
+            } catch (e) {
+                this.error = 'Failed to load outliers list: ' + e.message;
+                this.rows = [];
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async loadTabStats() {
+            this.tabStatsLoading = true;
+            try {
+                const params = new URLSearchParams();
+                if (this.filters.exam_year_id) params.set('exam_year_id', this.filters.exam_year_id);
+                if (this.filters.status) params.set('status', this.filters.status);
+                if (this.filters.school_id) params.set('school_id', this.filters.school_id);
+                if (this.filters.subject_id) params.set('subject_id', this.filters.subject_id);
+                if (this.filters.q) params.set('q', this.filters.q);
+
+                const res = await fetch(`/api/mark-entry/acsee/outliers/tab-stats?${params.toString()}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                const data = await res.json();
+                const fallback = { total: 0, actionable: 0, resolved: 0, manual: 0 };
+                this.tabStats = {
+                    integrity: data?.data?.integrity || fallback,
+                    missing: data?.data?.missing || fallback,
+                    swings: data?.data?.swings || fallback,
+                };
+                this.recomputeReadyGate();
+            } catch (_) {
+                this.tabStats = {
+                    integrity: { total: 0, actionable: 0, resolved: 0, manual: 0 },
+                    missing: { total: 0, actionable: 0, resolved: 0, manual: 0 },
+                    swings: { total: 0, actionable: 0, resolved: 0, manual: 0 },
+                };
+                this.recomputeReadyGate();
+            } finally {
+                this.tabStatsLoading = false;
+            }
+        },
+    };
+}
+
 // ==================== SUBMIT MARKS VIEW ====================
 function submitMarksView() {
     return {
+        rows: [],
         batches: [],
         isLoading: false,
         errorMsg: '',
         submittingId: null,
         showDetailModal: false,
         detailBatch: null,
-        filters: { exam_year: '', status: 'validated', school_id: '', subject_id: '' },
+        filters: { exam_year_id: '', status: 'validated', school_id: '', subject_id: '', q: '' },
         filterYears: [],
         filterSchools: [],
         filterSubjects: [],
-        pagination: { total: 0, current_page: 1, last_page: 1, has_more: false },
+        filterStatuses: [
+            { value: 'validated', label: 'Validated / Ready' },
+            { value: 'submitted', label: 'Submitted' },
+            { value: 'approved', label: 'Approved' },
+            { value: 'rejected', label: 'Rejected' },
+            { value: 'locked', label: 'Locked' },
+            { value: 'all', label: 'All' },
+        ],
+        yearOpen: false,
+        statusOpen: false,
+        schoolOpen: false,
+        subjectOpen: false,
+        yearSearch: '',
+        statusSearch: '',
+        schoolSearch: '',
+        subjectSearch: '',
+        pagination: {
+            page: 1,
+            perPage: 25,
+            total: 0,
+            lastPage: 1,
+            from: 0,
+            to: 0,
+            count_on_page: 0,
+            current_page: 1,
+            last_page: 1,
+            has_more: false,
+        },
 
-        init() {
-            // Populate filter dropdowns from parent markEntryManager context
+        async init() {
             const root = this.$root || {};
-            this.filterYears = (root.examYears || []).map(y => y.year_label);
+            this.filterYears = (root.examYears || []).map(y => ({
+                value: String(y.id ?? ''),
+                label: String(y.year_label ?? y.label ?? y.id),
+                year_label: String(y.year_label ?? y.label ?? ''),
+            }));
             this.filterSchools = root.schools || [];
             this.filterSubjects = root.subjects || [];
+            this.$nextTick(() => this.applySchoolNoWrapSelect2Style());
+            await this.loadBatches(1);
+        },
+
+        applySchoolNoWrapSelect2Style() {
+            if (!window.$) return;
+            const $ = window.$;
+            $('.school-select').next('.select2-container')
+                .find('.select2-selection__rendered')
+                .css({
+                    whiteSpace: 'nowrap',
+                    overflowX: 'auto',
+                    overflowY: 'hidden'
+                });
+        },
+
+        applyFilters() {
+            this.pagination.page = 1;
+            this.pagination.current_page = 1;
+            this.loadBatches(1);
+        },
+
+        setPerPage(value) {
+            const normalized = Number(value) || 25;
+            this.pagination.perPage = normalized;
+            this.pagination.page = 1;
+            this.pagination.current_page = 1;
+            this.loadBatches(1);
+        },
+
+        goToPage(page) {
+            const target = Number(page);
+            if (!target || target < 1 || target > this.pagination.lastPage || target === this.pagination.page) return;
+            this.loadBatches(target);
+        },
+
+        firstPage() {
+            this.goToPage(1);
+        },
+
+        lastPage() {
+            this.goToPage(this.pagination.last_page || this.pagination.lastPage || 1);
+        },
+
+        prevPage() {
+            this.goToPage((this.pagination.current_page || this.pagination.page || 1) - 1);
+        },
+
+        nextPage() {
+            this.goToPage((this.pagination.current_page || this.pagination.page || 1) + 1);
+        },
+
+        pageWindow() {
+            const current = this.pagination.current_page || 1;
+            const last = this.pagination.last_page || 1;
+            const size = 9;
+
+            let start = Math.max(1, current - Math.floor(size / 2));
+            let end = Math.min(last, start + size - 1);
+            start = Math.max(1, end - size + 1);
+
+            const pages = [];
+            for (let p = start; p <= end; p++) pages.push(p);
+            return pages;
+        },
+
+        selectedYearLabel() {
+            if (!this.filters.exam_year_id) return 'All Years';
+            return this.filterYears.find(y => String(y.value) === String(this.filters.exam_year_id))?.label || 'All Years';
+        },
+
+        selectedStatusLabel() {
+            return this.filterStatuses.find(s => s.value === this.filters.status)?.label || 'Validated / Ready';
+        },
+
+        selectedSchoolLabel() {
+            if (!this.filters.school_id) return 'All Schools';
+            const school = this.filterSchools.find(s => String(s.id) === String(this.filters.school_id));
+            return school ? (school.code ? `${school.code} - ${school.name}` : school.name) : 'All Schools';
+        },
+
+        selectedSubjectLabel() {
+            if (!this.filters.subject_id) return 'All Subjects';
+            const subject = this.filterSubjects.find(s => String(s.id) === String(this.filters.subject_id));
+            return subject ? (subject.code ? `${subject.code} - ${subject.name}` : subject.name) : 'All Subjects';
+        },
+
+        filteredYears() {
+            const q = this.yearSearch.trim().toLowerCase();
+            if (!q) return this.filterYears;
+            return this.filterYears.filter(y => String(y.label).toLowerCase().includes(q));
+        },
+
+        filteredStatuses() {
+            const q = this.statusSearch.trim().toLowerCase();
+            if (!q) return this.filterStatuses;
+            return this.filterStatuses.filter(s => s.label.toLowerCase().includes(q));
+        },
+
+        filteredSchools() {
+            const q = this.schoolSearch.trim().toLowerCase();
+            if (!q) return this.filterSchools;
+            return this.filterSchools.filter(s => `${s.code || ''} ${s.name || ''}`.toLowerCase().includes(q));
+        },
+
+        filteredSubjects() {
+            const q = this.subjectSearch.trim().toLowerCase();
+            if (!q) return this.filterSubjects;
+            return this.filterSubjects.filter(s => `${s.code || ''} ${s.name || ''}`.toLowerCase().includes(q));
+        },
+
+        selectYear(value) {
+            this.filters.exam_year_id = value;
+            this.yearOpen = false;
+            this.applyFilters();
+        },
+
+        selectStatus(value) {
+            this.filters.status = value;
+            this.statusOpen = false;
+            this.applyFilters();
+        },
+
+        selectSchool(value) {
+            this.filters.school_id = value;
+            this.schoolOpen = false;
+            this.applyFilters();
+        },
+
+        selectSubject(value) {
+            this.filters.subject_id = value;
+            this.subjectOpen = false;
+            this.applyFilters();
         },
 
         statusBadge(status) {
@@ -6753,19 +9934,57 @@ function submitMarksView() {
             this.isLoading = true;
             this.errorMsg = '';
             try {
-                const params = new URLSearchParams({ page, per_page: 20 });
-                if (this.filters.exam_year) params.set('exam_year', this.filters.exam_year);
+                const params = new URLSearchParams({ page, per_page: this.pagination.perPage || 25 });
+                if (this.filters.exam_year_id) params.set('exam_year_id', this.filters.exam_year_id);
                 if (this.filters.status) params.set('status', this.filters.status);
                 if (this.filters.school_id) params.set('school_id', this.filters.school_id);
                 if (this.filters.subject_id) params.set('subject_id', this.filters.subject_id);
+                if (this.filters.q) params.set('q', this.filters.q);
 
                 const resp = await fetch(`/api/mark-entry/acsee/submission/batches?${params}`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                 const json = await resp.json();
-                this.batches = json.data || [];
-                this.pagination = json.pagination || {};
+                this.rows = json.data || [];
+                this.batches = this.rows;
+                const meta = json.meta || json.pagination || {};
+                const currentPage = Number(meta.current_page || json.current_page || page || 1);
+                const lastPage = Number(meta.last_page || json.last_page || 1);
+                const total = Number(meta.total || json.total || 0);
+                const perPage = Number(meta.per_page || json.per_page || this.pagination.perPage || 25);
+                const from = Number(meta.from || json.from || (total === 0 ? 0 : ((currentPage - 1) * perPage) + 1));
+                const to = Number(meta.to || json.to || Math.min(currentPage * perPage, total));
+
+                this.pagination = {
+                    page: currentPage,
+                    perPage,
+                    total,
+                    lastPage,
+                    from,
+                    to,
+                    count_on_page: (this.rows || []).length,
+                    current_page: currentPage,
+                    last_page: lastPage,
+                    has_more: currentPage < lastPage,
+                };
+
+                if (this.pagination.page > this.pagination.lastPage && this.pagination.lastPage > 0) {
+                    this.pagination.page = 1;
+                    this.pagination.current_page = 1;
+                    return this.loadBatches(1);
+                }
+                this.filterYears = (json.filters?.exam_years || this.filterYears || []).map(y => ({
+                    value: String(y.id ?? ''),
+                    label: String(y.year_label ?? y.label ?? y.id),
+                    year_label: String(y.year_label ?? y.label ?? ''),
+                }));
+                this.filterSchools = json.filters?.schools || this.filterSchools || [];
+                this.filterSubjects = json.filters?.subjects || this.filterSubjects || [];
+                if (Array.isArray(json.filters?.statuses) && json.filters.statuses.length > 0) {
+                    this.filterStatuses = json.filters.statuses;
+                }
+                this.$nextTick(() => this.applySchoolNoWrapSelect2Style());
             } catch (e) {
                 this.errorMsg = 'Failed to load batches: ' + e.message;
             } finally {
@@ -6818,17 +10037,50 @@ function lockStatusView() {
         showLockModal: false,
         lockTarget: null,
         lockConfirmText: '',
+        isBulkLocking: false,
+        showBulkLockModal: false,
+        bulkLockMode: 'visible',
+        bulkLockCount: 0,
+        bulkLockConfirmText: '',
+        bulkLockAcknowledged: false,
         showPromotionResult: false,
         promotionData: null,
         showHistoryModal: false,
         historyLoading: false,
         historyItems: [],
 
+        notify(message, type = 'info') {
+            try {
+                const alertDiv = document.createElement('div');
+                const styles = type === 'success'
+                    ? { bg: 'bg-green-50 border-green-300 text-green-800', icon: '✓', title: 'Success' }
+                    : type === 'warning'
+                        ? { bg: 'bg-amber-50 border-amber-300 text-amber-900', icon: '⚠', title: 'Warning' }
+                        : { bg: 'bg-red-50 border-red-300 text-red-800', icon: '✕', title: 'Error' };
+                alertDiv.style.zIndex = '99999';
+                alertDiv.className = `fixed top-4 right-4 left-4 sm:left-auto sm:w-96 ${styles.bg} p-5 rounded-lg border-2 shadow-xl`;
+                alertDiv.innerHTML = `<div class="flex items-start gap-3">
+                    <span class="text-2xl font-bold">${styles.icon}</span>
+                    <div class="flex-1">
+                        <p class="font-bold text-lg">${styles.title}</p>
+                        <p class="text-sm mt-1 whitespace-pre-wrap">${message}</p>
+                    </div>
+                    <button class="text-lg leading-none opacity-70 hover:opacity-100" onclick="this.parentElement.parentElement.remove()">×</button>
+                </div>`;
+                document.body.appendChild(alertDiv);
+                const timeout = type === 'success' ? 5000 : 8000;
+                setTimeout(() => { if (alertDiv.parentElement) alertDiv.remove(); }, timeout);
+            } catch (_) {
+                console.log(message);
+            }
+        },
+
         async loadData() {
             this.isLoading = true;
             this.errorMsg = '';
             try {
-                const resp = await fetch('/api/mark-entry/acsee/locking/status', {
+                const resp = await fetch('/api/mark-entry/acsee/locking/status?approved_limit=100&locked_limit=50&_ts=' + Date.now(), {
+                    cache: 'no-store',
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -6865,19 +10117,126 @@ function lockStatusView() {
                 if (json.success) {
                     this.showLockModal = false;
                     this.lockConfirmText = '';
-                    this.$root.showMessage(json.message || 'Batch locked and marks promoted!', 'success');
+                    this.notify(json.message || 'Batch locked and marks promoted!', 'success');
                     if (json.promotion) {
                         this.promotionData = json.promotion;
                         this.showPromotionResult = true;
                     }
                     await this.loadData();
                 } else {
-                    this.$root.showMessage(json.message || 'Failed to lock batch', 'error');
+                    this.notify(json.message || 'Failed to lock batch', 'error');
                 }
             } catch (e) {
-                this.$root.showMessage('Error: ' + e.message, 'error');
+                this.notify('Error: ' + e.message, 'error');
             } finally {
                 this.lockingId = null;
+            }
+        },
+
+        async lockAllVisible() {
+            if (this.approvedBatches.length === 0 || this.isBulkLocking) return;
+            this.bulkLockMode = 'visible';
+            this.bulkLockCount = this.approvedBatches.length;
+            this.bulkLockConfirmText = '';
+            this.bulkLockAcknowledged = false;
+            this.showBulkLockModal = true;
+        },
+
+        async lockAllInScope() {
+            const totalApproved = Number(this.stats.approved_ready || 0);
+            if (totalApproved === 0 || this.isBulkLocking) return;
+            this.bulkLockMode = 'scope';
+            this.bulkLockCount = totalApproved;
+            this.bulkLockConfirmText = '';
+            this.bulkLockAcknowledged = false;
+            this.showBulkLockModal = true;
+        },
+
+        async executeBulkLock() {
+            if (!this.bulkLockAcknowledged || this.bulkLockConfirmText.trim().toUpperCase() !== 'LOCK ALL') return;
+            this.isBulkLocking = true;
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+                let totalLocked = 0;
+                let totalSkipped = 0;
+                let totalFailed = 0;
+                const skipReasons = [];
+
+                if (this.bulkLockMode === 'visible') {
+                    // API allows max 200 per request; process visible batches in chunks.
+                    const ids = this.approvedBatches.map(b => b.id);
+                    const chunkSize = 200;
+                    for (let i = 0; i < ids.length; i += chunkSize) {
+                        const batchIds = ids.slice(i, i + chunkSize);
+                        const resp = await fetch('/api/mark-entry/submission/lock-bulk', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: JSON.stringify({ batch_ids: batchIds }),
+                        });
+
+                        let json = {};
+                        try { json = await resp.json(); } catch (_) { json = {}; }
+
+                        if (!resp.ok || !json.success) {
+                            this.notify(json.message || `Bulk lock failed (HTTP ${resp.status})`, 'error');
+                            return;
+                        }
+
+                        const summary = json.data || {};
+                        totalLocked += (summary.locked || []).length;
+                        totalSkipped += (summary.skipped || []).length;
+                        totalFailed += (summary.failed || []).length;
+                        (summary.skipped || []).forEach(s => {
+                            if (s?.reason && skipReasons.length < 3) skipReasons.push(s.reason);
+                        });
+                    }
+                } else {
+                    const resp = await fetch('/api/mark-entry/submission/lock-all', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify({}),
+                    });
+
+                    let json = {};
+                    try { json = await resp.json(); } catch (_) { json = {}; }
+
+                    if (!resp.ok || !json.success) {
+                        this.notify(json.message || `Bulk lock failed (HTTP ${resp.status})`, 'error');
+                        return;
+                    }
+
+                    const summary = json.data || {};
+                    totalLocked += (summary.locked || []).length;
+                    totalSkipped += (summary.skipped || []).length;
+                    totalFailed += (summary.failed || []).length;
+                    (summary.skipped || []).forEach(s => {
+                        if (s?.reason && skipReasons.length < 3) skipReasons.push(s.reason);
+                    });
+                }
+
+                this.showBulkLockModal = false;
+                this.bulkLockConfirmText = '';
+                this.bulkLockAcknowledged = false;
+                const msg = `Bulk lock complete: ${totalLocked} locked, ${totalSkipped} skipped, ${totalFailed} failed.`;
+                if (totalLocked === 0 && totalSkipped > 0 && totalFailed === 0) {
+                    const hint = skipReasons.length > 0 ? ` Reasons: ${skipReasons.join(' | ')}` : '';
+                    this.notify(msg + hint, 'warning');
+                } else {
+                    this.notify(msg, totalFailed > 0 ? 'error' : 'success');
+                }
+                await this.loadData();
+            } catch (e) {
+                this.notify('Error: ' + e.message, 'error');
+            } finally {
+                this.isBulkLocking = false;
             }
         },
 
@@ -6908,10 +10267,160 @@ function adminUnlockView() {
         errorMsg: '',
         filters: { exam_year: '', district_id: '', school_id: '' },
         pagination: { total: 0, current_page: 1, last_page: 1, has_more: false },
+        filterYears: [],
+        filterDistricts: [],
+        filterSchools: [],
+        yearOpen: false,
+        districtOpen: false,
+        schoolOpen: false,
+        yearSearch: '',
+        districtSearch: '',
+        schoolSearch: '',
         showUnlockModal: false,
         unlockTarget: null,
         unlockReason: '',
         unlockingId: null,
+
+        async init() {
+            await this.loadFilterOptions();
+            await this.loadLockedBatches(1);
+        },
+
+        async loadFilterOptions() {
+            const yearsResp = await fetch('/api/exam-years/with-acsee', {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const yearsJson = yearsResp.ok ? await yearsResp.json() : { years: [] };
+            this.filterYears = Array.isArray(yearsJson.years) ? yearsJson.years.map(y => String(y.year_label)) : [];
+
+            await this.loadDistrictsForYear(this.filters.exam_year || '');
+            await this.loadSchoolsForContext();
+        },
+
+        async loadDistrictsForYear(examYearLabel = '') {
+            const labels = examYearLabel ? [String(examYearLabel)] : [...new Set(this.filterYears)];
+            if (labels.length === 0) {
+                this.filterDistricts = [];
+                return;
+            }
+
+            const responses = await Promise.all(
+                labels.map(label =>
+                    fetch(`/api/mark-entry/acsee/districts-by-year?exam_year=${encodeURIComponent(label)}`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                )
+            );
+
+            const all = [];
+            for (const resp of responses) {
+                if (!resp.ok) continue;
+                const json = await resp.json();
+                if (Array.isArray(json.data)) all.push(...json.data);
+            }
+
+            const deduped = new Map();
+            all.forEach(d => {
+                if (!deduped.has(String(d.id))) deduped.set(String(d.id), d);
+            });
+            this.filterDistricts = Array.from(deduped.values());
+        },
+
+        async loadSchoolsForContext() {
+            if (this.filters.district_id) {
+                const resp = await fetch(`/api/mark-entry/acsee/schools?district_id=${encodeURIComponent(this.filters.district_id)}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const json = resp.ok ? await resp.json() : { data: [] };
+                this.filterSchools = Array.isArray(json.data) ? json.data : [];
+                return;
+            }
+
+            const labels = this.filters.exam_year ? [String(this.filters.exam_year)] : [...new Set(this.filterYears)];
+            if (labels.length === 0) {
+                this.filterSchools = [];
+                return;
+            }
+
+            const responses = await Promise.all(
+                labels.map(label =>
+                    fetch(`/api/mark-entry/acsee/schools-by-year?exam_year=${encodeURIComponent(label)}`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                )
+            );
+
+            const all = [];
+            for (const resp of responses) {
+                if (!resp.ok) continue;
+                const json = await resp.json();
+                if (Array.isArray(json.data)) all.push(...json.data);
+            }
+
+            const deduped = new Map();
+            all.forEach(s => {
+                if (!deduped.has(String(s.id))) deduped.set(String(s.id), s);
+            });
+            this.filterSchools = Array.from(deduped.values());
+        },
+
+        selectedYearLabel() {
+            return this.filters.exam_year || 'All Years';
+        },
+
+        selectedDistrictLabel() {
+            if (!this.filters.district_id) return 'All Districts';
+            const district = this.filterDistricts.find(d => String(d.id) === String(this.filters.district_id));
+            return district ? (district.code ? `${district.code} - ${district.name}` : district.name) : 'All Districts';
+        },
+
+        selectedSchoolLabel() {
+            if (!this.filters.school_id) return 'All Schools';
+            const school = this.filterSchools.find(s => String(s.id) === String(this.filters.school_id));
+            return school ? (school.code ? `${school.code} - ${school.name}` : school.name) : 'All Schools';
+        },
+
+        filteredYears() {
+            const q = (this.yearSearch || '').trim().toLowerCase();
+            if (!q) return this.filterYears;
+            return this.filterYears.filter(y => y.toLowerCase().includes(q));
+        },
+
+        filteredDistricts() {
+            const q = (this.districtSearch || '').trim().toLowerCase();
+            if (!q) return this.filterDistricts;
+            return this.filterDistricts.filter(d => (`${d.code || ''} ${d.name || ''}`).toLowerCase().includes(q));
+        },
+
+        filteredSchools() {
+            const q = (this.schoolSearch || '').trim().toLowerCase();
+            if (!q) return this.filterSchools;
+            return this.filterSchools.filter(s => (`${s.code || ''} ${s.name || ''}`).toLowerCase().includes(q));
+        },
+
+        async selectYear(value) {
+            this.filters.exam_year = String(value || '');
+            this.yearOpen = false;
+            this.filters.district_id = '';
+            this.filters.school_id = '';
+            await this.loadDistrictsForYear(this.filters.exam_year);
+            await this.loadSchoolsForContext();
+            await this.loadLockedBatches(1);
+        },
+
+        async selectDistrict(value) {
+            this.filters.district_id = String(value || '');
+            this.districtOpen = false;
+            this.filters.school_id = '';
+            await this.loadSchoolsForContext();
+            await this.loadLockedBatches(1);
+        },
+
+        async selectSchool(value) {
+            this.filters.school_id = String(value || '');
+            this.schoolOpen = false;
+            await this.loadLockedBatches(1);
+        },
 
         async loadLockedBatches(page = 1) {
             this.isLoading = true;
@@ -6983,11 +10492,116 @@ function historyView() {
         pagination: { total: 0, current_page: 1, last_page: 1, has_more: false },
         filterYears: [],
         filterSchools: [],
+        yearOpen: false,
+        schoolOpen: false,
+        actionOpen: false,
+        yearSearch: '',
+        schoolSearch: '',
+        actionSearch: '',
+        actions: [
+            { value: '', label: 'All Actions' },
+            { value: 'submitted', label: 'Submitted' },
+            { value: 'approved', label: 'Approved' },
+            { value: 'rejected', label: 'Rejected' },
+            { value: 'locked', label: 'Locked' },
+            { value: 'unlocked', label: 'Unlocked' },
+        ],
 
-        init() {
-            const root = this.$root || {};
-            this.filterYears = (root.examYears || []).map(y => y.year_label);
-            this.filterSchools = root.schools || [];
+        async init() {
+            await this.loadFilterOptions();
+            await this.loadHistory();
+        },
+
+        async loadFilterOptions() {
+            const [yearsRes] = await Promise.all([
+                fetch('/api/exam-years/with-acsee', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } }),
+            ]);
+            const yearsJson = yearsRes.ok ? await yearsRes.json() : { years: [] };
+            this.filterYears = Array.isArray(yearsJson.years) ? yearsJson.years.map(y => String(y.year_label)) : [];
+            await this.loadSchoolsForYear(this.filters.exam_year || '');
+        },
+
+        async loadSchoolsForYear(examYearLabel = '') {
+            const labels = examYearLabel ? [String(examYearLabel)] : [...new Set(this.filterYears)];
+            if (labels.length === 0) {
+                this.filterSchools = [];
+                return;
+            }
+
+            const responses = await Promise.all(
+                labels.map(label =>
+                    fetch(`/api/mark-entry/acsee/schools-by-year?exam_year=${encodeURIComponent(label)}`, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    })
+                )
+            );
+
+            const allSchools = [];
+            for (const resp of responses) {
+                if (!resp.ok) continue;
+                const json = await resp.json();
+                if (Array.isArray(json.data)) allSchools.push(...json.data);
+            }
+
+            const deduped = new Map();
+            allSchools.forEach(s => {
+                if (!deduped.has(String(s.id))) deduped.set(String(s.id), s);
+            });
+            this.filterSchools = Array.from(deduped.values());
+        },
+
+        selectedYearLabel() {
+            return this.filters.exam_year || 'All Years';
+        },
+
+        selectedSchoolLabel() {
+            if (!this.filters.school_id) return 'All Schools';
+            const school = this.filterSchools.find(s => String(s.id) === String(this.filters.school_id));
+            return school ? (school.code ? `${school.code} - ${school.name}` : school.name) : 'All Schools';
+        },
+
+        selectedActionLabel() {
+            return this.actions.find(a => String(a.value) === String(this.filters.action))?.label || 'All Actions';
+        },
+
+        filteredYears() {
+            const q = (this.yearSearch || '').trim().toLowerCase();
+            if (!q) return this.filterYears;
+            return this.filterYears.filter(y => y.toLowerCase().includes(q));
+        },
+
+        filteredSchools() {
+            const q = (this.schoolSearch || '').trim().toLowerCase();
+            if (!q) return this.filterSchools;
+            return this.filterSchools.filter(s => (`${s.code || ''} ${s.name || ''}`).toLowerCase().includes(q));
+        },
+
+        filteredActions() {
+            const q = (this.actionSearch || '').trim().toLowerCase();
+            if (!q) return this.actions;
+            return this.actions.filter(a => (a.label || '').toLowerCase().includes(q));
+        },
+
+        async selectYear(value) {
+            this.filters.exam_year = String(value || '');
+            await this.loadSchoolsForYear(this.filters.exam_year);
+            if (this.filters.school_id && !this.filterSchools.find(s => String(s.id) === String(this.filters.school_id))) {
+                this.filters.school_id = '';
+            }
+            this.yearOpen = false;
+            await this.loadHistory(1);
+        },
+
+        async selectSchool(value) {
+            this.filters.school_id = String(value || '');
+            this.schoolOpen = false;
+            await this.loadHistory(1);
+        },
+
+        async selectAction(value) {
+            this.filters.action = String(value || '');
+            this.actionOpen = false;
+            await this.loadHistory(1);
         },
 
         async loadHistory(page = 1) {
@@ -7013,6 +10627,22 @@ function historyView() {
             } finally {
                 this.isLoading = false;
             }
+        },
+
+        historyPageWindow() {
+            const current = Number(this.pagination.current_page || 1);
+            const last = Number(this.pagination.last_page || 1);
+            const windowSize = 9;
+            if (last <= windowSize) {
+                return Array.from({ length: last }, (_, i) => i + 1);
+            }
+
+            const half = Math.floor(windowSize / 2);
+            let start = Math.max(1, current - half);
+            let end = Math.min(last, start + windowSize - 1);
+            start = Math.max(1, end - windowSize + 1);
+
+            return Array.from({ length: end - start + 1 }, (_, i) => start + i);
         },
     };
 }
@@ -7268,6 +10898,16 @@ function adminBatchManager() {
             if (p >= 1 && p <= this.batchPagination.last_page) this.loadBatches(p);
         },
 
+        batchPageWindow() {
+            const current = Number(this.batchPagination.current_page || 1);
+            const last = Number(this.batchPagination.last_page || 1);
+            const size = 5;
+            let start = Math.max(1, current - Math.floor(size / 2));
+            let end = Math.min(last, start + size - 1);
+            start = Math.max(1, end - size + 1);
+            return Array.from({ length: Math.max(0, end - start + 1) }, (_, i) => start + i);
+        },
+
         async viewBatchDetail(id) {
             try {
                 const resp = await fetch(`/api/acsee/admin/batches/${id}`, {
@@ -7397,6 +11037,16 @@ function adminLogsManager() {
 
         logPage(p) {
             if (p >= 1 && p <= this.logPagination.last_page) this.loadLogs(p);
+        },
+
+        logPageWindow() {
+            const current = Number(this.logPagination.current_page || 1);
+            const last = Number(this.logPagination.last_page || 1);
+            const size = 5;
+            let start = Math.max(1, current - Math.floor(size / 2));
+            let end = Math.min(last, start + size - 1);
+            start = Math.max(1, end - size + 1);
+            return Array.from({ length: Math.max(0, end - start + 1) }, (_, i) => start + i);
         },
 
         openLogDetail(log) {

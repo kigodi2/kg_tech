@@ -10,6 +10,8 @@ use App\Models\ExamType;
 use App\Models\ExamYear;
 use App\Models\School;
 use App\Models\Candidate;
+use App\Models\CandidateExamRegistration;
+use App\Models\Subject;
 use App\Services\Candidates\CandidateImportService;
 
 class CandidateImportTest extends TestCase
@@ -22,11 +24,30 @@ class CandidateImportTest extends TestCase
 
     // Create ACSEE exam type and an active exam year
     ExamType::create(['code' => 'ACSEE', 'name' => 'ACSEE']);
+    ExamType::create(['code' => 'CSEE', 'name' => 'CSEE']);
     ExamYear::create(['year_label' => '2026', 'is_active' => true]);
 
     // Create a region and a school
     $region = \App\Models\Region::create(['code' => 'R1', 'name' => 'TestRegion']);
     School::create(['code' => 'S001', 'name' => 'Test School', 'region_id' => $region->id]);
+    School::create(['code' => 'S5191', 'name' => 'CSEE Centre', 'region_id' => $region->id]);
+
+    $csee = ExamType::where('code', 'CSEE')->first();
+    foreach ([
+      ['011', 'CIVICS'],
+      ['012', 'HISTORY'],
+      ['013', 'GEOGRAPHY'],
+      ['021', 'KISWAHILI'],
+      ['022', 'ENGLISH LANGUAGE'],
+      ['033', 'BIOLOGY'],
+      ['041', 'BASIC MATHEMATICS'],
+    ] as [$code, $name]) {
+      Subject::create([
+        'exam_type_id' => $csee->id,
+        'code' => $code,
+        'name' => $name,
+      ]);
+    }
 
     // Create combinations
     $acsee = ExamType::where('code', 'ACSEE')->first();
@@ -141,5 +162,36 @@ class CandidateImportTest extends TestCase
 
     $candidate = Candidate::where('candidate_id', 'X004')->first();
     $this->assertEquals('OLD', $candidate->combination);
+  }
+
+  public function test_csee_import_derives_school_code_from_first_five_characters_and_registers_candidate()
+  {
+    $csv = "candidate_id,full_name,gender\n";
+    $csv .= "S51910001,JANE DOE,F\n";
+
+    $file = $this->makeUploadFromString($csv);
+
+    $service = new CandidateImportService();
+    $result = $service->commitImport($file, '2026', 'CSEE', 'skip');
+
+    $this->assertTrue($result['success']);
+    $this->assertEquals(1, $result['imported_count']);
+
+    $candidate = Candidate::where('candidate_id', 'S51910001')->first();
+    $this->assertNotNull($candidate);
+    $this->assertEquals('CSEE', $candidate->exam_type);
+    $this->assertEquals('F', $candidate->gender);
+    $this->assertEquals('S5191', $candidate->school?->code);
+
+    $cseeType = ExamType::where('code', 'CSEE')->firstOrFail();
+    $examYear = ExamYear::where('year_label', '2026')->firstOrFail();
+
+    $this->assertDatabaseHas('candidate_exam_registrations', [
+        'candidate_id' => $candidate->id,
+        'exam_type_id' => $cseeType->id,
+        'exam_year_id' => $examYear->id,
+    ]);
+
+    $this->assertEquals(7, $candidate->subjectSelections()->where('exam_type_id', $cseeType->id)->where('exam_year_id', $examYear->id)->count());
   }
 }

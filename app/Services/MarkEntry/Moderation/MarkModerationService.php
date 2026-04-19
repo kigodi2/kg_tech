@@ -76,6 +76,17 @@ class MarkModerationService {
                 'reviewer_id' => $approver->id,
             ]);
 
+            $currentState = $this->lifecycleService->getCurrentState($batch);
+            if ($currentState === 'validated') {
+                $this->lifecycleService->transition(
+                    $batch,
+                    'awaiting_moderation',
+                    $approver,
+                    'Sent to moderation before approval'
+                );
+                $batch->refresh();
+            }
+
             $this->lifecycleService->transition(
                 $batch,
                 'approved',

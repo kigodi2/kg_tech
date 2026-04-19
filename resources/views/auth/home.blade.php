@@ -1,0 +1,529 @@
+@extends('layouts.auth-rms')
+
+@section('title', 'IRMS Home')
+
+@section('content')
+<style>
+    .public-main {
+        flex: 1 0 auto;
+        padding: clamp(18px, 3vw, 30px);
+    }
+
+    .public-home-shell {
+        max-width: 1220px;
+        margin: 0 auto;
+        display: grid;
+        gap: 24px;
+    }
+
+    .hero-section {
+        position: relative;
+        overflow: hidden;
+        border-radius: 28px;
+        background:
+            linear-gradient(135deg, rgba(14, 76, 140, 0.96) 0%, rgba(10, 61, 113, 0.94) 56%, rgba(22, 91, 56, 0.88) 100%);
+        color: #ffffff;
+        padding: clamp(28px, 4vw, 46px);
+        box-shadow: 0 24px 54px rgba(15, 23, 42, 0.18);
+    }
+
+    .hero-section::before,
+    .hero-section::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        pointer-events: none;
+    }
+
+    .hero-section::before {
+        width: 360px;
+        height: 360px;
+        right: -120px;
+        top: -120px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 68%);
+    }
+
+    .hero-section::after {
+        width: 280px;
+        height: 280px;
+        left: -80px;
+        bottom: -120px;
+        background: radial-gradient(circle, rgba(252, 209, 22, 0.18) 0%, rgba(252, 209, 22, 0) 68%);
+    }
+
+    .hero-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
+        gap: 24px;
+        align-items: center;
+    }
+
+    .hero-markers {
+        display: inline-flex;
+        gap: 5px;
+        margin-bottom: 16px;
+    }
+
+    .hero-markers span {
+        width: 34px;
+        height: 4px;
+        border-radius: 999px;
+        display: block;
+    }
+
+    .hero-copy h1 {
+        margin: 0 0 14px;
+        font-size: clamp(2rem, 4vw, 3.15rem);
+        line-height: 1.04;
+        letter-spacing: -0.03em;
+        color: #ffffff;
+    }
+
+    .hero-copy p {
+        margin: 0;
+        max-width: 680px;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 1rem;
+        line-height: 1.8;
+    }
+
+    .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+    }
+
+    .hero-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 46px;
+        padding: 0 18px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        text-decoration: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .hero-btn:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+    .hero-btn-primary {
+        background: #ffffff;
+        color: #0e4c8c;
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+    }
+
+    .hero-btn-secondary {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        color: #ffffff;
+    }
+
+    .hero-aside {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 22px;
+        padding: 22px 22px 20px;
+        backdrop-filter: blur(6px);
+    }
+
+    .hero-aside h2 {
+        margin: 0 0 10px;
+        font-size: 1.05rem;
+        color: #ffffff;
+    }
+
+    .hero-aside p {
+        margin: 0 0 16px;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 0.93rem;
+        line-height: 1.7;
+    }
+
+    .hero-stat-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .hero-stat {
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr);
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.08);
+    }
+
+    .hero-stat-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, 0.14);
+        font-size: 1rem;
+        color: #ffffff;
+    }
+
+    .hero-stat strong {
+        display: block;
+        color: #ffffff;
+        font-size: 0.95rem;
+    }
+
+    .hero-stat span {
+        display: block;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 0.82rem;
+        margin-top: 2px;
+    }
+
+    .section-shell {
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid rgba(203, 213, 225, 0.92);
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05);
+    }
+
+    .section-heading {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: #1f2937;
+    }
+
+    .section-heading p {
+        margin: 6px 0 0;
+        max-width: 720px;
+        color: #64748b;
+        font-size: 0.95rem;
+        line-height: 1.7;
+    }
+
+    .module-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .module-card {
+        padding: 20px 18px;
+        border-radius: 20px;
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .module-card-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+        color: #ffffff;
+        font-size: 1.15rem;
+    }
+
+    .module-card h3 {
+        margin: 0 0 8px;
+        font-size: 1.15rem;
+        color: #1f2937;
+    }
+
+    .module-card p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.92rem;
+        line-height: 1.7;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 18px;
+    }
+
+    .info-card {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        border-radius: 20px;
+        padding: 20px;
+    }
+
+    .info-card h3 {
+        margin: 0 0 14px;
+        font-size: 1.15rem;
+        color: #1f2937;
+    }
+
+    .info-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .info-list-item {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+        padding: 12px 0;
+        border-top: 1px solid rgba(226, 232, 240, 0.95);
+    }
+
+    .info-list-item:first-child {
+        border-top: 0;
+        padding-top: 0;
+    }
+
+    .info-list-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: rgba(14, 76, 140, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0e4c8c;
+    }
+
+    .info-list-item strong {
+        display: block;
+        color: #1f2937;
+        font-size: 0.95rem;
+    }
+
+    .info-list-item span {
+        display: block;
+        color: #64748b;
+        font-size: 0.88rem;
+        line-height: 1.65;
+        margin-top: 2px;
+    }
+
+    .faq-stack {
+        display: grid;
+        gap: 12px;
+    }
+
+    .faq-item {
+        background: #ffffff;
+        border: 1px solid rgba(226, 232, 240, 0.95);
+        border-radius: 18px;
+        padding: 16px 18px;
+    }
+
+    .faq-item h3 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        color: #1f2937;
+    }
+
+    .faq-item p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.9rem;
+        line-height: 1.7;
+    }
+
+    @media (max-width: 1100px) {
+        .hero-grid,
+        .info-grid,
+        .module-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .public-main {
+            padding: 16px;
+        }
+
+        .section-shell,
+        .hero-section {
+            border-radius: 22px;
+            padding: 20px;
+        }
+
+        .section-heading {
+            display: block;
+        }
+    }
+</style>
+
+<main class="public-main">
+    <div class="public-home-shell">
+        <section class="hero-section">
+            <div class="hero-grid">
+                <div class="hero-copy">
+                    <div class="hero-markers" aria-hidden="true">
+                        <span style="background:#1EB53A;"></span>
+                        <span style="background:#FCD116;"></span>
+                        <span style="background:#000000;"></span>
+                        <span style="background:#00A3DD;"></span>
+                    </div>
+                    <h1>Integrated Results Management System</h1>
+                    <p>This is the official public entry page for IRMS. Authorized users may proceed to login and access protected examination workflows, including registration, mark entry, result processing, evaluations, and administrative operations.</p>
+                    <div class="hero-actions">
+                        <a href="{{ route('login') }}" class="hero-btn hero-btn-primary">
+                            <i class="fas fa-right-to-bracket" aria-hidden="true"></i>
+                            <span>Proceed to Login</span>
+                        </a>
+                        <a href="#modules" class="hero-btn hero-btn-secondary">
+                            <i class="fas fa-circle-info" aria-hidden="true"></i>
+                            <span>View System Overview</span>
+                        </a>
+                    </div>
+                </div>
+
+                <aside class="hero-aside">
+                    <h2>Access Notice</h2>
+                    <p>This page is visible to guests for orientation only. Internal system functions remain protected and require a valid IRMS account.</p>
+                    <div class="hero-stat-list">
+                        <div class="hero-stat">
+                            <div class="hero-stat-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></div>
+                            <div>
+                                <strong>Protected Internal Modules</strong>
+                                <span>Dashboard, registration, mark entry, results, evaluations, and settings are accessible only after authentication.</span>
+                            </div>
+                        </div>
+                        <div class="hero-stat">
+                            <div class="hero-stat-icon"><i class="fas fa-route" aria-hidden="true"></i></div>
+                            <div>
+                                <strong>Public Navigation</strong>
+                                <span>`HOME` opens this public entry page and `LOGIN` opens the protected sign-in form, matching the RMS guest flow pattern.</span>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <section class="section-shell" id="modules">
+            <div class="section-heading">
+                <div>
+                    <h2>Core IRMS Modules</h2>
+                    <p>The sections below reflect the actual protected modules already implemented inside IRMS.</p>
+                </div>
+            </div>
+            <div class="module-grid">
+                <article class="module-card">
+                    <div class="module-card-icon" style="background:linear-gradient(135deg,#355c9a,#4c74b4);">
+                        <i class="fas fa-clipboard-list" aria-hidden="true"></i>
+                    </div>
+                    <h3>Exam Registration</h3>
+                    <p>Manage regions, districts, schools, and candidate registration data in a structured workflow.</p>
+                </article>
+                <article class="module-card">
+                    <div class="module-card-icon" style="background:linear-gradient(135deg,#ef8c20,#dd6b20);">
+                        <i class="fas fa-pen-ruler" aria-hidden="true"></i>
+                    </div>
+                    <h3>Mark Entry</h3>
+                    <p>Support controlled mark capture, uploads, moderation, and validation for active exam years.</p>
+                </article>
+                <article class="module-card">
+                    <div class="module-card-icon" style="background:linear-gradient(135deg,#d13f7a,#b83280);">
+                        <i class="fas fa-badge-check" aria-hidden="true"></i>
+                    </div>
+                    <h3>Validation & Controls</h3>
+                    <p>Keep internal workflows traceable with audit, review, and verification steps across result processes.</p>
+                </article>
+                <article class="module-card">
+                    <div class="module-card-icon" style="background:linear-gradient(135deg,#2f9e44,#1b7f33);">
+                        <i class="fas fa-lock" aria-hidden="true"></i>
+                    </div>
+                    <h3>Security & Access</h3>
+                    <p>Authenticated route protection, session invalidation on logout, and guarded internal modules are enforced.</p>
+                </article>
+                <article class="module-card">
+                    <div class="module-card-icon" style="background:linear-gradient(135deg,#d9485f,#c53030);">
+                        <i class="fas fa-file-chart-column" aria-hidden="true"></i>
+                    </div>
+                    <h3>Results Publication</h3>
+                    <p>Handle result processing, publication workflows, and controlled portal access for approved result outputs.</p>
+                </article>
+                <article class="module-card">
+                    <div class="module-card-icon" style="background:linear-gradient(135deg,#6b46c1,#553c9a);">
+                        <i class="fas fa-headset" aria-hidden="true"></i>
+                    </div>
+                    <h3>Operational Support</h3>
+                    <p>Provide administrative tools, backup management, settings, and issue handling across the platform.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="section-shell">
+            <div class="section-heading">
+                <div>
+                    <h2>Access Control Summary</h2>
+                    <p>This public page mirrors the RMS home/login pattern, while the actual IRMS backend continues to use Laravel-native middleware and session protection.</p>
+                </div>
+            </div>
+            <div class="info-grid">
+                <div class="info-card">
+                    <h3>Guest Entry</h3>
+                    <div class="info-list">
+                        <div class="info-list-item">
+                            <div class="info-list-icon"><i class="fas fa-house" aria-hidden="true"></i></div>
+                            <div>
+                                <strong>Public Home</strong>
+                                <span>Guests can open this route for orientation and then continue to the login page.</span>
+                            </div>
+                        </div>
+                        <div class="info-list-item">
+                            <div class="info-list-icon"><i class="fas fa-user-lock" aria-hidden="true"></i></div>
+                            <div>
+                                <strong>Login-First Internal Access</strong>
+                                <span>Protected modules redirect unauthenticated requests to the IRMS login page.</span>
+                            </div>
+                        </div>
+                        <div class="info-list-item">
+                            <div class="info-list-icon"><i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i></div>
+                            <div>
+                                <strong>Secure Logout</strong>
+                                <span>Logout invalidates the session and prevents continued use of protected routes.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>Important Notes</h3>
+                    <div class="faq-stack">
+                        <div class="faq-item">
+                            <h3>Authorized access only</h3>
+                            <p>IRMS is intended for approved users operating within examination and results workflows.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3>Public page purpose</h3>
+                            <p>This page provides a formal entry point and system overview before users proceed to login.</p>
+                        </div>
+                        <div class="faq-item">
+                            <h3>Security unchanged</h3>
+                            <p>Authentication logic, route guards, middleware, session invalidation, and internal module protection remain intact.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+@endsection

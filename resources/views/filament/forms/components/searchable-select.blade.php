@@ -57,7 +57,7 @@ foreach ($options as $value => $label) {
         <!-- Dropdown -->
         <div
             x-show="open"
-            class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-10 rounded-b flex flex-col shadow-lg"
+            class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-50 rounded-b flex flex-col shadow-lg"
         >
             <!-- Search Input -->
             <input

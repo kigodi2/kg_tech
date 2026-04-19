@@ -6,6 +6,7 @@ use App\Models\CandidateExamRegistration;
 use App\Models\CandidateSubjectSelection;
 use App\Models\Combination;
 use App\Models\ExamType;
+use App\Models\Subject;
 
 /**
  * CandidateExamRegistrationObserver
@@ -82,6 +83,8 @@ class CandidateExamRegistrationObserver
         }
 
         // Create subject selections for this registration
+        $gsId = Subject::query()->where('code', '111')->value('id');
+        $bamId = Subject::query()->where('code', '141')->value('id');
         $created = 0;
         foreach ($subjects as $subject) {
             // Check if already exists (avoid duplicates)
@@ -98,6 +101,7 @@ class CandidateExamRegistrationObserver
                     'exam_year_id' => $registration->exam_year_id,
                     'subject_id' => $subject->id,
                     'year' => $registration->year ?? (int)$registration->examYear->year_label,
+                    'is_principal' => (int) $subject->id !== (int) $gsId && (int) $subject->id !== (int) $bamId,
                     'is_active' => true,
                 ]);
                 $created++;

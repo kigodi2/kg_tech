@@ -5,11 +5,14 @@ namespace App\Console\Commands;
 use App\Models\Candidate;
 use App\Models\ExamYear;
 use App\Models\ExamType;
+use App\Models\Subject;
+use App\Models\SubjectPaperWeight;
 use App\Models\SubjectMarks;
 use App\Jobs\ProcessBulkImportFile;
 use App\Services\Results\GradeCalculationService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class RecalculateAllMarksAndGrades extends Command
 {
@@ -17,6 +20,7 @@ class RecalculateAllMarksAndGrades extends Command
     protected $description = 'Recalculate marks_obtained for all subjects and grades for all candidates. This ensures multi-paper subjects are properly averaged.';
 
     private GradeCalculationService $gradeCalcService;
+    private array $paperWeightCache = [];
 
     public function __construct(GradeCalculationService $gradeCalcService)
     {
@@ -76,37 +80,27 @@ class RecalculateAllMarksAndGrades extends Command
                     ->get();
 
                 foreach ($marks as $mark) {
-                    // Recalculate marks_obtained based on paper scores and subject config
+                    // Recalculate marks_obtained using SubjectMark100 weighted normalization
                     $subject = $mark->subject;
                     
                     // Get paper marks
                     $paper1 = $mark->paper_1;
                     $paper2 = $mark->paper_2;
                     $paper3 = $mark->paper_3;
-                    
-                    // Calculate final mark (averaged if multi-paper)
-                    $paperMarks = [];
-                    if (!empty($paper1)) $paperMarks[] = (float)$paper1;
-                    if (!empty($paper2)) $paperMarks[] = (float)$paper2;
-                    if (!empty($paper3)) $paperMarks[] = (float)$paper3;
-                    
-                    if (empty($paperMarks)) {
+
+                    $finalMarks = $this->normalizeSubjectMarkTo100(
+                        [
+                            'paper_1' => $paper1,
+                            'paper_2' => $paper2,
+                            'paper_3' => $paper3,
+                        ],
+                        $subject
+                    );
+
+                    if ($finalMarks === null) {
                         continue;
                     }
-                    
-                    $totalPapers = ($subject->written_papers ?? 1) + 
-                                  ($subject->has_practical ? 1 : 0) + 
-                                  ($subject->has_project ? 1 : 0);
-                    
-                    // Calculate final marks
-                    if ($totalPapers > 1) {
-                        // Multi-paper: average
-                        $finalMarks = round(array_sum($paperMarks) / count($paperMarks), 2);
-                    } else {
-                        // Single paper: use as-is
-                        $finalMarks = $paperMarks[0] ?? null;
-                    }
-                    
+
                     // Only update if changed
                     if ($finalMarks !== null && $mark->marks_obtained != $finalMarks) {
                         $mark->update(['marks_obtained' => $finalMarks]);
@@ -131,5 +125,96 @@ class RecalculateAllMarksAndGrades extends Command
         $this->info("Total Grades Recalculated: {$totalGradesRecalculated}");
 
         return 0;
+    }
+
+    private function normalizeSubjectMarkTo100(array $paperValuesRaw, ?Subject $subject): ?float
+    {
+        $paperValues = [];
+        foreach (['paper_1', 'paper_2', 'paper_3'] as $code) {
+            $v = $paperValuesRaw[$code] ?? null;
+            if ($v === null || $v === '') {
+                continue;
+            }
+            $paperValues[$code] = (float) $v;
+        }
+
+        if (empty($paperValues)) {
+            return null;
+        }
+
+        if ($subject) {
+            $weights = $this->paperWeightsForSubject((int) $subject->id);
+            if (!empty($weights)) {
+                $weightedSum = 0.0;
+                $weightedMax = 0.0;
+                foreach ($weights as $row) {
+                    $paperCode = (string) ($row['paper_code'] ?? '');
+                    if ($paperCode === '' || !array_key_exists($paperCode, $paperValues)) {
+                        continue;
+                    }
+                    $weight = (float) ($row['weight'] ?? 1.0);
+                    $maxMark = (float) ($row['max_mark'] ?? 100.0);
+                    $mark = (float) $paperValues[$paperCode];
+                    $weightedSum += ($mark * $weight);
+                    $weightedMax += ($maxMark * $weight);
+                }
+                if ($weightedMax > 0) {
+                    return round(($weightedSum / $weightedMax) * 100.0, 0);
+                }
+            }
+        }
+
+        $weightedSum = 0.0;
+        $weightedMax = 0.0;
+        foreach ($paperValues as $paperCode => $mark) {
+            $weightedSum += (float) $mark;
+            $weightedMax += $this->paperMaxMark((string) $paperCode);
+        }
+
+        if ($weightedMax <= 0) {
+            return null;
+        }
+
+        return round(($weightedSum / $weightedMax) * 100.0, 0);
+    }
+
+    private function paperWeightsForSubject(int $subjectId): array
+    {
+        if (array_key_exists($subjectId, $this->paperWeightCache)) {
+            return $this->paperWeightCache[$subjectId];
+        }
+
+        if (!Schema::hasTable('subject_paper_weights')) {
+            $this->paperWeightCache[$subjectId] = [];
+            return [];
+        }
+
+        $rows = SubjectPaperWeight::query()
+            ->where('subject_id', $subjectId)
+            ->where('is_active', true)
+            ->whereIn('paper_code', ['paper_1', 'paper_2', 'paper_3'])
+            ->orderBy('paper_code')
+            ->get(['paper_code', 'weight', 'max_mark'])
+            ->map(fn ($r) => [
+                'paper_code' => (string) $r->paper_code,
+                'weight' => (float) ($r->weight ?? 1.0),
+                'max_mark' => $this->paperMaxMark((string) $r->paper_code, $r->max_mark),
+            ])
+            ->values()
+            ->all();
+
+        $this->paperWeightCache[$subjectId] = $rows;
+        return $rows;
+    }
+
+    private function paperMaxMark(string $paperCode, mixed $configuredMax = null): float
+    {
+        $canonical = $paperCode === 'paper_3' ? 50.0 : 100.0;
+        if ($configuredMax === null || $configuredMax === '') {
+            return $canonical;
+        }
+
+        $value = (float) $configuredMax;
+        return $value > 0 ? $value : $canonical;
     }
 }

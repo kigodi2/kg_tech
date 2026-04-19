@@ -19,7 +19,6 @@
                     </form>
                 @else
                     <a href="/login" class="hover:bg-blue-700 px-4 py-2 rounded">Login</a>
-                    <a href="/register" class="hover:bg-blue-700 px-4 py-2 rounded">Register</a>
                 @endauth
             </div>
         </div>
@@ -32,7 +31,6 @@
             
             @guest
                 <div class="flex gap-4 justify-center">
-                    <a href="/register" class="bg-blue-600 text-white px-8 py-3 rounded text-lg">Get Started</a>
                     <a href="/login" class="bg-gray-600 text-white px-8 py-3 rounded text-lg">Sign In</a>
                 </div>
             @else

@@ -20,19 +20,30 @@ class ResultProcess extends Model
         'exam_year_id',
         'type',
         'status',
+        'config_fingerprint',
+        'input_fingerprint',
+        'scope_type',
+        'scope_id',
         'user_id',
         'total_candidates',
         'processed_count',
         'error_count',
+        'error_message',
         'processed_at',
+        'started_at',
         'completed_at',
+        'finished_at',
         'metadata',
+        'stats',
     ];
 
     protected $casts = [
         'metadata' => 'array',
+        'stats' => 'array',
         'processed_at' => 'datetime',
+        'started_at' => 'datetime',
         'completed_at' => 'datetime',
+        'finished_at' => 'datetime',
     ];
 
     public function examType()

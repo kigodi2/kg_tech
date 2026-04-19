@@ -14,8 +14,9 @@ use App\Services\SQLiteBackupService;
 use App\Services\HardenedRestoreService;
 use App\Observers\SchoolObserver;
 use App\Observers\CandidateExamRegistrationObserver;
+use App\Observers\CandidateResultObserver;
 use App\Models\CandidateExamRegistration;
-use App\Http\View\Composers\ResultsComposer;
+use App\Models\CandidateResult;
 use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
@@ -57,8 +58,16 @@ class AppServiceProvider extends ServiceProvider
         // Register model observers
         School::observe(SchoolObserver::class);
         CandidateExamRegistration::observe(CandidateExamRegistrationObserver::class);
+        CandidateResult::observe(CandidateResultObserver::class);
 
-        // Register view composers
-        View::composer('hierarchy.school-results', ResultsComposer::class);
+        View::composer('results.acsee.*', function ($view) {
+            $isPsle = request()->routeIs('results.psle.*');
+
+            $view->with([
+                'resultsRoutePrefix' => $isPsle ? 'results.psle' : 'results.acsee',
+                'resultsModuleLabel' => $isPsle ? 'PSLE' : 'ACSEE',
+                'resultsModuleTitle' => $isPsle ? 'PSLE Results' : 'ACSEE Results',
+            ]);
+        });
     }
 }

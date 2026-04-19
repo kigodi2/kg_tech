@@ -1,46 +1,62 @@
 <div x-data="importModal()" x-show="showModal" x-cloak @open-import-modal.window="open($event.detail.type, $event.detail.context)">
   <div class="fixed inset-0 z-[1000]">
-    <div class="absolute inset-0 bg-black/50" @click="close()"></div>
+    <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" @click="close()"></div>
     <div class="absolute inset-0 flex items-start justify-center overflow-y-auto p-4">
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl mt-10" @keydown.escape.window="close()">
-        <div class="border-b px-5 py-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <h3 class="text-lg font-semibold text-gray-800" x-text="title"></h3>
-            <span class="text-xs px-2 py-0.5 rounded-full" :class="importType==='single_csv'?'bg-blue-100 text-blue-700':importType==='school_zip'?'bg-purple-100 text-purple-700':'bg-indigo-100 text-indigo-700'" x-text="badge"></span>
+      <div class="bg-white rounded-[28px] shadow-2xl shadow-slate-900/20 border border-slate-200 w-full max-w-5xl mt-10 overflow-hidden" @keydown.escape.window="close()">
+        <div class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-800 px-6 py-5 text-white">
+          <div class="absolute inset-y-0 right-0 w-64 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_68%)]"></div>
+          <div class="relative flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div>
+                <div class="flex items-center gap-3">
+                  <h3 class="text-2xl font-semibold tracking-tight text-white" x-text="title"></h3>
+                  <span class="text-xs px-3 py-1 rounded-full border border-white/15 bg-white/10" :class="importType==='single_csv'?'text-blue-100':importType==='school_zip'?'text-purple-100':'text-indigo-100'" x-text="badge"></span>
+                </div>
+                <p class="mt-2 text-sm text-white/75" x-text="importType==='single_csv' ? 'Validate one subject file before committing marks into the workflow.' : 'Validate bulk ZIP packages before committing them into the governed mark-entry pipeline.'"></p>
+              </div>
+            </div>
+            <button class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/15 hover:text-white" @click="close()"><i class="fas fa-times"></i></button>
           </div>
-          <button class="text-gray-500 hover:text-gray-700" @click="close()"><i class="fas fa-times"></i></button>
         </div>
 
         <!-- Stepper -->
-        <div class="px-5 pt-4">
-          <div class="flex items-center gap-4 text-sm">
-            <div class="flex items-center gap-2" :class="step>=1?'text-blue-600':'text-gray-400'"><span class="w-6 h-6 inline-flex items-center justify-center rounded-full border" :class="step>=1?'border-blue-600':'border-gray-300'">1</span> Upload</div>
-            <div class="h-px flex-1 bg-gray-200"></div>
-            <div class="flex items-center gap-2" :class="step>=2?'text-blue-600':'text-gray-400'"><span class="w-6 h-6 inline-flex items-center justify-center rounded-full border" :class="step>=2?'border-blue-600':'border-gray-300'">2</span> Validate</div>
-            <div class="h-px flex-1 bg-gray-200"></div>
-            <div class="flex items-center gap-2" :class="step>=3?'text-blue-600':'text-gray-400'"><span class="w-6 h-6 inline-flex items-center justify-center rounded-full border" :class="step>=3?'border-blue-600':'border-gray-300'">3</span> Commit</div>
+        <div class="px-6 pt-5 bg-slate-50">
+          <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+            <div class="flex items-center gap-4 text-sm">
+              <div class="flex items-center gap-2" :class="step>=1?'text-blue-600':'text-gray-400'"><span class="w-7 h-7 inline-flex items-center justify-center rounded-full border font-semibold" :class="step>=1?'border-blue-600 bg-blue-50':'border-gray-300'">1</span> Upload</div>
+              <div class="h-px flex-1 bg-gray-200"></div>
+              <div class="flex items-center gap-2" :class="step>=2?'text-blue-600':'text-gray-400'"><span class="w-7 h-7 inline-flex items-center justify-center rounded-full border font-semibold" :class="step>=2?'border-blue-600 bg-blue-50':'border-gray-300'">2</span> Validate</div>
+              <template x-if="importType==='district_zip'">
+                <div class="contents">
+                  <div class="h-px flex-1 bg-gray-200"></div>
+                  <div class="flex items-center gap-2" :class="step>=3?'text-blue-600':'text-gray-400'"><span class="w-7 h-7 inline-flex items-center justify-center rounded-full border font-semibold" :class="step>=3?'border-blue-600 bg-blue-50':'border-gray-300'">3</span> Duplicates</div>
+                </div>
+              </template>
+              <div class="h-px flex-1 bg-gray-200"></div>
+              <div class="flex items-center gap-2" :class="step>=(importType==='district_zip'?4:3)?'text-blue-600':'text-gray-400'"><span class="w-7 h-7 inline-flex items-center justify-center rounded-full border font-semibold" :class="step>=(importType==='district_zip'?4:3)?'border-blue-600 bg-blue-50':'border-gray-300'" x-text="importType==='district_zip' ? '4' : '3'"></span> Commit</div>
+            </div>
           </div>
         </div>
 
-        <div class="p-5 space-y-5">
+        <div class="p-6 space-y-5 bg-slate-50">
           <!-- Step 1: Upload -->
           <div x-show="step===1" class="space-y-4">
             <!-- Visibility hint -->
-            <div class="bg-amber-50 border border-amber-200 rounded p-3 flex items-start gap-2 text-sm">
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-sm">
               <i class="fas fa-info-circle text-amber-600 mt-0.5"></i>
               <div class="text-amber-800">
                 <strong>Visibility:</strong> Imported marks appear in Reports only after Approval and Locking via Moderation & Review.
               </div>
             </div>
 
-            <div class="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-blue-500" @click="$refs.file.click()">
-              <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
-              <p class="text-gray-700">Click to choose a file or drag & drop</p>
+            <div class="border-2 border-dashed border-slate-300 rounded-[24px] bg-white p-10 text-center cursor-pointer hover:border-blue-500 hover:bg-blue-50/40 transition-colors" @click="$refs.file.click()">
+              <i class="fas fa-cloud-upload-alt text-4xl text-slate-400 mb-3"></i>
+              <p class="text-slate-700 text-2xl font-semibold tracking-tight">Click to choose a file or drag & drop</p>
               <p class="text-gray-500 text-xs" x-text="importType==='single_csv' ? 'CSV/TXT up to 5MB' : 'ZIP up to 200MB' "></p>
               <input x-ref="file" type="file" :accept="importType==='single_csv'?'.csv,.txt':'.zip'" class="hidden" @change="onFileChange($event)">
             </div>
             <template x-if="file">
-              <div class="bg-gray-50 border rounded p-3 flex items-center justify-between">
+              <div class="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
                 <div class="text-sm text-gray-700">
                   <span class="font-semibold" x-text="file?.name"></span>
                   <span class="text-gray-500"> • </span>
@@ -50,7 +66,7 @@
               </div>
             </template>
             <div class="flex justify-end gap-2">
-              <button class="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50" :disabled="!file || isValidating" @click="validate()">
+              <button class="px-5 py-2.5 bg-blue-600 text-white rounded-2xl shadow-sm shadow-blue-200/80 disabled:opacity-50" :disabled="!file || isValidating" @click="validate()">
                 <span x-show="!isValidating"><i class="fas fa-check mr-1"></i> Validate</span>
                 <span x-show="isValidating"><i class="fas fa-spinner fa-spin mr-1"></i> Validating...</span>
               </button>
@@ -72,19 +88,19 @@
             </div>
 
             <div class="grid grid-cols-4 gap-3">
-              <div class="bg-blue-50 border border-blue-200 rounded p-3">
+              <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
                 <p class="text-xs text-gray-600">Total Rows</p>
                 <p class="text-2xl font-bold text-blue-700" x-text="validationReport?.totals?.total_rows ?? 0"></p>
               </div>
-              <div class="bg-green-50 border border-green-200 rounded p-3">
+              <div class="bg-green-50 border border-green-200 rounded-2xl p-4">
                 <p class="text-xs text-gray-600">Valid</p>
                 <p class="text-2xl font-bold text-green-700" x-text="validationReport?.totals?.valid_rows ?? 0"></p>
               </div>
-              <div class="bg-red-50 border border-red-200 rounded p-3">
+              <div class="bg-red-50 border border-red-200 rounded-2xl p-4">
                 <p class="text-xs text-gray-600">Invalid</p>
                 <p class="text-2xl font-bold text-red-700" x-text="validationReport?.totals?.invalid_rows ?? 0"></p>
               </div>
-              <div class="bg-yellow-50 border border-yellow-200 rounded p-3">
+              <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
                 <p class="text-xs text-gray-600">Warnings</p>
                 <p class="text-2xl font-bold text-yellow-700" x-text="validationReport?.totals?.warnings ?? 0"></p>
               </div>
@@ -92,7 +108,7 @@
 
             <!-- Structured errors table -->
             <template x-if="(validationReport?.errors?.length||0) > 0">
-              <div class="border rounded">
+              <div class="border border-slate-200 rounded-2xl bg-white overflow-hidden">
                 <div class="px-3 py-2 bg-red-50 border-b text-red-700 font-semibold text-sm flex items-center justify-between">
                   <span>Errors & Warnings</span>
                   <button class="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700" @click="downloadErrorCsv()">
@@ -137,7 +153,7 @@
 
             <!-- Preview rows -->
             <template x-if="(validationReport?.preview?.length||0) > 0">
-              <div class="border rounded">
+              <div class="border border-slate-200 rounded-2xl bg-white overflow-hidden">
                 <div class="px-3 py-2 bg-gray-50 border-b text-gray-700 font-semibold text-sm">Preview (first 20 rows)</div>
                 <div class="max-h-64 overflow-auto">
                   <table class="w-full text-sm">
@@ -167,18 +183,123 @@
             </template>
 
             <div class="flex justify-between items-center">
-              <button class="px-4 py-2 bg-gray-200 rounded" @click="step=1">Back</button>
+              <button class="px-4 py-2 bg-slate-200 text-slate-700 rounded-2xl" @click="step=1">Back</button>
               <div class="flex gap-2">
-                <button class="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50" :disabled="!validationReport?.can_commit || isCommitting" @click="commit()">
+                <button x-show="importType==='district_zip'" class="px-4 py-2 bg-blue-600 text-white rounded-2xl shadow-sm shadow-blue-200/80 disabled:opacity-50" :disabled="!validationReport?.can_commit" @click="step=3">
+                  <i class="fas fa-arrow-right mr-1"></i> Next: Duplicates
+                </button>
+                <button x-show="importType!=='district_zip'" class="px-4 py-2 bg-green-600 text-white rounded-2xl shadow-sm shadow-green-200/80 disabled:opacity-50" :disabled="!validationReport?.can_commit || isCommitting || (importType==='school_zip' && duplicateStrategy==='replace' && (!duplicateReason || !forceReplaceLocked))" @click="commit()">
                   <span x-show="!isCommitting"><i class="fas fa-play mr-1"></i> Commit</span>
                   <span x-show="isCommitting"><i class="fas fa-spinner fa-spin mr-1"></i> Committing...</span>
                 </button>
               </div>
             </div>
+
+            <div x-show="importType==='school_zip'" class="border border-slate-200 rounded-2xl bg-white p-4 space-y-2">
+              <p class="text-sm font-semibold text-gray-800">Locked/Approved Handling</p>
+              <div x-show="canForceReplace" class="flex justify-end">
+                <button type="button" class="px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700" @click="applyAdminReplaceDefaults()">
+                  Use Admin Replace Defaults
+                </button>
+              </div>
+              <label class="flex items-start gap-2 text-sm"><input type="radio" value="skip" x-model="duplicateStrategy"> <span><strong>Skip locked/approved</strong> - keep existing approved data.</span></label>
+              <label class="flex items-start gap-2 text-sm"><input type="radio" value="replace" x-model="duplicateStrategy"> <span><strong>Replace existing</strong> - archive old batch and import this ZIP.</span></label>
+              <textarea x-show="duplicateStrategy==='replace'" x-model="duplicateReason" class="w-full border border-slate-300 rounded-2xl px-3 py-2 text-sm" rows="2" placeholder="Reason for replace (required)"></textarea>
+              <label class="flex items-center gap-2 text-xs text-red-700" x-show="duplicateStrategy==='replace'">
+                <input type="checkbox" x-model="forceReplaceLocked"> I confirm replacing approved/locked data (super-admin only).
+              </label>
+            </div>
+          </div>
+
+          <!-- Step 3: Duplicates (District ZIP only) -->
+          <div x-show="importType==='district_zip' && step===3" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+                <p class="text-xs text-gray-600">Duplicate ZIP</p>
+                <p class="text-lg font-bold text-yellow-700" x-text="duplicateReport?.duplicate_zip ? 'Yes' : 'No'"></p>
+              </div>
+              <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+                <p class="text-xs text-gray-600">Duplicate Files</p>
+                <p class="text-lg font-bold text-blue-700" x-text="duplicateReport?.summary?.duplicate_files_count ?? 0"></p>
+              </div>
+              <div class="bg-orange-50 border border-orange-200 rounded-2xl p-4">
+                <p class="text-xs text-gray-600">Duplicate Rows</p>
+                <p class="text-lg font-bold text-orange-700" x-text="duplicateReport?.summary?.duplicate_rows_count ?? 0"></p>
+              </div>
+              <div class="bg-red-50 border border-red-200 rounded-2xl p-4">
+                <p class="text-xs text-gray-600">Conflicting Rows</p>
+                <p class="text-lg font-bold text-red-700" x-text="duplicateReport?.summary?.conflicting_rows_count ?? 0"></p>
+              </div>
+            </div>
+
+            <div class="border border-slate-200 rounded-2xl bg-white p-4 space-y-2">
+              <p class="text-sm font-semibold text-gray-800">Duplicate Handling</p>
+              <label class="flex items-start gap-2 text-sm"><input type="radio" value="skip" x-model="duplicateStrategy"> <span><strong>Skip duplicates</strong> (default) - commit only new rows.</span></label>
+              <label class="flex items-start gap-2 text-sm"><input type="radio" value="merge" x-model="duplicateStrategy"> <span><strong>Merge</strong> - append new rows, keep conflicts rejected.</span></label>
+              <label class="flex items-start gap-2 text-sm"><input type="radio" value="replace" x-model="duplicateStrategy"> <span><strong>Replace existing</strong> - requires authorization and reason.</span></label>
+              <label class="flex items-center gap-2 text-sm ml-6" x-show="duplicateStrategy==='merge' || duplicateStrategy==='replace'">
+                <input type="checkbox" x-model="replaceConflicts"> Replace conflicts
+              </label>
+              <textarea x-show="duplicateStrategy==='replace'" x-model="duplicateReason" class="w-full border border-slate-300 rounded-2xl px-3 py-2 text-sm" rows="2" placeholder="Reason for replace (required)"></textarea>
+              <label class="flex items-center gap-2 text-xs text-red-700" x-show="duplicateStrategy==='replace'">
+                <input type="checkbox" x-model="forceReplaceLocked"> I confirm replacing against approved/locked requires super-admin authority.
+              </label>
+            </div>
+
+            <template x-if="(duplicateReport?.duplicate_files?.length||0) > 0">
+              <div class="border rounded">
+                <div class="px-3 py-2 bg-gray-50 border-b text-sm font-semibold">Duplicate Files</div>
+                <div class="max-h-40 overflow-auto">
+                  <table class="w-full text-xs">
+                    <thead class="bg-white sticky top-0"><tr><th class="px-3 py-1 text-left">Filename</th><th class="px-3 py-1 text-left">School</th><th class="px-3 py-1 text-left">Subject</th></tr></thead>
+                    <tbody>
+                      <template x-for="f in duplicateReport.duplicate_files" :key="f.filename + f.file_hash">
+                        <tr class="border-t">
+                          <td class="px-3 py-1" x-text="f.filename"></td>
+                          <td class="px-3 py-1" x-text="f.derived_scope?.school_code || '-'"></td>
+                          <td class="px-3 py-1" x-text="f.derived_scope?.subject_code || '-'"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+            <template x-if="(duplicateReport?.conflicting_rows?.length||0) > 0">
+              <div class="border rounded">
+                <div class="px-3 py-2 bg-red-50 border-b text-sm font-semibold text-red-700">Conflicting Rows (sample)</div>
+                <div class="max-h-40 overflow-auto">
+                  <table class="w-full text-xs">
+                    <thead class="bg-white sticky top-0"><tr><th class="px-3 py-1 text-left">Index</th><th class="px-3 py-1 text-left">Old</th><th class="px-3 py-1 text-left">New</th><th class="px-3 py-1 text-left">Source Batch</th></tr></thead>
+                    <tbody>
+                      <template x-for="r in duplicateReport.conflicting_rows.slice(0,50)" :key="r.source_file + '-' + r.index_number">
+                        <tr class="border-t">
+                          <td class="px-3 py-1" x-text="r.index_number"></td>
+                          <td class="px-3 py-1" x-text="r.old_mark"></td>
+                          <td class="px-3 py-1" x-text="r.new_mark"></td>
+                          <td class="px-3 py-1" x-text="r.batch_code || '-'"></td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
+
+            <div class="flex justify-between items-center">
+              <button class="px-4 py-2 bg-gray-200 rounded" @click="step=2">Back</button>
+              <button class="px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
+                :disabled="isCommitting || (duplicateStrategy==='replace' && !duplicateReason)"
+                @click="commit()">
+                <span x-show="!isCommitting"><i class="fas fa-play mr-1"></i> Commit Upload</span>
+                <span x-show="isCommitting"><i class="fas fa-spinner fa-spin mr-1"></i> Committing...</span>
+              </button>
+            </div>
           </div>
 
           <!-- Step 3: Commit/Progress -->
-          <div x-show="step===3" class="space-y-4">
+          <div x-show="(importType==='district_zip' ? step===4 : step===3)" class="space-y-4">
             <template x-if="importType==='single_csv'">
               <div class="space-y-3">
                 <div class="bg-green-50 border border-green-200 rounded p-3" x-show="commitReport?.success">
@@ -231,9 +352,13 @@
                   </template>
                 </div>
                 <div x-show="progress?.status !== 'completed' && progress?.status !== 'failed'" class="text-xs text-gray-500"><i class="fas fa-sync-alt fa-spin mr-1"></i> Auto-refreshing every 2s...</div>
-                <div x-show="progress?.status === 'completed'" class="bg-green-50 border border-green-200 rounded p-3">
+                <div x-show="progress?.status === 'completed' && ((progress?.summary?.success_count||0) > 0)" class="bg-green-50 border border-green-200 rounded p-3">
                   <div class="font-semibold text-green-800"><i class="fas fa-check-circle mr-1"></i> Import Completed Successfully</div>
-                  <div class="text-sm text-green-700 mt-1">All files have been processed and marks imported.</div>
+                  <div class="text-sm text-green-700 mt-1">Files processed: <span x-text="progress?.summary?.success_count || 0"></span> imported, <span x-text="progress?.summary?.skipped_count || 0"></span> skipped, <span x-text="progress?.summary?.failed_count || 0"></span> failed.</div>
+                </div>
+                <div x-show="progress?.status === 'completed' && ((progress?.summary?.success_count||0) === 0)" class="bg-yellow-50 border border-yellow-200 rounded p-3">
+                  <div class="font-semibold text-yellow-800"><i class="fas fa-exclamation-triangle mr-1"></i> No New Marks Imported</div>
+                  <div class="text-sm text-yellow-700 mt-1">All files were skipped or failed. Use Replace mode (admin) or unlock existing approved/locked batches.</div>
                 </div>
                 <div x-show="progress?.status === 'failed'" class="bg-red-50 border border-red-200 rounded p-3">
                   <div class="font-semibold text-red-800"><i class="fas fa-times-circle mr-1"></i> Import Failed</div>
@@ -261,13 +386,36 @@
   </div>
 
   <script>
+    @php
+      $canForceReplace = auth()->check() && (auth()->user()->isAdmin() || auth()->user()->can('mark-entry.admin'));
+    @endphp
     function importModal(){
       return {
         showModal:false, step:1, importType:'single_csv', title:'Upload Marks', badge:'',
         file:null, isValidating:false, isCommitting:false,
         validationReport:null, commitReport:null, progress:null, poller:null,
+        duplicateReport:null, duplicateStrategy:'skip', replaceConflicts:false, duplicateReason:'', forceReplaceLocked:false,
+        canForceReplace: @json($canForceReplace),
         context:{ exam_year:null, school_id:null, subject_id:null, district_id:null },
-        open(type, ctx){ this.importType=type; this.title = type==='single_csv'?'Single Subject CSV':'Bulk ZIP Import'; this.badge = type==='single_csv'?'Single CSV':(type==='school_zip'?'School ZIP':'District ZIP'); this.context = { ...this.context, ...ctx }; this.showModal=true; this.step=1; this.file=null; this.validationReport=null; this.commitReport=null; this.progress=null; },
+        open(type, ctx){
+          this.importType=type; this.title = type==='single_csv'?'Single Subject CSV':'Bulk ZIP Import'; this.badge = type==='single_csv'?'Single CSV':(type==='school_zip'?'School ZIP':'District ZIP'); this.context = { ...this.context, ...ctx }; this.showModal=true; this.step=1; this.file=null; this.validationReport=null; this.commitReport=null; this.progress=null; this.duplicateReport=null; this.duplicateStrategy='skip'; this.replaceConflicts=false; this.duplicateReason=''; this.forceReplaceLocked=false;
+          if (this.importType === 'school_zip' && this.canForceReplace) {
+            this.applyAdminReplaceDefaults();
+          }
+        },
+        applyAdminReplaceDefaults(){
+          this.duplicateStrategy = 'replace';
+          this.forceReplaceLocked = true;
+          if (!this.duplicateReason) {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            this.duplicateReason = `Admin bulk replace ${y}-${m}-${d} ${hh}:${mm}`;
+          }
+        },
         close(){ this.stopPolling(); this.showModal=false; },
         onFileChange(e){ this.file=e.target.files[0]||null; },
         clearFile(){ this.file=null; this.$refs.file.value=''; },
@@ -290,7 +438,7 @@
               fd.append('exam_year_id', this.context.exam_year_id||'');
               fd.append('district_id', this.context.district_id||'');
               const r=await fetch('/mark-entry/acsee/bulk/district/validate-zip', { method:'POST', body:fd, headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').getAttribute('content')} });
-              const j=await r.json(); if(!r.ok){ throw new Error(j.message||'Validate failed'); } this.validationReport=j; this.step=2;
+              const j=await r.json(); if(!r.ok){ throw new Error(j.message||'Validate failed'); } this.validationReport=j; this.duplicateReport=j.duplicate_report||null; this.step=2;
             }
           } catch(e){ alert(e.message); } finally{ this.isValidating=false; }
         },
@@ -302,15 +450,51 @@
               const j=await r.json(); if(!r.ok){ throw new Error(j.message||'Commit failed'); } this.commitReport=j; this.step=3;
             } else if(this.importType==='school_zip'){
               const fd=new FormData(); fd.append('school_id', this.context.school_id); fd.append('exam_year_id', this.context.exam_year_id);
+              fd.append('duplicate_strategy', this.duplicateStrategy || 'skip');
+              fd.append('reason', this.duplicateReason || '');
+              fd.append('force_replace_locked', this.forceReplaceLocked ? '1' : '0');
               const r=await fetch('/mark-entry/acsee/bulk/school/commit-zip', { method:'POST', body:fd, headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').getAttribute('content')} });
               const j=await r.json(); if(!r.ok){ throw new Error(j.message||'Commit failed'); } this.commitReport=j; this.step=3;
-              this.progress = { status:'completed', progress_percentage:100, files: j.files||[] };
+              const files = j.files || [];
+              const successCount = files.filter(f => f.status === 'success').length;
+              const skippedCount = files.filter(f => f.status === 'skipped').length;
+              const failedCount = files.filter(f => f.status === 'failed').length;
+              const commitStatus = (failedCount > 0 && successCount === 0) ? 'failed' : 'completed';
+              this.progress = {
+                status: commitStatus,
+                progress_percentage:100,
+                files,
+                summary: {
+                  success_count: successCount,
+                  skipped_count: skippedCount,
+                  failed_count: failedCount
+                }
+              };
             } else {
               const fd=new FormData(); fd.append('district_id', this.context.district_id); fd.append('exam_year_id', this.context.exam_year_id);
-              const r=await fetch('/mark-entry/acsee/bulk/district/commit-zip', { method:'POST', body:fd, headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').getAttribute('content')} });
-              const j=await r.json(); if(!r.ok && !j.schools){ throw new Error(j.message||'Commit failed'); } this.commitReport=j; this.step=3;
-              const commitStatus = (j.success === false) ? 'failed' : 'completed';
-              this.progress = { status:commitStatus, progress_percentage:100, schools: j.schools||[] };
+              fd.append('bulk_upload_id', this.validationReport?.bulk_upload_id || '');
+              fd.append('duplicate_strategy', this.duplicateStrategy || 'skip');
+              fd.append('replace_conflicts', this.replaceConflicts ? '1' : '0');
+              fd.append('reason', this.duplicateReason || '');
+              fd.append('force_replace_locked', this.forceReplaceLocked ? '1' : '0');
+              const r=await fetch('/api/mark-entry/acsee/district-zip/commit', { method:'POST', body:fd, headers:{'X-CSRF-TOKEN':document.querySelector('meta[name="csrf-token"]').getAttribute('content')} });
+              const j=await r.json(); if(!r.ok && !j.schools){ throw new Error(j.message||'Commit failed'); } this.commitReport=j;
+              const schools = j.schools || [];
+              const successCount = schools.filter(s => s.status === 'success').length;
+              const skippedCount = schools.filter(s => s.status === 'skipped').length;
+              const failedCount = schools.filter(s => s.status === 'failed').length;
+              const commitStatus = (j.success === false || (failedCount > 0 && successCount === 0)) ? 'failed' : 'completed';
+              this.progress = {
+                status:commitStatus,
+                progress_percentage:100,
+                schools,
+                summary: {
+                  success_count: successCount,
+                  skipped_count: skippedCount,
+                  failed_count: failedCount
+                }
+              };
+              this.step=4;
             }
           } catch(e){ alert(e.message); } finally{ this.isCommitting=false; }
         },

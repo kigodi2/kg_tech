@@ -1,618 +1,211 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full" style="font-family: 'Maiandra GD', sans-serif;">
-    <!-- Page Header -->
-    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
-        <h1 class="text-2xl font-bold text-gray-800" style="font-family: 'Maiandra GD', sans-serif;">ACSEE Evaluations</h1>
-    </div>
-
-    <!-- Main Content with Side Menu -->
-    <div class="flex h-full">
-        <!-- Side Menu Bar -->
-        <div class="w-64 bg-gray-800 border-r border-gray-700 shadow-sm overflow-y-auto" style="height: calc(100vh - 140px); font-family: 'Maiandra GD', sans-serif;" x-data="evaluationsManager()">
-            <nav class="p-6 space-y-2">
-                <!-- Zonalwise Section -->
+<div class="min-h-screen bg-slate-50" style="font-family: 'Maiandra GD', sans-serif;">
+    <div class="border-b border-slate-200 bg-white/95 backdrop-blur sticky top-0 z-30 shadow-sm">
+        <div class="mx-auto max-w-7xl px-6 py-5 lg:px-8">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <button @click="expandedSection = expandedSection === 'zonal' ? null : 'zonal'; if (expandedSection === 'zonal') activeTab = 'zonal-overall'" class="w-full text-left px-4 py-2 font-semibold text-white hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-between">
-                        <span class="flex items-center gap-2">
-                            <i class="fas fa-globe text-blue-600 w-5"></i>ZONALWISE
-                        </span>
-                        <i :class="expandedSection === 'zonal' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="text-xs"></i>
-                    </button>
+                    <div class="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.25em] text-blue-700">
+                        <span class="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                        Evaluation Centre
+                    </div>
+                    <h1 class="mt-2 text-3xl font-black tracking-tight text-slate-900 lg:text-4xl">ACSEE Evaluations</h1>
+                    <p class="mt-1 max-w-3xl text-sm text-slate-600 lg:text-base">
+                        Review national performance insights through professionally organized zonal and regional evaluation reports.
+                    </p>
                 </div>
 
-                <!-- Regionalwise Section -->
-                <div>
-                    <button disabled class="w-full text-left px-4 py-2 font-semibold text-gray-600 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 opacity-50 cursor-not-allowed">
-                        <i class="fas fa-map text-gray-400 w-5"></i>REGIONALWISE
-                     </button>
-                </div>
-
-                <!-- Districtwise Section -->
-                <div>
-                    <button disabled class="w-full text-left px-4 py-2 font-semibold text-gray-600 hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 opacity-50 cursor-not-allowed">
-                        <i class="fas fa-location-dot text-gray-400 w-5"></i>DISTRICTWISE
-                     </button>
-                </div>
-
-                <!-- Candidate Extremity Analysis Section -->
-                <div>
-                    <a href="/evaluations/extremity-analysis" class="w-full text-left px-4 py-2 font-semibold text-white hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-2 block">
-                        <i class="fas fa-chart-scatter text-orange-500 w-5 flex-shrink-0"></i><span>EXTREMITY ANALYSIS</span>
+                <div class="flex flex-wrap items-center gap-3">
+                    <a href="/evaluations" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+                        <i class="fas fa-arrow-left text-xs"></i>
+                        Back to Evaluations
+                    </a>
+                    <a href="/evaluations/acsee/regionalwise" class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800">
+                        Open Regional Reports
+                        <i class="fas fa-arrow-right text-xs"></i>
                     </a>
                 </div>
-
-                <!-- Entry Report Section -->
-                <div>
-                    <button @click="expandedSection = expandedSection === 'entry' ? null : 'entry'" class="w-full text-left px-4 py-2 font-semibold text-white hover:bg-gray-700 rounded-lg transition-colors flex items-center justify-between">
-                        <span class="flex items-center gap-2"><i class="fas fa-file-alt text-purple-600 w-5"></i>ENTRY REPORT</span>
-                        <i :class="expandedSection === 'entry' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="text-xs"></i>
-                    </button>
-                    <template x-if="expandedSection === 'entry'">
-                        <div class="ml-4 space-y-1 mt-2">
-                            <div>
-                                <button @click="expandedSubSection = expandedSubSection === 'entry-zonal' ? null : 'entry-zonal'" class="w-full text-left px-4 py-2 text-gray-400 hover:bg-gray-700 rounded-lg transition-colors text-sm flex items-center justify-between">
-                                    <span class="flex items-center gap-2"><i class="fas fa-layer-group text-blue-500 w-4"></i>ZONAL LEVEL</span>
-                                    <i :class="expandedSubSection === 'entry-zonal' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="text-xs"></i>
-                                </button>
-                                <template x-if="expandedSubSection === 'entry-zonal'">
-                                    <div class="ml-4 space-y-1 mt-1">
-                                        <button @click="activeTab = 'entry-zonal-subjects'" :class="activeTab === 'entry-zonal-subjects' ? 'bg-blue-700 text-blue-200' : 'text-gray-400 hover:bg-gray-700'" class="w-full text-left px-4 py-2 rounded-lg transition-colors text-xs flex items-center gap-2"><i class="fas fa-book w-3"></i>SUBJECTS</button>
-                                        <button @click="activeTab = 'entry-zonal-regions'" :class="activeTab === 'entry-zonal-regions' ? 'bg-blue-700 text-blue-200' : 'text-gray-400 hover:bg-gray-700'" class="w-full text-left px-4 py-2 rounded-lg transition-colors text-xs flex items-center gap-2"><i class="fas fa-compass w-3"></i>REGIONS</button>
-                                        <button @click="activeTab = 'entry-zonal-districts'" :class="activeTab === 'entry-zonal-districts' ? 'bg-blue-700 text-blue-200' : 'text-gray-400 hover:bg-gray-700'" class="w-full text-left px-4 py-2 rounded-lg transition-colors text-xs flex items-center gap-2"><i class="fas fa-square w-3"></i>DISTRICTS</button>
-                                        <button @click="activeTab = 'entry-zonal-schools'" :class="activeTab === 'entry-zonal-schools' ? 'bg-blue-700 text-blue-200' : 'text-gray-400 hover:bg-gray-700'" class="w-full text-left px-4 py-2 rounded-lg transition-colors text-xs flex items-center gap-2"><i class="fas fa-building w-3"></i>SCHOOLS</button>
-                                    </div>
-                                </template>
-                            </div>
-                            <div>
-                                <button @click="expandedSubSection = expandedSubSection === 'entry-regional' ? null : 'entry-regional'" class="w-full text-left px-4 py-2 text-gray-400 hover:bg-gray-700 rounded-lg transition-colors text-sm flex items-center justify-between">
-                                    <span class="flex items-center gap-2"><i class="fas fa-layer-group text-green-500 w-4"></i>REGIONAL LEVEL</span>
-                                    <i :class="expandedSubSection === 'entry-regional' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="text-xs"></i>
-                                </button>
-                                <template x-if="expandedSubSection === 'entry-regional'">
-                                    <div class="ml-4 space-y-1 mt-1">
-                                        <a href="/evaluations/acsee/daily-marks-entry-report" class="w-full text-left px-4 py-2 rounded-lg transition-colors text-xs flex items-center gap-2 text-gray-400 hover:bg-gray-700 block"><i class="fas fa-book w-3"></i>SUBJECTS</a>
-                                        <button @click="activeTab = 'entry-regional-districts'" :class="activeTab === 'entry-regional-districts' ? 'bg-blue-700 text-blue-200' : 'text-gray-400 hover:bg-gray-700'" class="w-full text-left px-4 py-2 rounded-lg transition-colors text-xs flex items-center gap-2"><i class="fas fa-square w-3"></i>DISTRICTS</button>
-                                        <button @click="activeTab = 'entry-regional-schools'" :class="activeTab === 'entry-regional-schools' ? 'bg-blue-700 text-blue-200' : 'text-gray-400 hover:bg-gray-700'" class="w-full text-left px-4 py-2 rounded-lg transition-colors text-xs flex items-center gap-2"><i class="fas fa-building w-3"></i>SCHOOLS</button>
-                                    </div>
-                                </template>
-                            </div>
-                            <div>
-                                <button @click="expandedSubSection = expandedSubSection === 'entry-district' ? null : 'entry-district'" class="w-full text-left px-4 py-2 text-gray-400 hover:bg-gray-700 rounded-lg transition-colors text-sm flex items-center justify-between">
-                                    <span class="flex items-center gap-2"><i class="fas fa-layer-group text-red-500 w-4"></i>DISTRICT LEVEL</span>
-                                    <i :class="expandedSubSection === 'entry-district' ? 'fas fa-chevron-down' : 'fas fa-chevron-right'" class="text-xs"></i>
-                                </button>
-                                <template x-if="expandedSubSection === 'entry-district'">
-                                    <div class="ml-4 space-y-1 mt-1">
-                                        <button @click="activeTab = 'entry-district-data'" :class="activeTab === 'entry-district-data' ? 'bg-blue-700 text-blue-200' : 'text-gray-400 hover:bg-gray-700'" class="w-full text-left px-4 py-2 rounded-lg transition-colors text-xs flex items-center gap-2"><i class="fas fa-database w-3"></i>ENTRY DATA</button>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </nav>
-        </div>
-
-        <!-- Main Content Area -->
-        <div class="flex-1 overflow-y-auto bg-gray-50">
-            <!-- CANDIDATE EXTREMITY ANALYSIS PAGE -->
-            <div x-show="activeTab === 'candidate-extremity'" class="w-full" style="font-family: 'Maiandra GD', sans-serif;" x-data="candidateExtremityDashboard()" @init="init()">
-                <!-- Header -->
-                <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
-                    <div class="flex justify-between items-center">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-800">Candidate Performance Anomalies</h1>
-                            <p class="text-sm text-gray-600 mt-1">Identify candidates with suspicious cross-subject score patterns</p>
-                        </div>
-                        <button @click="openAnalysisModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium">
-                            <i class="fas fa-sync mr-2"></i> Run Analysis
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Content -->
-                <div class="px-8 py-8">
-                    <!-- Summary Cards -->
-                    <div class="grid grid-cols-5 gap-4 mb-8">
-                        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-500">
-                            <p class="text-xs text-gray-600 font-semibold uppercase">High Risk</p>
-                            <p class="text-3xl font-bold text-red-600" x-text="summary.high_risk || 0"></p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
-                            <p class="text-xs text-gray-600 font-semibold uppercase">Moderate Risk</p>
-                            <p class="text-3xl font-bold text-yellow-600" x-text="summary.moderate_risk || 0"></p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-                            <p class="text-xs text-gray-600 font-semibold uppercase">Low Risk</p>
-                            <p class="text-3xl font-bold text-green-600" x-text="summary.low_risk || 0"></p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
-                            <p class="text-xs text-gray-600 font-semibold uppercase">Total Flagged</p>
-                            <p class="text-3xl font-bold text-blue-600" x-text="summary.total_flagged || 0"></p>
-                        </div>
-                        <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-                            <p class="text-xs text-gray-600 font-semibold uppercase">Pending Review</p>
-                            <p class="text-3xl font-bold text-purple-600" x-text="summary.pending_review || 0"></p>
-                        </div>
-                    </div>
-
-                    <!-- Filters -->
-                    <div class="bg-white rounded-lg shadow p-6 mb-8">
-                        <div class="grid grid-cols-4 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Year</label>
-                                <select x-model="filters.exam_year_id" @change="loadReports()" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                    <option value="">All Years</option>
-                                    <template x-for="year in examYears" :key="year.id">
-                                        <option :value="year.id" x-text="year.year_label"></option>
-                                    </template>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Risk Level</label>
-                                <select x-model="filters.risk_level" @change="loadReports()" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                    <option value="">All Levels</option>
-                                    <option value="High">High</option>
-                                    <option value="Moderate">Moderate</option>
-                                    <option value="Low">Low</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
-                                <select x-model="filters.reviewed_only" @change="loadReports()" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                    <option value="">Pending Review</option>
-                                    <option value="true">All</option>
-                                </select>
-                            </div>
-                            <div class="flex items-end gap-2">
-                                <button @click="exportCandidates()" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium text-sm">
-                                    <i class="fas fa-download mr-2"></i> Export
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Candidates Table -->
-                    <div class="bg-white rounded-lg shadow overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-100 border-b-2 border-gray-300">
-                                <tr>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Index</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Candidate Name</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">School</th>
-                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Combo</th>
-                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Avg</th>
-                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Std Dev</th>
-                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Outliers</th>
-                                    <th class="px-4 py-3 text-left font-semibold text-gray-700">Risk</th>
-                                    <th class="px-4 py-3 text-center font-semibold text-gray-700">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200">
-                                <template x-for="report in reports" :key="report.id">
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-4 py-3 text-gray-800 font-mono" x-text="report.candidate.candidate_id"></td>
-                                        <td class="px-4 py-3 text-gray-800 font-medium" x-text="report.candidate.full_name"></td>
-                                        <td class="px-4 py-3 text-gray-600 text-xs" x-text="report.candidate.school.name"></td>
-                                        <td class="px-4 py-3 text-center font-mono text-gray-800" x-text="report.combination"></td>
-                                        <td class="px-4 py-3 text-center font-mono text-gray-800" x-text="parseFloat(report.average_score).toFixed(1)"></td>
-                                        <td class="px-4 py-3 text-center font-mono text-gray-800" x-text="parseFloat(report.std_dev_across_subjects).toFixed(2)"></td>
-                                        <td class="px-4 py-3 text-center font-bold" :class="report.outlier_subject_count > 0 ? 'text-red-600' : 'text-gray-600'" x-text="report.outlier_subject_count"></td>
-                                        <td class="px-4 py-3 text-center">
-                                            <span :class="{
-                                                'bg-red-100 text-red-800': report.risk_level === 'High',
-                                                'bg-yellow-100 text-yellow-800': report.risk_level === 'Moderate',
-                                                'bg-green-100 text-green-800': report.risk_level === 'Low',
-                                            }" class="inline-block px-3 py-1 rounded-full font-semibold" x-text="report.risk_level"></span>
-                                        </td>
-                                        <td class="px-4 py-3 text-center space-x-2">
-                                            <button @click="viewCandidate(report)" class="text-blue-600 hover:text-blue-800 font-medium text-xs">
-                                                <i class="fas fa-eye"></i> View
-                                            </button>
-                                            <template x-if="!report.reviewed">
-                                                <button @click="reviewCandidate(report)" class="text-green-600 hover:text-green-800 font-medium text-xs">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                            </template>
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Analysis Modal -->
-                <template x-teleport="body">
-                    <div x-show="showAnalysisModal" class="fixed inset-0 bg-black/50 z-[9998] flex items-center justify-center" @click="showAnalysisModal = false">
-                        <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6" @click.stop>
-                            <h2 class="text-xl font-bold text-gray-800 mb-4">Analyze Cross-Subject Performance</h2>
-                            <div class="space-y-4 mb-6">
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Year *</label>
-                                    <select x-model="analysisForm.exam_year_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                        <option value="">Select Year</option>
-                                        <template x-for="year in examYears" :key="year.id">
-                                            <option :value="year.id" x-text="year.year_label || year"></option>
-                                        </template>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Type *</label>
-                                    <select x-model="analysisForm.exam_type_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                                        <option value="">Select Type</option>
-                                        <template x-for="type in examTypes" :key="type.id">
-                                            <option :value="type.id" x-text="type.code || type.name || type"></option>
-                                        </template>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="flex gap-2">
-                                <button @click="showAnalysisModal = false" class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium">
-                                    Cancel
-                                </button>
-                                <button @click="runAnalysis()" :disabled="!analysisForm.exam_year_id || !analysisForm.exam_type_id" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium">
-                                    <i class="fas fa-sync" :class="analysisLoading && 'animate-spin'"></i> Analyze
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <!-- ZONALWISE PAGE -->
-            <div x-show="activeTab === 'zonal-overall'" class="px-8 py-8">
-                <div>
-                    <div class="mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900" style="font-family: 'Maiandra GD', sans-serif;">ZONALWISE EVALUATIONS</h1>
-                        <p class="mt-2 text-gray-600" style="font-family: 'Maiandra GD', sans-serif;">Choose an evaluation type to view detailed data</p>
-                    </div>
-
-                    <!-- 4-Column Grid -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                        <!-- General Evaluation -->
-                         <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
-                             <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                             <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                  <div class="text-left">
-                                      <p class="text-base font-bold uppercase tracking-wider">Zonal General Evaluation</p>
-                                 </div>
-                             </div>
-                         </div>
-
-                        <!-- Councilwise Evaluation -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Councilwise Evaluation</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Schoolwise Evaluation -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #1F2937 0%, #111827 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Schoolwise Evaluation</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Regional Councilwise Evaluation -->
-                         <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);">
-                             <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                             <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                  <div class="text-left">
-                                      <p class="text-base font-bold uppercase tracking-wider">Zonal Regionalwise Evaluation</p>
-                                 </div>
-                             </div>
-                         </div>
-
-                         <!-- Best Ten (10) Councils -->
-                         <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
-                             <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                             <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                 <div class="text-left">
-                                     <p class="text-base font-bold uppercase tracking-wider">Zonal Best Ten (10) Councils</p>
-                                 </div>
-                             </div>
-                         </div>
-
-                         <!-- Least Ten (10) Councils -->
-                         <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-                             <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                             <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                 <div class="text-left">
-                                     <p class="text-base font-bold uppercase tracking-wider">Zonal Least Ten (10) Councils</p>
-                                 </div>
-                             </div>
-                         </div>
-
-                         <!-- Best Ten (10) Schools -->
-                         <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Best Ten (10) Schools</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Least Ten (10) Schools -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Least Ten (10) Schools</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Best Ten (10) Girls -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #1F2937 0%, #111827 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Best Ten (10) Girls</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Least Ten (10) Girls -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Least Ten (10) Girls</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Best Ten (10) Boys -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Best Ten (10) Boys</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Least Ten (10) Boys -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Least Ten (10) Boys</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Overall Ten (10) Best Students -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #1F2937 0%, #111827 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Overall Ten (10) Best Students</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Overall Ten (10) Least Students -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Overall Ten (10) Least Students</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Government Schools -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Government Schools</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Non-Government Schools -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Non-Government Schools</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Ownership Result Evaluation -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #1F2937 0%, #111827 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Ownership Result Evaluation</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Subjectwise Result Evaluation -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Subjectwise Result Evaluation</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Mark Entry Status Report -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Mark Entry Status Report</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Subject Summary Evaluation -->
-                        <div class="group relative overflow-hidden shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105 transform cursor-pointer" style="background: linear-gradient(135deg, #10B981 0%, #059669 100%);">
-                            <div class="absolute inset-0 opacity-0 group-hover:opacity-20 bg-white transition-opacity duration-300"></div>
-                            <div class="relative p-1 h-11 flex flex-col items-start justify-center text-white" style="font-family: 'Maiandra GD', sans-serif;">
-                                <div class="text-left">
-                                    <p class="text-base font-bold uppercase tracking-wider">Zonal Subject Summary Evaluation</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
+
+    <div class="mx-auto max-w-7xl px-6 py-8 lg:px-8">
+        <section class="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-indigo-900 px-6 py-8 text-white shadow-2xl shadow-blue-950/20 lg:px-10 lg:py-10">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(96,165,250,0.28),_transparent_34%),radial-gradient(circle_at_bottom_left,_rgba(52,211,153,0.18),_transparent_26%)]"></div>
+            <div class="relative grid gap-8 lg:grid-cols-[1.4fr_0.9fr] lg:items-center">
+                <div>
+                    <div class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.25em] text-blue-100">
+                        Professional Reporting Workspace
+                    </div>
+                    <h2 class="mt-5 max-w-3xl text-3xl font-black leading-tight lg:text-5xl">
+                        A cleaner, smarter gateway to ACSEE evaluation reporting.
+                    </h2>
+                    <p class="mt-4 max-w-2xl text-sm leading-7 text-slate-200 lg:text-base">
+                        Navigate quickly between strategic report groups, compare performance areas, and move straight into the evaluation views used by your team.
+                    </p>
+
+                    <div class="mt-8 flex flex-wrap gap-3">
+                        <a href="/evaluations/acsee/zonalwise" class="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-900 transition hover:-translate-y-0.5 hover:bg-slate-100">
+                            <i class="fas fa-globe text-blue-600"></i>
+                            Explore Zonalwise
+                        </a>
+                        <a href="/evaluations/acsee/regionalwise" class="inline-flex items-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/15">
+                            <i class="fas fa-map text-emerald-300"></i>
+                            Explore Regionalwise
+                        </a>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+                    <div class="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-blue-100">Coverage</p>
+                                <h3 class="mt-2 text-xl font-bold">20 evaluation report types</h3>
+                                <p class="mt-2 text-sm text-slate-200">Organized into zonal and regional review paths for faster access.</p>
+                            </div>
+                            <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-400/20 text-blue-200">
+                                <i class="fas fa-layer-group text-lg"></i>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-100">Readiness</p>
+                                <h3 class="mt-2 text-xl font-bold">Decision-focused navigation</h3>
+                                <p class="mt-2 text-sm text-slate-200">Designed to guide reviewers directly to the correct analysis category.</p>
+                            </div>
+                            <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-400/20 text-emerald-200">
+                                <i class="fas fa-bolt text-lg"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Evaluation Streams</span>
+                    <span class="rounded-2xl bg-blue-50 p-3 text-blue-600"><i class="fas fa-sitemap"></i></span>
+                </div>
+                <p class="mt-4 text-4xl font-black text-slate-900">2</p>
+                <p class="mt-2 text-sm text-slate-600">Zonalwise and regionalwise pathways with distinct report collections.</p>
+            </div>
+
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Strategic Views</span>
+                    <span class="rounded-2xl bg-emerald-50 p-3 text-emerald-600"><i class="fas fa-chart-line"></i></span>
+                </div>
+                <p class="mt-4 text-4xl font-black text-slate-900">40</p>
+                <p class="mt-2 text-sm text-slate-600">Combined evaluation perspectives across rankings, summaries, and status reporting.</p>
+            </div>
+
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">User Experience</span>
+                    <span class="rounded-2xl bg-amber-50 p-3 text-amber-600"><i class="fas fa-star"></i></span>
+                </div>
+                <p class="mt-4 text-4xl font-black text-slate-900">A+</p>
+                <p class="mt-2 text-sm text-slate-600">Modern card layout, better hierarchy, and clearer calls to action.</p>
+            </div>
+
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold uppercase tracking-[0.22em] text-slate-500">Workflow</span>
+                    <span class="rounded-2xl bg-violet-50 p-3 text-violet-600"><i class="fas fa-shield-alt"></i></span>
+                </div>
+                <p class="mt-4 text-4xl font-black text-slate-900">Fast</p>
+                <p class="mt-2 text-sm text-slate-600">Choose report family, open view, and move into analysis with fewer clicks.</p>
+            </div>
+        </section>
+
+        <section class="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+            <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70 lg:p-8">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.25em] text-blue-700">Choose a reporting path</p>
+                        <h3 class="mt-2 text-2xl font-black text-slate-900">Evaluation modules</h3>
+                        <p class="mt-2 max-w-2xl text-sm text-slate-600">Each module is presented as a dedicated workspace so users can focus on the right level of review.</p>
+                    </div>
+                    <div class="text-sm text-slate-500">Built for supervisors, analysts, and review committees.</div>
+                </div>
+
+                <div class="mt-8 grid gap-5 lg:grid-cols-2">
+                    <a href="/evaluations/acsee/zonalwise" class="group rounded-[1.75rem] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-sky-50 p-6 transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-100/70">
+                        <div class="flex items-start justify-between gap-4">
+                            <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-xl text-white shadow-lg shadow-blue-600/25">
+                                <i class="fas fa-globe"></i>
+                            </span>
+                            <span class="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-blue-700">Zonalwise</span>
+                        </div>
+                        <h4 class="mt-6 text-2xl font-black text-slate-900">Zonal performance evaluations</h4>
+                        <p class="mt-3 text-sm leading-7 text-slate-600">Open zonal reports covering general performance, council rankings, school analysis, ownership categories, subject summaries, and top or least-performing groups.</p>
+                        <div class="mt-6 flex items-center justify-between text-sm font-bold text-blue-700">
+                            <span>Open module</span>
+                            <i class="fas fa-arrow-right transition group-hover:translate-x-1"></i>
+                        </div>
+                    </a>
+
+                    <a href="/evaluations/acsee/regionalwise" class="group rounded-[1.75rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 transition duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-100/70">
+                        <div class="flex items-start justify-between gap-4">
+                            <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-xl text-white shadow-lg shadow-emerald-600/25">
+                                <i class="fas fa-map"></i>
+                            </span>
+                            <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Regionalwise</span>
+                        </div>
+                        <h4 class="mt-6 text-2xl font-black text-slate-900">Regional performance evaluations</h4>
+                        <p class="mt-3 text-sm leading-7 text-slate-600">Access region-focused reports for school and council comparisons, district breakdowns, category-specific ranking lists, and subject-level performance evaluation.</p>
+                        <div class="mt-6 flex items-center justify-between text-sm font-bold text-emerald-700">
+                            <span>Open module</span>
+                            <i class="fas fa-arrow-right transition group-hover:translate-x-1"></i>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <div class="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/70 lg:p-8">
+                <p class="text-sm font-semibold uppercase tracking-[0.25em] text-slate-500">Why this page feels better</p>
+                <h3 class="mt-2 text-2xl font-black text-slate-900">Professional improvements</h3>
+
+                <div class="mt-6 space-y-4">
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <div class="flex items-start gap-3">
+                            <span class="mt-0.5 text-blue-600"><i class="fas fa-check-circle"></i></span>
+                            <div>
+                                <h4 class="font-bold text-slate-900">Clear information hierarchy</h4>
+                                <p class="mt-1 text-sm text-slate-600">Header, hero, summary metrics, and action modules are now visually separated and easier to scan.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <div class="flex items-start gap-3">
+                            <span class="mt-0.5 text-emerald-600"><i class="fas fa-check-circle"></i></span>
+                            <div>
+                                <h4 class="font-bold text-slate-900">Strong call-to-action design</h4>
+                                <p class="mt-1 text-sm text-slate-600">Primary routes are emphasized with premium cards and action buttons instead of a plain side menu.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl bg-slate-50 p-4">
+                        <div class="flex items-start gap-3">
+                            <span class="mt-0.5 text-violet-600"><i class="fas fa-check-circle"></i></span>
+                            <div>
+                                <h4 class="font-bold text-slate-900">Consistent modern styling</h4>
+                                <p class="mt-1 text-sm text-slate-600">Rounded surfaces, soft shadows, gradients, and balanced spacing align this page with more polished sections of the system.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
 </div>
-
-<script>
-    function evaluationsManager() {
-        return {
-            activeTab: 'zonal-overall',
-            expandedSection: null,
-            expandedSubSection: null,
-
-            init() {
-                // Initialize if needed
-            }
-        };
-    }
-
-    function candidateExtremityDashboard() {
-        return {
-            summary: {},
-            reports: [],
-            examYears: [],
-            examTypes: [],
-            filters: {
-                exam_year_id: '',
-                risk_level: '',
-                reviewed_only: '',
-            },
-            showAnalysisModal: false,
-            analysisForm: {
-                exam_year_id: '',
-                exam_type_id: '',
-            },
-            analysisLoading: false,
-
-            async init() {
-                await this.loadExamYears();
-                await this.loadExamTypes();
-                await this.loadReports();
-            },
-
-            async loadReports() {
-                try {
-                    const params = new URLSearchParams(this.filters);
-                    const response = await fetch(`/api/admin/candidate-extremity/dashboard?${params}`, {
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        }
-                    });
-
-                    const data = await response.json();
-                    this.summary = data.summary;
-                    this.reports = data.reports.data;
-                } catch (error) {
-                    console.error('Error loading reports:', error);
-                }
-            },
-
-            async loadExamYears() {
-                const response = await fetch('/api/exam-years');
-                const data = await response.json();
-                this.examYears = data.exam_years || data;
-            },
-
-            async loadExamTypes() {
-                const response = await fetch('/api/exam-types');
-                const data = await response.json();
-                this.examTypes = data.data || data;
-            },
-
-            openAnalysisModal() {
-                this.showAnalysisModal = true;
-            },
-
-            async runAnalysis() {
-                this.analysisLoading = true;
-                try {
-                    const response = await fetch('/api/admin/candidate-extremity/analyze', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(this.analysisForm),
-                    });
-
-                    if (response.ok) {
-                        this.showAlert('Analysis completed', 'success');
-                        this.showAnalysisModal = false;
-                        await this.loadReports();
-                    } else {
-                        this.showAlert('Analysis failed', 'error');
-                    }
-                } finally {
-                    this.analysisLoading = false;
-                }
-            },
-
-            viewCandidate(report) {
-                window.location.href = `/admin/candidate-extremity/${report.id}`;
-            },
-
-            async reviewCandidate(report) {
-                const action = prompt('Select action:\n1: Investigation\n2: No Action\n3: Corrected', '1');
-                if (!action) return;
-
-                const actionMap = { '1': 'marked_for_investigation', '2': 'no_action_needed', '3': 'data_corrected' };
-
-                const response = await fetch(`/api/admin/candidate-extremity/${report.id}/mark-reviewed`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ action: actionMap[action] }),
-                });
-
-                if (response.ok) {
-                    this.showAlert('Marked as reviewed', 'success');
-                    await this.loadReports();
-                }
-            },
-
-            async exportCandidates() {
-                const params = new URLSearchParams(this.filters);
-                window.location.href = `/api/admin/candidate-extremity/export?${params}`;
-            },
-
-            showAlert(message, type) {
-                const alert = document.createElement('div');
-                alert.className = `fixed top-4 right-4 px-6 py-3 rounded-lg text-white font-medium ${type === 'success' ? 'bg-green-600' : 'bg-red-600'} shadow-lg`;
-                alert.textContent = message;
-                document.body.appendChild(alert);
-                setTimeout(() => alert.remove(), 3000);
-            }
-        };
-    }
-
-
-</script>
 @endsection

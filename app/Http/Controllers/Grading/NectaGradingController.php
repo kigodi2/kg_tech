@@ -70,15 +70,21 @@ class NectaGradingController extends Controller
      */
     public function apiCalculateGrade(Request $request)
     {
-        $marks = $request->validate(['marks' => 'required|numeric|min:0|max:100'])['marks'];
+        $validated = $request->validate([
+            'marks' => 'required|numeric|min:0|max:100',
+            'exam_type' => 'nullable|string|in:ACSEE,CSEE',
+        ]);
+        $marks = (float) $validated['marks'];
+        $examTypeCode = strtoupper((string) ($validated['exam_type'] ?? 'ACSEE'));
 
-        $grade = $this->gradingService->calculateGrade($marks);
-        $competence = $this->gradingService->getCompetenceLevel($grade);
-        $points = $this->gradingService->getGradePoints($grade);
-        $color = $this->gradingService->getGradeColor($grade);
+        $grade = $this->gradingService->calculateGradeForExamType($marks, $examTypeCode);
+        $competence = $this->gradingService->getCompetenceLevelForExamType($grade, $examTypeCode);
+        $points = $this->gradingService->getGradePointsForExamType($grade, $examTypeCode);
+        $color = $this->gradingService->getGradeColorForExamType($grade, $examTypeCode);
 
         return response()->json([
             'marks' => $marks,
+            'exam_type' => $examTypeCode,
             'grade' => $grade,
             'competence' => $competence,
             'competence_level' => "Grade {$grade} ({$competence})",
@@ -150,10 +156,13 @@ class NectaGradingController extends Controller
      */
     public function apiGradeReference()
     {
+        $examTypeCode = strtoupper((string) request()->input('exam_type', 'ACSEE'));
+
         return response()->json([
-            'grade_boundaries' => $this->gradingService->getGradeBoundaries(),
-            'grade_points' => $this->gradingService->getGradePointsMapping(),
-            'division_boundaries' => $this->gradingService->getDivisionBoundaries(),
+            'exam_type' => $examTypeCode,
+            'grade_boundaries' => $this->gradingService->getGradeBoundariesForExamType($examTypeCode),
+            'grade_points' => $this->gradingService->getGradePointsMappingForExamType($examTypeCode),
+            'division_boundaries' => $this->gradingService->getDivisionBoundariesForExamType($examTypeCode),
             'excluded_subjects' => $this->gradingService->getExcludedSubjects(),
         ]);
     }

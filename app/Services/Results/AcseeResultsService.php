@@ -338,8 +338,10 @@ class AcseeResultsService
         return $query->with([
             'candidate:id,school_id,candidate_id,full_name,gender',
             'candidate.school:id,district_id,region_id,name',
+            'candidate.school.district:id,region_id,name',
+            'candidate.school.region:id,name',
             'examType:id,code,name',
-            'subjectMarks:id,candidate_id,subject_id,exam_type_id,year,mark,grade'
+            'subjectMarks:id,candidate_id,subject_id,exam_type_id,year,marks_obtained,grade,grade_from_average'
                 ->with('subject:id,code,name'),
         ])->get();
     }

@@ -49,9 +49,9 @@ if (!function_exists('format_division')) {
  *   get_competence('F')  // Returns: 'Fail'
  */
 if (!function_exists('get_competence')) {
-    function get_competence(string $grade): string
+    function get_competence(string $grade, string $examTypeCode = 'ACSEE'): string
     {
-        return app(NectaGradingService::class)->getCompetenceLevel($grade);
+        return app(NectaGradingService::class)->getCompetenceLevelForExamType($grade, $examTypeCode);
     }
 }
 
@@ -65,9 +65,9 @@ if (!function_exists('get_competence')) {
  *   get_grade_color('A')  // Returns: '#00AA7A'
  */
 if (!function_exists('get_grade_color')) {
-    function get_grade_color(string $grade): string
+    function get_grade_color(string $grade, string $examTypeCode = 'ACSEE'): string
     {
-        return app(NectaGradingService::class)->getGradeColor($grade);
+        return app(NectaGradingService::class)->getGradeColorForExamType($grade, $examTypeCode);
     }
 }
 
@@ -104,9 +104,9 @@ if (!function_exists('calculate_gpa')) {
  *   get_grade_points('F')  // Returns: 7
  */
 if (!function_exists('get_grade_points')) {
-    function get_grade_points(string $grade): int
+    function get_grade_points(string $grade, string $examTypeCode = 'ACSEE'): int
     {
-        return app(NectaGradingService::class)->getGradePoints($grade);
+        return app(NectaGradingService::class)->getGradePointsForExamType($grade, $examTypeCode);
     }
 }
 
@@ -121,9 +121,9 @@ if (!function_exists('get_grade_points')) {
  *   get_grade_from_mark(45)  // Returns: 'E'
  */
 if (!function_exists('get_grade_from_mark')) {
-    function get_grade_from_mark(float $mark): string
+    function get_grade_from_mark(float $mark, string $examTypeCode = 'ACSEE'): string
     {
-        return app(NectaGradingService::class)->calculateGrade($mark);
+        return app(NectaGradingService::class)->calculateGradeForExamType($mark, $examTypeCode);
     }
 }
 
@@ -138,10 +138,10 @@ if (!function_exists('get_grade_from_mark')) {
  *   // Returns: ['division' => 1, 'name' => 'I', 'competence' => 'Excellent']
  */
 if (!function_exists('get_division_info')) {
-    function get_division_info(int $totalPoints): array
+    function get_division_info(int $totalPoints, string $examTypeCode = 'ACSEE'): array
     {
         $gradingService = app(NectaGradingService::class);
-        $divisionInfo = $gradingService->calculateDivision($totalPoints);
+        $divisionInfo = $gradingService->calculateDivisionForExamType($totalPoints, $examTypeCode);
 
         if (!$divisionInfo) {
             return [

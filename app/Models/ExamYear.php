@@ -44,6 +44,10 @@ class ExamYear extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'year',
+    ];
+
     // ==================== RELATIONSHIPS ====================
 
     /**
@@ -176,6 +180,14 @@ class ExamYear extends Model
     public static function current(): ?self
     {
         return static::active()->first();
+    }
+
+    /**
+     * Backward-compatible alias for legacy views that still read `year`.
+     */
+    public function getYearAttribute(): ?string
+    {
+        return $this->year_label;
     }
 
     // ==================== METHODS ====================

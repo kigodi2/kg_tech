@@ -7,7 +7,6 @@ use App\Models\GovernanceAuditLog;
 use App\Services\SecurityAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -64,6 +63,14 @@ class AuthController extends Controller
                 ]
             );
 
+            if ($user->portal_role === 'admin') {
+                return redirect()->intended('/admin/dashboard');
+            }
+
+            if ($user->portal_role === 'user') {
+                return redirect()->intended('/user/dashboard');
+            }
+
             return redirect()->intended('/dashboard');
         }
 
@@ -89,29 +96,6 @@ class AuthController extends Controller
         ]);
     }
 
-    public function showRegister()
-    {
-        return view('auth.register');
-    }
-
-    public function register(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|min:6|confirmed',
-        ]);
-
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
-
-        Auth::login($user);
-        return redirect('/dashboard');
-    }
-
     public function logout(Request $request)
     {
         if (auth()->check()) {
@@ -131,6 +115,6 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        return redirect('/');
+        return redirect()->route('login');
     }
 }

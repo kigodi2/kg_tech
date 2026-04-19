@@ -42,9 +42,9 @@
 
         /* Official Header */
         .official-header {
-            background: linear-gradient(135deg, #1b5e3f 0%, #2d7a4f 50%, #1b5e3f 100%);
+            background: linear-gradient(180deg, #1b5f41 0%, #1f6a48 54%, #185438 100%);
             color: white;
-            padding: 0.8rem 2rem;
+            padding: 0.55rem 1.5rem 0.6rem;
             text-align: center;
             position: fixed;
             top: 0;
@@ -52,18 +52,27 @@
             right: 0;
             z-index: 999;
             width: 100%;
-            height: 100px;
+            height: 96px;
             overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.14);
+        }
+
+        .official-header::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 2px;
+            background: linear-gradient(90deg, rgba(0, 0, 0, 0) 0%, rgba(201, 162, 39, 0.9) 18%, rgba(215, 178, 55, 0.95) 50%, rgba(201, 162, 39, 0.9) 82%, rgba(0, 0, 0, 0) 100%);
         }
 
         .header-content {
-            max-width: 1400px;
+            max-width: 1120px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 3rem;
-            position: relative;
             height: 100%;
         }
 
@@ -71,62 +80,72 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 80px;
-            height: 80px;
+            width: 78px;
+            height: 78px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
         .left-emblem {
-            left: 2rem;
+            left: 1.5rem;
         }
 
         .right-emblem {
-            right: 2rem;
+            right: 1.5rem;
         }
 
         .header-emblem img {
-            max-width: 100%;
-            max-height: 100%;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
         }
 
         .header-text {
-            flex: 1;
             text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.08rem;
+            min-width: 0;
+            width: 100%;
         }
 
         .header-line-1 {
-            font-size: 0.75rem;
+            font-size: 0.68rem;
             font-weight: 500;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.09em;
             margin-bottom: 0;
-            line-height: 1.2;
+            line-height: 1.15;
+            color: rgba(255, 255, 255, 0.92);
         }
 
         .header-line-2 {
-            font-size: 0.75rem;
-            font-weight: 500;
-            letter-spacing: 0.05em;
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
             margin-bottom: 0;
-            line-height: 1.2;
+            line-height: 1.15;
+            color: rgba(255, 255, 255, 0.94);
         }
 
         .header-line-3 {
-            font-size: 0.65rem;
+            font-size: 0.6rem;
             font-weight: 400;
-            letter-spacing: 0.02em;
-            margin-bottom: 0.3rem;
-            opacity: 0.95;
-            line-height: 1.2;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.28rem;
+            opacity: 0.76;
+            line-height: 1.1;
         }
 
         .header-title {
-            font-size: 1.4rem;
+            font-size: 1.72rem;
             font-weight: 700;
-            color: #ffc107;
-            letter-spacing: 0.05em;
-            line-height: 1.2;
+            color: #e0b33b;
+            letter-spacing: 0.012em;
+            line-height: 1.06;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
         }
 
         /* Navigation Bar - using Tailwind */
@@ -136,7 +155,7 @@
             text-decoration: none;
             font-weight: 600;
             padding: 0.25rem 0;
-            transition: all 0.2s;
+            transition: color 0.2s ease;
             background: none;
             border: none;
             cursor: pointer;
@@ -145,9 +164,61 @@
             white-space: nowrap;
         }
 
+        .nav-link-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-icon {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            opacity: 1;
+        }
+
+        .nav-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            transition: filter 0.2s ease, opacity 0.2s ease;
+            filter: brightness(0) invert(1);
+            opacity: 1;
+        }
+
         .nav-link:hover {
             color: #ffc107;
             text-decoration: none;
+        }
+
+        .nav-link:hover .nav-icon img,
+        .nav-link.active .nav-icon img,
+        .logout-link:hover .nav-icon img,
+        .dropdown-toggle:hover .nav-icon img {
+            filter: brightness(0) saturate(100%) invert(76%) sepia(45%) saturate(694%) hue-rotate(358deg) brightness(92%) contrast(88%);
+            opacity: 1;
+        }
+
+        .nav-link.active {
+            color: #ffc107;
+        }
+
+        .nav-link.active .nav-link-label,
+        .dropdown-toggle.active .nav-link-label {
+            position: relative;
+        }
+
+        .nav-link.active .nav-link-label::after,
+        .dropdown-toggle.active .nav-link-label::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -0.72rem;
+            height: 2px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(224, 179, 59, 0) 0%, rgba(224, 179, 59, 0.95) 22%, rgba(224, 179, 59, 0.95) 78%, rgba(224, 179, 59, 0) 100%);
         }
 
         .nav-dropdown {
@@ -161,12 +232,37 @@
             align-items: center;
             gap: 0.5rem;
             cursor: pointer;
-            background-color: #2d2d2d;
-            border: 1px solid #404040;
-            border-bottom: 1px solid #2d2d2d;
-            padding: 0.5rem 1rem;
+            background-color: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom-color: transparent;
+            padding: 0.5rem 0.95rem;
             border-radius: 6px 6px 0 0;
             margin: 0;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+
+        .dropdown-toggle:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .navbar-shell {
+            width: 100%;
+            padding: 0 1.5rem;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 1rem;
+            height: 100%;
+        }
+
+        .navbar-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            min-width: 0;
+            grid-column: 2;
         }
 
         .dropdown-toggle i {
@@ -234,6 +330,13 @@
             width: 18px;
             text-align: center;
             flex-shrink: 0;
+            color: rgba(255, 255, 255, 0.88);
+            font-size: 0.92rem;
+            transition: color 0.15s ease;
+        }
+
+        .dropdown-item:hover i {
+            color: #ffc107;
         }
 
         .dropdown-menu hr {
@@ -285,14 +388,95 @@
         .navbar-user {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
-            position: absolute;
-            right: 2rem;
+            justify-content: flex-end;
+            gap: 0.9rem;
+            padding-left: 1.3rem;
+            padding-right: 0.25rem;
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            grid-column: 3;
+            justify-self: end;
         }
 
         .user-info {
             color: #ddd;
             font-size: 0.8rem;
+        }
+
+        .page-footer {
+            margin-top: 32px;
+            background: #0057a8;
+            color: #ffffff;
+            box-shadow: 0 -10px 20px rgba(15, 23, 42, 0.08);
+        }
+
+        .page-footer-stripes {
+            display: flex;
+            width: 100%;
+            height: 2px;
+        }
+
+        .page-footer-stripes span {
+            display: block;
+            width: 25%;
+        }
+
+        .page-footer-body {
+            width: 100%;
+            padding: 10px 18px 12px;
+        }
+
+        .page-footer-row {
+            position: relative;
+            min-height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .page-footer-copy,
+        .page-footer-meta {
+            font-size: 0.83rem;
+            line-height: 1.45;
+        }
+
+        .page-footer-copy {
+            text-align: center;
+        }
+
+        .page-footer-meta {
+            position: absolute;
+            right: 0;
+            text-align: right;
+            color: rgba(255, 255, 255, 0.88);
+            font-size: 0.79rem;
+        }
+
+        .page-footer-meta strong {
+            color: #fcd116;
+            font-weight: 700;
+        }
+
+        .page-footer-copy p,
+        .page-footer-meta p {
+            margin: 0;
+        }
+
+        .logout-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.45rem 0.85rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+        }
+
+        .logout-link:hover {
+            color: #ffc107;
+            background: rgba(255, 255, 255, 0.09);
+            border-color: rgba(255, 193, 7, 0.2);
+            transform: translateY(-1px);
         }
 
         main {
@@ -342,8 +526,10 @@
             }
 
             .header-emblem {
-                width: 60px;
-                height: 60px;
+                width: 56px;
+                height: 56px;
+                top: 0.9rem;
+                transform: none;
             }
 
             .header-title {
@@ -351,29 +537,63 @@
             }
 
             .official-header {
-                height: 80px;
+                height: auto;
+                padding: 0.9rem 1rem;
+            }
+
+            .header-content {
+                max-width: 100%;
+                gap: 0.75rem;
+            }
+
+            .right-emblem {
+                display: none;
+            }
+
+            .left-emblem {
+                left: 1rem;
             }
 
             .navbar {
-                top: 80px;
+                top: 112px;
                 height: auto;
             }
 
-            .navbar-content {
-                padding: 0 1rem;
-                flex-wrap: wrap;
-                gap: 1rem;
+            .navbar-shell {
+                padding: 0.4rem 1rem 0.6rem;
+                grid-template-columns: 1fr;
+                height: auto;
+                gap: 0.75rem;
             }
 
             .navbar-nav {
-                order: 3;
-                flex-basis: 100%;
+                order: 2;
+                flex-wrap: wrap;
+                justify-content: center;
                 gap: 1rem;
+                grid-column: auto;
             }
 
             .navbar-user {
-                order: 2;
+                order: 1;
                 margin-left: auto;
+                border-left: none;
+                padding-left: 0;
+                grid-column: auto;
+            }
+
+            .page-footer-body {
+                padding: 12px 16px 14px;
+            }
+
+            .page-footer-row {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .page-footer-meta {
+                position: static;
+                text-align: center;
             }
 
             /* Hide sidebar on mobile */
@@ -385,6 +605,16 @@
         /* Alpine.js x-cloak directive - hide elements until Alpine initializes */
         [x-cloak] { 
             display: none !important; 
+        }
+
+        /* Shared square-corner filter styling across portal dropdown/search controls */
+        .filter-search-input,
+        .filter-dropdown-btn,
+        .acsee-filter-input,
+        .acsee-filter-button,
+        .acsee-filter-menu,
+        select.acsee-square-select {
+            border-radius: 0 !important;
         }
     </style>
 </head>
@@ -408,70 +638,156 @@
     </div>
 
     <!-- Navigation Header -->
-    <nav class="navbar fixed top-[100px] left-0 right-0 w-full h-10 shadow-md" style="z-index: 1000; background-color: #2d2d2d; border-bottom: 2px solid #404040;">
-        <div class="navbar-content max-w-7xl mx-auto px-8 flex items-center justify-center h-full">
-            <div class="navbar-nav flex gap-8 items-center">
-                <a href="/dashboard" class="nav-link">HOME</a>
+    <nav class="navbar fixed top-[96px] left-0 right-0 w-full h-11 shadow-md" style="z-index: 1000; background-color: #2d2d2d; border-bottom: 2px solid #404040;">
+        <div class="navbar-shell">
+            <div class="navbar-nav">
+                <a href="/dashboard" class="nav-link active">
+                    <span class="nav-link-label">
+                        <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/house.png') }}" alt=""></span>
+                        <span>HOME</span>
+                    </span>
+                </a>
 
-                <!-- REGISTRATION Dropdown -->
+                <!-- REGISTRATION Dropdown (Admin Only) -->
+                @if(auth()->check() && auth()->user()->isAdmin())
                 <div class="nav-dropdown">
-                    <button class="nav-link dropdown-toggle">REGISTRATION <i class="fas fa-chevron-down"></i></button>
+                    <button class="nav-link dropdown-toggle">
+                        <span class="nav-link-label">
+                            <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/register.png') }}" alt=""></span>
+                            <span>REGISTRATION</span>
+                        </span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="dropdown-menu">
-                        <a href="/registration" class="dropdown-item">Dashboard</a>
-                        <a href="/registration/regions" class="dropdown-item">Regions</a>
-                        <a href="/registration/districts" class="dropdown-item">Districts</a>
-                        <a href="/registration/schools" class="dropdown-item">Schools</a>
-                        <a href="/registration/candidates" class="dropdown-item">Candidates</a>
+                        <a href="/admin/registration" class="dropdown-item"><i class="fas fa-table-columns"></i> Dashboard</a>
+                        <a href="/admin/registration/regions" class="dropdown-item"><i class="fas fa-map"></i> Regions</a>
+                        <a href="/admin/registration/districts" class="dropdown-item"><i class="fas fa-map-location-dot"></i> Districts</a>
+                        <a href="/admin/registration/schools" class="dropdown-item"><i class="fas fa-school"></i> Schools</a>
+                        <a href="/admin/registration/candidates" class="dropdown-item"><i class="fas fa-user-graduate"></i> Candidates</a>
                     </div>
                 </div>
+                @endif
 
-                <!-- EXAM TYPE Dropdown -->
+                <!-- EXAM TYPE Dropdown (Admin Only) -->
+                @if(auth()->check() && auth()->user()->isAdmin())
                 <div class="nav-dropdown">
-                    <button class="nav-link dropdown-toggle">EXAM TYPE <i class="fas fa-chevron-down"></i></button>
+                    <button class="nav-link dropdown-toggle">
+                        <span class="nav-link-label">
+                            <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/resume.png') }}" alt=""></span>
+                            <span>EXAM TYPE</span>
+                        </span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="dropdown-menu">
-                        <a href="/exam-types/psle" class="dropdown-item">PSLE</a>
-                        <a href="/exam-types/csee" class="dropdown-item">CSEE</a>
-                        <a href="/exam-types/acsee" class="dropdown-item">ACSEE</a>
+                        @php
+                            $configuredExamTypes = \App\Models\ExamType::query()
+                                ->orderBy('code')
+                                ->get(['code', 'name']);
+                        @endphp
+                        <a href="/admin/exam-types" class="dropdown-item"><i class="fas fa-table-list"></i> All Exam Types</a>
+                        @forelse ($configuredExamTypes as $configuredExamType)
+                            <a href="/admin/exam-types/{{ strtolower($configuredExamType->code) }}" class="dropdown-item">
+                                <i class="fas fa-file-circle-check"></i> {{ $configuredExamType->code }}
+                            </a>
+                        @empty
+                            <span class="dropdown-item text-gray-400 cursor-default">
+                                <i class="fas fa-circle-info"></i> No exam types configured
+                            </span>
+                        @endforelse
                     </div>
                 </div>
+                @endif
 
                 <!-- MARK ENTRY Dropdown -->
                 <div class="nav-dropdown">
-                    <button class="nav-link dropdown-toggle">MARK ENTRY <i class="fas fa-chevron-down"></i></button>
+                    <button class="nav-link dropdown-toggle">
+                        <span class="nav-link-label">
+                            <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/keys.png') }}" alt=""></span>
+                            <span>MARK ENTRY</span>
+                        </span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="dropdown-menu">
-                        <a href="/mark-entry/psle" class="dropdown-item">PSLE</a>
-                        <a href="/mark-entry/csee" class="dropdown-item">CSEE</a>
-                        <a href="/mark-entry/acsee" class="dropdown-item">ACSEE</a>
+                        <a href="/mark-entry/psle" class="dropdown-item"><i class="fas fa-pen-to-square"></i> PSLE</a>
+                        <a href="/mark-entry/csee" class="dropdown-item"><i class="fas fa-keyboard"></i> CSEE</a>
+                        <a href="/mark-entry/acsee" class="dropdown-item"><i class="fas fa-clipboard-check"></i> ACSEE</a>
+                        <hr style="margin: 0.4rem 0; border-top: 1px solid #404040;">
+                        <span class="dropdown-item text-gray-400 cursor-default">
+                            <i class="fas fa-list-check"></i> QUESTION ENTRY
+                        </span>
+                        <a href="{{ route('mark-entry.psle.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> PSLE Questions</a>
+                        <a href="{{ route('mark-entry.sfna.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> SFNA Questions</a>
+                        <a href="{{ route('mark-entry.ftna.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> FTNA Questions</a>
+                        <a href="{{ route('mark-entry.csee.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> CSEE Questions</a>
+                        <a href="{{ route('mark-entry.acsee.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> ACSEE Questions</a>
                     </div>
                 </div>
 
                 <!-- RESULTS Dropdown -->
                 <div class="nav-dropdown">
-                    <button class="nav-link dropdown-toggle">RESULTS <i class="fas fa-chevron-down"></i></button>
+                    <button class="nav-link dropdown-toggle">
+                        <span class="nav-link-label">
+                            <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/vacancies.png') }}" alt=""></span>
+                            <span>RESULTS</span>
+                        </span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="dropdown-menu">
-                        <a href="/results/psle" class="dropdown-item">PSLE</a>
-                        <a href="/results/csee" class="dropdown-item">CSEE</a>
-                        <a href="/results/acsee" class="dropdown-item">ACSEE</a>
+                        <a href="/results/psle" class="dropdown-item"><i class="fas fa-square-poll-vertical"></i> PSLE</a>
+                        <a href="/results/csee" class="dropdown-item"><i class="fas fa-chart-column"></i> CSEE</a>
+                        <a href="/results/acsee" class="dropdown-item"><i class="fas fa-award"></i> ACSEE</a>
                         <hr style="margin: 0.4rem 0; border-top: 1px solid #404040;">
                         <a href="/results/2026/acsee" class="dropdown-item">
                             <i class="fas fa-globe"></i> PUBLIC RESULTS (2026 ACSEE)
+                        </a>
+                        <a href="/results/2026/psle" class="dropdown-item">
+                            <i class="fas fa-globe"></i> PUBLIC RESULTS (2026 PSLE)
                         </a>
                     </div>
                 </div>
 
                 <!-- EVALUATIONS Dropdown -->
                 <div class="nav-dropdown">
-                    <button class="nav-link dropdown-toggle">EVALUATIONS <i class="fas fa-chevron-down"></i></button>
+                    <button class="nav-link dropdown-toggle">
+                        <span class="nav-link-label">
+                            <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/feedback.png') }}" alt=""></span>
+                            <span>EVALUATIONS</span>
+                        </span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="dropdown-menu">
-                        <a href="/evaluations/psle" class="dropdown-item">PSLE</a>
-                        <a href="/evaluations/csee" class="dropdown-item">CSEE</a>
-                        <a href="/evaluations/acsee" class="dropdown-item">ACSEE</a>
+                        <a href="/evaluations/psle" class="dropdown-item"><i class="fas fa-magnifying-glass-chart"></i> PSLE</a>
+                        <a href="/evaluations/csee" class="dropdown-item"><i class="fas fa-chart-line"></i> CSEE</a>
+                        <a href="/evaluations/acsee" class="dropdown-item"><i class="fas fa-chart-pie"></i> ACSEE</a>
+                    </div>
+                </div>
+
+                <!-- EXAM DEVELOPMENT Dropdown -->
+                <div class="nav-dropdown">
+                    <button class="nav-link dropdown-toggle">
+                        <span class="nav-link-label">
+                            <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/document.png') }}" alt=""></span>
+                            <span>EXAM DEVELOPMENT</span>
+                        </span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="{{ route('exam-development.dashboard') }}" class="dropdown-item"><i class="fas fa-diagram-project"></i> Dashboard</a>
+                        <a href="{{ route('exam-development.formats.index') }}" class="dropdown-item"><i class="fas fa-layer-group"></i> Format Master</a>
+                        <a href="{{ route('exam-development.projects.index') }}" class="dropdown-item"><i class="fas fa-folder-tree"></i> Projects</a>
+                        <a href="{{ route('exam-development.questions.index') }}" class="dropdown-item"><i class="fas fa-book-open"></i> Question Bank</a>
                     </div>
                 </div>
 
                 <!-- SETTINGS Dropdown -->
                 <div class="nav-dropdown">
-                    <button class="nav-link dropdown-toggle">SETTINGS <i class="fas fa-chevron-down"></i></button>
+                    <button class="nav-link dropdown-toggle">
+                        <span class="nav-link-label">
+                            <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/building.png') }}" alt=""></span>
+                            <span>SETTINGS</span>
+                        </span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="dropdown-menu">
                         @auth
                             @if(auth()->user()->isAdmin())
@@ -500,14 +816,20 @@
                 </div>
             </div>
 
-            <div class="navbar-user absolute right-8 flex items-center gap-6">
+            <div class="navbar-user">
                 @auth
                     <form method="POST" action="/logout" class="inline">
                         @csrf
-                        <button type="submit" class="nav-link">Logout</button>
+                        <button type="submit" class="nav-link logout-link">
+                            <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/login.png') }}" alt=""></span>
+                            <span>Logout</span>
+                        </button>
                     </form>
                 @else
-                    <a href="/login" class="nav-link">Login</a>
+                    <a href="/login" class="nav-link logout-link">
+                        <span class="nav-icon" aria-hidden="true"><img src="{{ asset('assets/rms-icons/login.png') }}" alt=""></span>
+                        <span>Login</span>
+                    </a>
                 @endauth
             </div>
         </div>
@@ -537,6 +859,25 @@
 
         @yield('content')
     </main>
+
+    <footer class="page-footer">
+        <div class="page-footer-stripes" aria-hidden="true">
+            <span style="background:#1EB53A;"></span>
+            <span style="background:#FCD116;"></span>
+            <span style="background:#000000;"></span>
+            <span style="background:#00A3DD;"></span>
+        </div>
+        <div class="page-footer-body">
+            <div class="page-footer-row">
+                <div class="page-footer-copy">
+                    <p>Copyright &copy; {{ now()->year }} Integrated Results Management System | All Rights Reserved</p>
+                </div>
+                <div class="page-footer-meta">
+                    <p>Developed by <strong>ProSmart Technologies</strong></p>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <!-- Modal -->
     <div id="modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">

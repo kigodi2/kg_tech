@@ -134,34 +134,48 @@
         </div>
         
         <!-- Pagination -->
-        <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-white rounded-lg shadow">
-            <div class="text-sm text-gray-600">
-                Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span>, showing <span x-text="filteredCandidates.length"></span> of <span x-text="totalCount"></span> records
+        <div class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5 rounded-b-[22px]">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                    <i class="fas fa-layer-group text-xs"></i>
+                    <span>Page <span x-text="currentPage"></span> of <span x-text="Math.max(totalPages, 1)"></span></span>
+                </div>
+                <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                    <i class="fas fa-table-list text-xs text-slate-400"></i>
+                    <span>Showing <span class="font-semibold text-slate-800" x-text="filteredCandidates.length"></span> of <span class="font-semibold text-slate-800" x-text="totalCount"></span> records</span>
+                </div>
             </div>
-            <div class="flex gap-2 items-center">
+            <div class="flex gap-2 items-center flex-wrap lg:justify-end">
+                <button @click="currentPage > 1 && (currentPage = 1, loadCandidates())" :disabled="currentPage <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-left text-xs"></i></button>
                 <button 
                     @click="currentPage > 1 && (currentPage--, loadCandidates())"
                     :disabled="currentPage <= 1"
-                    class="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                    class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                    <i class="fas fa-chevron-left"></i>
+                    <i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span>
                 </button>
-                <template x-for="page in Array.from({length: Math.min(totalPages, 5)}, (_, i) => i + 1)" :key="page">
+                <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                <template x-for="page in visiblePages" :key="page">
                     <button 
                         @click="currentPage = page; loadCandidates()"
-                        :class="currentPage === page ? 'bg-blue-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-100'"
-                        class="px-3 py-1 rounded transition-colors font-medium"
+                        :class="currentPage === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                        class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
                         x-text="page"
                     ></button>
                 </template>
+                </div>
                 <button 
                     @click="currentPage < totalPages && (currentPage++, loadCandidates())"
                     :disabled="currentPage >= totalPages"
-                    class="px-3 py-1 border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
+                    class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                    <i class="fas fa-chevron-right"></i>
+                    <span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i>
                 </button>
+                <button @click="currentPage < totalPages && (currentPage = totalPages, loadCandidates())" :disabled="currentPage >= totalPages" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"><i class="fas fa-angles-right text-xs"></i></button>
             </div>
+            </div>
+        </div>
         </div>
         
     </div>
@@ -189,6 +203,17 @@ function dashboardAcseeManager() {
         currentPage: 1,
         pageSize: 15,
         totalPages: 1,
+        get visiblePages() {
+            const total = this.totalPages || 1;
+            const current = this.currentPage || 1;
+            const windowSize = 5;
+            let start = Math.max(1, current - Math.floor(windowSize / 2));
+            let end = Math.min(total, start + windowSize - 1);
+            if (end - start + 1 < windowSize) {
+                start = Math.max(1, end - windowSize + 1);
+            }
+            return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+        },
         totalCount: 0,
         
         // State - UI

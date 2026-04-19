@@ -1,7 +1,7 @@
 @extends('results.acsee.layout')
 
 @section('page-title', 'Result Processing')
-@section('page-subtitle', 'Grade candidates, compute GPA, and assign divisions')
+@section('page-subtitle', $resultsModuleLabel === 'PSLE' ? 'Validate marks and apply PSLE grades for release' : 'Grade candidates, compute GPA, and assign divisions')
 @section('breadcrumb-active', 'Result Processing')
 
 @section('results-content')
@@ -10,9 +10,9 @@
     <!-- Pre-Processing Validation -->
     <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
         <div class="flex items-start justify-between">
-            <div>
-                <h3 class="text-lg font-bold text-gray-900 mb-2">Pre-Processing Validation</h3>
-                <p class="text-sm text-gray-600 mb-3">Verify all data is complete before processing</p>
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Pre-Processing Validation</h3>
+                    <p class="text-sm text-gray-600 mb-3">{{ $resultsModuleLabel === 'PSLE' ? 'Verify PSLE marks and grading setup before processing' : 'Verify all data is complete before processing' }}</p>
                 <div id="validationStatus" class="space-y-2">
                     <p class="text-sm"><span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-semibold">⏳ Checking</span></p>
                 </div>
@@ -31,7 +31,7 @@
             <div class="flex items-start justify-between mb-4">
                 <div>
                     <h3 class="text-lg font-bold text-gray-900">Draft Run</h3>
-                    <p class="text-sm text-gray-600 mt-1">Safe testing - results not locked</p>
+                    <p class="text-sm text-gray-600 mt-1">{{ $resultsModuleLabel === 'PSLE' ? 'Safe testing for PSLE grading - results not locked' : 'Safe testing - results not locked' }}</p>
                 </div>
                 <i class="fas fa-flask text-blue-500 text-2xl"></i>
             </div>
@@ -39,7 +39,7 @@
             <div class="space-y-3 mb-4">
                 <div class="flex items-center gap-2 text-sm text-gray-700">
                     <i class="fas fa-check text-green-600"></i>
-                    <span>Test grade calculations</span>
+                    <span>{{ $resultsModuleLabel === 'PSLE' ? 'Test PSLE grade calculations' : 'Test grade calculations' }}</span>
                 </div>
                 <div class="flex items-center gap-2 text-sm text-gray-700">
                     <i class="fas fa-check text-green-600"></i>
@@ -61,7 +61,7 @@
             <div class="flex items-start justify-between mb-4">
                 <div>
                     <h3 class="text-lg font-bold text-gray-900">Final Run</h3>
-                    <p class="text-sm text-gray-600 mt-1">Permanent processing - results locked</p>
+                    <p class="text-sm text-gray-600 mt-1">{{ $resultsModuleLabel === 'PSLE' ? 'Permanent PSLE processing - results locked' : 'Permanent processing - results locked' }}</p>
                 </div>
                 <i class="fas fa-lock text-green-500 text-2xl"></i>
             </div>
@@ -77,7 +77,7 @@
                 </div>
                 <div class="flex items-center gap-2 text-sm text-gray-700">
                     <i class="fas fa-check text-green-600"></i>
-                    <span>Ready for publication</span>
+                    <span>{{ $resultsModuleLabel === 'PSLE' ? 'Ready for PSLE publication' : 'Ready for publication' }}</span>
                 </div>
             </div>
 
@@ -142,7 +142,7 @@
         <ul class="text-sm text-red-800 space-y-1">
             <li>✓ Run validation before processing</li>
             <li>✓ Draft run can be rolled back anytime</li>
-            <li>✓ Final run results are locked permanently</li>
+            <li>✓ {{ $resultsModuleLabel }} final run results are locked permanently</li>
             <li>✓ Processing cannot be reversed once final</li>
         </ul>
     </div>
@@ -152,7 +152,7 @@
 function validateData() {
     document.getElementById('validationStatus').innerHTML = '<p class="text-sm"><span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-semibold">⏳ Validating...</span></p>';
     
-    fetch('{{ route("results.acsee.processing.validate") }}', {
+    fetch('{{ route($resultsRoutePrefix . ".processing.validate") }}', {
         method: 'POST',
         headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'},
     })
@@ -168,8 +168,8 @@ function validateData() {
 }
 
 function startDraftRun() {
-    if (confirm('Start draft processing run? This will grade all candidates.')) {
-        fetch('{{ route("results.acsee.processing.draft-run") }}', {
+    if (confirm('Start draft processing run? This will process all {{ $resultsModuleLabel }} candidates in scope.')) {
+        fetch('{{ route($resultsRoutePrefix . ".processing.draft-run") }}', {
             method: 'POST',
             headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'},
         })
@@ -184,9 +184,9 @@ function startDraftRun() {
 }
 
 function confirmFinalRun() {
-    if (confirm('⚠️ Start FINAL processing? This will lock all results permanently and cannot be undone.')) {
+    if (confirm('⚠️ Start FINAL processing? This will lock all {{ $resultsModuleLabel }} results permanently and cannot be undone.')) {
         if (confirm('Are you absolutely sure? This action is irreversible.')) {
-            fetch('{{ route("results.acsee.processing.final-run") }}', {
+            fetch('{{ route($resultsRoutePrefix . ".processing.final-run") }}', {
                 method: 'POST',
                 headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'},
                 body: JSON.stringify({confirm: true})

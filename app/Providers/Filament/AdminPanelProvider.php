@@ -97,12 +97,12 @@ class AdminPanelProvider extends PanelProvider
                 // Log admin panel access for audit trail
                 if (auth()->check()) {
                     Log::channel('admin')->info('Admin panel accessed', [
-                        'user_id' => auth()->id(),
-                        'username' => auth()->user()->username,
-                        'role' => auth()->user()->irms_role,
+                        'user_id'    => auth()->id(),
+                        'name'       => auth()->user()->name,
+                        'role'       => auth()->user()->portal_role ?? 'unknown',
                         'ip_address' => request()->ip(),
                         'user_agent' => request()->userAgent(),
-                        'timestamp' => now(),
+                        'timestamp'  => now(),
                     ]);
                 }
             });

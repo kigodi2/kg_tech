@@ -13,7 +13,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('results.acsee.grading.update', $profile) }}" class="space-y-6" id="gradingForm" @if($profile->is_locked) onsubmit="return false" @endif>
+    <form method="POST" action="{{ route($resultsRoutePrefix . '.grading.update', $profile) }}" class="space-y-6" id="gradingForm" @if($profile->is_locked) onsubmit="return false" @endif>
         @csrf
         @method('PATCH')
 
@@ -24,7 +24,7 @@
             <div class="grid grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Profile Name *</label>
-                    <input type="text" name="name" placeholder="e.g., ACSEE 2026 Standard" value="{{ old('name', $profile->name) }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('name') border-red-500 @enderror" @if($profile->is_locked) disabled @endif>
+                    <input type="text" name="name" placeholder="e.g., {{ $resultsModuleLabel }} 2026 Standard" value="{{ old('name', $profile->name) }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('name') border-red-500 @enderror" @if($profile->is_locked) disabled @endif>
                     @error('name')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                     @enderror
@@ -147,14 +147,14 @@
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
                     <i class="fas fa-save"></i> Update Profile
                 </button>
-                <form method="POST" action="{{ route('results.acsee.grading.lock', $profile) }}" class="inline">
+                <form method="POST" action="{{ route($resultsRoutePrefix . '.grading.lock', $profile) }}" class="inline">
                     @csrf
                     <button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
                         <i class="fas fa-lock"></i> Lock Profile
                     </button>
                 </form>
             @endif
-            <a href="{{ route('results.acsee.grading.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors font-medium">
+            <a href="{{ route($resultsRoutePrefix . '.grading.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors font-medium">
                 Back
             </a>
         </div>

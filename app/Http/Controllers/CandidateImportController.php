@@ -7,6 +7,7 @@ use App\Models\School;
 use App\Models\ExamYear;
 use App\Models\ExamType;
 use App\Services\Candidates\CandidateImportService;
+use App\Services\Candidates\CseeRegistrationPdfImportService;
 use App\Jobs\ProcessCandidateBulkImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,95 @@ class CandidateImportController extends Controller
     public function __construct(CandidateImportService $importService)
     {
         $this->importService = $importService;
+    }
+
+    public function validateCseeRegistrationPdf(Request $request, CseeRegistrationPdfImportService $service)
+    {
+        try {
+            $request->validate([
+                'files' => 'required|array|min:1',
+                'files.*' => 'required|file|mimes:pdf',
+                'exam_year' => 'nullable|string|regex:/^\d{4}$/',
+            ]);
+
+            return response()->json(
+                $service->validatePdfBatch($request->file('files', []), $request->input('exam_year')),
+                200
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('CSEE registration PDF validation error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation error: ' . $e->getMessage(),
+                'errors' => [],
+            ], 400);
+        }
+    }
+
+    public function commitCseeRegistrationPdf(Request $request, CseeRegistrationPdfImportService $service)
+    {
+        try {
+            if ($request->has('parsed_payloads')) {
+                $validated = $request->validate([
+                    'parsed_payloads' => 'required|array|min:1',
+                    'parsed_payloads.*.exam_year' => 'nullable|string|regex:/^\d{4}$/',
+                    'parsed_payloads.*.school_code' => 'required|string',
+                    'parsed_payloads.*.school_name' => 'required|string',
+                    'parsed_payloads.*.rows' => 'required|array|min:1',
+                    'parsed_payloads.*.rows.*.candidate_id' => 'required|string',
+                    'parsed_payloads.*.rows.*.gender' => 'required|string',
+                    'parsed_payloads.*.rows.*.full_name' => 'required|string',
+                    'parsed_payloads.*.rows.*.school_code' => 'nullable|string',
+                    'parsed_payloads.*.rows.*.subject_codes' => 'required|array|min:1',
+                    'parsed_payloads.*.rows.*.subject_codes.*' => 'required|string',
+                    'parsed_payloads.*.source_file_name' => 'nullable|string',
+                    'exam_year' => 'nullable|string|regex:/^\d{4}$/',
+                ]);
+
+                return response()->json(
+                    $service->commitParsedPayloadBatch($validated['parsed_payloads'], $request->input('exam_year')),
+                    200
+                );
+            }
+
+            $request->validate([
+                'files' => 'required|array|min:1',
+                'files.*' => 'required|file|mimes:pdf',
+                'exam_year' => 'nullable|string|regex:/^\d{4}$/',
+            ]);
+
+            return response()->json(
+                $service->commitPdfBatch($request->file('files', []), $request->input('exam_year')),
+                200
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('CSEE registration PDF import error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Import error: ' . $e->getMessage(),
+                'errors' => [],
+            ], 400);
+        }
     }
 
     /**
@@ -123,48 +213,69 @@ class CandidateImportController extends Controller
     public function downloadTemplate(Request $request)
     {
         try {
+            $examType = strtoupper((string) $request->input('exam_type', 'ACSEE'));
             $filename = 'candidates-import-template-' . date('Y-m-d') . '.csv';
-            
-            $headers = [
-                'candidate_id',
-                'full_name',
-                'gender',    // M or F
-                'school_code',
-                'candidate_type', // SCHOOL or PRIVATE
-                'combination', // For SCHOOL candidates: e.g., "PCM" or "HGE"
-                'subjects', // For PRIVATE candidates: pipe-delimited codes e.g., "111|102|103|121"
-                'exam_type', // Optional: PSLE, CSEE, ACSEE (default from UI)
-                'exam_year'  // Optional: 4-digit year
-            ];
 
             // Create CSV in memory
             $csv = fopen('php://memory', 'w');
-            fputcsv($csv, $headers);
-            
-            // Add example rows (SCHOOL and PRIVATE)
-            fputcsv($csv, [
-                'S0001-0001',
-                'John School',
-                'M',
-                'SCH001',
-                'SCHOOL',
-                'PCM', // For SCHOOL: combination code
-                '', // Leave blank for SCHOOL
-                'ACSEE',
-                '2026'
-            ]);
-            
-            fputcsv($csv, [
-                'P0001-0001',
-                'John Private',
-                'M',
-                'SCH001',
-                'PRIVATE',
-                '', // Leave blank for PRIVATE
-                '111|102|103|121', // For PRIVATE: subject codes (GS + 3 principals)
-                'ACSEE',
-                '2026'
-            ]);
+
+            if ($examType === 'CSEE') {
+                $filename = 'csee-candidates-import-template-' . date('Y-m-d') . '.csv';
+                fputcsv($csv, [
+                    'candidate_id',
+                    'full_name',
+                    'gender',
+                    'exam_type',
+                    'exam_year',
+                ]);
+
+                fputcsv($csv, [
+                    'S51910001',
+                    'JANE DOE',
+                    'F',
+                    'CSEE',
+                    '2026',
+                ]);
+            } else {
+                fputcsv($csv, [
+                    'candidate_id',
+                    'prem_no',
+                    'full_name',
+                    'gender',
+                    'school_code',
+                    'candidate_type',
+                    'combination',
+                    'subjects',
+                    'exam_type',
+                    'exam_year'
+                ]);
+
+                fputcsv($csv, [
+                    'S0001-0001',
+                    'PREM-001',
+                    'John School',
+                    'M',
+                    'SCH001',
+                    'SCHOOL',
+                    'PCM',
+                    '',
+                    'ACSEE',
+                    '2026'
+                ]);
+
+                fputcsv($csv, [
+                    'P0001-0001',
+                    'PREM-002',
+                    'John Private',
+                    'M',
+                    'SCH001',
+                    'PRIVATE',
+                    '',
+                    '111|102|103|121',
+                    'ACSEE',
+                    '2026'
+                ]);
+            }
 
             rewind($csv);
             $content = stream_get_contents($csv);
@@ -263,6 +374,7 @@ class CandidateImportController extends Controller
             $headers = [
                 'row_number',
                 'candidate_id',
+                'prem_no',
                 'full_name',
                 'gender',
                 'school_code',
@@ -277,6 +389,7 @@ class CandidateImportController extends Controller
                 fputcsv($csv, [
                     $error['row_number'] ?? '',
                     $error['candidate_id'] ?? '',
+                    $error['prem_no'] ?? '',
                     $error['full_name'] ?? '',
                     $error['gender'] ?? '',
                     $error['school_code'] ?? '',

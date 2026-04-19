@@ -16,6 +16,7 @@ class CandidateResult extends Model
         'exam_type_id',
         'year',
         'overall_grade',
+        'result_status',
         'total_marks',
         'grade_points',
         'division',
@@ -25,6 +26,8 @@ class CandidateResult extends Model
         'published_at',
         'is_locked',
         'locked_at',
+        'process_id',
+        'snapshot_id',
     ];
 
     protected $casts = [
@@ -50,10 +53,9 @@ class CandidateResult extends Model
 
     public function subjectMarks()
     {
-        return $this->hasMany(SubjectMarks::class, 'candidate_id', 'candidate_id')
-            ->where('exam_type_id', $this->exam_type_id)
-            ->where('year', $this->year);
+        return $this->hasMany(SubjectMarks::class, 'candidate_id', 'candidate_id');
     }
+
 
     public function verify()
     {

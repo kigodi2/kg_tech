@@ -16,12 +16,30 @@ use Illuminate\Http\Request;
  */
 class ProcessingController extends Controller
 {
-    public function index()
+    private function routePrefix(Request $request): string
+    {
+        return $request->routeIs('results.psle.*') ? 'results.psle' : 'results.acsee';
+    }
+
+    private function examCode(Request $request): string
+    {
+        return $request->routeIs('results.psle.*') ? 'PSLE' : 'ACSEE';
+    }
+
+    private function legacyLifecycleRedirectResponse(Request $request, string $action)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => "Legacy {$action} endpoint is disabled. Use /" . str_replace('.', '/', $this->routePrefix($request)) . " lifecycle Compute / Validate workflow instead.",
+        ], 410);
+    }
+
+    public function index(Request $request)
     {
         $examYear = ExamYear::active()->first();
-        $acsee = ExamType::where('code', 'ACSEE')->first();
+        $examType = ExamType::where('code', $this->examCode($request))->first();
         
-        $processes = ResultProcess::where('exam_type_id', $acsee->id)
+        $processes = ResultProcess::where('exam_type_id', $examType->id)
             ->where('exam_year_id', $examYear->id)
             ->with('user')
             ->latest()
@@ -58,60 +76,12 @@ class ProcessingController extends Controller
 
     public function draftRun(Request $request)
     {
-        $examYear = ExamYear::active()->first();
-        $acsee = ExamType::where('code', 'ACSEE')->first();
-
-        // Create draft processing batch
-        $process = ResultProcess::create([
-            'exam_type_id' => $acsee->id,
-            'exam_year_id' => $examYear->id,
-            'type' => 'draft',
-            'status' => 'in_progress',
-            'user_id' => auth()->id(),
-            'total_candidates' => 0,
-            'processed_count' => 0,
-        ]);
-
-        // Queue processing job
-        // Dispatch to queue for background processing
-
-        return response()->json([
-            'success' => true,
-            'batch_id' => $process->id,
-            'message' => 'Draft processing started. You will be notified when complete.',
-        ]);
+        return $this->legacyLifecycleRedirectResponse($request, 'draft processing');
     }
 
     public function finalRun(Request $request)
     {
-        $request->validate(['confirm' => 'required|boolean']);
-
-        if (!$request->confirm) {
-            return response()->json(['error' => 'Confirmation required'], 422);
-        }
-
-        $examYear = ExamYear::active()->first();
-        $acsee = ExamType::where('code', 'ACSEE')->first();
-
-        // Create final processing batch
-        $process = ResultProcess::create([
-            'exam_type_id' => $acsee->id,
-            'exam_year_id' => $examYear->id,
-            'type' => 'final',
-            'status' => 'in_progress',
-            'user_id' => auth()->id(),
-            'total_candidates' => 0,
-            'processed_count' => 0,
-        ]);
-
-        // Queue processing job
-        // Dispatch to queue for background processing
-
-        return response()->json([
-            'success' => true,
-            'batch_id' => $process->id,
-            'message' => 'Final processing started. Results will be locked after completion.',
-        ]);
+        return $this->legacyLifecycleRedirectResponse($request, 'final processing');
     }
 
     public function status($batchId)
@@ -130,15 +100,6 @@ class ProcessingController extends Controller
 
     public function rollback($batchId)
     {
-        $process = ResultProcess::findOrFail($batchId);
-
-        if ($process->type === 'final' && $process->status === 'completed') {
-            // Require explicit unpublish first
-            return response()->json(['error' => 'Cannot rollback final processing. Unpublish results first.'], 422);
-        }
-
-        $process->update(['status' => 'rolled_back']);
-
-        return response()->json(['success' => true, 'message' => 'Processing rolled back.']);
+        return $this->legacyLifecycleRedirectResponse(request(), 'rollback');
     }
 }

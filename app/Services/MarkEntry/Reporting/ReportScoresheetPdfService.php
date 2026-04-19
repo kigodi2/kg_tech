@@ -3,6 +3,7 @@
 namespace App\Services\MarkEntry\Reporting;
 
 use App\Models\District;
+use App\Models\Candidate;
 use App\Models\ExamType;
 use App\Models\ExamYear;
 use App\Models\MarkImportBatch;
@@ -17,6 +18,53 @@ use ZipArchive;
 
 class ReportScoresheetPdfService
 {
+    private const BULK_EXPORT_TIMEOUT_SECONDS = 600;
+    private const BULK_EXPORT_MEMORY_LIMIT = '1024M';
+
+    /**
+     * Configure runtime limits for heavy PDF ZIP generation.
+     */
+    private function configureBulkExportRuntime(): void
+    {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(self::BULK_EXPORT_TIMEOUT_SECONDS);
+        }
+
+        @ini_set('max_execution_time', (string) self::BULK_EXPORT_TIMEOUT_SECONDS);
+        @ini_set('memory_limit', self::BULK_EXPORT_MEMORY_LIMIT);
+    }
+
+    /**
+     * Resolve candidate gender from linked candidate first, then raw CSV row.
+     */
+    private function resolveGender(?string $candidateGender, mixed $rawData): string
+    {
+        $gender = $candidateGender;
+
+        if (($gender === null || trim($gender) === '') && is_array($rawData)) {
+            // CSV template is [index_number, sex, paper_1, ...]
+            $gender = $rawData[1] ?? null;
+        }
+
+        $normalized = strtoupper(substr(trim((string) $gender), 0, 1));
+
+        return in_array($normalized, ['M', 'F'], true) ? $normalized : 'U';
+    }
+
+    /**
+     * Resolve candidate combination with sensible fallbacks.
+     */
+    private function resolveCombination(?string $candidateCombination, mixed $fallbackCandidate): string
+    {
+        $combination = trim((string) ($candidateCombination ?? ''));
+
+        if ($combination === '' && $fallbackCandidate) {
+            $combination = trim((string) ($fallbackCandidate->resolved_combination ?? ''));
+        }
+
+        return $combination !== '' ? $combination : '—';
+    }
+
     /**
      * Resolve exam_year_id (PK) to year_label (e.g. 2026) for batch queries.
      */
@@ -69,9 +117,30 @@ class ReportScoresheetPdfService
                   ->whereIn('status', $statuses);
             })
             ->where('has_errors', false)
-            ->with('candidate:id,candidate_id,full_name,gender,combination')
+            ->with('candidate:id,candidate_id,full_name,gender,combination,combination_id')
             ->orderBy('candidate_index_number')
             ->get();
+
+        // Fallback map by index number for rows whose candidate_id is null or partially populated.
+        $indexNumbers = $marks->pluck('candidate_index_number')
+            ->filter(fn ($index) => !empty($index))
+            ->unique()
+            ->values();
+
+        $candidateFallbackMap = collect();
+        if ($indexNumbers->isNotEmpty()) {
+            $candidateFallbackMap = Candidate::query()
+                ->leftJoin('combinations', 'combinations.id', '=', 'candidates.combination_id')
+                ->where('candidates.school_id', $schoolId)
+                ->whereIn('candidates.candidate_id', $indexNumbers)
+                ->select(
+                    'candidates.candidate_id',
+                    'candidates.gender',
+                    DB::raw("COALESCE(NULLIF(candidates.combination, ''), combinations.code) as resolved_combination")
+                )
+                ->get()
+                ->keyBy('candidate_id');
+        }
 
         $paperStructure = [
             'written_papers' => $subject->written_papers ?? 2,
@@ -80,34 +149,48 @@ class ReportScoresheetPdfService
         ];
 
         // Calculate total for each candidate
-        $candidateRows = $marks->map(function ($mark) use ($paperStructure) {
+        $candidateRows = $marks->map(function ($mark) use ($paperStructure, $candidateFallbackMap) {
             $total = 0;
             $papers = [];
+            $paperCount = 0;
+            $fallbackCandidate = $candidateFallbackMap->get($mark->candidate_index_number);
 
             for ($i = 1; $i <= $paperStructure['written_papers']; $i++) {
                 $field = "paper_{$i}_marks";
                 $val = $mark->$field;
                 $papers["P{$i}"] = $val;
                 $total += (float)($val ?? 0);
+                if ($val !== null && $val !== '' && is_numeric($val)) {
+                    $paperCount++;
+                }
             }
 
             if ($paperStructure['has_practical']) {
                 $papers['PRAC'] = $mark->practical_marks;
                 $total += (float)($mark->practical_marks ?? 0);
+                if ($mark->practical_marks !== null && $mark->practical_marks !== '' && is_numeric($mark->practical_marks)) {
+                    $paperCount++;
+                }
             }
 
             if ($paperStructure['has_project']) {
                 $papers['PROJ'] = $mark->project_marks;
                 $total += (float)($mark->project_marks ?? 0);
+                if ($mark->project_marks !== null && $mark->project_marks !== '' && is_numeric($mark->project_marks)) {
+                    $paperCount++;
+                }
             }
+
+            $markValue = $paperCount > 0 ? round($total / $paperCount, 2) : null;
 
             return [
                 'index_number' => $mark->candidate_index_number ?? $mark->candidate?->candidate_id ?? '—',
                 'full_name' => $mark->full_name ?? $mark->candidate?->full_name ?? '—',
-                'gender' => strtoupper(substr($mark->candidate?->gender ?? 'U', 0, 1)),
-                'combination' => $mark->candidate?->combination ?? '—',
+                'gender' => $this->resolveGender($mark->candidate?->gender ?? $fallbackCandidate?->gender, $mark->raw_data),
+                'combination' => $this->resolveCombination($mark->candidate?->combination, $fallbackCandidate),
                 'papers' => $papers,
                 'total' => $total,
+                'mark' => $markValue,
             ];
         });
 
@@ -130,6 +213,8 @@ class ReportScoresheetPdfService
      */
     public function generateSchoolZip(int $examYearId, int $schoolId, string $mode = 'approved'): array
     {
+        $this->configureBulkExportRuntime();
+
         $examYear = ExamYear::findOrFail($examYearId);
         $school = School::findOrFail($schoolId);
         $subjects = $this->getSubjectsWithMarks($schoolId, $examYearId, $mode);
@@ -158,7 +243,7 @@ class ReportScoresheetPdfService
             $pdfPath = base_path(self::TEMP_DIR . '/' . $pdfName);
 
             $pdf = Pdf::loadView($viewName, $data)
-                ->setPaper('a4', 'landscape')
+                ->setPaper('a4', 'portrait')
                 ->setOption('enable-local-file-access', true);
             file_put_contents($pdfPath, $pdf->output());
 
@@ -177,6 +262,8 @@ class ReportScoresheetPdfService
      */
     public function generateDistrictZip(int $examYearId, int $districtId, string $mode = 'approved'): array
     {
+        $this->configureBulkExportRuntime();
+
         $examYear = ExamYear::findOrFail($examYearId);
         $district = District::findOrFail($districtId);
         $schools = $this->getSchoolsWithMarks($districtId, $examYearId, $mode);
@@ -209,7 +296,7 @@ class ReportScoresheetPdfService
                 $pdfPath = base_path(self::TEMP_DIR . '/' . str_replace('/', '_', $pdfName));
 
                 $pdf = Pdf::loadView($viewName, $data)
-                    ->setPaper('a4', 'landscape')
+                    ->setPaper('a4', 'portrait')
                     ->setOption('enable-local-file-access', true);
                 file_put_contents($pdfPath, $pdf->output());
 
@@ -229,6 +316,8 @@ class ReportScoresheetPdfService
      */
     public function generateRegionZip(int $examYearId, int $regionId, string $mode = 'approved'): array
     {
+        $this->configureBulkExportRuntime();
+
         $examYear = ExamYear::findOrFail($examYearId);
         $region = Region::findOrFail($regionId);
 
@@ -273,7 +362,7 @@ class ReportScoresheetPdfService
                 $pdfPath = base_path(self::TEMP_DIR . '/' . str_replace('/', '_', $pdfName));
 
                 $pdf = Pdf::loadView($viewName, $data)
-                    ->setPaper('a4', 'landscape')
+                    ->setPaper('a4', 'portrait')
                     ->setOption('enable-local-file-access', true);
                 file_put_contents($pdfPath, $pdf->output());
 

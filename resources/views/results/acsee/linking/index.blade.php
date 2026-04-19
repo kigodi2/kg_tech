@@ -110,7 +110,7 @@
     <div id="readyCard" class="hidden bg-green-50 border border-green-200 rounded-lg p-6">
         <h3 class="text-lg font-bold text-green-900 mb-2">✓ Ready for Processing</h3>
         <p class="text-sm text-green-800 mb-4">All candidates are properly linked and ready for result processing.</p>
-        <a href="{{ route('results.acsee.processing.index') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors font-medium inline-block">
+        <a href="{{ route($resultsRoutePrefix . '.processing.index') }}" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors font-medium inline-block">
             Proceed to Processing
         </a>
     </div>
@@ -118,7 +118,7 @@
 
 <script>
 function revalidate() {
-    fetch('{{ route("results.acsee.linking.validate") }}', {
+    fetch('{{ route($resultsRoutePrefix . ".linking.validate") }}', {
         method: 'POST',
         headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'},
     })
@@ -150,7 +150,7 @@ function updateStatus(data) {
 
 function fixMissing(type) {
     if (confirm(`Auto-fix ${type} issues? This will attempt to resolve missing links.`)) {
-        fetch('{{ route("results.acsee.linking.fix-missing") }}', {
+        fetch('{{ route($resultsRoutePrefix . ".linking.fix-missing") }}', {
             method: 'POST',
             headers: {'X-CSRF-TOKEN': '{{ csrf_token() }}'},
             body: JSON.stringify({type: type})

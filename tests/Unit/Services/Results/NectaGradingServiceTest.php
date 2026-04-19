@@ -176,6 +176,46 @@ class NectaGradingServiceTest extends TestCase
         $this->assertEquals(7, $mapping['F']);
     }
 
+    public function test_calculate_csee_grade_uses_official_necta_bands()
+    {
+        $this->assertSame('A', $this->service->calculateGradeForExamType(75, 'CSEE'));
+        $this->assertSame('B', $this->service->calculateGradeForExamType(74, 'CSEE'));
+        $this->assertSame('B', $this->service->calculateGradeForExamType(65, 'CSEE'));
+        $this->assertSame('C', $this->service->calculateGradeForExamType(64, 'CSEE'));
+        $this->assertSame('C', $this->service->calculateGradeForExamType(45, 'CSEE'));
+        $this->assertSame('D', $this->service->calculateGradeForExamType(44, 'CSEE'));
+        $this->assertSame('D', $this->service->calculateGradeForExamType(30, 'CSEE'));
+        $this->assertSame('F', $this->service->calculateGradeForExamType(29, 'CSEE'));
+    }
+
+    public function test_csee_competence_labels_and_points_match_results_pages()
+    {
+        $this->assertSame('Excellent', $this->service->getCompetenceLevelForExamType('A', 'CSEE'));
+        $this->assertSame('Very Good', $this->service->getCompetenceLevelForExamType('B', 'CSEE'));
+        $this->assertSame('Good', $this->service->getCompetenceLevelForExamType('C', 'CSEE'));
+        $this->assertSame('Satisfactory', $this->service->getCompetenceLevelForExamType('D', 'CSEE'));
+        $this->assertSame('Fail', $this->service->getCompetenceLevelForExamType('F', 'CSEE'));
+
+        $this->assertSame(1, $this->service->getGradePointsForExamType('A', 'CSEE'));
+        $this->assertSame(2, $this->service->getGradePointsForExamType('B', 'CSEE'));
+        $this->assertSame(3, $this->service->getGradePointsForExamType('C', 'CSEE'));
+        $this->assertSame(4, $this->service->getGradePointsForExamType('D', 'CSEE'));
+        $this->assertSame(5, $this->service->getGradePointsForExamType('F', 'CSEE'));
+    }
+
+    public function test_calculate_csee_division_uses_official_aggt_bands()
+    {
+        $this->assertSame(1, $this->service->calculateDivisionForExamType(7, 'CSEE')['division']);
+        $this->assertSame(1, $this->service->calculateDivisionForExamType(17, 'CSEE')['division']);
+        $this->assertSame(2, $this->service->calculateDivisionForExamType(18, 'CSEE')['division']);
+        $this->assertSame(2, $this->service->calculateDivisionForExamType(21, 'CSEE')['division']);
+        $this->assertSame(3, $this->service->calculateDivisionForExamType(22, 'CSEE')['division']);
+        $this->assertSame(3, $this->service->calculateDivisionForExamType(25, 'CSEE')['division']);
+        $this->assertSame(4, $this->service->calculateDivisionForExamType(26, 'CSEE')['division']);
+        $this->assertSame(4, $this->service->calculateDivisionForExamType(33, 'CSEE')['division']);
+        $this->assertSame(0, $this->service->calculateDivisionForExamType(34, 'CSEE')['division']);
+    }
+
     // Integration Tests with Database
 
     public function test_calculate_total_marks()

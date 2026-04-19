@@ -12,31 +12,75 @@ use App\Http\Controllers\ExamYearController;
 use App\Http\Controllers\PasswordChangeController;
 use App\Http\Controllers\BackupManagementController;
 use App\Http\Controllers\BackupRestoreController;
+use App\Http\Controllers\PublicPsleResultsController;
+use App\Http\Controllers\PsleEvaluationsController;
 use App\Http\Controllers\Results\AcseeResultsController;
-use App\Http\Controllers\HierarchyController;
 use App\Http\Controllers\PublicResultsController;
+use App\Http\Controllers\PublicResultsPortalController;
 use App\Http\Controllers\DistrictCandidateImportController;
 use App\Http\Controllers\CandidateImportController;
 use App\Http\Controllers\AcseeAllocationController;
+use App\Http\Controllers\Admin\SubjectPaperWeightController;
+use App\Services\Candidates\CseeCandidateSubjectService;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check()
+        ? redirect('/admin/dashboard')
+        : redirect()->route('public.home');
 });
 
-// Public Results Portal (no authentication required)
-Route::get('/results/{examYear}/{examType}', function($examYear, $examType) {
-    return view('public.results.index', compact('examYear', 'examType'));
-})->name('public.results');
+Route::get('/dev-login', function () {
+    $user = \App\Models\User::where('email', 'agreykigodi@gmail.com')->first();
+    auth()->login($user);
+    return redirect('/admin/dashboard');
+});
+
+// Auth routes
+Route::middleware('guest')->group(function () {
+    Route::view('/home', 'auth.home')->name('public.home');
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+});
+
+Route::get('/r/{token}', [PublicResultsPortalController::class, 'index'])
+    ->name('public.results.portal');
+
+Route::get('/r/{token}/file/{item}', [PublicResultsPortalController::class, 'download'])
+    ->name('public.results.portal.file');
+
+Route::get('/r/{tokenPath}', [PublicResultsPortalController::class, 'indexFromPath'])
+    ->where('tokenPath', '.*')
+    ->name('public.results.portal.normalized');
+
+Route::get('/results/{examYear}/psle', [PublicPsleResultsController::class, 'regions'])
+    ->where(['examYear' => '[0-9]{4}'])
+    ->name('public.results.psle.regions');
+
+Route::get('/results/{examYear}/psle/regions/{region}', [PublicPsleResultsController::class, 'districts'])
+    ->where(['examYear' => '[0-9]{4}'])
+    ->name('public.results.psle.districts');
+
+Route::get('/results/{examYear}/psle/regions/{region}/districts/{district}', [PublicPsleResultsController::class, 'schools'])
+    ->where(['examYear' => '[0-9]{4}'])
+    ->name('public.results.psle.schools');
+
+Route::get('/results/{examYear}/psle/regions/{region}/districts/{district}/schools/{school}', [PublicPsleResultsController::class, 'schoolResults'])
+    ->where(['examYear' => '[0-9]{4}'])
+    ->name('public.results.psle.school');
+
+Route::get('/results/{examYear}/{examType}', [PublicResultsPortalController::class, 'landing'])
+    ->where(['examYear' => '[0-9]{4}', 'examType' => '[A-Za-z0-9_-]+'])
+    ->name('public.results');
 
 Route::post('/api/public-results', [PublicResultsController::class, 'search'])->name('public.results.search');
-Route::get('/results/{examYear}/{examType}/candidate/{candidateId}', [PublicResultsController::class, 'candidate'])->name('public.results.candidate');
-Route::get('/results/{examYear}/{examType}/school/{schoolId}', [PublicResultsController::class, 'school'])->name('public.results.school');
-
-// Auth routes (no middleware)
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-Route::get('/register', [AuthController::class, 'showRegister']);
-Route::post('/register', [AuthController::class, 'register']);
+Route::get('/results/{examYear}/{examType}/candidate/{candidateId}', [PublicResultsController::class, 'candidate'])
+    ->where(['examYear' => '[0-9]{4}', 'examType' => '[A-Za-z0-9_-]+'])
+    ->name('public.results.candidate');
+Route::get('/results/{examYear}/{examType}/school/{schoolId}', [PublicResultsController::class, 'school'])
+    ->where(['examYear' => '[0-9]{4}', 'examType' => '[A-Za-z0-9_-]+'])
+    ->name('public.results.school');
 
 // Forced password change on first login
 Route::get('/password/change-required', [PasswordChangeController::class, 'showChangeRequired'])->name('password.change-required')->middleware('auth');
@@ -47,6 +91,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/backups', [BackupManagementController::class, 'index'])->name('backups.index');
     Route::post('/admin/backups/create', [BackupManagementController::class, 'create'])->name('backups.create');
     Route::delete('/admin/backups/{id}', [BackupManagementController::class, 'delete'])->name('backups.delete');
+    Route::get('/admin/subject-paper-weights', [SubjectPaperWeightController::class, 'page'])->name('admin.subject-paper-weights');
     
     // Backup Restore Routes
     Route::get('/backups/{id}/restore', [BackupRestoreController::class, 'showRestoreForm'])->name('backup.restore-form');
@@ -78,29 +123,159 @@ Route::middleware('auth')->group(function () {
     
     Route::get('/dashboard', [DashboardController::class, 'index']);
     Route::get('/dashboard/exam/ACSEE', [DashboardController::class, 'acseeExam'])->name('dashboard.exam.acsee');
-    
-    // Registration Management Routes
-    Route::get('/registration', function () { return view('registration.dashboard'); });
-    Route::get('/registration/dashboard', function () { return view('registration.dashboard'); });
-    Route::get('/registration/regions', function () { return view('registration.regions'); });
-    Route::get('/registration/districts', function () { 
-        return view('registration.districts', ['regions' => \App\Models\Region::all()]); 
-    });
-    Route::get('/registration/schools', function () { 
-        return view('registration.schools', ['regions' => \App\Models\Region::all()]); 
-    });
-    Route::get('/registration/candidates', function () { 
-        return view('registration.candidates'); 
-    });
-    Route::get('/registration/candidates-by-district', function () { 
-        return view('registration.candidates-by-district'); 
-    });
-    Route::get('/exam-types', function () { 
-        return view('exam-types.index'); 
-    });
-    // Dedicated ACSEE route
-    Route::get('/exam-types/acsee', function () { 
-        return view('exam-types.acsee'); 
+        
+        // Exam Submission Routes
+        Route::get('/exam-submissions/final-report', [\App\Http\Controllers\ExamSubmissionController::class, 'finalReport'])
+            ->name('exam-submissions.final-report');
+        Route::resource('exam-submissions', \App\Http\Controllers\ExamSubmissionController::class)->except(['edit', 'update', 'destroy']);
+        Route::get('/exam-submissions/{exam_submission}/download', [\App\Http\Controllers\ExamSubmissionController::class, 'download'])->name('exam-submissions.download');
+        Route::post('/exam-submissions/{exam_submission}/approve', [\App\Http\Controllers\ExamSubmissionController::class, 'approve'])
+            ->name('exam-submissions.approve')
+            ->middleware('admin');
+        Route::post('/exam-submissions/{exam_submission}/reject', [\App\Http\Controllers\ExamSubmissionController::class, 'reject'])
+            ->name('exam-submissions.reject')
+            ->middleware('admin');
+        Route::post('/exam-submissions/validate-format', [\App\Http\Controllers\ExamSubmissionController::class, 'validateFormat'])->name('exam-submissions.validate-format');
+        Route::get('/exam-submissions/subjects/{exam_type_id}', [\App\Http\Controllers\ExamSubmissionController::class, 'getSubjects'])->name('exam-submissions.subjects');
+        
+        // Format PDF Routes for ACSEE and FTNA (similar to CSEE)
+        Route::get('/exam-types/acsee/formats/pdf', function (\Illuminate\Http\Request $request) {
+            $pdfPath = (string) config('acsee.formats_pdf_path', base_path('ACSEE_FORMATS_2026.pdf'));
+            $filename = (string) config('acsee.formats_pdf_filename', 'acsee_formats_2026.pdf');
+            $nectaPublications = 'https://www.necta.go.tz/publications/all';
+
+            if (!is_file($pdfPath)) {
+                return redirect()->away($nectaPublications);
+            }
+
+            $response = response()->file($pdfPath, [
+                'Content-Type' => 'application/pdf',
+            ]);
+
+            if (strtolower((string) $request->query('disposition', 'inline')) !== 'inline') {
+                $response->setContentDisposition(
+                    \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+                    $filename
+                );
+            }
+
+            return $response;
+        })->name('exam-types.acsee.formats.pdf');
+        
+        Route::get('/exam-types/ftna/formats/pdf', function (\Illuminate\Http\Request $request) {
+            $stream = strtolower((string) $request->query('stream', 'general'));
+            $paths = config('ftna.formats_pdf_paths', []);
+            $nectaPublications = 'https://www.necta.go.tz/publications/all';
+
+            if (!in_array($stream, ['general', 'vocational'])) {
+                $stream = 'general';
+            }
+
+            $pdfPath = $paths[$stream] ?? config('ftna.formats_pdf_path', base_path('FTNA_FORMATS_VOCATIONAL_STREAM_2025.pdf'));
+            $filename = $stream === 'vocational'
+                ? 'ftna_formats_vocational_stream_2025.pdf'
+                : (string) config('ftna.formats_pdf_filename', 'ftna_formats_vocational_stream_2025.pdf');
+
+            if (!is_file($pdfPath)) {
+                // If the selected stream is missing, attempt to fall back to the general format first.
+                if ($stream === 'vocational' && isset($paths['general']) && is_file($paths['general'])) {
+                    $pdfPath = $paths['general'];
+                    $filename = (string) config('ftna.formats_pdf_filename', 'ftna_formats_vocational_stream_2025.pdf');
+                } else {
+                    return redirect()->away($nectaPublications);
+                }
+            }
+
+            $response = response()->file($pdfPath, [
+                'Content-Type' => 'application/pdf',
+            ]);
+
+            if (strtolower((string) $request->query('disposition', 'inline')) !== 'inline') {
+                $response->setContentDisposition(
+                    \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+                    $filename
+                );
+            }
+
+            return $response;
+        })->name('exam-types.ftna.formats.pdf');
+
+    // Exam Types moved to Admin group
+    Route::get('/exam-types/csee/formats/pdf', function (\Illuminate\Http\Request $request) {
+        $pdfPath = (string) config('csee.formats_pdf_path', base_path('CSEE_FORMATS_2022.pdf'));
+        $filename = (string) config('csee.formats_pdf_filename', 'csee_formats_2022.pdf');
+        $nectaPublications = 'https://www.necta.go.tz/publications/all';
+
+        if (!is_file($pdfPath)) {
+            return redirect()->away($nectaPublications);
+        }
+
+        $response = response()->file($pdfPath, [
+            'Content-Type' => 'application/pdf',
+        ]);
+
+        if (strtolower((string) $request->query('disposition', 'inline')) !== 'inline') {
+            $response->setContentDisposition(
+                \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_ATTACHMENT,
+                $filename
+            );
+        }
+
+        return $response;
+    })->name('exam-types.csee.formats.pdf');
+    Route::get('/exam-types/psle/timetable/pdf', function (\Illuminate\Http\Request $request) {
+        $timetableConfig = config('psle.timetable', []);
+        $filename = (string) ($timetableConfig['download_filename'] ?? 'psle_zonal_timetable_may_2026_a3_portrait.pdf');
+        $sourceDir = rtrim((string) ($timetableConfig['source_dir'] ?? ''), DIRECTORY_SEPARATOR);
+        $texFile = $sourceDir . DIRECTORY_SEPARATOR . (string) ($timetableConfig['source_tex'] ?? '');
+        $pdfFile = $sourceDir . DIRECTORY_SEPARATOR . (string) ($timetableConfig['source_pdf'] ?? '');
+
+        if ($sourceDir === '' || !is_dir($sourceDir)) {
+            abort(500, 'PSLE timetable source directory is not configured correctly.');
+        }
+
+        if (!is_file($texFile)) {
+            abort(404, 'PSLE timetable LaTeX source file was not found.');
+        }
+
+        $needsCompile = !is_file($pdfFile) || filemtime($pdfFile) < filemtime($texFile);
+
+        if ($needsCompile) {
+            $command = 'cd ' . escapeshellarg($sourceDir)
+                . ' && pdflatex -interaction=nonstopmode -halt-on-error '
+                . escapeshellarg(basename($texFile));
+
+            exec($command . ' 2>&1', $output, $exitCode);
+
+            if ($exitCode !== 0 || !is_file($pdfFile)) {
+                abort(500, 'Failed to compile the PSLE timetable LaTeX PDF.');
+            }
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'psle_timetable_');
+        if ($tempPath === false) {
+            abort(500, 'Unable to prepare PDF export file.');
+        }
+
+        $pdfPath = $tempPath . '.pdf';
+        @rename($tempPath, $pdfPath);
+
+        if (!copy($pdfFile, $pdfPath)) {
+            abort(500, 'Unable to stage the PSLE timetable PDF.');
+        }
+
+        $response = response()->download($pdfPath, $filename, [
+            'Content-Type' => 'application/pdf',
+        ]);
+
+        if (strtolower((string) $request->query('disposition', 'inline')) === 'inline') {
+            $response->setContentDisposition(
+                \Symfony\Component\HttpFoundation\ResponseHeaderBag::DISPOSITION_INLINE,
+                $filename
+            );
+        }
+
+        return $response->deleteFileAfterSend(true);
     });
     Route::get('/exam-types/{code}', function ($code) { 
         return view('exam-types.show', ['code' => $code]); 
@@ -114,6 +289,14 @@ Route::middleware('auth')->group(function () {
         Route::post('report/{report}/mark-reviewed', [\App\Http\Controllers\Admin\CandidateExtremityController::class, 'markReviewed']);
         Route::get('export', [\App\Http\Controllers\Admin\CandidateExtremityController::class, 'export']);
     });
+
+    Route::prefix('api/admin/subject-paper-weights')->middleware(['auth', 'admin'])->group(function () {
+        Route::get('/subjects', [SubjectPaperWeightController::class, 'subjects']);
+        Route::get('/', [SubjectPaperWeightController::class, 'index']);
+        Route::post('/', [SubjectPaperWeightController::class, 'store']);
+        Route::put('/{id}', [SubjectPaperWeightController::class, 'update']);
+        Route::delete('/{id}', [SubjectPaperWeightController::class, 'destroy']);
+    });
     
     // Evaluations Routes
     Route::get('/evaluations', function () { 
@@ -122,6 +305,2160 @@ Route::middleware('auth')->group(function () {
     Route::get('/evaluations/acsee', function () { 
         return view('evaluations.acsee'); 
     });
+    Route::get('/evaluations/psle', [PsleEvaluationsController::class, 'index'])
+        ->name('evaluations.psle.index');
+    Route::get('/evaluations/psle/zonalwise', [PsleEvaluationsController::class, 'zonalwise'])
+        ->name('evaluations.psle.zonalwise');
+    Route::get('/evaluations/psle/regionalwise', [PsleEvaluationsController::class, 'regionalwise'])
+        ->name('evaluations.psle.regionalwise');
+    Route::get('/evaluations/psle/regionalwise/{region}', [PsleEvaluationsController::class, 'regionalwiseRegion'])
+        ->name('evaluations.psle.regionalwise.region');
+    Route::get('/evaluations/psle/regionalwise/{region}/evaluation/{evaluation}', [PsleEvaluationsController::class, 'regionalwiseEvaluation'])
+        ->name('evaluations.psle.regionalwise.region.evaluation');
+    Route::get('/evaluations/psle/regionalwise/{region}/evaluation/{evaluation}/export/{format}', [PsleEvaluationsController::class, 'regionalwiseEvaluationExport'])
+        ->name('evaluations.psle.regionalwise.region.evaluation.export');
+    Route::get('/evaluations/acsee/zonalwise', function () {
+        $activeYear = \App\Models\ExamYear::query()->where('is_active', true)->first();
+        $examYearValue = (int) ($activeYear->year_label ?? now()->year);
+
+        $entries = collect([
+            'ZONAL GENERAL EVALUATION',
+            'ZONAL COUNCILWISE EVALUATION',
+            'ZONAL SCHOOLWISE EVALUATION',
+            'ZONAL DISTRICTWISE EVALUATION',
+            'ZONAL BEST TEN (10) COUNCILS',
+            'ZONAL LEAST TEN (10) COUNCILS',
+            'ZONAL BEST TEN (10) SCHOOLS',
+            'ZONAL LEAST TEN (10) SCHOOLS',
+            'ZONAL BEST TEN (10) GIRLS',
+            'ZONAL LEAST TEN (10) GIRLS',
+            'ZONAL BEST TEN (10) BOYS',
+            'ZONAL LEAST TEN (10) BOYS',
+            'ZONAL OVERALL TEN (10) BEST STUDENTS',
+            'ZONAL OVERALL TEN (10) LEAST STUDENTS',
+            'ZONAL GOVERNMENT SCHOOLS',
+            'ZONAL NON-GOVERNMENT SCHOOLS',
+            'ZONAL OWNERSHIP RESULT EVALUATION',
+            'ZONAL SUBJECTWISE RESULT EVALUATION',
+            'ZONAL MARK ENTRY STATUS REPORT',
+            'ZONAL SUBJECT SUMMARY EVALUATION',
+        ])->map(fn ($label) => [
+            'label' => $label,
+            'url' => '#',
+        ]);
+
+        $meta = [
+            'title' => 'Zonal IRMS Portal',
+            'description' => 'Examination Results',
+            'keywords' => 'results, mock, NECTA',
+            'author' => 'Examination Board',
+            'portal_variant' => 'professional-evaluation',
+            'eyebrow' => 'ACSEE Zonal Evaluation Workspace',
+            'header_top' => "PRIME MINISTER'S OFFICE",
+            'header_subtitle' => 'REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT',
+            'header_places' => 'TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA',
+            'header_title' => 'FORM SIX ZONAL JOINT MOCK EVALUATION RESULTS - FEBRUARY, ' . $examYearValue,
+            'announcement' => 'Results have been officially published. Please use the search facility below to locate your school or examination centre.',
+            'hero_badge' => 'Zonal Reporting Centre',
+            'hero_title' => 'Browse zonal ACSEE evaluation reports in one premium workspace.',
+            'hero_copy' => 'Review zonal general performance, rankings, ownership summaries, subject reports, and status reports from a cleaner, more professional interface.',
+            'stats_label' => 'Zonal Reports',
+            'stats_copy' => 'Every zonal evaluation entry is presented in a modern card layout for quick review and access.',
+            'support_label' => 'Navigation',
+            'support_value' => 'Focused',
+            'support_copy' => 'Search for a specific evaluation instantly or use the alphabet filter to narrow the list.',
+            'stats_title_two' => 'Columns',
+            'stats_title_three' => 'Experience',
+            'stats_title_four' => 'Access',
+            'stats_value_three' => 'Refined',
+            'stats_value_four' => 'One Click',
+            'stats_card_one' => 'The full collection of zonal evaluation entries available for ACSEE review.',
+            'stats_card_two' => 'Balanced grid spacing keeps the report list easier to scan.',
+            'stats_card_three' => 'Modern visual hierarchy improves confidence and readability.',
+            'stats_card_four' => 'Open any zonal report directly from its dedicated card.',
+            'toolbar_title' => 'Available zonal evaluation entries',
+            'toolbar_copy' => 'Use the search box to find the exact zonal report you need, then open it directly from the cards below.',
+            'entry_copy' => 'Open this zonal evaluation report to review detailed ACSEE performance data.',
+            'search_placeholder' => 'Search Evaluation from the list',
+            'alpha_label' => 'CLICK ANY LETTER BELOW TO FILTER EVALUATIONS BY ALPHABET',
+            'alpha_all_label' => 'ALL EVALUATIONS',
+            'back_url' => '/evaluations/acsee',
+            'back_label' => 'Back to ACSEE Evaluations',
+            'primary_action_url' => '/evaluations/acsee/regionalwise',
+            'primary_action_label' => 'Open Regionalwise',
+        ];
+
+        return view('public.results-portal.index', [
+            'link' => null,
+            'entries' => $entries,
+            'meta' => $meta,
+            'token' => 'internal-evaluations-zonalwise',
+        ]);
+    })->name('evaluations.acsee.zonalwise');
+    Route::get('/evaluations/acsee/regionalwise', function () {
+        $activeYear = \App\Models\ExamYear::query()->where('is_active', true)->first();
+        $examYearValue = (int) ($activeYear->year_label ?? now()->year);
+
+        $entries = \App\Models\Region::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($region) => [
+                'label' => $region->name,
+                'url' => route('evaluations.acsee.regionalwise.region', ['region' => $region->id]),
+            ]);
+
+        $meta = [
+            'title' => 'Zonal IRMS Portal',
+            'description' => 'Examination Results',
+            'keywords' => 'results, mock, NECTA',
+            'author' => 'Examination Board',
+            'portal_variant' => 'professional-evaluation',
+            'eyebrow' => 'ACSEE Regional Evaluation Workspace',
+            'header_top' => "PRIME MINISTER'S OFFICE",
+            'header_subtitle' => 'REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT',
+            'header_places' => 'TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA',
+            'header_title' => 'FORM SIX REGIONAL JOINT MOCK EVALUATION RESULTS - FEBRUARY, ' . $examYearValue,
+            'announcement' => 'Results have been officially published. Please use the search facility below to locate your school or examination centre.',
+            'hero_badge' => 'Regional Reporting Centre',
+            'hero_title' => 'Access regional ACSEE evaluation reports through a cleaner, executive-style portal.',
+            'hero_copy' => 'Browse the region list with improved readability, faster search, and clearer calls to action before opening the selected evaluation path.',
+            'stats_label' => 'Regions',
+            'stats_copy' => 'Each region entry opens the next evaluation level from a more professional browsing experience.',
+            'support_label' => 'Selection Mode',
+            'support_value' => 'Region First',
+            'support_copy' => 'Choose a region, then continue into its detailed evaluation categories with fewer distractions.',
+            'stats_title_two' => 'Columns',
+            'stats_title_three' => 'Experience',
+            'stats_title_four' => 'Flow',
+            'stats_value_three' => 'Premium',
+            'stats_value_four' => 'Structured',
+            'stats_card_one' => 'Total region entries available for ACSEE regional evaluation browsing.',
+            'stats_card_two' => 'A wide but balanced layout supports quicker scanning across all regions.',
+            'stats_card_three' => 'Improved visual quality aligns this page with the polished ACSEE section.',
+            'stats_card_four' => 'Move from region selection to evaluation detail in a clear sequence.',
+            'toolbar_title' => 'Available regional entries',
+            'toolbar_copy' => 'Search by region name or use the alphabet shortcuts below to open the correct regional evaluation path.',
+            'entry_copy' => 'Open this region to view its available ACSEE evaluation categories.',
+            'search_placeholder' => 'Search Region from the list',
+            'alpha_label' => 'CLICK ANY LETTER BELOW TO FILTER REGIONS BY ALPHABET',
+            'alpha_all_label' => 'ALL REGIONS',
+            'columns' => 4,
+            'back_url' => '/evaluations/acsee',
+            'back_label' => 'Back to ACSEE Evaluations',
+            'primary_action_url' => route('evaluations.acsee.zonalwise'),
+            'primary_action_label' => 'Open Zonalwise',
+        ];
+
+        return view('public.results-portal.index', [
+            'link' => null,
+            'entries' => $entries,
+            'meta' => $meta,
+            'token' => 'internal-evaluations-regionalwise',
+        ]);
+    })->name('evaluations.acsee.regionalwise');
+    Route::get('/evaluations/acsee/regionalwise/{region}', function (\App\Models\Region $region) {
+        $activeYear = \App\Models\ExamYear::query()->where('is_active', true)->first();
+        $examYearValue = (int) ($activeYear->year_label ?? now()->year);
+
+        $evaluations = collect([
+            ['key' => 'general', 'label' => 'GENERAL EVALUATION'],
+            ['key' => 'councilwise', 'label' => 'COUNCILWISE EVALUATION'],
+            ['key' => 'schoolwise', 'label' => 'SCHOOLWISE EVALUATION'],
+            ['key' => 'districtwise', 'label' => 'DISTRICTWISE EVALUATION'],
+            ['key' => 'best-ten-councils', 'label' => 'BEST TEN (10) COUNCILS'],
+            ['key' => 'least-ten-councils', 'label' => 'LEAST TEN (10) COUNCILS'],
+            ['key' => 'best-ten-schools', 'label' => 'BEST TEN (10) SCHOOLS'],
+            ['key' => 'least-ten-schools', 'label' => 'LEAST TEN (10) SCHOOLS'],
+            ['key' => 'best-ten-girls', 'label' => 'BEST TEN (10) GIRLS'],
+            ['key' => 'least-ten-girls', 'label' => 'LEAST TEN (10) GIRLS'],
+            ['key' => 'best-ten-boys', 'label' => 'BEST TEN (10) BOYS'],
+            ['key' => 'least-ten-boys', 'label' => 'LEAST TEN (10) BOYS'],
+            ['key' => 'overall-best-ten-students', 'label' => 'OVERALL TEN (10) BEST STUDENTS'],
+            ['key' => 'overall-least-ten-students', 'label' => 'OVERALL TEN (10) LEAST STUDENTS'],
+            ['key' => 'government-schools', 'label' => 'GOVERNMENT SCHOOLS'],
+            ['key' => 'non-government-schools', 'label' => 'NON-GOVERNMENT SCHOOLS'],
+            ['key' => 'ownership-result-evaluation', 'label' => 'OWNERSHIP RESULT EVALUATION'],
+            ['key' => 'subjectwise-result-evaluation', 'label' => 'SUBJECTWISE RESULT EVALUATION'],
+            ['key' => 'mark-entry-status-report', 'label' => 'MARK ENTRY STATUS REPORT'],
+            ['key' => 'subject-summary-evaluation', 'label' => 'SUBJECT SUMMARY EVALUATION'],
+        ]);
+
+        $entries = $evaluations->map(fn ($evaluation) => [
+            'label' => $evaluation['label'],
+            'url' => route('evaluations.acsee.regionalwise.region.evaluation', [
+                'region' => $region->id,
+                'evaluation' => $evaluation['key'],
+            ]),
+        ]);
+
+        $meta = [
+            'title' => 'Zonal IRMS Portal',
+            'description' => 'Examination Results',
+            'keywords' => 'results, mock, NECTA',
+            'author' => 'Examination Board',
+            'portal_variant' => 'professional-evaluation',
+            'eyebrow' => strtoupper($region->name) . ' Regional Workspace',
+            'header_top' => "PRIME MINISTER'S OFFICE",
+            'header_subtitle' => 'REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT',
+            'header_places' => 'TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA',
+            'header_title' => 'FORM SIX ZONAL JOINT MOCK EVALUATION RESULTS - FEBRUARY, ' . $examYearValue . ' - ' . strtoupper($region->name),
+            'announcement' => 'Results have been officially published. Please use the search facility below to locate your school or examination centre.',
+            'hero_badge' => strtoupper($region->name) . ' Evaluation Centre',
+            'hero_title' => 'Open detailed regional evaluation reports for ' . strtoupper($region->name) . '.',
+            'hero_copy' => 'Choose the exact report category for this region, from general evaluation and rankings to ownership summaries, subject reports, and status views.',
+            'stats_label' => 'Evaluation Types',
+            'stats_copy' => 'All report categories for the selected region are gathered in one premium workspace.',
+            'support_label' => 'Region',
+            'support_value' => strtoupper($region->name),
+            'support_copy' => 'Search within this region’s evaluation categories and move directly into the selected report.',
+            'stats_title_two' => 'Columns',
+            'stats_title_three' => 'Mode',
+            'stats_title_four' => 'Navigation',
+            'stats_value_three' => 'Detailed',
+            'stats_value_four' => 'Direct',
+            'stats_card_one' => 'The full set of regional evaluation categories for the selected region.',
+            'stats_card_two' => 'Three-column layout keeps report cards organized and readable.',
+            'stats_card_three' => 'Focused presentation for committee and analyst workflows.',
+            'stats_card_four' => 'Open the required evaluation category without scanning through dense lists.',
+            'toolbar_title' => strtoupper($region->name) . ' evaluation categories',
+            'toolbar_copy' => 'Search the report list or filter alphabetically to open the correct evaluation category for this region.',
+            'entry_copy' => 'Open this evaluation category to review detailed regional ACSEE results.',
+            'search_placeholder' => 'Search Evaluation from the list',
+            'alpha_label' => 'CLICK ANY LETTER BELOW TO FILTER EVALUATIONS BY ALPHABET',
+            'alpha_all_label' => 'ALL EVALUATIONS',
+            'columns' => 3,
+            'back_url' => route('evaluations.acsee.regionalwise'),
+            'back_label' => 'Back to Regions',
+            'primary_action_url' => route('evaluations.acsee.regionalwise'),
+            'primary_action_label' => 'All Regions',
+        ];
+
+        return view('public.results-portal.index', [
+            'link' => null,
+            'entries' => $entries,
+            'meta' => $meta,
+            'token' => 'internal-evaluations-regionalwise-' . $region->id,
+        ]);
+    })->name('evaluations.acsee.regionalwise.region');
+    Route::get('/evaluations/acsee/regionalwise/{region}/evaluation/{evaluation}', function (\App\Models\Region $region, string $evaluation) {
+        $evaluationMap = collect([
+            ['key' => 'general', 'label' => 'GENERAL EVALUATION'],
+            ['key' => 'councilwise', 'label' => 'COUNCILWISE EVALUATION'],
+            ['key' => 'schoolwise', 'label' => 'SCHOOLWISE EVALUATION'],
+            ['key' => 'districtwise', 'label' => 'DISTRICTWISE EVALUATION'],
+            ['key' => 'best-ten-councils', 'label' => 'BEST TEN (10) COUNCILS'],
+            ['key' => 'least-ten-councils', 'label' => 'LEAST TEN (10) COUNCILS'],
+            ['key' => 'best-ten-schools', 'label' => 'BEST TEN (10) SCHOOLS'],
+            ['key' => 'least-ten-schools', 'label' => 'LEAST TEN (10) SCHOOLS'],
+            ['key' => 'best-ten-girls', 'label' => 'BEST TEN (10) GIRLS'],
+            ['key' => 'least-ten-girls', 'label' => 'LEAST TEN (10) GIRLS'],
+            ['key' => 'best-ten-boys', 'label' => 'BEST TEN (10) BOYS'],
+            ['key' => 'least-ten-boys', 'label' => 'LEAST TEN (10) BOYS'],
+            ['key' => 'overall-best-ten-students', 'label' => 'OVERALL TEN (10) BEST STUDENTS'],
+            ['key' => 'overall-least-ten-students', 'label' => 'OVERALL TEN (10) LEAST STUDENTS'],
+            ['key' => 'government-schools', 'label' => 'GOVERNMENT SCHOOLS'],
+            ['key' => 'non-government-schools', 'label' => 'NON-GOVERNMENT SCHOOLS'],
+            ['key' => 'ownership-result-evaluation', 'label' => 'OWNERSHIP RESULT EVALUATION'],
+            ['key' => 'subjectwise-result-evaluation', 'label' => 'SUBJECTWISE RESULT EVALUATION'],
+            ['key' => 'mark-entry-status-report', 'label' => 'MARK ENTRY STATUS REPORT'],
+            ['key' => 'subject-summary-evaluation', 'label' => 'SUBJECT SUMMARY EVALUATION'],
+        ])->keyBy('key');
+
+        abort_unless($evaluationMap->has($evaluation), 404);
+
+        $activeYear = \App\Models\ExamYear::query()->where('is_active', true)->first();
+        $examYearValue = (int) ($activeYear->year_label ?? now()->year);
+        $examType = \App\Models\ExamType::query()->where('code', 'ACSEE')->firstOrFail();
+
+        $applyYearFilter = function ($query) use ($activeYear, $examYearValue) {
+            $query->where(function ($q) use ($activeYear, $examYearValue) {
+                $q->where('cer.year', $examYearValue);
+                if ($activeYear) {
+                    $q->orWhere('cer.exam_year_id', $activeYear->id);
+                }
+            });
+        };
+
+        $baseRegistrations = \Illuminate\Support\Facades\DB::table('candidate_exam_registrations as cer')
+            ->join('candidates as c', 'c.id', '=', 'cer.candidate_id')
+            ->join('schools as s', 's.id', '=', 'c.school_id')
+            ->leftJoin('district_councils as dc', 'dc.id', '=', 's.council_id')
+            ->leftJoin('districts as d', 'd.id', '=', 's.district_id')
+            ->where('s.region_id', $region->id)
+            ->where('cer.exam_type_id', $examType->id);
+        $applyYearFilter($baseRegistrations);
+
+        $registrationRows = (clone $baseRegistrations)
+            ->selectRaw('cer.candidate_id as candidate_id')
+            ->selectRaw('c.candidate_id as index_number')
+            ->selectRaw('COALESCE(c.full_name, c.candidate_id) as full_name')
+            ->selectRaw('c.gender as gender')
+            ->selectRaw('c.combination as combination')
+            ->selectRaw('s.id as school_id, s.code as school_code, s.name as school_name, COALESCE(s.ownership, "UNKNOWN") as ownership')
+            ->selectRaw('d.id as district_id, d.code as district_code, d.name as district_name')
+            ->selectRaw('COALESCE(dc.id, d.id) as council_id')
+            ->selectRaw('COALESCE(dc.code, d.code) as council_code')
+            ->selectRaw('COALESCE(dc.name, d.name, "-") as council_name')
+            ->get();
+        $regionCandidateIds = $registrationRows->pluck('candidate_id')->unique()->values();
+
+        $hasStoredResultStatus = \Illuminate\Support\Facades\Schema::hasColumn('candidate_results', 'result_status');
+        $activeSnapshot = \App\Models\ResultSnapshot::query()
+            ->where('exam_year_id', $activeYear?->id)
+            ->where('is_active', true)
+            ->first();
+        $latestProcessId = \App\Models\ResultProcess::query()
+            ->where('exam_type_id', $examType->id)
+            ->where('exam_year_id', $activeYear?->id)
+            ->where('status', 'completed')
+            ->latest('id')
+            ->value('id');
+
+        $useSnapshotForFinalGrades = false;
+        $hasFinalOverallGrade = \Illuminate\Support\Facades\Schema::hasColumn('final_grades', 'overall_grade');
+        if ($activeSnapshot && \Illuminate\Support\Facades\Schema::hasColumn('final_grades', 'snapshot_id')) {
+            $useSnapshotForFinalGrades = \Illuminate\Support\Facades\DB::table('final_grades')
+                ->where('exam_type_id', $examType->id)
+                ->where('year', $examYearValue)
+                ->where('snapshot_id', $activeSnapshot->id)
+                ->exists();
+        }
+
+        $resultsBase = \Illuminate\Support\Facades\DB::table('final_grades as fg')
+            ->join('candidates as c', 'c.id', '=', 'fg.candidate_id')
+            ->join('schools as s', 's.id', '=', 'c.school_id')
+            ->leftJoin('district_councils as dc', 'dc.id', '=', 's.council_id')
+            ->leftJoin('districts as d', 'd.id', '=', 's.district_id')
+            ->where('fg.exam_type_id', $examType->id)
+            ->where('fg.year', $examYearValue)
+            ->where('s.region_id', $region->id);
+
+        if ($useSnapshotForFinalGrades) {
+            $resultsBase->where('fg.snapshot_id', $activeSnapshot->id);
+        } elseif ($latestProcessId) {
+            $resultsBase->where(function ($q) use ($latestProcessId) {
+                $q->where('fg.process_id', $latestProcessId)
+                    ->whereNull('fg.snapshot_id');
+            });
+        }
+
+        $resultStatusByCandidate = collect();
+        if ($hasStoredResultStatus) {
+            $statusBase = \Illuminate\Support\Facades\DB::table('candidate_results as cr')
+                ->where('cr.exam_type_id', $examType->id)
+                ->where('cr.year', $examYearValue)
+                ->whereIn('cr.candidate_id', $regionCandidateIds);
+
+            if ($useSnapshotForFinalGrades && $activeSnapshot && \Illuminate\Support\Facades\Schema::hasColumn('candidate_results', 'snapshot_id')) {
+                $statusBase->where('cr.snapshot_id', $activeSnapshot->id);
+            } elseif ($latestProcessId) {
+                $statusBase->where(function ($q) use ($latestProcessId) {
+                    $q->where('cr.process_id', $latestProcessId)
+                        ->whereNull('cr.snapshot_id');
+                });
+            }
+
+            $resultStatusByCandidate = $statusBase
+                ->get(['cr.candidate_id', 'cr.result_status'])
+                ->keyBy('candidate_id');
+
+            $missingStatusCandidateIds = $regionCandidateIds
+                ->diff($resultStatusByCandidate->keys())
+                ->values();
+
+            if ($missingStatusCandidateIds->isNotEmpty()) {
+                $fallbackStatusRows = \Illuminate\Support\Facades\DB::table('candidate_results as cr')
+                    ->where('cr.exam_type_id', $examType->id)
+                    ->where('cr.year', $examYearValue)
+                    ->whereIn('cr.candidate_id', $missingStatusCandidateIds)
+                    ->orderByDesc('cr.id')
+                    ->get(['cr.id', 'cr.candidate_id', 'cr.result_status'])
+                    ->unique('candidate_id')
+                    ->keyBy('candidate_id');
+
+                $resultStatusByCandidate = $resultStatusByCandidate->union($fallbackStatusRows);
+            }
+        }
+
+        $scopedFinalRows = $resultsBase
+            ->selectRaw('fg.candidate_id as candidate_id')
+            ->selectRaw('fg.gpa as resolved_gpa_source')
+            ->selectRaw('fg.division as resolved_division_source')
+            ->selectRaw('fg.grading_breakdown as resolved_breakdown_source')
+            ->selectRaw($hasFinalOverallGrade ? 'fg.overall_grade as resolved_overall_grade_source' : 'NULL as resolved_overall_grade_source')
+            ->get();
+
+        $finalByCandidate = $scopedFinalRows->keyBy('candidate_id');
+        $missingFinalCandidateIds = $regionCandidateIds
+            ->diff($finalByCandidate->keys())
+            ->values();
+
+        if ($missingFinalCandidateIds->isNotEmpty()) {
+            $fallbackFinalRows = \Illuminate\Support\Facades\DB::table('final_grades as fg')
+                ->where('fg.exam_type_id', $examType->id)
+                ->where('fg.year', $examYearValue)
+                ->whereIn('fg.candidate_id', $missingFinalCandidateIds)
+                ->orderByDesc('fg.id')
+                ->get([
+                    'fg.id',
+                    'fg.candidate_id',
+                    'fg.gpa as resolved_gpa_source',
+                    'fg.division as resolved_division_source',
+                    'fg.grading_breakdown as resolved_breakdown_source',
+                    \Illuminate\Support\Facades\DB::raw($hasFinalOverallGrade ? 'fg.overall_grade as resolved_overall_grade_source' : 'NULL as resolved_overall_grade_source'),
+                ])
+                ->unique('candidate_id')
+                ->keyBy('candidate_id');
+
+            $finalByCandidate = $finalByCandidate->union($fallbackFinalRows);
+        }
+
+        $resultRows = $registrationRows->map(function ($row) use ($finalByCandidate) {
+            $final = $finalByCandidate->get($row->candidate_id);
+            $row->resolved_gpa_source = $final->resolved_gpa_source ?? null;
+            $row->resolved_division_source = $final->resolved_division_source ?? null;
+            $row->resolved_breakdown_source = $final->resolved_breakdown_source ?? null;
+            $row->resolved_overall_grade_source = $final->resolved_overall_grade_source ?? null;
+            $row->result_status = null;
+            return $row;
+        })->values();
+
+        $storedFinalRowsForMetrics = $finalByCandidate->map(function ($final) {
+            return (object) [
+                'gpa' => $final->resolved_gpa_source ?? null,
+                'division' => $final->resolved_division_source ?? null,
+                'grading_breakdown' => $final->resolved_breakdown_source ?? null,
+            ];
+        });
+
+        $needsComputedMetrics = $resultRows
+            ->filter(function ($row) use ($finalByCandidate, $resultStatusByCandidate) {
+                $storedStatus = strtoupper(trim((string) ($resultStatusByCandidate->get($row->candidate_id)->result_status ?? '')));
+                $final = $finalByCandidate->get($row->candidate_id);
+                $hasStoredDivision = !is_null($final?->resolved_division_source) && $final->resolved_division_source !== '';
+                $hasStoredGpa = !is_null($final?->resolved_gpa_source) && $final->resolved_gpa_source !== '';
+
+                if (in_array($storedStatus, ['ABS', 'INC'], true)) {
+                    return false;
+                }
+
+                if ($storedStatus === 'COMPLETE' && $hasStoredDivision && $hasStoredGpa) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->pluck('candidate_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $computedMetrics = $needsComputedMetrics->isNotEmpty()
+            ? app(\App\Services\Results\PublicAcseeCandidateMetricsService::class)
+                ->computeForCandidateIds(
+                    $needsComputedMetrics,
+                    $examType,
+                    $examYearValue,
+                    $storedFinalRowsForMetrics,
+                    $resultStatusByCandidate
+                )
+            : collect();
+
+        $enrichedRows = $resultRows->map(function ($row) use ($computedMetrics, $finalByCandidate, $resultStatusByCandidate) {
+            $final = $finalByCandidate->get($row->candidate_id);
+            $storedStatus = strtoupper(trim((string) ($resultStatusByCandidate->get($row->candidate_id)->result_status ?? '')));
+            $hasStoredDivision = !is_null($final?->resolved_division_source) && $final->resolved_division_source !== '';
+            $hasStoredGpa = !is_null($final?->resolved_gpa_source) && $final->resolved_gpa_source !== '';
+
+            if ($storedStatus === 'COMPLETE' && $hasStoredDivision && $hasStoredGpa) {
+                $row->resolved_result_status = 'COMPLETE';
+                $row->resolved_division = (int) $final->resolved_division_source;
+                $row->resolved_gpa = (float) $final->resolved_gpa_source;
+                return $row;
+            }
+
+            if (in_array($storedStatus, ['ABS', 'INC'], true)) {
+                $row->resolved_result_status = $storedStatus;
+                $row->resolved_division = 0;
+                $row->resolved_gpa = null;
+                return $row;
+            }
+
+            $metrics = $computedMetrics->get($row->candidate_id, []);
+            $row->resolved_result_status = (string) ($metrics['candidateStatus'] ?? ($storedStatus !== '' ? $storedStatus : 'ABS'));
+            $row->resolved_division = (int) ($metrics['division_numeric'] ?? ($hasStoredDivision ? (int) $final->resolved_division_source : 0));
+            $row->resolved_gpa = array_key_exists('gpa', $metrics)
+                ? (float) $metrics['gpa']
+                : ($hasStoredGpa ? (float) $final->resolved_gpa_source : null);
+            return $row;
+        })->values();
+
+        $completeRows = $enrichedRows->filter(fn ($row) => $row->resolved_result_status === 'COMPLETE')->values();
+
+        $summary = [
+            'Exam Year' => (string) $examYearValue,
+            'Region' => strtoupper((string) $region->name),
+            'Candidates' => number_format((int) $enrichedRows->count()),
+            'Schools' => number_format((int) $enrichedRows->pluck('school_id')->filter()->unique()->count()),
+            'Pass' => number_format((int) $completeRows->filter(fn ($row) => in_array($row->resolved_division, [1, 2, 3, 4], true))->count()),
+            'Fail' => number_format((int) $completeRows->where('resolved_division', 0)->count()),
+            'Avg GPA' => number_format((float) ($completeRows->pluck('resolved_gpa')->filter(fn ($v) => $v !== null)->avg() ?? 0), 2),
+        ];
+
+        if (in_array($evaluation, ['schoolwise', 'best-ten-schools', 'least-ten-schools', 'government-schools', 'non-government-schools'], true)) {
+            $hasStoredResultStatus = \Illuminate\Support\Facades\Schema::hasColumn('candidate_results', 'result_status');
+            $filteredRows = match ($evaluation) {
+                'government-schools' => $enrichedRows->filter(fn ($row) => strtoupper((string) ($row->ownership ?? '')) === 'GOVERNMENT')->values(),
+                'non-government-schools' => $enrichedRows->filter(fn ($row) => strtoupper((string) ($row->ownership ?? '')) === 'NON-GOVERNMENT')->values(),
+                default => $enrichedRows,
+            };
+
+            $candidateRows = $filteredRows->map(function ($row) {
+                return (object) [
+                    'candidate_id' => $row->candidate_id,
+                    'result_status' => $row->resolved_result_status,
+                    'resolved_division' => $row->resolved_division,
+                    'resolved_gpa' => $row->resolved_gpa,
+                    'gender' => $row->gender,
+                    'school_id' => $row->school_id,
+                    'school_code' => $row->school_code,
+                    'school_name' => $row->school_name,
+                    'council_name' => $row->council_name,
+                ];
+            })->values();
+
+            $schoolBuckets = [];
+            foreach ($candidateRows as $row) {
+                if (empty($row->school_id)) {
+                    continue;
+                }
+
+                $schoolKey = (string) ((int) $row->school_id);
+                if (!isset($schoolBuckets[$schoolKey])) {
+                    $schoolName = strtoupper((string) ($row->school_name ?? '-'));
+                    $schoolCode = strtoupper(trim((string) ($row->school_code ?? '')));
+                    $schoolBuckets[$schoolKey] = [
+                        'council' => strtoupper((string) ($row->council_name ?? '-')),
+                        'school' => $schoolCode !== '' ? "{$schoolCode} - {$schoolName}" : $schoolName,
+                        'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                        'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                        'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                        'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                        'division' => [
+                            'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                        ],
+                        'gpa_sum' => 0.0,
+                        'gpa_count' => 0,
+                        'gpa' => null,
+                    ];
+                }
+
+                $genderValue = strtoupper(trim((string) $row->gender));
+                $gender = match ($genderValue) {
+                    'F' => 'f',
+                    'M' => 'm',
+                    default => null,
+                };
+                $bucket = &$schoolBuckets[$schoolKey];
+                $bucket['registered']['t']++;
+                if ($gender !== null) {
+                    $bucket['registered'][$gender]++;
+                }
+
+                $resultStatus = strtoupper(trim((string) ($row->result_status ?? 'COMPLETE')));
+
+                if ($resultStatus === 'ABS') {
+                    $bucket['absent']['t']++;
+                    if ($gender !== null) {
+                        $bucket['absent'][$gender]++;
+                    }
+                    unset($bucket);
+                    continue;
+                }
+
+                $bucket['sat']['t']++;
+                if ($gender !== null) {
+                    $bucket['sat'][$gender]++;
+                }
+
+                if ($resultStatus === 'INC') {
+                    $bucket['inc']['t']++;
+                    if ($gender !== null) {
+                        $bucket['inc'][$gender]++;
+                    }
+                    unset($bucket);
+                    continue;
+                }
+
+                $divisionValue = (int) ($row->resolved_division ?? 0);
+                $group = match ($divisionValue) {
+                    1 => 'i',
+                    2 => 'ii',
+                    3 => 'iii',
+                    4 => 'iv',
+                    default => 'zero',
+                };
+
+                $bucket['division'][$group]['t']++;
+                if ($gender !== null) {
+                    $bucket['division'][$group][$gender]++;
+                }
+
+                $gpaValue = $row->resolved_gpa ?? null;
+                if (!is_null($gpaValue) && $gpaValue !== '') {
+                    $bucket['gpa_sum'] += (float) $gpaValue;
+                    $bucket['gpa_count']++;
+                }
+                unset($bucket);
+            }
+
+            $schoolStats = collect($schoolBuckets)->map(function ($bucket) {
+                $regT = max((int) $bucket['registered']['t'], 0);
+                $absT = (int) $bucket['absent']['t'];
+                $incT = (int) $bucket['inc']['t'];
+
+                // SAT follows NECTA-style rollup: SAT = REGISTERED - ABSENT (INC is included in SAT).
+                $bucket['sat']['m'] = max((int) $bucket['registered']['m'] - (int) $bucket['absent']['m'], 0);
+                $bucket['sat']['f'] = max((int) $bucket['registered']['f'] - (int) $bucket['absent']['f'], 0);
+                $bucket['sat']['t'] = $bucket['sat']['m'] + $bucket['sat']['f'];
+                $satT = max((int) $bucket['sat']['t'], 0);
+
+                $bucket['absent']['pct'] = $regT > 0 ? ($absT / $regT) * 100 : 0.0;
+                $bucket['sat']['pct'] = $regT > 0 ? ($satT / $regT) * 100 : 0.0;
+                $bucket['inc']['pct'] = $regT > 0 ? ($incT / $regT) * 100 : 0.0;
+
+                $bucket['division']['i_iii']['m'] = $bucket['division']['i']['m'] + $bucket['division']['ii']['m'] + $bucket['division']['iii']['m'];
+                $bucket['division']['i_iii']['f'] = $bucket['division']['i']['f'] + $bucket['division']['ii']['f'] + $bucket['division']['iii']['f'];
+                $bucket['division']['i_iii']['t'] = $bucket['division']['i_iii']['m'] + $bucket['division']['i_iii']['f'];
+
+                $bucket['division']['i_iv']['m'] = $bucket['division']['i_iii']['m'] + $bucket['division']['iv']['m'];
+                $bucket['division']['i_iv']['f'] = $bucket['division']['i_iii']['f'] + $bucket['division']['iv']['f'];
+                $bucket['division']['i_iv']['t'] = $bucket['division']['i_iv']['m'] + $bucket['division']['i_iv']['f'];
+
+                foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $grp) {
+                    $bucket['division'][$grp]['pct'] = $satT > 0
+                        ? ((int) $bucket['division'][$grp]['t'] / $satT) * 100
+                        : 0.0;
+                }
+
+                $bucket['gpa'] = $bucket['gpa_count'] > 0
+                    ? round($bucket['gpa_sum'] / $bucket['gpa_count'], 4)
+                    : null;
+
+                unset($bucket['gpa_sum'], $bucket['gpa_count']);
+                return $bucket;
+            })->values();
+
+            $rankedRows = $schoolStats
+                ->sortBy(fn ($r) => is_null($r['gpa']) ? INF : $r['gpa'])
+                ->values()
+                ->map(function ($row, $idx) {
+                    $row['pos'] = $idx + 1;
+                    return $row;
+                });
+
+            $displayRows = match ($evaluation) {
+                'best-ten-schools' => $rankedRows->take(10)->values(),
+                'least-ten-schools' => $rankedRows->reverse()->take(10)->values()->values(),
+                default => $rankedRows,
+            };
+
+            $total = [
+                'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                'division' => [
+                    'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                ],
+            ];
+
+            foreach ($displayRows as $row) {
+                foreach (['m', 'f', 't'] as $k) {
+                    $total['registered'][$k] += $row['registered'][$k];
+                    $total['absent'][$k] += $row['absent'][$k];
+                    $total['sat'][$k] += $row['sat'][$k];
+                    $total['inc'][$k] += $row['inc'][$k];
+                }
+                foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $grp) {
+                    foreach (['m', 'f', 't'] as $k) {
+                        $total['division'][$grp][$k] += $row['division'][$grp][$k];
+                    }
+                }
+            }
+
+            $total['absent']['pct'] = $total['registered']['t'] > 0 ? ($total['absent']['t'] / $total['registered']['t']) * 100 : 0;
+            $total['sat']['pct'] = $total['registered']['t'] > 0 ? ($total['sat']['t'] / $total['registered']['t']) * 100 : 0;
+            $total['inc']['pct'] = $total['registered']['t'] > 0 ? ($total['inc']['t'] / $total['registered']['t']) * 100 : 0;
+            foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $grp) {
+                $total['division'][$grp]['pct'] = $total['sat']['t'] > 0
+                    ? ($total['division'][$grp]['t'] / $total['sat']['t']) * 100
+                    : 0;
+            }
+
+            if (strtolower((string) request()->query('export')) === 'pdf') {
+                $safeRegion = \Illuminate\Support\Str::slug((string) $region->name);
+                $exportKey = match ($evaluation) {
+                    'best-ten-schools' => 'best_ten_schools',
+                    'least-ten-schools' => 'least_ten_schools',
+                    'government-schools' => 'government_schools',
+                    'non-government-schools' => 'non_government_schools',
+                    default => 'schoolwise',
+                };
+                $filename = "acsee_regional_{$exportKey}_{$safeRegion}_{$examYearValue}.pdf";
+                $tempPath = tempnam(sys_get_temp_dir(), 'acsee_schoolwise_');
+                if ($tempPath === false) {
+                    abort(500, 'Unable to prepare PDF export file.');
+                }
+                $pdfPath = $tempPath . '.pdf';
+                @rename($tempPath, $pdfPath);
+
+                app(\App\Services\Results\AcseeRegionalSchoolwiseFpdfService::class)
+                    ->generate(
+                        $region,
+                        $examYearValue,
+                        $displayRows->all(),
+                        $total,
+                        $pdfPath,
+                        (string) data_get($evaluationMap->get($evaluation), 'label', 'SCHOOLWISE')
+                    );
+
+                return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+            }
+
+            return view('evaluations.acsee-regionalwise-schoolwise', [
+                'region' => $region,
+                'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+                'examYearValue' => $examYearValue,
+                'rows' => $displayRows,
+                'total' => $total,
+            ]);
+        }
+
+        $columns = [];
+        $rows = [];
+
+        $buildInstitutionRows = function ($items, ?int $limit = null, ?string $orderDirection = null) use ($examYearValue) {
+            $rows = collect($items);
+            if ($orderDirection === 'ASC') {
+                $rows = $rows->sortBy(fn ($row) => is_null($row->avg_gpa) ? INF : $row->avg_gpa)->values();
+            } elseif ($orderDirection === 'DESC') {
+                $rows = $rows->sortByDesc(fn ($row) => is_null($row->avg_gpa) ? -INF : $row->avg_gpa)->values();
+            }
+            if ($limit) {
+                $rows = $rows->take($limit)->values();
+            }
+            return $rows->map(function ($row) use ($examYearValue) {
+                $passCount = (int) ($row->pass_count ?? 0);
+                $candidates = max((int) ($row->candidates ?? 0), 1);
+                $passRate = ($passCount / $candidates) * 100;
+
+                $firstCell = trim(($row->code ? $row->code . ' - ' : '') . ($row->name ?? 'N/A'));
+                $firstCellUrl = isset($row->school_id) && $row->school_id
+                    ? route('public.results.school', [
+                        'examYear' => $examYearValue,
+                        'examType' => 'acsee',
+                        'schoolId' => $row->school_id,
+                    ])
+                    : null;
+
+                return [
+                    'cells' => [
+                        $firstCell,
+                        number_format((int) ($row->candidates ?? 0)),
+                        number_format($passCount),
+                        number_format((int) ($row->fail_count ?? 0)),
+                        number_format($passRate, 1) . '%',
+                        number_format((float) ($row->avg_gpa ?? 0), 2),
+                    ],
+                    'first_cell_url' => $firstCellUrl,
+                ];
+            })->values();
+        };
+
+        switch ($evaluation) {
+            case 'general':
+                $generalRows = collect(['F', 'M'])->map(function ($gender) use ($enrichedRows, $finalByCandidate) {
+                    $label = $gender === 'F' ? 'FEMALE' : 'MALE';
+                    $bucket = [
+                        'council' => $label,
+                        'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                        'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                        'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                        'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                        'division' => [
+                            'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                        ],
+                        'gpa_sum' => 0.0,
+                        'gpa_count' => 0,
+                        'gpa' => null,
+                    ];
+
+                    foreach ($enrichedRows->filter(fn ($row) => strtoupper((string) ($row->gender ?? '')) === $gender) as $row) {
+                        $genderKey = $gender === 'F' ? 'f' : 'm';
+                        $bucket['registered']['t']++;
+                        $bucket['registered'][$genderKey]++;
+
+                        $resultStatus = strtoupper(trim((string) ($row->resolved_result_status ?? 'COMPLETE')));
+                        if ($resultStatus === 'ABS') {
+                            $bucket['absent']['t']++;
+                            $bucket['absent'][$genderKey]++;
+                            continue;
+                        }
+
+                        if ($resultStatus === 'INC') {
+                            $bucket['inc']['t']++;
+                            $bucket['inc'][$genderKey]++;
+                        }
+
+                        $divisionValue = (int) ($row->resolved_division ?? 0);
+                        if ($resultStatus !== 'INC') {
+                            $group = match ($divisionValue) {
+                                1 => 'i',
+                                2 => 'ii',
+                                3 => 'iii',
+                                4 => 'iv',
+                                default => 'zero',
+                            };
+                            $bucket['division'][$group]['t']++;
+                            $bucket['division'][$group][$genderKey]++;
+                        }
+
+                        $gpaValue = $row->resolved_gpa ?? null;
+                        if ($resultStatus !== 'INC' && !is_null($gpaValue) && $gpaValue !== '') {
+                            $bucket['gpa_sum'] += (float) $gpaValue;
+                            $bucket['gpa_count']++;
+                        }
+                    }
+
+                    $regT = max((int) $bucket['registered']['t'], 0);
+                    $absT = (int) $bucket['absent']['t'];
+                    $incT = (int) $bucket['inc']['t'];
+                    $bucket['sat']['m'] = max((int) $bucket['registered']['m'] - (int) $bucket['absent']['m'], 0);
+                    $bucket['sat']['f'] = max((int) $bucket['registered']['f'] - (int) $bucket['absent']['f'], 0);
+                    $bucket['sat']['t'] = $bucket['sat']['m'] + $bucket['sat']['f'];
+                    $satT = max((int) $bucket['sat']['t'], 0);
+
+                    $bucket['absent']['pct'] = $regT > 0 ? ($absT / $regT) * 100 : 0.0;
+                    $bucket['sat']['pct'] = $regT > 0 ? ($satT / $regT) * 100 : 0.0;
+                    $bucket['inc']['pct'] = $regT > 0 ? ($incT / $regT) * 100 : 0.0;
+                    $bucket['division']['i_iii']['m'] = $bucket['division']['i']['m'] + $bucket['division']['ii']['m'] + $bucket['division']['iii']['m'];
+                    $bucket['division']['i_iii']['f'] = $bucket['division']['i']['f'] + $bucket['division']['ii']['f'] + $bucket['division']['iii']['f'];
+                    $bucket['division']['i_iii']['t'] = $bucket['division']['i_iii']['m'] + $bucket['division']['i_iii']['f'];
+                    $bucket['division']['i_iv']['m'] = $bucket['division']['i_iii']['m'] + $bucket['division']['iv']['m'];
+                    $bucket['division']['i_iv']['f'] = $bucket['division']['i_iii']['f'] + $bucket['division']['iv']['f'];
+                    $bucket['division']['i_iv']['t'] = $bucket['division']['i_iv']['m'] + $bucket['division']['i_iv']['f'];
+
+                    foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                        $bucket['division'][$group]['pct'] = $satT > 0
+                            ? ((int) $bucket['division'][$group]['t'] / $satT) * 100
+                            : 0.0;
+                    }
+
+                    $bucket['gpa'] = $bucket['gpa_count'] > 0
+                        ? round($bucket['gpa_sum'] / $bucket['gpa_count'], 4)
+                        : null;
+
+                    unset($bucket['gpa_sum'], $bucket['gpa_count']);
+                    return $bucket;
+                })->sortBy(fn ($row) => is_null($row['gpa']) ? INF : $row['gpa'])->values()->map(function ($row, $idx) {
+                    $row['pos'] = $idx + 1;
+                    return $row;
+                });
+
+                $total = [
+                    'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                    'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'division' => [
+                        'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    ],
+                ];
+
+                foreach ($generalRows as $row) {
+                    foreach (['m', 'f', 't'] as $key) {
+                        $total['registered'][$key] += $row['registered'][$key];
+                        $total['absent'][$key] += $row['absent'][$key];
+                        $total['sat'][$key] += $row['sat'][$key];
+                        $total['inc'][$key] += $row['inc'][$key];
+                    }
+                    foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                        foreach (['m', 'f', 't'] as $key) {
+                            $total['division'][$group][$key] += $row['division'][$group][$key];
+                        }
+                    }
+                }
+
+                $total['absent']['pct'] = $total['registered']['t'] > 0 ? ($total['absent']['t'] / $total['registered']['t']) * 100 : 0;
+                $total['sat']['pct'] = $total['registered']['t'] > 0 ? ($total['sat']['t'] / $total['registered']['t']) * 100 : 0;
+                $total['inc']['pct'] = $total['registered']['t'] > 0 ? ($total['inc']['t'] / $total['registered']['t']) * 100 : 0;
+                foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                    $total['division'][$group]['pct'] = $total['sat']['t'] > 0
+                        ? ($total['division'][$group]['t'] / $total['sat']['t']) * 100
+                        : 0;
+                }
+
+                if (strtolower((string) request()->query('export')) === 'pdf') {
+                    $safeRegion = \Illuminate\Support\Str::slug((string) $region->name);
+                    $filename = "acsee_regional_general_{$safeRegion}_{$examYearValue}.pdf";
+                    $tempPath = tempnam(sys_get_temp_dir(), 'acsee_general_');
+                    if ($tempPath === false) {
+                        abort(500, 'Unable to prepare PDF export file.');
+                    }
+                    $pdfPath = $tempPath . '.pdf';
+                    @rename($tempPath, $pdfPath);
+
+                    app(\App\Services\Results\AcseeRegionalSchoolwiseFpdfService::class)
+                        ->generate(
+                            $region,
+                            $examYearValue,
+                            $generalRows->all(),
+                            $total,
+                            $pdfPath,
+                            (string) data_get($evaluationMap->get($evaluation), 'label', 'GENERAL'),
+                            [
+                                'first_column_label' => 'SEX',
+                                'first_column_key' => 'council',
+                                'first_column_width' => 18,
+                                'hide_second_column' => true,
+                                'metric3_width' => 12,
+                                'metric4_width' => 11.7,
+                                'gpa_width' => 27,
+                                'pos_width' => 20,
+                            ]
+                        );
+
+                    return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+                }
+
+                return view('evaluations.acsee-regionalwise-schoolwise', [
+                    'region' => $region,
+                    'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+                    'examYearValue' => $examYearValue,
+                    'rows' => $generalRows,
+                    'total' => $total,
+                    'tableMode' => 'general',
+                ]);
+
+            case 'councilwise':
+            case 'best-ten-councils':
+            case 'least-ten-councils':
+                $councilBuckets = [];
+                foreach ($enrichedRows->filter(fn ($row) => !empty($row->council_id)) as $row) {
+                    $councilKey = (string) ((int) $row->council_id);
+                    if (!isset($councilBuckets[$councilKey])) {
+                        $councilName = strtoupper(trim((string) ($row->council_name ?? 'N/A'))) ?: 'N/A';
+                        $councilBuckets[$councilKey] = [
+                            'council' => $councilName,
+                            'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                            'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'division' => [
+                                'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            ],
+                            'gpa_sum' => 0.0,
+                            'gpa_count' => 0,
+                            'gpa' => null,
+                        ];
+                    }
+
+                    $genderValue = strtoupper(trim((string) ($row->gender ?? '')));
+                    $gender = match ($genderValue) {
+                        'F' => 'f',
+                        'M' => 'm',
+                        default => null,
+                    };
+
+                    $bucket = &$councilBuckets[$councilKey];
+                    $bucket['registered']['t']++;
+                    if ($gender !== null) {
+                        $bucket['registered'][$gender]++;
+                    }
+
+                    $resultStatus = strtoupper(trim((string) ($row->resolved_result_status ?? 'COMPLETE')));
+
+                    if ($resultStatus === 'ABS') {
+                        $bucket['absent']['t']++;
+                        if ($gender !== null) {
+                            $bucket['absent'][$gender]++;
+                        }
+                        unset($bucket);
+                        continue;
+                    }
+
+                    if ($resultStatus === 'INC') {
+                        $bucket['inc']['t']++;
+                        if ($gender !== null) {
+                            $bucket['inc'][$gender]++;
+                        }
+                    }
+
+                    $divisionValue = (int) ($row->resolved_division ?? 0);
+                    if ($resultStatus !== 'INC') {
+                        $group = match ($divisionValue) {
+                            1 => 'i',
+                            2 => 'ii',
+                            3 => 'iii',
+                            4 => 'iv',
+                            default => 'zero',
+                        };
+
+                        $bucket['division'][$group]['t']++;
+                        if ($gender !== null) {
+                            $bucket['division'][$group][$gender]++;
+                        }
+                    }
+
+                    $gpaValue = $row->resolved_gpa ?? null;
+                    if ($resultStatus !== 'INC' && !is_null($gpaValue) && $gpaValue !== '') {
+                        $bucket['gpa_sum'] += (float) $gpaValue;
+                        $bucket['gpa_count']++;
+                    }
+
+                    unset($bucket);
+                }
+
+                $rankedCouncils = collect($councilBuckets)
+                    ->map(function ($bucket) {
+                        $regT = max((int) $bucket['registered']['t'], 0);
+                        $absT = (int) $bucket['absent']['t'];
+                        $incT = (int) $bucket['inc']['t'];
+
+                        $bucket['sat']['m'] = max((int) $bucket['registered']['m'] - (int) $bucket['absent']['m'], 0);
+                        $bucket['sat']['f'] = max((int) $bucket['registered']['f'] - (int) $bucket['absent']['f'], 0);
+                        $bucket['sat']['t'] = $bucket['sat']['m'] + $bucket['sat']['f'];
+                        $satT = max((int) $bucket['sat']['t'], 0);
+
+                        $bucket['absent']['pct'] = $regT > 0 ? ($absT / $regT) * 100 : 0.0;
+                        $bucket['sat']['pct'] = $regT > 0 ? ($satT / $regT) * 100 : 0.0;
+                        $bucket['inc']['pct'] = $regT > 0 ? ($incT / $regT) * 100 : 0.0;
+
+                        $bucket['division']['i_iii']['m'] = $bucket['division']['i']['m'] + $bucket['division']['ii']['m'] + $bucket['division']['iii']['m'];
+                        $bucket['division']['i_iii']['f'] = $bucket['division']['i']['f'] + $bucket['division']['ii']['f'] + $bucket['division']['iii']['f'];
+                        $bucket['division']['i_iii']['t'] = $bucket['division']['i_iii']['m'] + $bucket['division']['i_iii']['f'];
+
+                        $bucket['division']['i_iv']['m'] = $bucket['division']['i_iii']['m'] + $bucket['division']['iv']['m'];
+                        $bucket['division']['i_iv']['f'] = $bucket['division']['i_iii']['f'] + $bucket['division']['iv']['f'];
+                        $bucket['division']['i_iv']['t'] = $bucket['division']['i_iv']['m'] + $bucket['division']['i_iv']['f'];
+
+                        foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                            $bucket['division'][$group]['pct'] = $satT > 0
+                                ? ((int) $bucket['division'][$group]['t'] / $satT) * 100
+                                : 0.0;
+                        }
+
+                        $bucket['gpa'] = $bucket['gpa_count'] > 0
+                            ? round($bucket['gpa_sum'] / $bucket['gpa_count'], 4)
+                            : null;
+
+                        unset($bucket['gpa_sum'], $bucket['gpa_count']);
+                        return $bucket;
+                    })
+                    ->sortBy(fn ($row) => is_null($row['gpa']) ? INF : $row['gpa'])
+                    ->values()
+                    ->map(function ($row, $idx) {
+                        $row['pos'] = $idx + 1;
+                        return $row;
+                    });
+
+                $displayRows = match ($evaluation) {
+                    'best-ten-councils' => $rankedCouncils->take(10)->values(),
+                    'least-ten-councils' => $rankedCouncils->reverse()->take(10)->values()->values(),
+                    default => $rankedCouncils,
+                };
+
+                $total = [
+                    'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                    'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'division' => [
+                        'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    ],
+                ];
+
+                foreach ($displayRows as $row) {
+                    foreach (['m', 'f', 't'] as $key) {
+                        $total['registered'][$key] += $row['registered'][$key];
+                        $total['absent'][$key] += $row['absent'][$key];
+                        $total['sat'][$key] += $row['sat'][$key];
+                        $total['inc'][$key] += $row['inc'][$key];
+                    }
+                    foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                        foreach (['m', 'f', 't'] as $key) {
+                            $total['division'][$group][$key] += $row['division'][$group][$key];
+                        }
+                    }
+                }
+
+                $total['absent']['pct'] = $total['registered']['t'] > 0 ? ($total['absent']['t'] / $total['registered']['t']) * 100 : 0;
+                $total['sat']['pct'] = $total['registered']['t'] > 0 ? ($total['sat']['t'] / $total['registered']['t']) * 100 : 0;
+                $total['inc']['pct'] = $total['registered']['t'] > 0 ? ($total['inc']['t'] / $total['registered']['t']) * 100 : 0;
+                foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                    $total['division'][$group]['pct'] = $total['sat']['t'] > 0
+                        ? ($total['division'][$group]['t'] / $total['sat']['t']) * 100
+                        : 0;
+                }
+
+                if (strtolower((string) request()->query('export')) === 'pdf') {
+                    $safeRegion = \Illuminate\Support\Str::slug((string) $region->name);
+                    $exportKey = match ($evaluation) {
+                        'best-ten-councils' => 'best_ten_councils',
+                        'least-ten-councils' => 'least_ten_councils',
+                        default => 'councilwise',
+                    };
+                    $filename = "acsee_regional_{$exportKey}_{$safeRegion}_{$examYearValue}.pdf";
+                    $tempPath = tempnam(sys_get_temp_dir(), 'acsee_council_');
+                    if ($tempPath === false) {
+                        abort(500, 'Unable to prepare PDF export file.');
+                    }
+                    $pdfPath = $tempPath . '.pdf';
+                    @rename($tempPath, $pdfPath);
+
+                    app(\App\Services\Results\AcseeRegionalSchoolwiseFpdfService::class)
+                        ->generate(
+                            $region,
+                            $examYearValue,
+                            $displayRows->all(),
+                            $total,
+                            $pdfPath,
+                            (string) data_get($evaluationMap->get($evaluation), 'label', 'COUNCILWISE'),
+                            [
+                                'first_column_label' => 'COUNCIL',
+                                'first_column_key' => 'council',
+                                'first_column_width' => 32,
+                                'hide_second_column' => true,
+                                'metric3_width' => 12,
+                                'metric4_width' => 11.2,
+                                'gpa_width' => 26,
+                                'pos_width' => 20,
+                            ]
+                        );
+
+                    return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+                }
+
+                return view('evaluations.acsee-regionalwise-schoolwise', [
+                    'region' => $region,
+                    'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+                    'examYearValue' => $examYearValue,
+                    'rows' => $displayRows,
+                    'total' => $total,
+                    'tableMode' => 'councilwise',
+                ]);
+                break;
+
+            case 'schoolwise':
+            case 'best-ten-schools':
+            case 'least-ten-schools':
+            case 'government-schools':
+            case 'non-government-schools':
+                $columns = ['SCHOOL', 'CANDIDATES', 'PASS', 'FAIL', 'PASS RATE', 'AVG GPA'];
+                $query = $enrichedRows;
+                if ($evaluation === 'government-schools') {
+                    $query = $query->filter(fn ($row) => strtoupper((string) $row->ownership) === 'GOVERNMENT');
+                }
+                if ($evaluation === 'non-government-schools') {
+                    $query = $query->filter(fn ($row) => strtoupper((string) $row->ownership) === 'NON-GOVERNMENT');
+                }
+                $query = $query->groupBy('school_id')->map(function ($items) use ($completeRows) {
+                    $first = $items->first();
+                    $ids = $items->pluck('candidate_id')->all();
+                    $complete = $completeRows->filter(fn ($row) => in_array($row->candidate_id, $ids, true));
+                    return (object) [
+                        'school_id' => $first->school_id,
+                        'code' => $first->school_code,
+                        'name' => $first->school_name,
+                        'candidates' => $items->count(),
+                        'pass_count' => $complete->filter(fn ($row) => in_array($row->resolved_division, [1, 2, 3, 4], true))->count(),
+                        'fail_count' => $complete->where('resolved_division', 0)->count(),
+                        'avg_gpa' => round((float) ($complete->pluck('resolved_gpa')->filter(fn ($v) => $v !== null)->avg() ?? 0), 2),
+                    ];
+                })->values();
+
+                if ($evaluation === 'best-ten-schools') {
+                    $rows = $buildInstitutionRows($query, 10, 'ASC');
+                } elseif ($evaluation === 'least-ten-schools') {
+                    $rows = $buildInstitutionRows($query, 10, 'DESC');
+                } else {
+                    $rows = $buildInstitutionRows($query->sortBy('name')->values());
+                }
+                break;
+
+            case 'districtwise':
+                $districtBuckets = [];
+                foreach ($enrichedRows->filter(fn ($row) => !empty($row->district_id)) as $row) {
+                    $districtKey = (string) ((int) $row->district_id);
+                    if (!isset($districtBuckets[$districtKey])) {
+                        $districtName = trim(((string) ($row->district_code ?? '')) . ' - ' . ((string) ($row->district_name ?? 'N/A')));
+                        $districtBuckets[$districtKey] = [
+                            'district' => $districtName,
+                            'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                            'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'division' => [
+                                'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            ],
+                            'gpa_sum' => 0.0,
+                            'gpa_count' => 0,
+                            'gpa' => null,
+                        ];
+                    }
+
+                    $genderValue = strtoupper(trim((string) ($row->gender ?? '')));
+                    $gender = match ($genderValue) {
+                        'F' => 'f',
+                        'M' => 'm',
+                        default => null,
+                    };
+
+                    $bucket = &$districtBuckets[$districtKey];
+                    $bucket['registered']['t']++;
+                    if ($gender !== null) {
+                        $bucket['registered'][$gender]++;
+                    }
+
+                    $resultStatus = strtoupper(trim((string) ($row->resolved_result_status ?? 'COMPLETE')));
+                    if ($resultStatus === 'ABS') {
+                        $bucket['absent']['t']++;
+                        if ($gender !== null) {
+                            $bucket['absent'][$gender]++;
+                        }
+                        unset($bucket);
+                        continue;
+                    }
+
+                    if ($resultStatus === 'INC') {
+                        $bucket['inc']['t']++;
+                        if ($gender !== null) {
+                            $bucket['inc'][$gender]++;
+                        }
+                    }
+
+                    $divisionValue = (int) ($row->resolved_division ?? 0);
+                    if ($resultStatus !== 'INC') {
+                        $group = match ($divisionValue) {
+                            1 => 'i',
+                            2 => 'ii',
+                            3 => 'iii',
+                            4 => 'iv',
+                            default => 'zero',
+                        };
+                        $bucket['division'][$group]['t']++;
+                        if ($gender !== null) {
+                            $bucket['division'][$group][$gender]++;
+                        }
+                    }
+
+                    $gpaValue = $row->resolved_gpa ?? null;
+                    if ($resultStatus !== 'INC' && !is_null($gpaValue) && $gpaValue !== '') {
+                        $bucket['gpa_sum'] += (float) $gpaValue;
+                        $bucket['gpa_count']++;
+                    }
+                    unset($bucket);
+                }
+
+                $displayRows = collect($districtBuckets)
+                    ->map(function ($bucket) {
+                        $regT = max((int) $bucket['registered']['t'], 0);
+                        $absT = (int) $bucket['absent']['t'];
+                        $incT = (int) $bucket['inc']['t'];
+                        $bucket['sat']['m'] = max((int) $bucket['registered']['m'] - (int) $bucket['absent']['m'], 0);
+                        $bucket['sat']['f'] = max((int) $bucket['registered']['f'] - (int) $bucket['absent']['f'], 0);
+                        $bucket['sat']['t'] = $bucket['sat']['m'] + $bucket['sat']['f'];
+                        $satT = max((int) $bucket['sat']['t'], 0);
+
+                        $bucket['absent']['pct'] = $regT > 0 ? ($absT / $regT) * 100 : 0.0;
+                        $bucket['sat']['pct'] = $regT > 0 ? ($satT / $regT) * 100 : 0.0;
+                        $bucket['inc']['pct'] = $regT > 0 ? ($incT / $regT) * 100 : 0.0;
+                        $bucket['division']['i_iii']['m'] = $bucket['division']['i']['m'] + $bucket['division']['ii']['m'] + $bucket['division']['iii']['m'];
+                        $bucket['division']['i_iii']['f'] = $bucket['division']['i']['f'] + $bucket['division']['ii']['f'] + $bucket['division']['iii']['f'];
+                        $bucket['division']['i_iii']['t'] = $bucket['division']['i_iii']['m'] + $bucket['division']['i_iii']['f'];
+                        $bucket['division']['i_iv']['m'] = $bucket['division']['i_iii']['m'] + $bucket['division']['iv']['m'];
+                        $bucket['division']['i_iv']['f'] = $bucket['division']['i_iii']['f'] + $bucket['division']['iv']['f'];
+                        $bucket['division']['i_iv']['t'] = $bucket['division']['i_iv']['m'] + $bucket['division']['i_iv']['f'];
+
+                        foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                            $bucket['division'][$group]['pct'] = $satT > 0
+                                ? ((int) $bucket['division'][$group]['t'] / $satT) * 100
+                                : 0.0;
+                        }
+
+                        $bucket['gpa'] = $bucket['gpa_count'] > 0
+                            ? round($bucket['gpa_sum'] / $bucket['gpa_count'], 4)
+                            : null;
+
+                        unset($bucket['gpa_sum'], $bucket['gpa_count']);
+                        return $bucket;
+                    })
+                    ->sortBy(fn ($row) => is_null($row['gpa']) ? INF : $row['gpa'])
+                    ->values()
+                    ->map(function ($row, $idx) {
+                        $row['pos'] = $idx + 1;
+                        return $row;
+                    });
+
+                $total = [
+                    'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                    'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'division' => [
+                        'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    ],
+                ];
+
+                foreach ($displayRows as $row) {
+                    foreach (['m', 'f', 't'] as $key) {
+                        $total['registered'][$key] += $row['registered'][$key];
+                        $total['absent'][$key] += $row['absent'][$key];
+                        $total['sat'][$key] += $row['sat'][$key];
+                        $total['inc'][$key] += $row['inc'][$key];
+                    }
+                    foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                        foreach (['m', 'f', 't'] as $key) {
+                            $total['division'][$group][$key] += $row['division'][$group][$key];
+                        }
+                    }
+                }
+
+                $total['absent']['pct'] = $total['registered']['t'] > 0 ? ($total['absent']['t'] / $total['registered']['t']) * 100 : 0;
+                $total['sat']['pct'] = $total['registered']['t'] > 0 ? ($total['sat']['t'] / $total['registered']['t']) * 100 : 0;
+                $total['inc']['pct'] = $total['registered']['t'] > 0 ? ($total['inc']['t'] / $total['registered']['t']) * 100 : 0;
+                foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                    $total['division'][$group]['pct'] = $total['sat']['t'] > 0
+                        ? ($total['division'][$group]['t'] / $total['sat']['t']) * 100
+                        : 0;
+                }
+
+                if (strtolower((string) request()->query('export')) === 'pdf') {
+                    $safeRegion = \Illuminate\Support\Str::slug((string) $region->name);
+                    $filename = "acsee_regional_districtwise_{$safeRegion}_{$examYearValue}.pdf";
+                    $tempPath = tempnam(sys_get_temp_dir(), 'acsee_district_');
+                    if ($tempPath === false) {
+                        abort(500, 'Unable to prepare PDF export file.');
+                    }
+                    $pdfPath = $tempPath . '.pdf';
+                    @rename($tempPath, $pdfPath);
+
+                    app(\App\Services\Results\AcseeRegionalSchoolwiseFpdfService::class)
+                        ->generate(
+                            $region,
+                            $examYearValue,
+                            $displayRows->all(),
+                            $total,
+                            $pdfPath,
+                            (string) data_get($evaluationMap->get($evaluation), 'label', 'DISTRICTWISE'),
+                            [
+                                'first_column_label' => 'DISTRICT',
+                                'first_column_key' => 'district',
+                                'first_column_width' => 92,
+                                'hide_second_column' => true,
+                                'metric3_width' => 10,
+                                'metric4_width' => 9.2,
+                                'gpa_width' => 24,
+                                'pos_width' => 18,
+                            ]
+                        );
+
+                    return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+                }
+
+                return view('evaluations.acsee-regionalwise-schoolwise', [
+                    'region' => $region,
+                    'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+                    'examYearValue' => $examYearValue,
+                    'rows' => $displayRows,
+                    'total' => $total,
+                    'tableMode' => 'districtwise',
+                ]);
+                break;
+
+            case 'ownership-result-evaluation':
+                $ownershipBuckets = [];
+                foreach ($enrichedRows as $row) {
+                    $ownership = strtoupper(trim((string) ($row->ownership ?? 'UNKNOWN')));
+                    if ($ownership === '') {
+                        $ownership = 'UNKNOWN';
+                    }
+
+                    if (!isset($ownershipBuckets[$ownership])) {
+                        $ownershipBuckets[$ownership] = [
+                            'ownership' => $ownership,
+                            'schools_count' => 0,
+                            'school_ids' => [],
+                            'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                            'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            'division' => [
+                                'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                                'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                            ],
+                            'gpa_sum' => 0.0,
+                            'gpa_count' => 0,
+                            'gpa' => null,
+                        ];
+                    }
+
+                    $bucket = &$ownershipBuckets[$ownership];
+
+                    if (!empty($row->school_id)) {
+                        $bucket['school_ids'][(string) ((int) $row->school_id)] = true;
+                    }
+
+                    $genderValue = strtoupper(trim((string) ($row->gender ?? '')));
+                    $gender = match ($genderValue) {
+                        'F' => 'f',
+                        'M' => 'm',
+                        default => null,
+                    };
+
+                    $bucket['registered']['t']++;
+                    if ($gender !== null) {
+                        $bucket['registered'][$gender]++;
+                    }
+
+                    $resultStatus = strtoupper(trim((string) ($row->resolved_result_status ?? 'COMPLETE')));
+
+                    if ($resultStatus === 'ABS') {
+                        $bucket['absent']['t']++;
+                        if ($gender !== null) {
+                            $bucket['absent'][$gender]++;
+                        }
+                        unset($bucket);
+                        continue;
+                    }
+
+                    if ($resultStatus === 'INC') {
+                        $bucket['inc']['t']++;
+                        if ($gender !== null) {
+                            $bucket['inc'][$gender]++;
+                        }
+                    }
+
+                    $divisionValue = (int) ($row->resolved_division ?? 0);
+                    if ($resultStatus !== 'INC') {
+                        $group = match ($divisionValue) {
+                            1 => 'i',
+                            2 => 'ii',
+                            3 => 'iii',
+                            4 => 'iv',
+                            default => 'zero',
+                        };
+
+                        $bucket['division'][$group]['t']++;
+                        if ($gender !== null) {
+                            $bucket['division'][$group][$gender]++;
+                        }
+                    }
+
+                    $gpaValue = $row->resolved_gpa ?? null;
+                    if ($resultStatus !== 'INC' && !is_null($gpaValue) && $gpaValue !== '') {
+                        $bucket['gpa_sum'] += (float) $gpaValue;
+                        $bucket['gpa_count']++;
+                    }
+
+                    unset($bucket);
+                }
+
+                $displayRows = collect($ownershipBuckets)
+                    ->map(function ($bucket) {
+                        $bucket['schools_count'] = count($bucket['school_ids']);
+                        unset($bucket['school_ids']);
+
+                        $regT = max((int) $bucket['registered']['t'], 0);
+                        $absT = (int) $bucket['absent']['t'];
+                        $incT = (int) $bucket['inc']['t'];
+
+                        $bucket['sat']['m'] = max((int) $bucket['registered']['m'] - (int) $bucket['absent']['m'], 0);
+                        $bucket['sat']['f'] = max((int) $bucket['registered']['f'] - (int) $bucket['absent']['f'], 0);
+                        $bucket['sat']['t'] = $bucket['sat']['m'] + $bucket['sat']['f'];
+                        $satT = max((int) $bucket['sat']['t'], 0);
+
+                        $bucket['absent']['pct'] = $regT > 0 ? ($absT / $regT) * 100 : 0.0;
+                        $bucket['sat']['pct'] = $regT > 0 ? ($satT / $regT) * 100 : 0.0;
+                        $bucket['inc']['pct'] = $regT > 0 ? ($incT / $regT) * 100 : 0.0;
+
+                        $bucket['division']['i_iii']['m'] = $bucket['division']['i']['m'] + $bucket['division']['ii']['m'] + $bucket['division']['iii']['m'];
+                        $bucket['division']['i_iii']['f'] = $bucket['division']['i']['f'] + $bucket['division']['ii']['f'] + $bucket['division']['iii']['f'];
+                        $bucket['division']['i_iii']['t'] = $bucket['division']['i_iii']['m'] + $bucket['division']['i_iii']['f'];
+
+                        $bucket['division']['i_iv']['m'] = $bucket['division']['i_iii']['m'] + $bucket['division']['iv']['m'];
+                        $bucket['division']['i_iv']['f'] = $bucket['division']['i_iii']['f'] + $bucket['division']['iv']['f'];
+                        $bucket['division']['i_iv']['t'] = $bucket['division']['i_iv']['m'] + $bucket['division']['i_iv']['f'];
+
+                        foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $grp) {
+                            $bucket['division'][$grp]['pct'] = $satT > 0
+                                ? ((int) $bucket['division'][$grp]['t'] / $satT) * 100
+                                : 0.0;
+                        }
+
+                        $bucket['gpa'] = $bucket['gpa_count'] > 0
+                            ? round($bucket['gpa_sum'] / $bucket['gpa_count'], 4)
+                            : null;
+
+                        unset($bucket['gpa_sum'], $bucket['gpa_count']);
+                        return $bucket;
+                    })
+                    ->sortBy(fn ($row) => is_null($row['gpa']) ? INF : $row['gpa'])
+                    ->values()
+                    ->map(function ($row, $idx) {
+                        $row['pos'] = $idx + 1;
+                        return $row;
+                    });
+
+                $total = [
+                    'registered' => ['m' => 0, 'f' => 0, 't' => 0],
+                    'absent' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'sat' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'inc' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    'division' => [
+                        'i' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'ii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'i_iii' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'i_iv' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                        'zero' => ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0],
+                    ],
+                ];
+
+                foreach ($displayRows as $row) {
+                    foreach (['m', 'f', 't'] as $key) {
+                        $total['registered'][$key] += $row['registered'][$key];
+                        $total['absent'][$key] += $row['absent'][$key];
+                        $total['sat'][$key] += $row['sat'][$key];
+                        $total['inc'][$key] += $row['inc'][$key];
+                    }
+
+                    foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                        foreach (['m', 'f', 't'] as $key) {
+                            $total['division'][$group][$key] += $row['division'][$group][$key];
+                        }
+                    }
+                }
+
+                $total['absent']['pct'] = $total['registered']['t'] > 0 ? ($total['absent']['t'] / $total['registered']['t']) * 100 : 0;
+                $total['sat']['pct'] = $total['registered']['t'] > 0 ? ($total['sat']['t'] / $total['registered']['t']) * 100 : 0;
+                $total['inc']['pct'] = $total['registered']['t'] > 0 ? ($total['inc']['t'] / $total['registered']['t']) * 100 : 0;
+                foreach (['i', 'ii', 'iii', 'i_iii', 'iv', 'i_iv', 'zero'] as $group) {
+                    $total['division'][$group]['pct'] = $total['sat']['t'] > 0
+                        ? ($total['division'][$group]['t'] / $total['sat']['t']) * 100
+                        : 0;
+                }
+
+                if (strtolower((string) request()->query('export')) === 'pdf') {
+                    $safeRegion = \Illuminate\Support\Str::slug((string) $region->name);
+                    $filename = "acsee_regional_ownership_{$safeRegion}_{$examYearValue}.pdf";
+                    $tempPath = tempnam(sys_get_temp_dir(), 'acsee_ownership_');
+                    if ($tempPath === false) {
+                        abort(500, 'Unable to prepare PDF export file.');
+                    }
+                    $pdfPath = $tempPath . '.pdf';
+                    @rename($tempPath, $pdfPath);
+
+                    app(\App\Services\Results\AcseeRegionalSchoolwiseFpdfService::class)
+                        ->generate(
+                            $region,
+                            $examYearValue,
+                            $displayRows->all(),
+                            $total,
+                            $pdfPath,
+                            (string) data_get($evaluationMap->get($evaluation), 'label', 'OWNERSHIP'),
+                            [
+                                'first_column_label' => 'OWNERSHIP',
+                                'second_column_label' => 'SCHOOLS',
+                                'first_column_key' => 'ownership',
+                                'second_column_key' => 'schools_count',
+                                'second_column_align' => 'C',
+                                'first_column_width' => 78,
+                                'second_column_width' => 56,
+                            ]
+                        );
+
+                    return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+                }
+
+                return view('evaluations.acsee-regionalwise-schoolwise', [
+                    'region' => $region,
+                    'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+                    'examYearValue' => $examYearValue,
+                    'rows' => $displayRows,
+                    'total' => $total,
+                    'tableMode' => 'ownership',
+                ]);
+                break;
+
+            case 'best-ten-girls':
+            case 'least-ten-girls':
+            case 'best-ten-boys':
+            case 'least-ten-boys':
+            case 'overall-best-ten-students':
+            case 'overall-least-ten-students':
+                $candidateQuery = $completeRows->filter(fn ($row) => $row->resolved_gpa !== null);
+
+                if ($evaluation === 'best-ten-girls' || $evaluation === 'least-ten-girls') {
+                    $candidateQuery = $candidateQuery->filter(fn ($row) => strtoupper((string) $row->gender) === 'F');
+                }
+                if ($evaluation === 'best-ten-boys' || $evaluation === 'least-ten-boys') {
+                    $candidateQuery = $candidateQuery->filter(fn ($row) => strtoupper((string) $row->gender) === 'M');
+                }
+
+                $isBest = in_array($evaluation, ['best-ten-girls', 'best-ten-boys', 'overall-best-ten-students'], true);
+                $candidateRows = $isBest
+                    ? $candidateQuery->sortBy(fn ($row) => [$row->resolved_gpa ?? INF, $row->resolved_division])->take(10)->values()
+                    : $candidateQuery->sortByDesc(fn ($row) => [$row->resolved_gpa ?? -INF, -1 * $row->resolved_division])->take(10)->values();
+
+                $candidateIds = $candidateRows
+                    ->pluck('candidate_id')
+                    ->filter(fn ($value) => !is_null($value))
+                    ->map(fn ($value) => (int) $value)
+                    ->values();
+
+                $subjectResultsByCandidate = \Illuminate\Support\Facades\DB::table('subject_marks as sm')
+                    ->join('subjects as sb', 'sb.id', '=', 'sm.subject_id')
+                    ->where('sm.exam_type_id', $examType->id)
+                    ->where('sm.year', $examYearValue)
+                    ->whereIn('sm.candidate_id', $candidateIds->all())
+                    ->get([
+                        'sm.id',
+                        'sm.candidate_id',
+                        'sm.subject_id',
+                        'sb.code as subject_code',
+                        'sb.name as subject_name',
+                        'sb.written_papers',
+                        'sb.has_practical',
+                        'sm.marks_obtained',
+                        'sm.paper_1',
+                        'sm.paper_2',
+                        'sm.paper_3',
+                        'sm.grade',
+                        'sm.subject_status',
+                    ])
+                    ->groupBy('candidate_id')
+                    ->map(function ($items) {
+                        $aliases = (array) config('necta_subject_aliases.acsee', []);
+
+                        $requiredPaperCodesForSubject = function ($item): array {
+                            $codes = [];
+                            $written = max(1, min(2, (int) ($item->written_papers ?? 1)));
+                            for ($i = 1; $i <= $written; $i++) {
+                                $codes[] = "paper_{$i}";
+                            }
+                            if (!empty($item->has_practical)) {
+                                $codes[] = 'paper_3';
+                            }
+                            return array_values(array_unique($codes));
+                        };
+
+                        return $items
+                            ->groupBy('subject_id')
+                            ->map(function ($subjectRows) use ($requiredPaperCodesForSubject) {
+                                $rows = collect($subjectRows)->sortByDesc('id')->values();
+                                $subject = $rows->first();
+                                $required = $requiredPaperCodesForSubject($subject);
+                                $positiveByPaper = [];
+                                foreach ($required as $paperCode) {
+                                    $positiveByPaper[$paperCode] = $rows->contains(function ($mark) use ($paperCode) {
+                                        $value = $mark->{$paperCode} ?? null;
+                                        return $value !== null && (float) $value > 0;
+                                    });
+                                }
+
+                                $preferred = $rows->first(function ($mark) use ($required, $positiveByPaper) {
+                                    $status = strtoupper((string) ($mark->subject_status ?? ''));
+                                    if ($status === 'INC') {
+                                        return false;
+                                    }
+                                    foreach ($required as $paperCode) {
+                                        $value = $mark->{$paperCode} ?? null;
+                                        if ($value === null) {
+                                            return false;
+                                        }
+                                        if (($positiveByPaper[$paperCode] ?? false) && (float) $value <= 0) {
+                                            return false;
+                                        }
+                                    }
+                                    return true;
+                                });
+
+                                return $preferred ?: $rows->first();
+                            })
+                            ->filter()
+                            ->sortBy(function ($item) use ($aliases) {
+                                $subjectCode = strtoupper(trim((string) ($item->subject_code ?? '')));
+                                $subjectName = strtoupper(trim((string) ($item->subject_name ?? '')));
+                                $subjectLabel = $subjectCode !== '' && isset($aliases[$subjectCode])
+                                    ? strtoupper((string) $aliases[$subjectCode])
+                                    : $subjectName;
+                                $isGeneralStudies = $subjectCode === '111'
+                                    || $subjectName === 'GENERAL STUDIES'
+                                    || $subjectLabel === 'G/STUDIES';
+
+                                return sprintf(
+                                    '%d_%s_%s',
+                                    $isGeneralStudies ? 0 : 1,
+                                    $subjectCode !== '' ? $subjectCode : 'ZZZ',
+                                    $subjectName
+                                );
+                            })
+                            ->values()
+                            ->map(function ($item) use ($aliases) {
+                                $subjectCode = strtoupper(trim((string) ($item->subject_code ?? '')));
+                                $subjectName = strtoupper(trim((string) ($item->subject_name ?? '')));
+                                $subjectLabel = $subjectCode !== '' && isset($aliases[$subjectCode])
+                                    ? strtoupper((string) $aliases[$subjectCode])
+                                    : $subjectName;
+                                $status = strtoupper(trim((string) ($item->subject_status ?? '')));
+                                $grade = strtoupper(trim((string) ($item->grade ?? '')));
+                                $marks = is_null($item->marks_obtained)
+                                    ? null
+                                    : rtrim(rtrim(number_format((float) $item->marks_obtained, 2, '.', ''), '0'), '.');
+
+                                if (in_array($status, ['ABS', 'X'], true)) {
+                                    $resultText = $status . " '" . $status . "'";
+                                } elseif ($status === 'INC' || ($marks === null && $grade === '')) {
+                                    $resultText = "INC 'INC'";
+                                } else {
+                                    $resultText = ($marks ?? '-') . ($grade !== '' ? " '" . $grade . "'" : '');
+                                }
+
+                                return [
+                                    'marks' => is_null($item->marks_obtained) ? null : (float) $item->marks_obtained,
+                                    'text' => ($subjectLabel !== '' ? $subjectLabel : 'SUBJECT') . '=' . $resultText,
+                                ];
+                            })
+                            ->all();
+                    });
+
+                $gradingService = app(\App\Services\Results\NectaGradingService::class);
+
+                $displayRows = $candidateRows->values()->map(function ($row) use ($subjectResultsByCandidate, $gradingService, $finalByCandidate) {
+                    $fullName = trim((string) ($row->full_name ?? ''));
+                    $divisionValue = (int) ($row->resolved_division ?? -1);
+                    $divisionLabelMap = [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV', 0 => '0'];
+                    $division = array_key_exists($divisionValue, $divisionLabelMap)
+                        ? $divisionLabelMap[$divisionValue]
+                        : '-';
+                    $candidateId = !is_null($row->candidate_id ?? null) ? (int) $row->candidate_id : null;
+                    $subjectRows = collect($candidateId ? ($subjectResultsByCandidate->get($candidateId) ?? []) : []);
+                    $scoredSubjects = $subjectRows
+                        ->filter(fn ($item) => is_numeric(data_get($item, 'marks')));
+                    $totalMarks = (float) $scoredSubjects->sum(fn ($item) => (float) data_get($item, 'marks', 0));
+                    $avgMarks = $scoredSubjects->count() > 0 ? round($totalMarks / $scoredSubjects->count(), 2) : null;
+                    $overallGrade = trim((string) ($row->resolved_overall_grade_source ?? data_get($finalByCandidate->get($candidateId), 'resolved_overall_grade_source', '')));
+                    if ($overallGrade === '' && !is_null($avgMarks)) {
+                        $overallGrade = $gradingService->calculateGrade((float) $avgMarks);
+                    }
+                    $decodedBreakdown = is_array($row->resolved_breakdown_source ?? null)
+                        ? $row->resolved_breakdown_source
+                        : json_decode((string) ($row->resolved_breakdown_source ?? ''), true);
+                    $aggt = data_get($decodedBreakdown, 'aggt_points');
+
+                    return [
+                        'candidate_id' => $candidateId,
+                        'index_number' => (string) ($row->index_number ?? '-'),
+                        'candidate' => strtoupper($fullName !== '' ? $fullName : 'N/A'),
+                        'school' => strtoupper(trim((string) ($row->school_name ?? '-'))) ?: '-',
+                        'council' => strtoupper(trim((string) ($row->council_name ?? '-'))) ?: '-',
+                        'combination' => strtoupper(trim((string) ($row->combination ?? '-'))) ?: '-',
+                        'sex' => strtoupper((string) ($row->gender ?? '-')),
+                        'total_marks' => $totalMarks > 0 ? round($totalMarks, 0) : null,
+                        'avg_marks' => $avgMarks,
+                        'overall_grade' => $overallGrade !== '' ? strtoupper($overallGrade) : '-',
+                        'aggt' => is_null($aggt) ? null : (int) round((float) $aggt),
+                        'gpa' => (float) ($row->resolved_gpa ?? 0),
+                        'division' => $division,
+                        'subject_results_text' => collect($candidateId ? ($subjectResultsByCandidate->get($candidateId) ?? []) : [])
+                            ->pluck('text')
+                            ->implode(', '),
+                    ];
+                })
+                    ->sort(function (array $left, array $right) {
+                        $leftTotal = $left['total_marks'] ?? -INF;
+                        $rightTotal = $right['total_marks'] ?? -INF;
+                        if ($leftTotal !== $rightTotal) {
+                            return $rightTotal <=> $leftTotal;
+                        }
+
+                        $leftGpa = $left['gpa'] ?? INF;
+                        $rightGpa = $right['gpa'] ?? INF;
+                        if ($leftGpa !== $rightGpa) {
+                            return $leftGpa <=> $rightGpa;
+                        }
+
+                        return strcmp((string) ($left['index_number'] ?? ''), (string) ($right['index_number'] ?? ''));
+                    })
+                    ->values()
+                    ->map(function (array $row, int $position) {
+                        $row['position'] = $position + 1;
+
+                        return $row;
+                    })
+                    ->values();
+
+                $summary = [
+                    'students' => number_format($displayRows->count()),
+                    'avg_gpa' => number_format((float) ($displayRows->pluck('gpa')->avg() ?? 0), 2),
+                    'best_gpa' => number_format((float) ($isBest ? ($displayRows->pluck('gpa')->min() ?? 0) : ($displayRows->pluck('gpa')->max() ?? 0)), 2),
+                    'sex' => match ($evaluation) {
+                        'best-ten-girls', 'least-ten-girls' => 'FEMALE',
+                        'best-ten-boys', 'least-ten-boys' => 'MALE',
+                        default => 'MIXED',
+                    },
+                ];
+
+                if (strtolower((string) request()->query('export')) === 'pdf') {
+                    $safeRegion = \Illuminate\Support\Str::slug((string) $region->name);
+                    $exportKey = \Illuminate\Support\Str::slug((string) $evaluation, '_');
+                    $filename = "acsee_regional_{$exportKey}_{$safeRegion}_{$examYearValue}.pdf";
+                    $tempPath = tempnam(sys_get_temp_dir(), 'acsee_students_');
+                    if ($tempPath === false) {
+                        abort(500, 'Unable to prepare PDF export file.');
+                    }
+                    $pdfPath = $tempPath . '.pdf';
+                    @rename($tempPath, $pdfPath);
+
+                    app(\App\Services\Results\AcseeRegionalStudentRankingFpdfService::class)
+                        ->generate(
+                            $region,
+                            $examYearValue,
+                            $displayRows->all(),
+                            $summary,
+                            $pdfPath,
+                            (string) data_get($evaluationMap->get($evaluation), 'label', 'STUDENT RANKING')
+                        );
+
+                    return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+                }
+
+                return view('evaluations.acsee-regionalwise-student-ranking', [
+                    'region' => $region,
+                    'evaluationKey' => $evaluation,
+                    'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+                    'examYearValue' => $examYearValue,
+                    'rows' => $displayRows,
+                    'summary' => $summary,
+                ]);
+                break;
+
+            case 'subjectwise-result-evaluation':
+            case 'subject-summary-evaluation':
+                $gradingService = app(\App\Services\Results\NectaGradingService::class);
+                $subjectRows = \Illuminate\Support\Facades\DB::table('subject_marks as sm')
+                    ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
+                    ->join('schools as s', 's.id', '=', 'c.school_id')
+                    ->join('subjects as sb', 'sb.id', '=', 'sm.subject_id')
+                    ->where('s.region_id', $region->id)
+                    ->where('sm.exam_type_id', $examType->id)
+                    ->where('sm.year', $examYearValue)
+                    ->selectRaw('sb.code as subject_code, sb.name as subject_name')
+                    ->selectRaw('COUNT(*) as entries')
+                    ->selectRaw('ROUND(AVG(sm.marks_obtained), 2) as avg_marks')
+                    ->selectRaw("SUM(CASE WHEN UPPER(sm.grade) = 'A' THEN 1 ELSE 0 END) as grade_a")
+                    ->selectRaw("SUM(CASE WHEN UPPER(sm.grade) = 'B' THEN 1 ELSE 0 END) as grade_b")
+                    ->selectRaw("SUM(CASE WHEN UPPER(sm.grade) = 'C' THEN 1 ELSE 0 END) as grade_c")
+                    ->selectRaw("SUM(CASE WHEN UPPER(sm.grade) = 'D' THEN 1 ELSE 0 END) as grade_d")
+                    ->selectRaw("SUM(CASE WHEN UPPER(sm.grade) = 'E' THEN 1 ELSE 0 END) as grade_e")
+                    ->selectRaw("SUM(CASE WHEN UPPER(sm.grade) = 'S' THEN 1 ELSE 0 END) as grade_s")
+                    ->selectRaw("SUM(CASE WHEN UPPER(sm.grade) = 'F' THEN 1 ELSE 0 END) as grade_f")
+                    ->groupBy('sb.id', 'sb.code', 'sb.name')
+                    ->orderByDesc('avg_marks')
+                    ->orderBy('sb.name')
+                    ->get()
+                    ->map(function ($row, $idx) use ($gradingService) {
+                        $graded = (int) ($row->grade_a ?? 0)
+                            + (int) ($row->grade_b ?? 0)
+                            + (int) ($row->grade_c ?? 0)
+                            + (int) ($row->grade_d ?? 0)
+                            + (int) ($row->grade_e ?? 0)
+                            + (int) ($row->grade_s ?? 0)
+                            + (int) ($row->grade_f ?? 0);
+                        $total = $graded;
+                        $gpa = $graded > 0
+                            ? round((
+                                ((int) ($row->grade_a ?? 0) * 1)
+                                + ((int) ($row->grade_b ?? 0) * 2)
+                                + ((int) ($row->grade_c ?? 0) * 3)
+                                + ((int) ($row->grade_d ?? 0) * 4)
+                                + ((int) ($row->grade_e ?? 0) * 5)
+                                + ((int) ($row->grade_s ?? 0) * 6)
+                                + ((int) ($row->grade_f ?? 0) * 7)
+                            ) / $graded, 4)
+                            : null;
+                        $competence = $gpa !== null ? $gradingService->getGpaCompetence($gpa) : null;
+
+                        return [
+                            'code' => (string) ($row->subject_code ?? ''),
+                            'name' => (string) ($row->subject_name ?? ''),
+                            'subject' => trim(((string) ($row->subject_code ?? '')) . ' - ' . ((string) ($row->subject_name ?? ''))),
+                            'entries' => (int) ($row->entries ?? 0),
+                            'avg_marks' => (float) ($row->avg_marks ?? 0),
+                            'grade_a' => (int) ($row->grade_a ?? 0),
+                            'grade_b' => (int) ($row->grade_b ?? 0),
+                            'grade_c' => (int) ($row->grade_c ?? 0),
+                            'grade_d' => (int) ($row->grade_d ?? 0),
+                            'grade_e' => (int) ($row->grade_e ?? 0),
+                            'grade_s' => (int) ($row->grade_s ?? 0),
+                            'grade_f' => (int) ($row->grade_f ?? 0),
+                            'total' => $total,
+                            'gpa' => $gpa,
+                            'competence' => $competence,
+                            'pos' => $idx + 1,
+                        ];
+                    })
+                    ->values();
+
+                $divisionSummary = [
+                    'F' => ['I' => 0, 'II' => 0, 'III' => 0, 'IV' => 0, '0' => 0, 'INC' => 0, 'ABS' => 0],
+                    'M' => ['I' => 0, 'II' => 0, 'III' => 0, 'IV' => 0, '0' => 0, 'INC' => 0, 'ABS' => 0],
+                ];
+
+                foreach ($enrichedRows as $row) {
+                    $sex = strtoupper(trim((string) ($row->gender ?? '')));
+                    if (!in_array($sex, ['F', 'M'], true)) {
+                        continue;
+                    }
+
+                    $status = strtoupper(trim((string) ($row->resolved_result_status ?? 'COMPLETE')));
+                    if ($status === 'ABS') {
+                        $divisionSummary[$sex]['ABS']++;
+                        continue;
+                    }
+
+                    if ($status === 'INC') {
+                        $divisionSummary[$sex]['INC']++;
+                        continue;
+                    }
+
+                    $division = (int) ($row->resolved_division ?? 0);
+                    $key = match ($division) {
+                        1 => 'I',
+                        2 => 'II',
+                        3 => 'III',
+                        4 => 'IV',
+                        default => '0',
+                    };
+                    $divisionSummary[$sex][$key]++;
+                }
+
+                $divisionSummary['T'] = [
+                    'I' => $divisionSummary['F']['I'] + $divisionSummary['M']['I'],
+                    'II' => $divisionSummary['F']['II'] + $divisionSummary['M']['II'],
+                    'III' => $divisionSummary['F']['III'] + $divisionSummary['M']['III'],
+                    'IV' => $divisionSummary['F']['IV'] + $divisionSummary['M']['IV'],
+                    '0' => $divisionSummary['F']['0'] + $divisionSummary['M']['0'],
+                    'INC' => $divisionSummary['F']['INC'] + $divisionSummary['M']['INC'],
+                    'ABS' => $divisionSummary['F']['ABS'] + $divisionSummary['M']['ABS'],
+                ];
+
+                $overallGpa = round((float) ($completeRows->pluck('resolved_gpa')->filter(fn ($v) => $v !== null)->avg() ?? 0), 4);
+                $summary = [
+                    'subjects' => number_format($subjectRows->count()),
+                    'entries' => number_format($subjectRows->sum('entries')),
+                    'avg_marks' => number_format((float) ($subjectRows->pluck('avg_marks')->avg() ?? 0), 2),
+                    'grade_a' => number_format($subjectRows->sum('grade_a')),
+                    'grade_b' => number_format($subjectRows->sum('grade_b')),
+                    'grade_c' => number_format($subjectRows->sum('grade_c')),
+                    'grade_d' => number_format($subjectRows->sum('grade_d')),
+                    'grade_e' => number_format($subjectRows->sum('grade_e')),
+                    'grade_s' => number_format($subjectRows->sum('grade_s')),
+                    'grade_f' => number_format($subjectRows->sum('grade_f')),
+                    'division_summary' => $divisionSummary,
+                    'overall' => [
+                        'region' => strtoupper((string) $region->name),
+                        'passed' => $divisionSummary['T']['I'] + $divisionSummary['T']['II'] + $divisionSummary['T']['III'] + $divisionSummary['T']['IV'],
+                        'gpa' => $overallGpa,
+                        'gpa_info' => $overallGpa > 0 ? $gradingService->getGpaCompetence($overallGpa) : null,
+                    ],
+                ];
+
+                if (strtolower((string) request()->query('export')) === 'pdf') {
+                    $safeRegion = \Illuminate\Support\Str::slug((string) $region->name);
+                    $exportKey = $evaluation === 'subject-summary-evaluation' ? 'subject_summary' : 'subjectwise';
+                    $filename = "acsee_regional_{$exportKey}_{$safeRegion}_{$examYearValue}.pdf";
+                    $tempPath = tempnam(sys_get_temp_dir(), 'acsee_subjectwise_');
+                    if ($tempPath === false) {
+                        abort(500, 'Unable to prepare PDF export file.');
+                    }
+                    $pdfPath = $tempPath . '.pdf';
+                    @rename($tempPath, $pdfPath);
+
+                    app(\App\Services\Results\AcseeRegionalSubjectwiseSummaryFpdfService::class)
+                        ->generate(
+                            $region,
+                            $examYearValue,
+                            $subjectRows->all(),
+                            $summary,
+                            $pdfPath,
+                            (string) data_get($evaluationMap->get($evaluation), 'label', 'SUBJECTWISE RESULT EVALUATION')
+                        );
+
+                    return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+                }
+
+                return view('evaluations.acsee-regionalwise-subjectwise', [
+                    'region' => $region,
+                    'evaluationKey' => $evaluation,
+                    'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+                    'examYearValue' => $examYearValue,
+                    'rows' => $subjectRows,
+                    'summary' => $summary,
+                ]);
+                break;
+
+            case 'mark-entry-status-report':
+                $markRows = \Illuminate\Support\Facades\DB::table('candidate_subject_selections as css')
+                    ->join('candidates as c', 'c.id', '=', 'css.candidate_id')
+                    ->join('schools as s', 's.id', '=', 'c.school_id')
+                    ->join('subjects as sb', 'sb.id', '=', 'css.subject_id')
+                    ->leftJoin('subject_marks as sm', function ($join) use ($examType, $examYearValue) {
+                        $join->on('sm.candidate_id', '=', 'css.candidate_id')
+                            ->on('sm.subject_id', '=', 'css.subject_id')
+                            ->where('sm.exam_type_id', '=', $examType->id)
+                            ->where('sm.year', '=', $examYearValue);
+                    })
+                    ->where('s.region_id', $region->id)
+                    ->where('css.exam_type_id', $examType->id)
+                    ->where('css.year', $examYearValue)
+                    ->where('css.is_active', true)
+                    ->selectRaw('sb.code as subject_code, sb.name as subject_name')
+                    ->selectRaw('COUNT(*) as expected_entries')
+                    ->selectRaw('SUM(CASE WHEN sm.id IS NOT NULL THEN 1 ELSE 0 END) as marked_entries')
+                    ->groupBy('sb.id', 'sb.code', 'sb.name')
+                    ->orderBy('sb.name')
+                    ->get()
+                    ->map(function ($row, $idx) {
+                    $expected = (int) ($row->expected_entries ?? 0);
+                    $marked = (int) ($row->marked_entries ?? 0);
+                    $pending = max($expected - $marked, 0);
+                    $completion = $expected > 0 ? ($marked / $expected) * 100 : 0;
+                    $status = match (true) {
+                        $completion >= 100 => 'Complete',
+                        $completion >= 80 => 'Near Complete',
+                        $completion > 0 => 'In Progress',
+                        default => 'Not Started',
+                    };
+                    return [
+                        'code' => (string) ($row->subject_code ?? ''),
+                        'name' => (string) ($row->subject_name ?? ''),
+                        'subject' => trim(((string) ($row->subject_code ?? '')) . ' - ' . ((string) ($row->subject_name ?? ''))),
+                        'expected_entries' => $expected,
+                        'marked_entries' => $marked,
+                        'pending_entries' => $pending,
+                        'completion' => round($completion, 1),
+                        'status' => $status,
+                        'pos' => $idx + 1,
+                    ];
+                })->values();
+
+                $summary = [
+                    'subjects' => number_format($markRows->count()),
+                    'expected_entries' => number_format($markRows->sum('expected_entries')),
+                    'marked_entries' => number_format($markRows->sum('marked_entries')),
+                    'pending_entries' => number_format($markRows->sum('pending_entries')),
+                    'completion' => number_format($markRows->sum('expected_entries') > 0 ? ($markRows->sum('marked_entries') / $markRows->sum('expected_entries')) * 100 : 0, 1),
+                ];
+
+                if (strtolower((string) request()->query('export')) === 'pdf') {
+                    $safeRegion = \Illuminate\Support\Str::slug((string) $region->name);
+                    $filename = "acsee_regional_mark_entry_status_{$safeRegion}_{$examYearValue}.pdf";
+                    $tempPath = tempnam(sys_get_temp_dir(), 'acsee_mark_status_');
+                    if ($tempPath === false) {
+                        abort(500, 'Unable to prepare PDF export file.');
+                    }
+                    $pdfPath = $tempPath . '.pdf';
+                    @rename($tempPath, $pdfPath);
+
+                    app(\App\Services\Results\AcseeRegionalMarkEntryStatusFpdfService::class)
+                        ->generate(
+                            $region,
+                            $examYearValue,
+                            $markRows->all(),
+                            $summary,
+                            $pdfPath,
+                            (string) data_get($evaluationMap->get($evaluation), 'label', 'MARK ENTRY STATUS REPORT')
+                        );
+
+                    return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+                }
+
+                return view('evaluations.acsee-regionalwise-mark-entry-status', [
+                    'region' => $region,
+                    'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+                    'examYearValue' => $examYearValue,
+                    'rows' => $markRows,
+                    'summary' => $summary,
+                ]);
+        }
+
+        return view('evaluations.acsee-regionalwise-evaluation-detail', [
+            'region' => $region,
+            'evaluationKey' => $evaluation,
+            'evaluationLabel' => data_get($evaluationMap->get($evaluation), 'label'),
+            'summary' => $summary,
+            'columns' => $columns,
+            'rows' => $rows,
+        ]);
+    })->name('evaluations.acsee.regionalwise.region.evaluation');
     Route::get('/evaluations/acsee/daily-marks-entry-report', function () { 
         return view('evaluations.daily-marks-entry-report'); 
     })->name('evaluations.daily-marks-entry-report');
@@ -146,115 +2483,7 @@ Route::middleware('auth')->group(function () {
     Route::post('exam-years/{examYear}/activate', [ExamYearController::class, 'activate'])->name('exam-years.activate');
     Route::post('exam-years/{examYear}/publish', [ExamYearController::class, 'publish'])->name('exam-years.publish');
     
-    // Regions API Endpoints
-    Route::get('/api/regions', [RegionController::class, 'apiGetRegions']);
-    Route::post('/api/regions', [RegionController::class, 'apiAddRegion']);
-    Route::put('/api/regions/{id}', [RegionController::class, 'apiUpdateRegion']);
-    Route::delete('/api/regions/{id}', [RegionController::class, 'apiDeleteRegion']);
-    Route::get('/api/regions/export-pdf', [RegionController::class, 'apiExportRegionsPdf']);
-    Route::get('/api/regions/export-excel', [RegionController::class, 'apiExportRegionsExcel']);
-    Route::post('/api/regions/import', [RegionController::class, 'apiImportRegions']);
-    Route::post('/api/regions/bulk-delete', function (\Illuminate\Http\Request $request) {
-        $validated = $request->validate([
-            'ids' => 'required|array',
-            'ids.*' => 'integer|exists:regions,id'
-        ]);
-        
-        $deleted = \App\Models\Region::whereIn('id', $validated['ids'])->delete();
-        return response()->json(['deleted' => $deleted, 'message' => 'Regions deleted successfully']);
-    });
-
-    // Districts API Endpoints
-    Route::get('/api/districts', function () {
-        $page = request('page', 1);
-        $pageSize = request('page_size', 10);
-        $search = request('search', '');
-        $regionId = request('region_id', '');
-        
-        $query = \App\Models\District::with('region');
-        
-        // Filter by region if specified
-        if ($regionId) {
-            $query->where('region_id', $regionId);
-        }
-        
-        // Search by code or name
-        if ($search) {
-            $query->where(function($q) use ($search) {
-                $q->where('code', 'like', "%$search%")
-                  ->orWhere('name', 'like', "%$search%");
-            });
-        }
-        
-        $total = $query->count();
-        $districts = $query->skip(($page - 1) * $pageSize)
-                           ->take($pageSize)
-                           ->get();
-        
-        $data = $districts->map(function($d) {
-            $schoolIds = $d->schools()->pluck('id');
-            $candidatesCount = \App\Models\Candidate::whereIn('school_id', $schoolIds)->count();
-            
-            return [
-                'id' => $d->id,
-                'code' => $d->code,
-                'name' => $d->name,
-                'region_id' => $d->region_id,
-                'region_name' => $d->region->name ?? null,
-                'schools_count' => $d->schools()->count(),
-                'candidates_count' => $candidatesCount,
-                'status' => 'active'
-            ];
-        });
-        
-        return response()->json([
-            'data' => $data,
-            'pagination' => [
-                'total_count' => $total,
-                'total_pages' => ceil($total / $pageSize),
-                'current_page' => $page,
-                'page_size' => $pageSize
-            ]
-        ]);
-    });
-    Route::post('/api/districts', function (\Illuminate\Http\Request $request) {
-        $validated = $request->validate([
-            'code' => 'required|unique:districts',
-            'name' => 'required',
-            'region_id' => 'required|exists:regions,id'
-        ]);
-        $district = \App\Models\District::create($validated);
-        return response()->json(['message' => 'District added', 'data' => $district], 201);
-    });
-    Route::put('/api/districts/{id}', function (\Illuminate\Http\Request $request, $id) {
-        $district = \App\Models\District::find($id);
-        if (!$district) return response()->json(['message' => 'Not found'], 404);
-        
-        $validated = $request->validate([
-            'code' => 'required|unique:districts,code,'.$id,
-            'name' => 'required',
-            'region_id' => 'required|exists:regions,id'
-        ]);
-        $district->update($validated);
-        return response()->json(['message' => 'District updated', 'data' => $district]);
-    });
-    Route::delete('/api/districts/{id}', function ($id) {
-        $district = \App\Models\District::find($id);
-        if (!$district) return response()->json(['message' => 'Not found'], 404);
-        
-        // Check if district has schools registered
-        $schoolCount = $district->schools()->count();
-        if ($schoolCount > 0) {
-            return response()->json([
-                'message' => "Cannot delete district with registered schools",
-                'details' => "This district has $schoolCount school(s) registered. Please remove all schools first.",
-                'count' => $schoolCount
-            ], 409);
-        }
-        
-        $district->delete();
-        return response()->json(['message' => 'District deleted']);
-    });
+    // Registration APIs moved to Admin group
     Route::post('/api/districts/import', function (\Illuminate\Http\Request $request) {
         $file = $request->file('file');
         if (!$file) {
@@ -365,6 +2594,201 @@ Route::middleware('auth')->group(function () {
     });
 
     // Schools API Endpoints
+    Route::post('/api/exam-types/psle/schools/sync-necta-2025', function (\Illuminate\Http\Request $request, \App\Services\Schools\NectaPsle2025SchoolSyncService $service) {
+        $validated = $request->validate([
+            'region_id' => 'nullable|integer|exists:regions,id',
+        ]);
+
+        $regions = \App\Models\Region::query()
+            ->when($validated['region_id'] ?? null, fn ($query, $regionId) => $query->where('id', $regionId))
+            ->orderBy('name')
+            ->get();
+
+        if ($regions->isEmpty()) {
+            return response()->json(['message' => 'No matching registered regions found in IRMS.'], 422);
+        }
+
+        $summary = $service->syncRegisteredRegions($regions);
+
+        return response()->json([
+            'message' => 'NECTA PSLE 2025 school sync completed.',
+            'summary' => $summary,
+        ]);
+    });
+
+    Route::get('/api/exam-types/psle/schools', function () {
+        $pageSize = request('page_size');
+        $search = request('search', '');
+        $regionId = request('region_id', '');
+        $districtId = request('district_id', '');
+
+        $query = \App\Models\School::with('district', 'district.region')
+            ->where('source_system', \App\Services\Schools\NectaPsle2025SchoolSyncService::SOURCE_SYSTEM);
+
+        if ($regionId) {
+            $query->where('region_id', $regionId);
+        }
+
+        if ($districtId) {
+            $query->where('district_id', $districtId);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('registration_number', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%");
+            });
+        }
+
+        $query->orderBy('name');
+
+        if ($pageSize) {
+            $query->take((int) $pageSize);
+        }
+
+        $schools = $query->get();
+
+        return response()->json([
+            'data' => $schools->map(function ($school) {
+                return [
+                    'id' => $school->id,
+                    'code' => $school->code,
+                    'registration_number' => $school->registration_number,
+                    'source_system' => $school->source_system,
+                    'name' => $school->name,
+                    'ownership' => $school->ownership,
+                    'district_id' => $school->district_id,
+                    'region_id' => $school->region_id,
+                    'district_name' => $school->district?->name,
+                    'region_name' => $school->region?->name ?? $school->district?->region?->name,
+                ];
+            })->values(),
+        ]);
+    });
+
+    Route::post('/api/exam-types/csee/schools/sync-necta-2025', function (\App\Services\Schools\NectaCsee2025CentreSyncService $service) {
+        $summary = $service->syncCentres();
+
+        return response()->json([
+            'message' => 'NECTA CSEE 2025 centres sync completed.',
+            'summary' => $summary,
+        ]);
+    });
+
+    Route::post('/api/exam-types/csee/schools/import-particulars', function (\Illuminate\Http\Request $request, \App\Services\Schools\CseeSchoolParticularsImportService $service) {
+        $summary = $request->hasFile('file')
+            ? $service->importFromCsv($request->file('file'))
+            : $service->importMissingParticulars();
+
+        $hasFailures = (int) ($summary['rows_failed'] ?? 0) > 0;
+
+        return response()->json([
+            'message' => $request->hasFile('file')
+                ? 'CSEE school particulars CSV imported successfully.'
+                : 'CSEE school particulars imported successfully.',
+            'summary' => $summary,
+        ], $hasFailures ? 422 : 200);
+    });
+
+    Route::get('/api/exam-types/csee/schools/import-particulars/template', function () {
+        $filename = 'csee-school-particulars-template.csv';
+        $csv = fopen('php://memory', 'w');
+
+        fputcsv($csv, ['code', 'name', 'ownership', 'region', 'district']);
+        fputcsv($csv, ['S0101', 'AZANIA SECONDARY SCHOOL', 'NON-GOVERNMENT', 'Dar es Salaam', 'Ilala']);
+        fputcsv($csv, ['P0104', 'BWIRU BOYS SECONDARY SCHOOL', 'GOVERNMENT', 'Mwanza', '']);
+
+        rewind($csv);
+        $content = stream_get_contents($csv);
+        fclose($csv);
+
+        return response($content, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
+    });
+
+    Route::get('/api/exam-types/csee/schools', function () {
+        $page = max((int) request('page', 1), 1);
+        $pageSize = min(max((int) request('page_size', 100), 1), 500);
+        $search = request('search', '');
+        $regionId = request('region_id', '');
+        $districtId = request('district_id', '');
+
+        $query = \App\Models\School::query()
+            ->with(['district.region', 'council.region', 'region'])
+            ->where('source_system', \App\Services\Schools\NectaCsee2025CentreSyncService::SOURCE_SYSTEM)
+            ->orderBy('name');
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('registration_number', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%");
+            });
+        }
+
+        if ($regionId) {
+            $query->where(function ($q) use ($regionId) {
+                $q->where('region_id', $regionId)
+                    ->orWhereHas('district', fn ($districtQuery) => $districtQuery->where('region_id', $regionId))
+                    ->orWhereHas('council', fn ($councilQuery) => $councilQuery->where('region_id', $regionId));
+            });
+        }
+
+        if ($districtId) {
+            $query->where(function ($q) use ($districtId) {
+                $q->where('district_id', $districtId)
+                    ->orWhere('council_id', $districtId);
+            });
+        }
+
+        $total = $query->count();
+        $schools = $query
+            ->skip(($page - 1) * $pageSize)
+            ->take($pageSize)
+            ->get();
+
+        return response()->json([
+            'data' => $schools->map(function ($school) {
+                $ownership = strtoupper((string) ($school->ownership ?? ''));
+                $regionName = $school->region?->name
+                    ?? $school->council?->region?->name
+                    ?? $school->district?->region?->name;
+
+                return [
+                    'id' => $school->id,
+                    'code' => $school->code,
+                    'registration_number' => $school->registration_number,
+                    'source_system' => $school->source_system,
+                    'name' => $school->name,
+                    'ownership' => $school->ownership,
+                    'ownership_label' => match ($ownership) {
+                        'NON-GOVERNMENT' => 'NON-GOVERNMENT',
+                        'GOVERNMENT' => 'GOVERNMENT',
+                        default => $school->ownership ?: 'UNKNOWN',
+                    },
+                    'district_id' => $school->district_id,
+                    'council_id' => $school->council_id,
+                    'region_id' => $school->region_id,
+                    'district_name' => $school->district?->name ?? $school->council?->name,
+                    'council_name' => $school->council?->name ?? $school->district?->name,
+                    'region_name' => $regionName,
+                    'school_type' => $school->school_type,
+                    'education_level' => $school->education_level,
+                ];
+            })->values(),
+            'meta' => [
+                'current_page' => $page,
+                'per_page' => $pageSize,
+                'total' => $total,
+                'last_page' => max((int) ceil($total / $pageSize), 1),
+            ],
+        ]);
+    });
+
     Route::get('/api/schools', function () {
         $page = request('page', 1);
         $pageSize = request('page_size', 10);
@@ -712,6 +3136,29 @@ Route::middleware('auth')->group(function () {
         }
         
         $candidate = \App\Models\Candidate::create($validated);
+
+        $examType = \App\Models\ExamType::where('code', strtoupper((string) $validated['exam_type']))->first();
+        $activeExamYear = \App\Models\ExamYear::where('is_active', true)->first();
+
+        if ($examType && $activeExamYear) {
+            \App\Models\CandidateExamRegistration::updateOrCreate(
+                [
+                    'candidate_id' => $candidate->id,
+                    'exam_type_id' => $examType->id,
+                    'exam_year_id' => $activeExamYear->id,
+                ],
+                [
+                    'year' => (int) $activeExamYear->year_label,
+                    'registration_number' => 'REG-' . uniqid(),
+                    'is_active' => true,
+                    'is_verified' => false,
+                ]
+            );
+
+            if (strtoupper((string) $validated['exam_type']) === 'CSEE') {
+                app(CseeCandidateSubjectService::class)->ensureCoreSubjects($candidate, $activeExamYear);
+            }
+        }
         
         return response()->json(['message' => 'Candidate registered successfully', 'data' => $candidate->load('school')], 201);
     });
@@ -732,8 +3179,51 @@ Route::middleware('auth')->group(function () {
         ]);
         
         $candidate->update($validated);
+
+        $examType = \App\Models\ExamType::where('code', strtoupper((string) $validated['exam_type']))->first();
+        $activeExamYear = \App\Models\ExamYear::where('is_active', true)->first();
+
+        if ($examType && $activeExamYear) {
+            \App\Models\CandidateExamRegistration::updateOrCreate(
+                [
+                    'candidate_id' => $candidate->id,
+                    'exam_type_id' => $examType->id,
+                    'exam_year_id' => $activeExamYear->id,
+                ],
+                [
+                    'year' => (int) $activeExamYear->year_label,
+                    'registration_number' => 'REG-' . uniqid(),
+                    'is_active' => true,
+                    'is_verified' => false,
+                ]
+            );
+
+            if (strtoupper((string) $validated['exam_type']) === 'CSEE') {
+                app(CseeCandidateSubjectService::class)->ensureCoreSubjects($candidate, $activeExamYear);
+            }
+        }
         
         return response()->json(['message' => 'Candidate updated successfully', 'data' => $candidate->load('school')]);
+    });
+
+    Route::post('/api/exam-types/csee/candidates/{candidate}/subjects', function (\Illuminate\Http\Request $request, \App\Models\Candidate $candidate, CseeCandidateSubjectService $service) {
+        $validated = $request->validate([
+            'subject_ids' => 'required|array',
+            'subject_ids.*' => 'integer|exists:subjects,id',
+            'exam_year' => 'nullable|string|regex:/^\d{4}$/',
+        ]);
+
+        $examYear = null;
+        if (!empty($validated['exam_year'])) {
+            $examYear = \App\Models\ExamYear::where('year_label', $validated['exam_year'])->first();
+        }
+
+        $result = $service->syncSubjects($candidate, $validated['subject_ids'], $examYear);
+
+        return response()->json([
+            'message' => 'CSEE candidate subjects updated successfully.',
+            'data' => $result,
+        ]);
     });
 
     Route::delete('/api/candidates/{id}', function ($id) {
@@ -1104,6 +3594,8 @@ Route::middleware('auth')->group(function () {
     // New Structured Candidate Import API (two-phase)
     Route::post('/api/candidates/import/validate', [CandidateImportController::class, 'validateImport']);
     Route::post('/api/candidates/import/commit', [CandidateImportController::class, 'commitImport']);
+    Route::post('/api/candidates/import/csee-registration-pdf/validate', [CandidateImportController::class, 'validateCseeRegistrationPdf']);
+    Route::post('/api/candidates/import/csee-registration-pdf/commit', [CandidateImportController::class, 'commitCseeRegistrationPdf']);
     Route::post('/api/candidates/import/async', [CandidateImportController::class, 'asyncBulkImport']);
     Route::get('/api/candidates/import/template', [CandidateImportController::class, 'downloadTemplate']);
     Route::post('/api/candidates/import/download-errors', [CandidateImportController::class, 'downloadErrorReport']);
@@ -1235,7 +3727,10 @@ Route::middleware('auth')->group(function () {
          return response()->json(['message' => 'Exam type deleted successfully']);
      });
 
-     // Subjects API Endpoints for ACSEE
+     Route::post('/api/exam-types/psle/subjects/sync-official', [ExamTypeController::class, 'syncOfficialPsleSubjects']);
+     Route::post('/api/exam-types/csee/subjects/sync-official', [ExamTypeController::class, 'syncOfficialCseeSubjects']);
+
+     // Subjects API Endpoints for exam types
      Route::get('/api/exam-types/{code}/subjects', [ExamTypeController::class, 'getSubjects']);
      Route::post('/api/exam-types/{code}/subjects', [ExamTypeController::class, 'createSubject']);
      Route::put('/api/exam-types/{code}/subjects/{id}', [ExamTypeController::class, 'updateSubject']);
@@ -1273,8 +3768,10 @@ Route::middleware('auth')->group(function () {
              $sn = 1;
 
              foreach ($subjects as $subject) {
-                 // Query marks for this subject with all relationships
-                 $marksQuery = \App\Models\SubjectMarks::where('subject_id', $subject->id);
+                 // Keep this query lightweight to avoid memory/timeouts on large datasets.
+                 $marksQuery = \App\Models\SubjectMarks::query()
+                     ->select(['subject_id', 'created_at', 'updated_at', 'year', 'candidate_id'])
+                     ->where('subject_id', $subject->id);
 
                  // Filter by exam year if provided
                  if ($examYearId) {
@@ -1290,16 +3787,25 @@ Route::middleware('auth')->group(function () {
 
                  // Filter by region if provided
                  if ($regionId) {
-                     $marksQuery->whereHas('candidate', function($q) use ($regionId) {
-                         $q->whereHas('school', function($sq) use ($regionId) {
-                             $sq->whereHas('district', function($dq) use ($regionId) {
-                                 $dq->where('region_id', $regionId);
-                             });
-                         });
+                     $marksQuery->whereHas('candidate.school', function($sq) use ($regionId) {
+                         $sq->where('region_id', $regionId);
                      });
                  }
 
-                 $marks = $marksQuery->with('candidate.school.district.region')->get();
+                 // Filter by entry date (accepts YYYY-MM-DD and MM/DD/YYYY)
+                 if ($entryDate) {
+                     try {
+                         $parsedDate = \Carbon\Carbon::parse($entryDate)->toDateString();
+                         $marksQuery->where(function ($q) use ($parsedDate) {
+                             $q->whereDate('created_at', $parsedDate)
+                               ->orWhereDate('updated_at', $parsedDate);
+                         });
+                     } catch (\Throwable $e) {
+                         // Ignore invalid date format and proceed without date filter
+                     }
+                 }
+
+                 $marks = $marksQuery->get();
 
                  // Count total expected scripts (candidates)
                  $totalCandidates = $marks->count();
@@ -1320,7 +3826,12 @@ Route::middleware('auth')->group(function () {
                  // Simple logic: count entries by creation date
                  $now = now();
                  foreach ($marks as $mark) {
-                     $daysOld = $mark->created_at->diffInDays($now);
+                     $createdAt = $mark->created_at ?? $mark->updated_at ?? null;
+                     if (!$createdAt) {
+                         $dayGroups['remainder']++;
+                         continue;
+                     }
+                     $daysOld = $createdAt->diffInDays($now);
                      
                      if ($daysOld <= 1) {
                          $dayGroups['day1']++;
@@ -1525,6 +4036,41 @@ Route::middleware('auth')->group(function () {
 
       // Mark Entry Module Routes (ACSEE)
       Route::get('/mark-entry/acsee', [MarkEntryController::class, 'index']);
+      Route::get('/mark-entry/csee', [\App\Http\Controllers\CseeMarkEntryController::class, 'index']);
+      Route::get('/api/mark-entry/csee/bootstrap', [\App\Http\Controllers\CseeMarkEntryController::class, 'bootstrap']);
+      Route::get('/api/mark-entry/csee/districts', [\App\Http\Controllers\CseeMarkEntryController::class, 'districts']);
+      Route::get('/api/mark-entry/csee/schools', [\App\Http\Controllers\CseeMarkEntryController::class, 'schools']);
+      Route::get('/api/mark-entry/csee/subjects', [\App\Http\Controllers\CseeMarkEntryController::class, 'subjects']);
+      Route::get('/api/mark-entry/csee/dashboard', [\App\Http\Controllers\CseeMarkEntryController::class, 'dashboard']);
+      Route::get('/mark-entry/psle', function () {
+          return view('mark-entry.psle');
+      });
+      Route::post('/mark-entry/psle/single/validate', [\App\Http\Controllers\PsleMarkEntryController::class, 'singleValidate']);
+      Route::post('/mark-entry/psle/single/commit', [\App\Http\Controllers\PsleMarkEntryController::class, 'singleCommit']);
+      Route::post('/mark-entry/psle/bulk/school/validate-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'schoolValidateZip']);
+      Route::post('/mark-entry/psle/bulk/school/commit-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'schoolCommitZip']);
+      Route::post('/mark-entry/psle/bulk/district/validate-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'districtValidateZip']);
+      Route::post('/mark-entry/psle/bulk/district/commit-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'districtCommitZip']);
+      Route::get('/api/mark-entry/psle/recent-batches', [\App\Http\Controllers\PsleMarkEntryController::class, 'recentBatches']);
+      Route::get('/api/mark-entry/psle/lifecycle/dashboard', [\App\Http\Controllers\PsleMarkEntryController::class, 'lifecycleDashboard']);
+      Route::get('/api/mark-entry/psle/reports/summary', [\App\Http\Controllers\PsleMarkEntryController::class, 'reportsSummary']);
+      Route::get('/api/mark-entry/psle/reports/export', [\App\Http\Controllers\PsleMarkEntryController::class, 'reportsExport']);
+      Route::get('/api/mark-entry/psle/reports/scoresheet-subjects', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetSubjects']);
+      Route::get('/api/mark-entry/psle/reports/scoresheet-pdf', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetPdf']);
+      Route::get('/api/mark-entry/psle/reports/scoresheet-pdf/school-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetSchoolZip']);
+      Route::get('/api/mark-entry/psle/reports/scoresheet-pdf/district-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetDistrictZip']);
+      Route::get('/api/mark-entry/psle/reports/scoresheet-pdf/region-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetRegionZip']);
+      Route::get('/api/mark-entry/psle/reports/entered-marks-pdf', [\App\Http\Controllers\PsleMarkEntryController::class, 'enteredMarksPdf']);
+      Route::get('/api/mark-entry/psle/reports/entered-marks-pdf/school-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'enteredMarksSchoolZip']);
+      Route::get('/api/mark-entry/psle/reports/entered-marks-pdf/district-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'enteredMarksDistrictZip']);
+      Route::get('/api/mark-entry/psle/reports/entered-marks-pdf/region-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'enteredMarksRegionZip']);
+      Route::get('/api/mark-entry/psle/audit/summary', [\App\Http\Controllers\PsleMarkEntryController::class, 'auditSummary']);
+      Route::get('/api/mark-entry/psle/admin/summary', [\App\Http\Controllers\PsleMarkEntryController::class, 'administrationSummary']);
+      Route::post('/api/mark-entry/psle/batches/{batchId}/submit', [\App\Http\Controllers\PsleMarkEntryController::class, 'submitBatch']);
+      Route::post('/api/mark-entry/psle/batches/{batchId}/approve', [\App\Http\Controllers\PsleMarkEntryController::class, 'approveBatch']);
+      Route::post('/api/mark-entry/psle/batches/{batchId}/reject', [\App\Http\Controllers\PsleMarkEntryController::class, 'rejectBatch']);
+      Route::post('/api/mark-entry/psle/batches/{batchId}/lock', [\App\Http\Controllers\PsleMarkEntryController::class, 'lockBatch']);
+      Route::post('/api/mark-entry/psle/batches/{batchId}/unlock', [\App\Http\Controllers\PsleMarkEntryController::class, 'unlockBatch']);
       Route::get('/mark-entry/acsee/download-template', [MarkEntryController::class, 'downloadTemplate']);
       // DEPRECATED: legacy upload endpoint (use validate/commit)
       Route::post('/mark-entry/acsee/upload', [MarkEntryController::class, 'uploadMarks']);
@@ -1538,6 +4084,7 @@ Route::middleware('auth')->group(function () {
       Route::post('/mark-entry/acsee/bulk/district/validate-zip', [MarkEntryController::class, 'districtValidateZip']);
       Route::post('/mark-entry/acsee/bulk/school/commit-zip', [MarkEntryController::class, 'schoolCommitZip']);
       Route::post('/mark-entry/acsee/bulk/district/commit-zip', [MarkEntryController::class, 'districtCommitZip']);
+      Route::post('/api/mark-entry/acsee/district-zip/commit', [MarkEntryController::class, 'districtCommitZip']);
       Route::get('/mark-entry/acsee/bulk/{id}/progress', [MarkEntryController::class, 'bulkProgress']);
 
       Route::get('/test-upload', function() { return response()->json(['status' => 'ok']); });
@@ -1577,108 +4124,16 @@ Route::middleware('auth')->group(function () {
       Route::get('/api/mark-entry/acsee/subjects', [MarkEntryController::class, 'getSubjects']);
       Route::get('/api/mark-entry/acsee/subjects-by-school', [MarkEntryController::class, 'getSubjectsBySchoolAndYear']);
       
-      // Exam Years API Endpoints
-      Route::get('/api/exam-years', function () {
-          try {
-              $years = \App\Models\ExamYear::orderByDesc('year_label')->get()->map(function($year) {
-                  return [
-                      'id' => $year->id,
-                      'year_label' => $year->year_label,
-                      'is_active' => $year->is_active,
-                      'is_locked' => $year->is_locked,
-                  ];
-              });
-
-              $activeYear = \App\Models\ExamYear::where('is_active', true)->first();
-
-              return response()->json([
-                  'exam_years' => $years,
-                  'active_year' => $activeYear ? [
-                      'id' => $activeYear->id,
-                      'year_label' => $activeYear->year_label,
-                  ] : null,
-              ]);
-          } catch (\Exception $e) {
-              \Log::error('Exam years API error:', ['error' => $e->getMessage()]);
-              return response()->json([
-                  'exam_years' => [],
-                  'active_year' => null,
-                  'error' => 'Unable to load exam years',
-              ], 200);
-          }
-      });
-      
-      // Get active exam year (for auto-filling forms throughout system)
-      Route::get('/api/exam-years/with-acsee', function () {
-          try {
-              $acseeType = \App\Models\ExamType::where('code', 'ACSEE')->first();
-              
-              if (!$acseeType) {
-                  return response()->json(['years' => []]);
-              }
-              
-              $years = \App\Models\ExamYear::query()
-                  ->whereHas('candidateExamRegistrations', function($q) use ($acseeType) {
-                      $q->where('exam_type_id', $acseeType->id);
-                  })
-                  ->orderBy('year_label', 'desc')
-                  ->get();
-              
-              $data = $years->map(function($year) {
-                  return [
-                      'id' => $year->id,
-                      'year_label' => $year->year_label,
-                      'is_locked' => $year->is_locked
-                  ];
-              });
-              
-              return response()->json(['years' => $data]);
-          } catch (\Exception $e) {
-              \Log::error('Exam years with ACSEE error:', ['error' => $e->getMessage()]);
-              return response()->json(['years' => [], 'error' => 'Unable to load exam years'], 500);
-          }
-      });
-
-      Route::get('/api/exam-years/active', function () {
-          try {
-              $activeYear = \App\Models\ExamYear::active()->first();
-              
-              if (!$activeYear) {
-                  return response()->json([
-                      'active_year' => null,
-                      'message' => 'No active exam year set'
-                  ]);
-              }
-              
-              return response()->json([
-                  'active_year' => [
-                      'id' => $activeYear->id,
-                      'year_label' => $activeYear->year_label,
-                      'is_locked' => $activeYear->is_locked
-                  ]
-              ]);
-          } catch (\Exception $e) {
-              \Log::error('Active exam year error:', ['error' => $e->getMessage()]);
-              return response()->json([
-                  'active_year' => null,
-                  'error' => 'Unable to load active exam year'
-              ], 500);
-          }
-      });
-
-      // ==================== HIERARCHY GRID ROUTES ====================
-          Route::middleware('auth')->group(function () {
-          Route::get('/hierarchy/regions', [HierarchyController::class, 'regions'])->name('hierarchy.regions');
-          Route::get('/hierarchy/districts/{regionId}', [HierarchyController::class, 'districts'])->name('hierarchy.districts');
-          Route::get('/hierarchy/schools/{districtId}', [HierarchyController::class, 'schools'])->name('hierarchy.schools');
-          Route::get('/hierarchy/school/{schoolId}/results', [HierarchyController::class, 'schoolResults'])->name('hierarchy.school-results');
-      });
+      // Exam Years API Endpoints moved to /admin/api/exam-years (admin group below)
 
       // ==================== ACSEE RESULTS ROUTES ====================
       require base_path('routes/results.php');
 
       // ==================== MARK ENTRY LIFECYCLE ROUTES ====================
       require base_path('routes/mark-entry.php');
+
+      // ==================== EXAM DEVELOPMENT ROUTES ====================
+      require base_path('routes/exam-development.php');
       });
 
 // Temporary debug endpoint
@@ -1703,4 +4158,182 @@ Route::post('/api/test-upload', function (\Illuminate\Http\Request $request) {
         \Log::error('Test upload failed: ' . $e->getMessage());
         return response()->json(['success' => false, 'error' => $e->getMessage()], 422);
     }
+})->middleware('auth');
+
+
+// Custom Role-Based Routes
+Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
+    Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+
+    // Registration Management
+    Route::prefix('registration')->group(function () {
+        Route::get('regions', function () { return view('registration.regions'); })->name('admin.registration.regions');
+        Route::get('districts', function () { return view('registration.districts', ['regions' => \App\Models\Region::all()]); })->name('admin.registration.districts');
+        Route::get('schools', function () { return view('registration.schools', ['regions' => \App\Models\Region::all()]); })->name('admin.registration.schools');
+        Route::get('candidates', function () { return view('registration.candidates'); })->name('admin.registration.candidates');
+        Route::get('candidates-by-district', function () { return view('registration.candidates-by-district'); })->name('admin.registration.candidates-by-district');
+    });
+
+    // Exam Types — use /manage/ prefix to avoid shadowing Filament's exam-types resource routes
+    Route::get('exam-types/psle', function () {
+        return view('exam-types.psle');
+    })->name('admin.exam-types.psle');
+    Route::get('exam-types/csee', function () {
+        return view('exam-types.csee');
+    })->name('admin.exam-types.csee');
+    Route::get('exam-types/acsee', function () { 
+        return view('exam-types.acsee'); 
+    })->name('admin.exam-types.acsee');
+
+    // User Management
+    Route::get('manage-users', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('admin.manage-users');
+
+    // API Endpoints for Registration (moved for admin-only protection)
+    Route::prefix('api')->group(function () {
+
+        // Users & Roles API
+        Route::get('users', [\App\Http\Controllers\AdminUserController::class, 'apiList']);
+        Route::post('users', [\App\Http\Controllers\AdminUserController::class, 'apiStore']);
+        Route::put('users/{id}', [\App\Http\Controllers\AdminUserController::class, 'apiUpdate']);
+        Route::delete('users/{id}', [\App\Http\Controllers\AdminUserController::class, 'apiDestroy']);
+        Route::get('roles', [\App\Http\Controllers\AdminUserController::class, 'apiRoles']);
+        // Regions
+        Route::get('regions', [RegionController::class, 'apiGetRegions']);
+        Route::post('regions', [RegionController::class, 'apiAddRegion']);
+        Route::put('regions/{id}', [RegionController::class, 'apiUpdateRegion']);
+        Route::delete('regions/{id}', [RegionController::class, 'apiDeleteRegion']);
+        Route::get('regions/export-pdf', [RegionController::class, 'apiExportRegionsPdf']);
+        Route::get('regions/export-excel', [RegionController::class, 'apiExportRegionsExcel']);
+        Route::post('regions/import', [RegionController::class, 'apiImportRegions']);
+        Route::post('regions/bulk-delete', function (\Illuminate\Http\Request $request) {
+            $validated = $request->validate(['ids' => 'required|array', 'ids.*' => 'integer|exists:regions,id']);
+            $deleted = \App\Models\Region::whereIn('id', $validated['ids'])->delete();
+            return response()->json(['deleted' => $deleted, 'message' => 'Regions deleted successfully']);
+        });
+
+        // Districts
+        Route::get('districts', function () {
+            $page = request('page', 1);
+            $pageSize = request('page_size', 10);
+            $search = request('search', '');
+            $regionId = request('region_id', '');
+            $query = \App\Models\District::with('region');
+            if ($regionId) $query->where('region_id', $regionId);
+            if ($search) $query->where(function($q) use ($search) { $q->where('code', 'like', "%$search%")->orWhere('name', 'like', "%$search%"); });
+            $total = $query->count();
+            $districts = $query->skip(($page - 1) * $pageSize)->take($pageSize)->get();
+            $data = $districts->map(function($d) {
+                return ['id' => $d->id, 'code' => $d->code, 'name' => $d->name, 'region_id' => $d->region_id, 'region_name' => $d->region->name ?? null, 'schools_count' => $d->schools()->count(), 'candidates_count' => \App\Models\Candidate::whereIn('school_id', $d->schools()->pluck('id'))->count(), 'status' => 'active'];
+            });
+            return response()->json(['data' => $data, 'pagination' => ['total_count' => $total, 'total_pages' => ceil($total / $pageSize), 'current_page' => $page, 'page_size' => $pageSize]]);
+        });
+        Route::post('districts', function (\Illuminate\Http\Request $request) {
+            $validated = $request->validate(['code' => 'required|unique:districts', 'name' => 'required', 'region_id' => 'required|exists:regions,id']);
+            $district = \App\Models\District::create($validated);
+            return response()->json(['message' => 'District added', 'data' => $district], 201);
+        });
+        Route::put('districts/{id}', function (\Illuminate\Http\Request $request, $id) {
+            $district = \App\Models\District::find($id);
+            if (!$district) return response()->json(['message' => 'Not found'], 404);
+            $validated = $request->validate(['code' => 'required|unique:districts,code,'.$id, 'name' => 'required', 'region_id' => 'required|exists:regions,id']);
+            $district->update($validated);
+            return response()->json(['message' => 'District updated', 'data' => $district]);
+        });
+        Route::delete('districts/{id}', function ($id) {
+            $district = \App\Models\District::find($id);
+            if (!$district) return response()->json(['message' => 'Not found'], 404);
+            if ($district->schools()->count() > 0) return response()->json(['message' => 'Cannot delete district with schools'], 400);
+            $district->delete();
+            return response()->json(['message' => 'District deleted']);
+        });
+
+        // Schools
+        Route::get('schools', function () {
+             $page = request('page', 1);
+             $pageSize = request('page_size', 10);
+             $search = request('search', '');
+             $regionId = request('region_id', '');
+             $districtId = request('district_id', '');
+             $query = \App\Models\School::with('region', 'district');
+             if ($regionId) $query->where('region_id', $regionId);
+             if ($districtId) $query->where('district_id', $districtId);
+             if ($search) $query->where(function($q) use ($search) { $q->where('code', 'like', "%$search%")->orWhere('name', 'like', "%$search%"); });
+             $total = $query->count();
+             $schools = $query->skip(($page - 1) * $pageSize)->take($pageSize)->get();
+             $data = $schools->map(function($s) {
+                 return ['id' => $s->id, 'code' => $s->code, 'name' => $s->name, 'region_name' => $s->region->name ?? null, 'district_name' => $s->district->name ?? null, 'candidates_count' => \App\Models\Candidate::where('school_id', $s->id)->count(), 'status' => 'active'];
+             });
+             return response()->json(['data' => $data, 'pagination' => ['total_count' => $total, 'total_pages' => ceil($total / $pageSize), 'current_page' => $page, 'page_size' => $pageSize]]);
+        });
+
+        // Candidates
+        Route::get('candidates', function () {
+             $page = request('page', 1);
+             $pageSize = request('page_size', 10);
+             $search = request('search', '');
+             $schoolId = request('school_id', '');
+             $query = \App\Models\Candidate::with('school');
+             if ($schoolId) $query->where('school_id', $schoolId);
+             if ($search) $query->where(function($q) use ($search) { $q->where('full_name', 'like', "%$search%")->orWhere('candidate_id', 'like', "%$search%"); });
+             $total = $query->count();
+             $candidates = $query->skip(($page - 1) * $pageSize)->take($pageSize)->get();
+             $data = $candidates->map(function($c) {
+                 return ['id' => $c->id, 'candidate_id' => $c->candidate_id, 'full_name' => $c->full_name, 'gender' => $c->gender, 'school_name' => $c->school->name ?? null, 'status' => 'registered'];
+             });
+             return response()->json(['data' => $data, 'pagination' => ['total_count' => $total, 'total_pages' => ceil($total / $pageSize), 'current_page' => $page, 'page_size' => $pageSize]]);
+        });
+
+        // Exam Types APIs
+        Route::get('exam-types', function () {
+            $examTypes = \App\Models\ExamType::withCount('candidates')->get();
+            $data = $examTypes->map(function($e) {
+                return ['id' => $e->id, 'name' => $e->name, 'code' => $e->code, 'level' => $e->level, 'description' => $e->description, 'candidates_count' => $e->candidates_count ?? 0];
+            });
+            return response()->json(['data' => $data]);
+        });
+        Route::get('exam-types/{code}', function ($code) {
+            $examType = \App\Models\ExamType::where('code', strtoupper($code))->withCount('candidates')->firstOrFail();
+            return response()->json(['data' => ['id' => $examType->id, 'name' => $examType->name, 'code' => $examType->code, 'level' => $examType->level, 'description' => $examType->description, 'candidates_count' => $examType->candidates_count ?? 0]]);
+        });
+        Route::post('exam-types/{code}/subjects', [ExamTypeController::class, 'getSubjects']);
+        Route::get('exam-types/{code}/combinations', [ExamTypeController::class, 'getCombinations']);
+
+        // Exam Years API
+        Route::get('exam-years', function () {
+            try {
+                $years = \App\Models\ExamYear::orderByDesc('year_label')->get()->map(function($year) {
+                    return ['id' => $year->id, 'year_label' => $year->year_label, 'is_active' => $year->is_active, 'is_locked' => $year->is_locked];
+                });
+                $activeYear = \App\Models\ExamYear::where('is_active', true)->first();
+                return response()->json(['exam_years' => $years, 'active_year' => $activeYear ? ['id' => $activeYear->id, 'year_label' => $activeYear->year_label] : null]);
+            } catch (\Exception $e) {
+                return response()->json(['exam_years' => [], 'active_year' => null, 'error' => 'Unable to load exam years'], 200);
+            }
+        });
+        Route::get('exam-years/with-acsee', function () {
+            try {
+                $acseeType = \App\Models\ExamType::where('code', 'ACSEE')->first();
+                if (!$acseeType) return response()->json(['years' => []]);
+                $years = \App\Models\ExamYear::query()->whereHas('candidateExamRegistrations', function($q) use ($acseeType) { $q->where('exam_type_id', $acseeType->id); })->orderBy('year_label', 'desc')->get();
+                $data = $years->map(function($year) { return ['id' => $year->id, 'year_label' => $year->year_label, 'is_locked' => $year->is_locked]; });
+                return response()->json(['years' => $data]);
+            } catch (\Exception $e) {
+                return response()->json(['years' => [], 'error' => 'Unable to load exam years'], 500);
+            }
+        });
+        Route::get('exam-years/active', function () {
+            try {
+                $activeYear = \App\Models\ExamYear::active()->first();
+                if (!$activeYear) return response()->json(['active_year' => null, 'message' => 'No active exam year set']);
+                return response()->json(['active_year' => ['id' => $activeYear->id, 'year_label' => $activeYear->year_label, 'is_locked' => $activeYear->is_locked]]);
+            } catch (\Exception $e) {
+                return response()->json(['active_year' => null, 'error' => 'Unable to load active exam year'], 500);
+            }
+        });
+
+    });
+});
+
+Route::middleware(['auth', 'user'])->prefix('user')->group(function () {
+    Route::get('/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
 });

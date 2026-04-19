@@ -47,6 +47,7 @@ class CandidateController extends Controller
         $validated = $request->validate([
             'school_id' => 'required|exists:schools,id',
             'candidate_id' => 'required|unique:candidates',
+            'prem_no' => 'nullable|string|max:100',
             'full_name' => 'nullable|string',
             'first_name' => 'nullable|string',
             'last_name' => 'nullable|string',
@@ -143,6 +144,7 @@ class CandidateController extends Controller
             $candidateData = [
                 'school_id' => $validated['school_id'],
                 'candidate_id' => $validated['candidate_id'],
+                'prem_no' => $validated['prem_no'] ?? null,
                 'gender' => $validated['gender'],
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
                 'candidate_type' => $validated['candidate_type'] ?? 'SCHOOL',  // Set from index number or default
@@ -235,6 +237,7 @@ class CandidateController extends Controller
         $validated = $request->validate([
             'school_id' => 'required|exists:schools,id',
             'candidate_id' => 'required|unique:candidates,candidate_id,' . $candidate->id,
+            'prem_no' => 'nullable|string|max:100',
             'full_name' => 'nullable|string',
             'first_name' => 'nullable|string',
             'last_name' => 'nullable|string',
@@ -293,6 +296,7 @@ class CandidateController extends Controller
             $updateData = [
                 'school_id' => $validated['school_id'],
                 'candidate_id' => $validated['candidate_id'],
+                'prem_no' => $validated['prem_no'] ?? null,
                 'gender' => $validated['gender'],
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
                 'candidate_type' => $validated['candidate_type'] ?? $candidate->candidate_type,

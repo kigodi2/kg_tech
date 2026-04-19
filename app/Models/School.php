@@ -13,6 +13,7 @@ class School extends Model
         'code',
         'name',
         'registration_number',
+        'source_system',
         'ownership',
         'district_id',
         'council_id',

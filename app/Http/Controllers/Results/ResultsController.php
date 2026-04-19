@@ -22,12 +22,17 @@ use Illuminate\Support\Facades\Schema;
  */
 class ResultsController extends Controller
 {
+    private function examCode(Request $request): string
+    {
+        return $request->routeIs('results.psle.*') ? 'PSLE' : 'ACSEE';
+    }
+
     /**
      * Display ACSEE Results Dashboard
      *
      * @return \Illuminate\View\View
      */
-    public function dashboard()
+    public function dashboard(Request $request)
     {
         // Get active exam year
         $examYear = ExamYear::active()->first();
@@ -43,37 +48,36 @@ class ResultsController extends Controller
             ]);
         }
 
-        // Get ACSEE exam type
-        $acsee = ExamType::where('code', 'ACSEE')->first();
+        $examType = ExamType::where('code', $this->examCode($request))->first();
 
         // Calculate metrics
         $metrics = [
-            'total_candidates' => $this->getTotalCandidates($acsee, $examYear),
-            'schools_submitted' => $this->getSchoolsSubmitted($acsee, $examYear),
+            'total_candidates' => $this->getTotalCandidates($examType, $examYear),
+            'schools_submitted' => $this->getSchoolsSubmitted($examType, $examYear),
             'total_schools' => School::active()->count(),
-            'processing_percentage' => $this->getProcessingPercentage($acsee, $examYear),
-            'draft_count' => $this->getResultCount($acsee, $examYear, 'draft'),
-            'final_count' => $this->getResultCount($acsee, $examYear, 'final'),
-            'published_count' => $this->getResultCount($acsee, $examYear, 'published'),
+            'processing_percentage' => $this->getProcessingPercentage($examType, $examYear),
+            'draft_count' => $this->getResultCount($examType, $examYear, 'draft'),
+            'final_count' => $this->getResultCount($examType, $examYear, 'final'),
+            'published_count' => $this->getResultCount($examType, $examYear, 'published'),
         ];
 
         // Get active grading profile
-        $gradingProfile = GradingProfile::where('exam_type_id', $acsee->id)
+        $gradingProfile = GradingProfile::where('exam_type_id', $examType->id)
             ->where('exam_year_id', $examYear->id)
             ->where('is_active', true)
             ->first();
 
         // Get last processing
-        $lastProcessing = ResultProcess::where('exam_type_id', $acsee->id)
+        $lastProcessing = ResultProcess::where('exam_type_id', $examType->id)
             ->where('exam_year_id', $examYear->id)
             ->latest('processed_at')
             ->first();
 
         // Get result linking status
-        $linkingStatus = $this->getLinkingStatus($acsee, $examYear);
+        $linkingStatus = $this->getLinkingStatus($examType, $examYear);
 
         // Get recent processing history
-        $recentProcessing = ResultProcess::where('exam_type_id', $acsee->id)
+        $recentProcessing = ResultProcess::where('exam_type_id', $examType->id)
             ->where('exam_year_id', $examYear->id)
             ->with('user')
             ->latest('processed_at')
@@ -108,7 +112,7 @@ class ResultsController extends Controller
     }
 
     /**
-     * Get total ACSEE candidates
+     * Get total candidates
      */
     private function getTotalCandidates($examType, $examYear): int
     {
@@ -174,7 +178,7 @@ class ResultsController extends Controller
             return [
                 'is_complete' => true,
                 'missing_count' => 0,
-                'invalid_combinations' => 0,
+                'invalid_configurations' => 0,
             ];
         }
 
@@ -190,7 +194,7 @@ class ResultsController extends Controller
             })
             ->count();
 
-        // Check for invalid combinations
+        // Check for invalid combinations/configurations
         $invalidCombos = \DB::table('candidates')
             ->join('candidate_exam_registrations', 'candidates.id', '=', 'candidate_exam_registrations.candidate_id')
             ->where('candidate_exam_registrations.exam_type_id', $examType->id)
@@ -207,7 +211,7 @@ class ResultsController extends Controller
         return [
             'is_complete' => $missingLinks === 0 && $invalidCombos === 0,
             'missing_count' => $missingLinks,
-            'invalid_combinations' => $invalidCombos,
+            'invalid_configurations' => $invalidCombos,
         ];
     }
 }

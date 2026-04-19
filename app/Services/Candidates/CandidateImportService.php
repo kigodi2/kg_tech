@@ -13,6 +13,7 @@ use App\Models\Subject;
 use App\Models\Combination;
 use App\Services\AcseeAllocationValidator;
 use App\Services\IndexNumber\IndexNumberValidator;
+use App\Services\Candidates\CseeCandidateSubjectService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -72,9 +73,14 @@ class CandidateImportService
         $updateCount = 0;
         $skipCount = 0;
         $errorRows = [];
+        $warningRows = [];
         $errorSummary = [];
         $rowDetails = [];
         $seenCandidates = []; // Track duplicates within file
+        $seenPsleSignals = [
+            'prem_school' => [],
+            'name_gender_school' => [],
+        ];
 
         while (($row = fgetcsv($handle)) !== false) {
             $rowNumber++;
@@ -86,7 +92,9 @@ class CandidateImportService
 
             // Map row to columns
             $record = $this->mapRowToRecord($row, $header);
+            $record = $this->normalizeRecord($record, $examType);
             $rowErrors = [];
+            $rowWarnings = [];
             $rowStatus = 'NEW';
 
             // Validate each field
@@ -144,8 +152,26 @@ class CandidateImportService
                 }
             }
 
+            if ($this->isPsleImport($record, $examType)) {
+                $this->validatePsleWarnings($record, $rowWarnings, $seenPsleSignals);
+            }
+
             // Only mark as error if validation failed
             if (empty($rowErrors)) {
+                if (!empty($rowWarnings) && $rowStatus === 'NEW') {
+                    $rowStatus = 'WARNING';
+                    $warningRows[] = [
+                        'row_number' => $rowNumber,
+                        'candidate_id' => $record['candidate_id'] ?? '',
+                        'prem_no' => $record['prem_no'] ?? '',
+                        'full_name' => $record['full_name'] ?? '',
+                        'gender' => $record['gender'] ?? '',
+                        'school_code' => $record['school_code'] ?? '',
+                        'warning_messages' => $rowWarnings,
+                        'primary_warning' => reset($rowWarnings) ?: 'Potential duplicate detected',
+                    ];
+                }
+
                 if ($rowStatus !== 'SKIP' && $rowStatus !== 'REPLACE') {
                     $createCount++;
                 }
@@ -156,6 +182,7 @@ class CandidateImportService
                 $errorRows[] = [
                     'row_number' => $rowNumber,
                     'candidate_id' => $record['candidate_id'] ?? '',
+                    'prem_no' => $record['prem_no'] ?? '',
                     'full_name' => $record['full_name'] ?? '',
                     'gender' => $record['gender'] ?? '',
                     'school_code' => $record['school_code'] ?? '',
@@ -176,11 +203,12 @@ class CandidateImportService
             $rowDetails[] = [
                 'row_number' => $rowNumber,
                 'candidate_id' => $record['candidate_id'] ?? '',
+                'prem_no' => $record['prem_no'] ?? '',
                 'full_name' => $record['full_name'] ?? '',
                 'csv_combination' => $record['combination'] ?? '',
                 'resolved_combination' => empty($rowErrors) && !empty($record['combination']) ? strtoupper(trim($record['combination'])) : null,
                 'status' => $rowStatus,
-                'messages' => $rowErrors
+                'messages' => $rowStatus === 'ERROR' ? $rowErrors : $rowWarnings
             ];
         }
 
@@ -194,8 +222,11 @@ class CandidateImportService
             'update_count' => $updateCount,
             'skip_count' => $skipCount,
             'error_count' => count($errorRows),
+            'warning_count' => count($warningRows),
             'errors' => array_slice($errorRows, 0, 100), // Limit to first 100 for display
+            'warnings' => array_slice($warningRows, 0, 100),
             'total_errors' => count($errorRows),
+            'total_warnings' => count($warningRows),
             'rows' => $rowDetails,
             'summary' => $errorSummary,
             'can_import' => ($createCount + $updateCount) > 0 && count($errorRows) === 0
@@ -257,6 +288,11 @@ class CandidateImportService
             $allocationsUpdated = 0;
             $allocationErrors = [];
             $errors = [];
+            $warnings = [];
+            $seenPsleSignals = [
+                'prem_school' => [],
+                'name_gender_school' => [],
+            ];
             $chunk = []; // Batch records
             $chunkSize = 100; // Process in batches of 100
 
@@ -269,9 +305,11 @@ class CandidateImportService
 
                 try {
                     $record = $this->mapRowToRecord($row, $header);
+                    $record = $this->normalizeRecord($record, $examType);
 
                     // Re-validate
                     $rowErrors = [];
+                    $rowWarnings = [];
                     $this->validateCandidateId($record['candidate_id'] ?? null, $rowErrors, [], $rowNumber);
                     $this->validateFullName($record['full_name'] ?? null, $rowErrors);
                     $this->validateGender($record['gender'] ?? null, $rowErrors);
@@ -291,13 +329,27 @@ class CandidateImportService
                         }
                     }
 
+                    if ($this->isPsleImport($record, $examType)) {
+                        $this->validatePsleWarnings($record, $rowWarnings, $seenPsleSignals);
+                    }
+
                     if (!empty($rowErrors)) {
                         $errors[] = [
                             'row_number' => $rowNumber,
                             'candidate_id' => $record['candidate_id'] ?? '',
+                            'prem_no' => $record['prem_no'] ?? '',
                             'error_messages' => $rowErrors
                         ];
                         continue;
+                    }
+
+                    if (!empty($rowWarnings)) {
+                        $warnings[] = [
+                            'row_number' => $rowNumber,
+                            'candidate_id' => $record['candidate_id'] ?? '',
+                            'prem_no' => $record['prem_no'] ?? '',
+                            'warning_messages' => $rowWarnings,
+                        ];
                     }
 
                     // Check if candidate exists using preloaded list
@@ -336,6 +388,7 @@ class CandidateImportService
                     $errors[] = [
                         'row_number' => $rowNumber,
                         'candidate_id' => $record['candidate_id'] ?? 'unknown',
+                        'prem_no' => $record['prem_no'] ?? '',
                         'error_messages' => [$e->getMessage()]
                     ];
                 }
@@ -365,6 +418,8 @@ class CandidateImportService
                 'updated_count' => $updatedCount,
                 'allocations_created_count' => $allocationsCreated,
                 'allocations_updated_count' => $allocationsUpdated,
+                'warning_count' => count($warnings),
+                'warnings' => array_slice($warnings, 0, 100),
                 'errors' => array_slice($errors, 0, 100),
                 'allocation_errors' => array_slice($allocationErrors, 0, 50)
             ];
@@ -395,6 +450,55 @@ class CandidateImportService
         foreach ($headers as $index => $header) {
             $record[$header] = trim($row[$index] ?? '');
         }
+
+        if (empty($record['candidate_id']) && !empty($record['candidate_number'])) {
+            $record['candidate_id'] = $record['candidate_number'];
+        }
+
+        if (empty($record['full_name']) && !empty($record['pupil_name'])) {
+            $record['full_name'] = $record['pupil_name'];
+        }
+
+        if (empty($record['gender']) && !empty($record['sex'])) {
+            $record['gender'] = $record['sex'];
+        }
+
+        if (empty($record['prem_no']) && !empty($record['prem no'])) {
+            $record['prem_no'] = $record['prem no'];
+        }
+
+        if (empty($record['prem_no']) && !empty($record['premno'])) {
+            $record['prem_no'] = $record['premno'];
+        }
+
+        if (empty($record['prem_no']) && !empty($record['prem_number'])) {
+            $record['prem_no'] = $record['prem_number'];
+        }
+
+        return $record;
+    }
+
+    private function normalizeRecord(array $record, ?string $examType = null): array
+    {
+        $finalExamType = strtoupper(trim((string) ($record['exam_type'] ?? $examType ?? '')));
+        $candidateId = trim((string) ($record['candidate_id'] ?? ''));
+
+        if ($finalExamType === 'CSEE') {
+            $record['candidate_type'] = 'SCHOOL';
+
+            if ($candidateId !== '') {
+                $record['school_code'] = strtoupper(substr($candidateId, 0, 5));
+            }
+        }
+
+        if (!empty($record['school_code'])) {
+            $record['school_code'] = strtoupper(trim((string) $record['school_code']));
+        }
+
+        if ($finalExamType !== '' && empty($record['exam_type'])) {
+            $record['exam_type'] = $finalExamType;
+        }
+
         return $record;
     }
 
@@ -461,6 +565,73 @@ class CandidateImportService
         $school = School::where('code', $schoolCode)->first();
         if (!$school) {
             $errors[] = "school_code not found: $schoolCode";
+        }
+    }
+
+    private function isPsleImport(array $record, ?string $examType): bool
+    {
+        $finalExamType = strtoupper(trim((string) ($record['exam_type'] ?? $examType ?? '')));
+
+        return $finalExamType === 'PSLE';
+    }
+
+    private function validatePsleWarnings(array $record, array &$warnings, array &$seenSignals): void
+    {
+        $schoolCode = strtoupper(trim((string) ($record['school_code'] ?? '')));
+        if ($schoolCode === '') {
+            return;
+        }
+
+        $school = School::where('code', $schoolCode)->first();
+        if (!$school) {
+            return;
+        }
+
+        $candidateId = strtoupper(trim((string) ($record['candidate_id'] ?? '')));
+        $premNo = strtoupper(trim((string) ($record['prem_no'] ?? '')));
+        $fullName = trim((string) ($record['full_name'] ?? ''));
+        $gender = strtoupper(substr(trim((string) ($record['gender'] ?? '')), 0, 1));
+
+        if ($candidateId !== '' && str_contains($candidateId, '-')) {
+            $candidatePrefix = strtoupper(trim((string) strtok($candidateId, '-')));
+            if ($candidatePrefix !== '' && $candidatePrefix !== $schoolCode) {
+                $warnings[] = "candidate_number prefix {$candidatePrefix} does not match school_code {$schoolCode}";
+            }
+        }
+
+        if ($premNo !== '') {
+            $premKey = $schoolCode . '|' . $premNo;
+            if (isset($seenSignals['prem_school'][$premKey])) {
+                $warnings[] = "duplicate PReM_No detected in this file for school {$schoolCode}";
+            } else {
+                $seenSignals['prem_school'][$premKey] = true;
+            }
+
+            $existingPrem = Candidate::where('school_id', $school->id)
+                ->where('prem_no', $premNo)
+                ->exists();
+
+            if ($existingPrem) {
+                $warnings[] = "PReM_No already exists for school {$schoolCode}";
+            }
+        }
+
+        if ($fullName !== '' && $gender !== '') {
+            $identityKey = $schoolCode . '|' . strtoupper($fullName) . '|' . $gender;
+            if (isset($seenSignals['name_gender_school'][$identityKey])) {
+                $warnings[] = "possible duplicate pupil in this file by name, sex, and school";
+            } else {
+                $seenSignals['name_gender_school'][$identityKey] = true;
+            }
+
+            $existingIdentity = Candidate::where('school_id', $school->id)
+                ->whereRaw('UPPER(full_name) = ?', [strtoupper($fullName)])
+                ->where('gender', $gender)
+                ->exists();
+
+            if ($existingIdentity) {
+                $warnings[] = "possible existing pupil match in system by name, sex, and school";
+            }
         }
     }
 
@@ -534,6 +705,7 @@ class CandidateImportService
 
         $candidateData = [
             'candidate_id' => $record['candidate_id'],
+            'prem_no' => $record['prem_no'] ?? null,
             'full_name' => $record['full_name'],
             'gender' => strtoupper($record['gender'][0] ?? 'M'),
             'exam_type' => $finalExamType,
@@ -573,6 +745,19 @@ class CandidateImportService
             } elseif ($candidateType === 'PRIVATE' && $record['subjects']) {
                 $this->registerForACSEEPrivate($candidate, $record['subjects'], $examYear);
             }
+        } elseif ($finalExamType === 'CSEE') {
+            $resolvedExamYear = $this->resolveExamYear($examYear);
+            $cseeType = ExamType::where('code', 'CSEE')->first();
+            if ($resolvedExamYear && $cseeType) {
+                $this->createExamRegistrationIfNotExists($candidate, $cseeType, $resolvedExamYear);
+                app(CseeCandidateSubjectService::class)->ensureCoreSubjects($candidate, $resolvedExamYear);
+            }
+        } elseif ($finalExamType === 'PSLE') {
+            $resolvedExamYear = $this->resolveExamYear($examYear);
+            $psleType = ExamType::where('code', 'PSLE')->first();
+            if ($resolvedExamYear && $psleType) {
+                $this->createExamRegistrationIfNotExists($candidate, $psleType, $resolvedExamYear);
+            }
         }
 
         return $candidate;
@@ -597,6 +782,7 @@ class CandidateImportService
         $updateData = [
             'school_id' => $school->id,
             'full_name' => $record['full_name'],
+            'prem_no' => $record['prem_no'] ?? null,
             'gender' => strtoupper($record['gender'][0] ?? 'M'),
         ];
 
@@ -616,6 +802,18 @@ class CandidateImportService
             $savedComboId = $candidate->combination_id;
             if (($comboCode ?? null) && ($savedComboCode !== ($comboCode ?? '') || $savedComboId !== ($comboId ?? null))) {
                 throw new \Exception("Combination mismatch on update for {$candidate->candidate_id}. CSV='{$comboCode}' Saved='{$savedComboCode}'");
+            }
+        }
+
+        $finalExamType = strtoupper($record['exam_type'] ?? $examType ?? 'ACSEE');
+        if (in_array($finalExamType, ['PSLE', 'CSEE'], true)) {
+            $resolvedExamYear = $this->resolveExamYear($examYear);
+            $targetType = ExamType::where('code', $finalExamType)->first();
+            if ($resolvedExamYear && $targetType) {
+                $this->createExamRegistrationIfNotExists($candidate, $targetType, $resolvedExamYear);
+                if ($finalExamType === 'CSEE') {
+                    app(CseeCandidateSubjectService::class)->ensureCoreSubjects($candidate, $resolvedExamYear);
+                }
             }
         }
 
@@ -931,6 +1129,7 @@ class CandidateImportService
                 $candidate = Candidate::create([
                     'school_id' => $school->id,
                     'candidate_id' => $record['candidate_id'],
+                    'prem_no' => $record['prem_no'] ?? null,
                     'full_name' => $record['full_name'],
                     'gender' => strtoupper($record['gender'][0] ?? 'M'),
                     'exam_type' => $examType,
@@ -963,6 +1162,14 @@ class CandidateImportService
                         // Note: allocation errors are logged but don't fail the import
                         if (!empty($allocationErrors)) {
                             Log::warning("Allocation errors for {$candidate->candidate_id}", $allocationErrors);
+                        }
+                    }
+                } elseif (in_array(strtoupper($examType), ['PSLE', 'CSEE'], true) && $examYear) {
+                    $standardType = ExamType::where('code', strtoupper($examType))->first();
+                    if ($standardType) {
+                        $this->createExamRegistrationIfNotExists($candidate, $standardType, $examYear);
+                        if (strtoupper($examType) === 'CSEE') {
+                            app(CseeCandidateSubjectService::class)->ensureCoreSubjects($candidate, $examYear);
                         }
                     }
                 }

@@ -1,0 +1,259 @@
+@extends('layout')
+
+@section('content')
+@php
+    $subjectDisplayNames = [
+        'KISWAHILI' => 'KISWAHILI',
+        'MAARIFA' => 'SOCIAL STUDIES AND VOCATIONAL SKILLS',
+        'HISABATI' => 'MATHEMATICS',
+        'SCIENCE' => 'SCIENCE AND TECHNOLOGY',
+        'URAIA' => 'CIVIC AND MORAL EDUCATION',
+        'ENGLISH' => 'ENGLISH LANGUAGE',
+    ];
+    $metricColumnWidth = '56px';
+    $subjectNameColumnWidth = '320px';
+    $avgColumnWidth = '66px';
+    $competenceColumnWidth = '170px';
+    $candidateNoColumnWidth = '124px';
+    $premNoColumnWidth = '149px';
+    $sexColumnWidth = '44px';
+    $candidateMetricColumnWidth = '58px';
+    $centreGradeColumnWidth = '90px';
+@endphp
+<div style="background-color: #B0E0E6; min-height: 100vh; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: 'Maiandra GD', sans-serif; font-weight: 700; white-space: nowrap;">
+    <div class="container mx-auto px-4">
+
+        <div style="margin-bottom: 1rem;">
+            <a href="{{ route('public.results.psle.schools', ['examYear' => $examYear, 'region' => $region->id, 'district' => $district->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
+                ← Back to Schools
+            </a>
+        </div>
+
+        <div style="background-color: #B0E0E6; padding-top: 1.5rem; padding-bottom: 0.35rem; padding-left: 1rem; padding-right: 1rem; margin-bottom: 0.2rem;">
+            <div class="flex items-center justify-between gap-4">
+                <div class="flex-shrink-0">
+                    <img src="{{ asset('images/emblem.png') }}" alt="Coat of Arms" class="h-20 w-20 object-contain">
+                </div>
+
+                <div class="flex-1 text-center px-4">
+                    <p class="text-lg font-bold text-blue-900">PRIME MINISTER'S OFFICE</p>
+                    <p class="text-lg font-bold text-blue-900">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
+                    <p class="text-lg font-bold text-blue-900 mt-1">TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA</p>
+                    <p class="text-lg font-bold text-blue-900 mt-1">OVERALL RESULTS FOR STANDARD SEVEN ZONAL JOINT MOCK EXAMINATION - MAY, {{ $examYear }}</p>
+                    <p class="text-lg font-bold text-blue-900 mt-1">{{ strtoupper($school->code) }} - {{ strtoupper($school->name) }}</p>
+                </div>
+
+                <div class="flex-shrink-0">
+                    <img src="{{ asset('images/emblem.png') }}" alt="Coat of Arms" class="h-20 w-20 object-contain">
+                </div>
+            </div>
+        </div>
+        <div style="padding: 0 1rem; margin-bottom: 0.15rem;">
+            <div style="height: 4px; width: 100%; background: linear-gradient(to right, #00a651 0%, #00a651 30%, #f5d000 30%, #f5d000 54%, #000000 54%, #000000 70%, #0b2f5b 70%, #0b2f5b 100%);"></div>
+        </div>
+
+        @if(!$resultsAvailable)
+            <div style="background-color: #B0E0E6; padding: 1rem;">
+                <div style="background-color: LIGHTYELLOW; border: 1px solid #999; padding: 1rem; color: #000080; line-height: 1.8;">
+                    <div style="font-weight: bold; font-size: 1rem;">RESULTS NOT AVAILABLE YET</div>
+                    <div>{{ strtoupper($school->code) }} - {{ strtoupper($school->name) }}</div>
+                    <div>No stored PSLE {{ $examYear }} result rows were found for this school yet.</div>
+                    <div>The school is listed because it exists in the NECTA-synced PSLE schools directory.</div>
+                </div>
+            </div>
+        @else
+            <div style="background-color: #B0E0E6; padding: 0.35rem 1rem 0.5rem 1rem; margin-bottom: 0;">
+                <div style="color: #000080; font-size: 1rem; line-height: 1.8;">
+                    <div><strong>EXAMINATION CENTRE:</strong> {{ strtoupper($school->name) }} - {{ strtoupper($school->code) }}</div>
+                    <div>
+                        CANDIDATES SAT : {{ $candidateCount }} OUT OF {{ $registeredCandidateCount }} REGISTERED CANDIDATES
+                        (F: {{ $satGirlsCount }}/{{ $registeredGirlsCount }}, M: {{ $satBoysCount }}/{{ $registeredBoysCount }})
+                    </div>
+                    <div>
+                        SCHOOL AVERAGE : {{ abs($schoolAverage - round($schoolAverage)) < 0.00005 ? number_format($schoolAverage, 0) : number_format($schoolAverage, 4) }}
+                        <span style="background-color: {{ $schoolAverageMeta['color'] }}; color: #000080; font-weight: bold; padding: 0 0.2rem;">{{ $schoolAverageMeta['label'] }}</span>
+                    </div>
+                    <div>PASS RATE (A-C): {{ number_format($passRateAC, 2) }}% | PASS RATE (A-D): {{ number_format($passRateAD, 2) }}%</div>
+                    @if($districtPosition && $districtSchoolsWithResults > 0)
+                        <div>DISTRICT POSITION: {{ $districtPosition }} OUT OF {{ $districtSchoolsWithResults }} SCHOOLS WITH RESULTS</div>
+                    @endif
+                    @if($regionalPosition && $regionalSchoolsWithResults > 0)
+                        <div>REGIONAL POSITION: {{ $regionalPosition }} OUT OF {{ $regionalSchoolsWithResults }} SCHOOLS WITH RESULTS</div>
+                    @endif
+                    @if($topCandidate)
+                        <div>TOP CANDIDATE: {{ strtoupper($topCandidate['candidate_id']) }} (TOTAL: {{ number_format($topCandidate['total_score'], 0) }}, GRD: {{ strtoupper($topCandidate['average_grade']) }})</div>
+                    @endif
+                </div>
+            </div>
+
+            <div style="background-color: #B0E0E6; padding: 0.35rem 1rem; margin-bottom: 0;">
+                <table class="w-full" style="table-layout: fixed; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
+                    <thead>
+                        <tr style="background-color: #003366;">
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF;" colspan="12">EXAMINATION CENTRE GRADE PERFORMANCE</th>
+                        </tr>
+                        <tr style="background-color: #003366;">
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">SEX</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">REGIST</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">SAT</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">WITHHELD</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">CLEAN</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">A</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">B</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">C</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">D</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">E</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">INC</th>
+                            <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF;">ABS</th>
+                        </tr>
+                    </thead>
+                    <tbody style="background-color: LIGHTYELLOW; color: #000080;">
+                        <tr style="background-color: LIGHTYELLOW;">
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">F</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $registeredGirlsCount }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $satGirlsCount }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">0</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ max($satGirlsCount - ($sexSummary['F']['INC'] ?? 0), 0) }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['F']['A'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['F']['B'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['F']['C'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['F']['D'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['F']['E'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['F']['INC'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['F']['ABS'] }}</td>
+                        </tr>
+                        <tr style="background-color: LIGHTYELLOW;">
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">M</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $registeredBoysCount }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $satBoysCount }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">0</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ max($satBoysCount - ($sexSummary['M']['INC'] ?? 0), 0) }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['M']['A'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['M']['B'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['M']['C'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['M']['D'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['M']['E'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['M']['INC'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center;">{{ $sexSummary['M']['ABS'] }}</td>
+                        </tr>
+                        <tr style="background-color: LIGHTYELLOW;">
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">T</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $registeredCandidateCount }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $candidateCount }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">0</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ max($candidateCount - ($totals['INC'] ?? 0), 0) }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $totals['A'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $totals['B'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $totals['C'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $totals['D'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $totals['E'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $totals['INC'] }}</td>
+                            <td style="border: 1px solid #999; padding: 0.25rem; text-align: center; font-weight: bold;">{{ $totals['ABS'] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="background-color: #B0E0E6; padding: 0.35rem 1rem; margin-bottom: 0;">
+                <div class="overflow-x-auto">
+                    <table class="w-full" style="background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
+                        <thead>
+                            <tr style="background-color: #003366;">
+                                <th style="border: 1px solid #999; padding: 0.25rem 0.4rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF; width: {{ $candidateNoColumnWidth }}; min-width: {{ $candidateNoColumnWidth }}; max-width: {{ $candidateNoColumnWidth }};">CAND. NO</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem 0.4rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF; width: {{ $premNoColumnWidth }}; min-width: {{ $premNoColumnWidth }}; max-width: {{ $premNoColumnWidth }};">PREM NO</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $sexColumnWidth }}; min-width: {{ $sexColumnWidth }}; max-width: {{ $sexColumnWidth }};">SEX</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF;">DETAILED SUBJECTS RESULT</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }};">TOTAL</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }};">GRD</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }};">AGGT</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $avgColumnWidth }}; min-width: {{ $avgColumnWidth }}; max-width: {{ $avgColumnWidth }};">GPA</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }};">POS</th>
+                            </tr>
+                        </thead>
+                        <tbody style="background-color: LIGHTYELLOW; color: #000080;">
+                            @foreach($candidates as $candidate)
+                                <tr>
+                                    @php
+                                        $subjectLine = collect($candidate['subject_rows'] ?? [])
+                                            ->map(function (array $subject) {
+                                                $score = number_format((float) ($subject['score_50'] ?? 0), 0);
+                                                $label = strtoupper((string) ($subject['subject'] ?? ''));
+                                                $label = match ($label) {
+                                                    'MAARIFA' => 'SOCIAL',
+                                                    'HISABATI' => 'MATHEMATICS',
+                                                    'URAIA' => 'CIVIC',
+                                                    default => $label,
+                                                };
+                                                return $label . " - {$score} '{$subject['grade']}'";
+                                            })
+                                            ->implode(', ');
+                                    @endphp
+                                    <td style="border: 1px solid #999; padding: 0.25rem 0.4rem; width: {{ $candidateNoColumnWidth }}; min-width: {{ $candidateNoColumnWidth }}; max-width: {{ $candidateNoColumnWidth }}; text-align: left; font-weight: bold;">{{ $candidate['candidate_id'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem 0.4rem; width: {{ $premNoColumnWidth }}; min-width: {{ $premNoColumnWidth }}; max-width: {{ $premNoColumnWidth }}; text-align: left; font-weight: bold;">{{ $candidate['prem_no'] ?: '-' }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $sexColumnWidth }}; min-width: {{ $sexColumnWidth }}; max-width: {{ $sexColumnWidth }}; text-align: center; font-weight: bold;">{{ $candidate['gender'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem;">{{ $subjectLine }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ number_format($candidate['total_score'], 0) }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ strtoupper($candidate['average_grade']) }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ $candidate['aggregate_points'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $avgColumnWidth }}; min-width: {{ $avgColumnWidth }}; max-width: {{ $avgColumnWidth }}; text-align: center; font-weight: bold;">{{ number_format($candidate['gpa'], 4) }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ $candidate['position'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="background-color: #B0E0E6; padding: 0.35rem 1rem; white-space: normal;">
+                <div class="overflow-x-auto">
+                    <table class="w-full" style="background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
+                        <thead>
+                            <tr style="background-color: #003366;">
+                                <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF;" colspan="15">EXAMINATION CENTRE SUBJECTS PERFORMANCE</th>
+                            </tr>
+                            <tr style="background-color: #003366;">
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">CODE</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $subjectNameColumnWidth }}; min-width: {{ $subjectNameColumnWidth }}; max-width: {{ $subjectNameColumnWidth }}; text-align: left; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">SUBJECT NAME</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">REGIST</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">SAT</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">ABS</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">A</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">B</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">C</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">A - C</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">D</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">A - D</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">E</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">AVG</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">GRD</th>
+                                <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $competenceColumnWidth }}; min-width: {{ $competenceColumnWidth }}; max-width: {{ $competenceColumnWidth }}; text-align: left; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">COMPETENCE LEVEL</th>
+                            </tr>
+                        </thead>
+                        <tbody style="background-color: LIGHTYELLOW; color: #000080;">
+                            @foreach($subjectSummary as $index => $subject)
+                                <tr>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ preg_replace('/^PSLE-/', '', (string) ($subject['code'] ?: ($index + 1))) }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $subjectNameColumnWidth }}; min-width: {{ $subjectNameColumnWidth }}; max-width: {{ $subjectNameColumnWidth }}; white-space: nowrap;">{{ $subjectDisplayNames[strtoupper($subject['subject'])] ?? strtoupper($subject['subject']) }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['registered'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['sat'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['abs'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['A'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['B'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['C'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['passed'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['D'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['a_to_d'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ $subject['E'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; white-space: nowrap;">{{ number_format($subject['average_score'], 0) }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; font-weight: bold; white-space: nowrap;">{{ $subject['grade'] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $competenceColumnWidth }}; min-width: {{ $competenceColumnWidth }}; max-width: {{ $competenceColumnWidth }}; background-color: {{ $subject['competence_meta']['color'] }}; color: #000080; font-weight: bold; white-space: nowrap;">{{ $subject['competence_meta']['label'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        @endif
+    </div>
+</div>
+@endsection

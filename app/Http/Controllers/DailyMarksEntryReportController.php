@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ExamYear;
-use App\Models\Region;
 use App\Models\Subject;
 use App\Models\SubjectMarks;
-use App\Models\Candidate;
+use App\Models\CandidateSubjectSelection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +17,8 @@ class DailyMarksEntryReportController extends Controller
      */
     public function getReport(Request $request)
     {
+        $yearValue = $this->resolveYearValue($request->input('exam_year_id'));
+
         $query = SubjectMarks::query()
             ->with(['subject', 'candidate.school.region', 'examType'])
             ->select(
@@ -26,8 +27,8 @@ class DailyMarksEntryReportController extends Controller
             );
 
         // Apply filters
-        if ($request->has('exam_year_id') && $request->exam_year_id) {
-            $query->where('subject_marks.year', $request->exam_year_id);
+        if ($yearValue) {
+            $query->where('subject_marks.year', $yearValue);
         }
 
         if ($request->has('region_id') && $request->region_id) {
@@ -41,7 +42,15 @@ class DailyMarksEntryReportController extends Controller
         }
 
         if ($request->has('entry_date') && $request->entry_date) {
-            $query->whereDate('subject_marks.created_at', $request->entry_date);
+            try {
+                $entryDate = \Carbon\Carbon::parse($request->entry_date)->toDateString();
+                $query->where(function ($q) use ($entryDate) {
+                    $q->whereDate('subject_marks.created_at', $entryDate)
+                        ->orWhereDate('subject_marks.updated_at', $entryDate);
+                });
+            } catch (\Throwable $e) {
+                // Ignore invalid date; return data without date filter.
+            }
         }
 
         $marks = $query->get();
@@ -59,9 +68,13 @@ class DailyMarksEntryReportController extends Controller
     {
         $reportData = [];
         $groupedBySubject = $marks->groupBy('subject_id');
+        $subjects = Subject::query()
+            ->when($request->subject_id, fn ($q) => $q->where('id', $request->subject_id))
+            ->orderBy('name')
+            ->get();
 
-        foreach ($groupedBySubject as $subjectId => $subjectMarks) {
-            $subject = $subjectMarks->first()->subject;
+        foreach ($subjects as $subject) {
+            $subjectMarks = $groupedBySubject->get($subject->id, collect());
             
             // Get expected scripts for this subject in the region
             $expectedScripts = $this->getExpectedScripts($subject, $request);
@@ -77,7 +90,12 @@ class DailyMarksEntryReportController extends Controller
             ];
 
             foreach ($subjectMarks as $mark) {
-                $day = $this->getDayOfWeek($mark->created_at);
+                $entryDate = $mark->created_at ?: $mark->updated_at;
+                if (!$entryDate) {
+                    $markedByDay['remainder']++;
+                    continue;
+                }
+                $day = $this->getDayOfWeek($entryDate);
                 $markedByDay[$day]++;
             }
 
@@ -100,7 +118,7 @@ class DailyMarksEntryReportController extends Controller
                 'remainder_count' => $markedByDay['remainder'],
                 'remainder_percentage' => $expectedScripts > 0 ? ($markedByDay['remainder'] / $expectedScripts) * 100 : 0,
                 'total_marked' => $total,
-                'remarks' => $this->generateRemarks($total, $expectedScripts)
+                'remarks' => $this->generateRemarks($total, $expectedScripts),
             ];
         }
 
@@ -112,26 +130,39 @@ class DailyMarksEntryReportController extends Controller
      */
     private function getExpectedScripts($subject, Request $request)
     {
-        $query = Candidate::query()
-            ->whereHas('examRegistrations', function ($q) use ($subject) {
-                $q->whereHas('subjectRegistrations', function ($sq) use ($subject) {
-                    $sq->where('subject_id', $subject->id);
-                });
-            });
+        $query = CandidateSubjectSelection::query()
+            ->where('subject_id', $subject->id);
 
         if ($request->has('region_id') && $request->region_id) {
-            $query->whereHas('school', function ($q) use ($request) {
+            $query->whereHas('candidate.school', function ($q) use ($request) {
                 $q->where('region_id', $request->region_id);
             });
         }
 
         if ($request->has('exam_year_id') && $request->exam_year_id) {
-            $query->whereHas('examRegistrations', function ($q) use ($request) {
-                $q->where('exam_year_id', $request->exam_year_id);
-            });
+            $query->where('exam_year_id', $request->exam_year_id);
         }
 
-        return $query->distinct()->count();
+        return $query->distinct('candidate_id')->count('candidate_id');
+    }
+
+    /**
+     * Convert exam year id/value from filter into a subject_marks.year-compatible value.
+     */
+    private function resolveYearValue($examYearId): ?string
+    {
+        if (!$examYearId) {
+            return null;
+        }
+
+        $yearLabel = ExamYear::query()->whereKey($examYearId)->value('year_label');
+        if ($yearLabel) {
+            $yearDigits = preg_replace('/[^0-9]/', '', (string) $yearLabel);
+            return $yearDigits !== '' ? $yearDigits : null;
+        }
+
+        $rawValue = preg_replace('/[^0-9]/', '', (string) $examYearId);
+        return $rawValue !== '' ? $rawValue : null;
     }
 
     /**

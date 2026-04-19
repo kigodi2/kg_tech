@@ -3,6 +3,16 @@
 @section('content')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 <style>
+  :root {
+    --irms-brand: #355c9a;
+    --irms-brand-dark: #274b82;
+    --irms-gold: #f0c341;
+    --irms-text: #1f2937;
+    --irms-muted: #64748b;
+    --irms-panel: rgba(255, 255, 255, 0.88);
+    --irms-panel-border: rgba(203, 213, 225, 0.9);
+  }
+
   /* Hero Carousel Section */
   .heroSwiper {
     position: relative;
@@ -32,7 +42,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
+    background: linear-gradient(135deg, rgba(22, 36, 58, 0.52) 0%, rgba(39, 75, 130, 0.28) 100%);
     z-index: 1;
   }
 
@@ -49,14 +59,19 @@
   .carousel-content {
     text-align: center;
     color: white;
-    max-width: 800px;
-    padding: 0 20px;
+    max-width: 840px;
+    padding: 28px 28px 30px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 24px;
+    background: linear-gradient(180deg, rgba(11, 22, 41, 0.34) 0%, rgba(28, 45, 70, 0.2) 100%);
+    box-shadow: 0 24px 54px rgba(15, 23, 42, 0.18);
+    backdrop-filter: blur(8px);
   }
 
   .carousel-content h2 {
     font-size: 3rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
+    font-weight: 800;
+    margin-bottom: 0.9rem;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
   }
 
@@ -65,30 +80,34 @@
   }
 
   .carousel-content p {
-    font-size: 1.2rem;
-    color: rgba(255, 255, 255, 0.95);
-    margin: 0 0 1.5rem 0;
+    max-width: 700px;
+    font-size: 1.08rem;
+    color: rgba(255, 255, 255, 0.92);
+    margin: 0 auto 1.4rem;
+    line-height: 1.75;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
   }
 
   .btn-get-started {
     display: inline-block;
-    padding: 12px 32px;
-    background: #667eea;
+    padding: 12px 30px;
+    background: linear-gradient(135deg, var(--irms-brand) 0%, var(--irms-brand-dark) 100%);
     color: white;
     text-decoration: none;
-    border-radius: 6px;
+    border-radius: 999px;
     font-weight: 600;
     font-size: 1rem;
     transition: all 0.3s ease;
-    border: 2px solid #667eea;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.2);
   }
 
   .btn-get-started:hover {
-    background: #5568d3;
-    border-color: #5568d3;
+    background: linear-gradient(135deg, #2f538f 0%, #203e6d 100%);
+    border-color: rgba(255, 255, 255, 0.28);
     text-decoration: none;
     color: white;
+    transform: translateY(-2px);
   }
 
   /* Swiper Pagination - Small Circles */
@@ -114,7 +133,7 @@
   /* Swiper Navigation Arrows */
   .heroSwiper .swiper-button-prev,
   .heroSwiper .swiper-button-next {
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(39, 75, 130, 0.48);
     width: 50px;
     height: 50px;
     border-radius: 50%;
@@ -130,42 +149,88 @@
 
   .heroSwiper .swiper-button-prev:hover,
   .heroSwiper .swiper-button-next:hover {
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(39, 75, 130, 0.82);
     transform: scale(1.1);
   }
 
   /* Events and News Section */
   .about-us {
-    padding: 60px 20px;
-    background: white;
+    padding: 42px 20px 28px;
+    background: #f7f9fc;
     width: 100vw;
     margin-left: calc(-50vw + 50%);
+  }
+
+  .updates-shell {
+    background: var(--irms-panel);
+    border: 1px solid var(--irms-panel-border);
+    border-radius: 24px;
+    padding: 24px 24px 22px;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05);
+  }
+
+  .updates-header {
+    max-width: 760px;
+    margin: 0 auto 22px;
+    text-align: center;
+  }
+
+  .updates-header h2 {
+    font-size: 1.85rem;
+    color: var(--irms-text);
+    font-weight: 700;
+    margin: 0 0 8px;
+  }
+
+  .updates-header p {
+    margin: 0;
+    color: var(--irms-muted);
+    font-size: 0.96rem;
+    line-height: 1.65;
   }
 
   .about-us .content {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 3rem;
+    gap: 24px;
   }
 
-  .about-us h2 {
-    font-size: 1.6rem;
-    color: #212529;
-    font-weight: 600;
-    margin-bottom: 1.2rem;
+  .updates-panel {
+    min-height: 250px;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 18px;
+    padding: 22px 22px 18px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  .updates-panel h3 {
+    font-size: 1.35rem;
+    color: #1f2937;
+    font-weight: 700;
+    margin: 0 0 16px;
+  }
+
+  .updates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
   }
 
   .read-details {
     display: inline-block;
-    color: #667eea;
+    color: var(--irms-brand);
     text-decoration: none;
-    font-weight: 500;
-    margin-top: 1rem;
+    font-weight: 600;
+    margin-top: 14px;
     transition: all 0.3s ease;
   }
 
   .read-details:hover {
-    color: #5568d3;
+    color: var(--irms-brand-dark);
     text-decoration: underline;
   }
 
@@ -178,111 +243,191 @@
   }
 
   .about-us a:hover .news {
-    color: #667eea;
+    color: var(--irms-brand);
   }
 
   .news {
     display: flex;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
     transition: all 0.3s ease;
     text-decoration: none;
-    border-bottom: none;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    border-radius: 14px;
+    background: #f8fbff;
+  }
+
+  .news:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    border-color: rgba(148, 163, 184, 0.95);
   }
 
   .calendar-container {
-    display: flex;
-    margin-right: 1rem;
+    display: grid;
+    place-items: center;
     flex-shrink: 0;
+    background: linear-gradient(135deg, var(--irms-brand) 0%, var(--irms-brand-dark) 100%);
+    color: white;
+    border-radius: 14px;
+    min-width: 72px;
+    min-height: 72px;
+    padding: 8px 10px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
   }
 
-  .calender-left {
-    background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);
-    color: white;
-    border-radius: 6px;
-    padding: 8px 14px;
-    font-size: 20px;
-    font-weight: bold;
-    min-width: 55px;
+  .calendar-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    line-height: 1;
+  }
+
+  .calendar-date {
+    font-size: 1.7rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+  }
+
+  .calendar-meta {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.88);
+  }
+
+  .news-copy {
+    min-width: 0;
+  }
+
+  .news-copy p {
+    margin: 0;
+    color: #334155;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.3;
+  }
+
+  .updates-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 150px;
+    padding: 20px;
+    border: 1px dashed rgba(191, 219, 254, 0.95);
+    border-radius: 16px;
+    background: #f8fbff;
     text-align: center;
+  }
+
+  .updates-empty-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: rgba(53, 92, 154, 0.1);
+    color: var(--irms-brand);
+    font-size: 22px;
   }
 
-  .calender-right {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    margin-left: 8px;
-  }
-
-  .day {
-    font-size: 11px;
-    font-weight: 600;
-    color: #6c757d;
-    text-transform: uppercase;
-  }
-
-  .month {
-    font-size: 11px;
-    color: #6c757d;
-    text-transform: uppercase;
-  }
-
-  .news p {
+  .updates-empty p {
     margin: 0;
-    color: #495057;
-    font-weight: 500;
-    font-size: 14px;
+    color: #64748b;
+    font-size: 0.95rem;
+    line-height: 1.6;
   }
 
   /* Services Section */
   .services {
-    padding: 60px 20px;
-    background: #f8f9fa;
+    padding: 42px 20px 56px;
+    background: #eef2f7;
     width: 100vw;
     margin-left: calc(-50vw + 50%);
   }
 
   .section-bg {
-    background-color: #f8f9fa;
+    background:
+      linear-gradient(180deg, #eef2f7 0%, #f5f7fb 100%);
   }
 
   .services-container {
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
     padding: 0 20px;
+  }
+
+  .services-shell {
+    background: var(--irms-panel);
+    border: 1px solid var(--irms-panel-border);
+    border-radius: 24px;
+    padding: 26px 24px 30px;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.06);
+  }
+
+  .services-header {
+    max-width: 760px;
+    margin: 0 auto 24px;
+    text-align: center;
+  }
+
+  .services-header h2 {
+    margin: 0 0 8px;
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--irms-text);
+  }
+
+  .services-header p {
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.65;
+    color: var(--irms-muted);
   }
 
   .services-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 30px;
+    gap: 22px;
   }
 
   .icon-box {
     background: white;
-    padding: 40px 30px;
-    border-radius: 8px;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
+    min-height: 272px;
+    padding: 32px 28px 30px;
+    border-radius: 18px;
+    border: 1px solid rgba(226, 232, 240, 0.95);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     width: 100%;
     text-align: center;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
   }
 
   .icon-box:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
+    border-color: rgba(148, 163, 184, 0.95);
   }
 
   .icon-box .icon {
-    margin: 0 auto 20px;
-    width: 90px;
-    height: 90px;
+    margin: 0 auto 16px;
+    width: 82px;
+    height: 82px;
     background: rgba(255, 255, 255, 0.15);
-    border-radius: 45% 55% 52% 48% / 48% 45% 55% 52%;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -291,58 +436,59 @@
   }
 
   .icon-box .icon i {
-    font-size: 45px;
+    font-size: 38px;
     position: relative;
     color: white;
     transition: transform 0.3s ease, filter 0.3s ease;
   }
 
   .icon-box:hover .icon {
-    transform: scale(1.2) rotateZ(-5deg);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    transform: scale(1.05);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
   }
 
   .icon-box:hover .icon i {
-    transform: scale(1.1);
+    transform: scale(1.03);
   }
 
   .icon-box h4 {
-    font-size: 1.2rem;
-    margin: 20px 0 15px;
-    font-weight: 600;
+    font-size: 1.15rem;
+    margin: 10px 0 12px;
+    font-weight: 700;
     color: #212529;
   }
 
   .icon-box p {
-    font-size: 0.9rem;
+    max-width: 280px;
+    font-size: 0.92rem;
     color: #6c757d;
     margin: 0;
-    line-height: 1.6;
+    line-height: 1.7;
   }
 
   /* Icon Box Colors */
   .iconbox-blue .icon {
-    background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);
+    background: linear-gradient(135deg, #355c9a 0%, #274b82 100%);
   }
 
   .iconbox-orange .icon {
-    background: linear-gradient(135deg, #fd7e14 0%, #e67e22 100%);
+    background: linear-gradient(135deg, #b8741a 0%, #996117 100%);
   }
 
   .iconbox-pink .icon {
-    background: linear-gradient(135deg, #e83e8c 0%, #d03a7d 100%);
+    background: linear-gradient(135deg, #a2456f 0%, #853757 100%);
   }
 
   .iconbox-green .icon {
-    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    background: linear-gradient(135deg, #2d7a55 0%, #245f44 100%);
   }
 
   .iconbox-red .icon {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    background: linear-gradient(135deg, #9d3d3d 0%, #7f3030 100%);
   }
 
   .iconbox-purple .icon {
-    background: linear-gradient(135deg, #6f42c1 0%, #5c35a6 100%);
+    background: linear-gradient(135deg, #5b4b9a 0%, #493d7c 100%);
   }
 
   /* Card entrance animations */
@@ -405,9 +551,14 @@
       font-size: 1rem;
     }
 
+    .carousel-content {
+      padding: 22px 18px 24px;
+      border-radius: 18px;
+    }
+
     .about-us .content {
       grid-template-columns: 1fr;
-      gap: 2rem;
+      gap: 18px;
     }
 
     .services-row {
@@ -415,12 +566,12 @@
     }
 
     .news {
-      flex-direction: column;
+      align-items: center;
     }
 
     .calendar-container {
-      margin-right: 0;
-      margin-bottom: 1rem;
+      min-width: 66px;
+      min-height: 66px;
     }
   }
 </style>
@@ -429,7 +580,7 @@
 <div class="swiper heroSwiper" id="heroCarousel">
   <div class="swiper-wrapper">
     <!-- Slide 1: Welcome -->
-    <div class="swiper-slide" style="background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);">
+    <div class="swiper-slide" style="background: linear-gradient(135deg, #355c9a 0%, #274b82 100%);">
       <div class="carousel-overlay"></div>
       <div class="carousel-container">
         <div class="carousel-content">
@@ -441,7 +592,7 @@
     </div>
 
     <!-- Slide 2: Examination Management -->
-    <div class="swiper-slide" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+    <div class="swiper-slide" style="background: linear-gradient(135deg, #3d6e8f 0%, #295f7d 100%);">
       <div class="carousel-overlay"></div>
       <div class="carousel-container">
         <div class="carousel-content">
@@ -453,7 +604,7 @@
     </div>
 
     <!-- Slide 3: Results Management -->
-    <div class="swiper-slide" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+    <div class="swiper-slide" style="background: linear-gradient(135deg, #2d7a55 0%, #245f44 100%);">
       <div class="carousel-overlay"></div>
       <div class="carousel-container">
         <div class="carousel-content">
@@ -476,96 +627,72 @@
 <!-- Events and News Section -->
 <section class="about-us">
   <div class="services-container">
-    <div class="content">
-      <!-- Events Column -->
-      <div>
-        <h2>Events</h2>
-        <a href="#" style="color: inherit">
-          <div class="news">
-            <div class="calendar-container">
-              <div class="calender-left">{{ date('d') }}</div>
-              <div class="calender-right">
-                <div class="day">{{ date('D') }}</div>
-                <div class="month">{{ date('M') }}</div>
-              </div>
-            </div>
-            <p>PSLE Examination Registration Opens</p>
-            <span style="clear: both"></span>
-          </div>
-        </a>
-        <a href="#" style="color: inherit">
-          <div class="news">
-            <div class="calendar-container">
-              <div class="calender-left">{{ date('d', strtotime('+7 days')) }}</div>
-              <div class="calender-right">
-                <div class="day">{{ date('D', strtotime('+7 days')) }}</div>
-                <div class="month">{{ date('M', strtotime('+7 days')) }}</div>
-              </div>
-            </div>
-            <p>CSEE Examination Begins</p>
-            <span style="clear: both"></span>
-          </div>
-        </a>
-        <a href="#" style="color: inherit">
-          <div class="news">
-            <div class="calendar-container">
-              <div class="calender-left">{{ date('d', strtotime('+14 days')) }}</div>
-              <div class="calender-right">
-                <div class="day">{{ date('D', strtotime('+14 days')) }}</div>
-                <div class="month">{{ date('M', strtotime('+14 days')) }}</div>
-              </div>
-            </div>
-            <p>Results Processing Phase Starts</p>
-            <span style="clear: both"></span>
-          </div>
-        </a>
-        <a href="#" class="read-details">All events</a>
+    <div class="updates-shell">
+      <div class="updates-header">
+        <h2>Latest Updates</h2>
+        <p>Track current notices, announcements, and operational updates from across the examination management environment.</p>
       </div>
 
-      <!-- News Column -->
-      <div>
-        <h2>News</h2>
-        <a href="#" style="color: inherit">
-          <div class="news">
-            <div class="calendar-container">
-              <div class="calender-left">{{ date('d', strtotime('-3 days')) }}</div>
-              <div class="calender-right">
-                <div class="day">{{ date('D', strtotime('-3 days')) }}</div>
-                <div class="month">{{ date('M', strtotime('-3 days')) }}</div>
+      <div class="content">
+        <!-- Events Column -->
+        <div class="updates-panel">
+          <h3>Events</h3>
+          <div class="updates-list">
+            @forelse(($events ?? collect()) as $event)
+              <a href="{{ $event->resolved_link_url ?: '#' }}" style="color: inherit">
+                <div class="news">
+                  <div class="calendar-container">
+                    <div class="calendar-badge">
+                      <div class="calendar-date">{{ optional($event->publish_date)->format('d') }}</div>
+                      <div class="calendar-meta">{{ optional($event->publish_date)->format('D') }} {{ optional($event->publish_date)->format('M') }}</div>
+                    </div>
+                  </div>
+                  <div class="news-copy">
+                    <p>{{ $event->title }}</p>
+                  </div>
+                </div>
+              </a>
+            @empty
+              <div class="updates-empty">
+                <div class="updates-empty-icon">
+                  <i class="fas fa-calendar-alt"></i>
+                </div>
+                <p>No events have been published yet.</p>
               </div>
-            </div>
-            <p>New IRMS Portal Features Launched</p>
-            <span style="clear: both"></span>
+            @endforelse
           </div>
-        </a>
-        <a href="#" style="color: inherit">
-          <div class="news">
-            <div class="calendar-container">
-              <div class="calender-left">{{ date('d', strtotime('-10 days')) }}</div>
-              <div class="calender-right">
-                <div class="day">{{ date('D', strtotime('-10 days')) }}</div>
-                <div class="month">{{ date('M', strtotime('-10 days')) }}</div>
-              </div>
-            </div>
-            <p>System Security Updates Completed</p>
-            <span style="clear: both"></span>
-          </div>
-        </a>
-        <a href="#" style="color: inherit">
-          <div class="news">
-            <div class="calendar-container">
-              <div class="calender-left">{{ date('d', strtotime('-15 days')) }}</div>
-              <div class="calender-right">
-                <div class="day">{{ date('D', strtotime('-15 days')) }}</div>
-                <div class="month">{{ date('M', strtotime('-15 days')) }}</div>
-              </div>
-            </div>
-            <p>User Training Sessions Schedule Published</p>
-            <span style="clear: both"></span>
-          </div>
-        </a>
+          <a href="#" class="read-details">All events</a>
+        </div>
 
-        <a href="#" class="read-details">All news</a>
+        <!-- News Column -->
+        <div class="updates-panel">
+          <h3>News</h3>
+          <div class="updates-list">
+            @forelse(($news ?? collect()) as $item)
+              <a href="{{ $item->resolved_link_url ?: '#' }}" style="color: inherit">
+                <div class="news">
+                  <div class="calendar-container">
+                    <div class="calendar-badge">
+                      <div class="calendar-date">{{ optional($item->publish_date)->format('d') }}</div>
+                      <div class="calendar-meta">{{ optional($item->publish_date)->format('D') }} {{ optional($item->publish_date)->format('M') }}</div>
+                    </div>
+                  </div>
+                  <div class="news-copy">
+                    <p>{{ $item->title }}</p>
+                  </div>
+                </div>
+              </a>
+            @empty
+              <div class="updates-empty">
+                <div class="updates-empty-icon">
+                  <i class="fas fa-newspaper"></i>
+                </div>
+                <p>No news items have been published yet.</p>
+              </div>
+            @endforelse
+          </div>
+          <a href="#" class="read-details">All news</a>
+        </div>
       </div>
     </div>
   </div>
@@ -574,59 +701,66 @@
 <!-- Services Section - 6 Cards -->
 <section class="services section-bg">
   <div class="services-container">
-    <div class="services-row">
-      <!-- Card 1: Blue - Exam Registration -->
-      <div class="icon-box iconbox-blue">
-        <div class="icon">
-          <i class="fas fa-clipboard"></i>
-        </div>
-        <h4>Exam Registration</h4>
-        <p>Complete examination registration and candidate enrollment for PSLE, CSEE, and ACSEE</p>
+    <div class="services-shell">
+      <div class="services-header">
+        <h2>Core System Modules</h2>
+        <p>IRMS brings registration, marking, validation, publication, and support workflows into one structured operational workspace.</p>
       </div>
 
-      <!-- Card 2: Orange - Marking & Grading -->
-      <div class="icon-box iconbox-orange">
-        <div class="icon">
-          <i class="fas fa-pen"></i>
+      <div class="services-row">
+        <!-- Card 1: Blue - Exam Registration -->
+        <div class="icon-box iconbox-blue">
+          <div class="icon">
+            <i class="fas fa-clipboard"></i>
+          </div>
+          <h4>Exam Registration</h4>
+          <p>Complete examination registration and candidate enrollment for PSLE, CSEE, and ACSEE</p>
         </div>
-        <h4>Marking & Grading</h4>
-        <p>Comprehensive marking system with automated grade calculation and quality assurance</p>
-      </div>
 
-      <!-- Card 3: Pink - Data Validation -->
-      <div class="icon-box iconbox-pink">
-        <div class="icon">
-          <i class="fas fa-check-circle"></i>
+        <!-- Card 2: Orange - Marking & Grading -->
+        <div class="icon-box iconbox-orange">
+          <div class="icon">
+            <i class="fas fa-pen"></i>
+          </div>
+          <h4>Marking & Grading</h4>
+          <p>Comprehensive marking system with automated grade calculation and quality assurance</p>
         </div>
-        <h4>Data Validation</h4>
-        <p>Rigorous validation and verification of examination data to ensure accuracy and integrity</p>
-      </div>
 
-      <!-- Card 4: Green - Security & Privacy -->
-      <div class="icon-box iconbox-green">
-        <div class="icon">
-          <i class="fas fa-lock"></i>
+        <!-- Card 3: Pink - Data Validation -->
+        <div class="icon-box iconbox-pink">
+          <div class="icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <h4>Data Validation</h4>
+          <p>Rigorous validation and verification of examination data to ensure accuracy and integrity</p>
         </div>
-        <h4>Security & Privacy</h4>
-        <p>Advanced security protocols and data protection for confidential examination information</p>
-      </div>
 
-      <!-- Card 5: Red - Results Publication -->
-      <div class="icon-box iconbox-red">
-        <div class="icon">
-          <i class="fas fa-file"></i>
+        <!-- Card 4: Green - Security & Privacy -->
+        <div class="icon-box iconbox-green">
+          <div class="icon">
+            <i class="fas fa-lock"></i>
+          </div>
+          <h4>Security & Privacy</h4>
+          <p>Advanced security protocols and data protection for confidential examination information</p>
         </div>
-        <h4>Results Publication</h4>
-        <p>Efficient publication of examination results to registered candidates and institutions</p>
-      </div>
 
-      <!-- Card 6: Purple - Support Services -->
-      <div class="icon-box iconbox-purple">
-        <div class="icon">
-          <i class="fas fa-headset"></i>
+        <!-- Card 5: Red - Results Publication -->
+        <div class="icon-box iconbox-red">
+          <div class="icon">
+            <i class="fas fa-file"></i>
+          </div>
+          <h4>Results Publication</h4>
+          <p>Efficient publication of examination results to registered candidates and institutions</p>
         </div>
-        <h4>Support Services</h4>
-        <p>Comprehensive support and customer service for all examination-related inquiries</p>
+
+        <!-- Card 6: Purple - Support Services -->
+        <div class="icon-box iconbox-purple">
+          <div class="icon">
+            <i class="fas fa-headset"></i>
+          </div>
+          <h4>Support Services</h4>
+          <p>Comprehensive support and customer service for all examination-related inquiries</p>
+        </div>
       </div>
     </div>
   </div>

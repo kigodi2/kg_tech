@@ -1,17 +1,41 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full">
-    <!-- Page Header -->
-    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
-        <h1 class="text-2xl font-bold text-gray-800" x-text="examType.code === 'ACSEE' ? 'ACSEE Candidates' : examType.code"></h1>
-    </div>
+@php
+    $examCode = strtoupper((string) $code);
+    $isPslePage = $examCode === 'PSLE';
+@endphp
+@include('registration.partials.theme')
+<div class="registration-shell">
+    <div class="registration-page-stack">
+    @include('registration.partials.header', [
+        'kicker' => $isPslePage ? 'PSLE Administration Workspace' : 'Exam Setup Workspace',
+        'title' => $isPslePage ? 'PSLE Configuration' : 'Exam Type Configuration',
+        'subtitle' => $isPslePage
+            ? 'Manage PSLE subjects, paper structure, timetable, school rosters, and pupil registration using a workflow aligned to region, council, and primary school administration.'
+            : 'Review and manage subjects, paper structures, timetable, combinations, and candidates for the selected exam type.',
+        'highlights' => $isPslePage
+            ? [
+                ['icon' => 'fas fa-book', 'text' => 'Primary subject setup'],
+                ['icon' => 'fas fa-school', 'text' => 'School roster control'],
+                ['icon' => 'fas fa-map-signs', 'text' => 'Region to council flow'],
+            ]
+            : [
+                ['icon' => 'fas fa-book', 'text' => 'Subject setup'],
+                ['icon' => 'fas fa-file-lines', 'text' => 'Paper structures'],
+                ['icon' => 'fas fa-calendar-days', 'text' => 'Timetable control'],
+            ],
+        'noteTitle' => $isPslePage ? 'Implementation Direction' : 'Configuration Scope',
+        'noteText' => $isPslePage
+            ? 'Use NECTA-style hierarchy as guidance only: organize PSLE administration around region, council, and primary school, while keeping this page focused on internal setup rather than public results presentation.'
+            : 'This workspace exposes deeper exam-type settings, so the sidebar and content areas are kept visible and structured for day-to-day administration.',
+    ])
 
     <!-- Exam Type Management Page -->
     <div x-data="examTypeManager('{{ $code }}')" x-init="init()" class="flex gap-6 px-8 py-8">
         <!-- Left Sidebar Menu -->
         <div :class="sidebarCollapsed ? 'w-20' : 'w-64'" class="flex-shrink-0 transition-all duration-300">
-            <div class="bg-gray-800 text-white rounded-lg overflow-hidden shadow-lg h-full">
+            <div class="bg-gray-800 text-white rounded-[22px] overflow-hidden shadow-lg h-full">
                 <!-- Menu Header -->
                 <div class="px-6 py-4 bg-gray-900 flex items-center justify-between">
                     <span x-show="!sidebarCollapsed" class="font-bold text-lg" x-text="examType.code"></span>
@@ -82,25 +106,44 @@
 
         <!-- Main Content Area -->
         <div class="flex-1 space-y-6">
+            <div
+                x-show="examTypeLoadError"
+                x-cloak
+                class="registration-surface border border-amber-200 bg-amber-50/90 p-6 text-amber-900"
+            >
+                <div class="flex items-start gap-4">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                        <i class="fas fa-circle-exclamation"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <h2 class="text-xl font-bold">Exam type not available</h2>
+                        <p class="text-sm leading-6">
+                            The code <span class="font-semibold" x-text="examTypeCode"></span> is not configured in IRMS,
+                            so this workspace has no data to load.
+                        </p>
+                        <div class="flex flex-wrap gap-3 pt-2">
+                            <a href="/exam-types" class="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                                <i class="fas fa-table-list"></i>
+                                <span>View configured exam types</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- SUBJECTS Tab -->
-             <div x-show="activeTab === 'subjects'" class="space-y-6">
+             <div x-show="activeTab === 'subjects' && !examTypeLoadError" class="space-y-6">
                  <!-- Header -->
-                 <div class="bg-white rounded-lg shadow p-6 border-b">
-                     <h2 class="text-2xl font-bold text-gray-800" x-text="(examType.code === 'ACSEE' ? 'ACSEE' : examType.name) + ' Subjects'"></h2>
+                 <div class="registration-surface registration-toolbar-card border-b">
+                     <h2 class="text-2xl font-bold text-gray-800" x-text="(examType.code === 'ACSEE' ? 'ACSEE' : (examType.name || examType.code || examTypeCode)) + ' Subjects'"></h2>
                  </div>
 
                  <!-- Tools Section -->
-                 <div class="bg-white rounded-lg shadow p-6">
-                     <div class="flex gap-3">
-                         <button @click="downloadSubjectsTemplate()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-medium">
-                             <i class="fas fa-download text-blue-600"></i> Download Template
-                         </button>
-                         <button @click="exportSubjectsCSV()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-medium">
-                             <i class="fas fa-file-csv text-blue-600"></i> Export CSV
-                         </button>
-                         <button @click="document.getElementById('subjectsImportInput').click()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-medium">
-                             <i class="fas fa-upload text-blue-600"></i> Import CSV
+                 <div class="registration-surface registration-toolbar-card">
+                     <div class="flex flex-wrap gap-3">
+                         <button @click="openSubjectToolsModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm shadow-blue-200/80">
+                             <i class="fas fa-wrench"></i> Subject Tools
+                             <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
                          </button>
                          <button @click="showSubjectModal = true; editingSubjectId = null; subjectForm = { code: '', name: '', category: '', writtenPapers: '', hasPractical: false, hasProject: false, description: '' };" class="ml-auto px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2 font-medium text-sm">
                              <i class="fas fa-plus"></i> Add Subject
@@ -110,7 +153,7 @@
                  </div>
 
                  <!-- Search Bar -->
-                 <div class="bg-gray-50 rounded-lg px-6 py-4">
+                 <div class="registration-surface registration-toolbar-card">
                      <input 
                          x-model="subjectSearch" 
                          @input="filterSubjects()"
@@ -121,7 +164,7 @@
                  </div>
 
                  <!-- Table Container -->
-                 <div class="bg-white rounded-lg shadow overflow-hidden">
+                 <div class="registration-surface registration-table-card overflow-hidden">
 
                 <div x-show="loadingSubjects" class="p-6 text-center text-gray-500">
                     <i class="fas fa-spinner animate-spin text-2xl"></i> Loading subjects...
@@ -232,7 +275,7 @@
                     </div>
 
                     <!-- COMBINATIONS Tab (ACSEE only) -->
-                    <div x-show="activeTab === 'combinations' && examType.code === 'ACSEE'" class="space-y-6">
+                    <div x-show="activeTab === 'combinations' && examType.code === 'ACSEE' && !examTypeLoadError" class="space-y-6">
                     <!-- Header -->
                     <div class="bg-white rounded-lg shadow p-6 border-b">
                      <h2 class="text-2xl font-bold text-gray-800">ACSEE Combinations</h2>
@@ -240,15 +283,10 @@
 
                     <!-- Tools Section -->
                     <div class="bg-white rounded-lg shadow p-6">
-                     <div class="flex gap-3">
-                         <button @click="downloadCombinationsTemplate()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-medium">
-                             <i class="fas fa-download text-blue-600"></i> Download Template
-                         </button>
-                         <button @click="exportCombinationsCSV()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-medium">
-                             <i class="fas fa-file-csv text-blue-600"></i> Export CSV
-                         </button>
-                         <button @click="document.getElementById('combinationsImportInput').click()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2 text-sm font-medium">
-                             <i class="fas fa-upload text-blue-600"></i> Import CSV
+                     <div class="flex flex-wrap gap-3">
+                         <button @click="openCombinationToolsModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 text-sm font-medium shadow-sm shadow-blue-200/80">
+                             <i class="fas fa-wrench"></i> Combination Tools
+                             <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
                          </button>
                          <button @click="openAddCombinationModal()" class="ml-auto px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-2 font-medium text-sm">
                              <i class="fas fa-plus"></i> Add Combination
@@ -313,96 +351,65 @@
                 </table>
 
                 <!-- Pagination for Combinations -->
-                <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-                    <div class="text-sm text-gray-600">
-                        Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span>, showing <span x-text="filteredCombinations.length"></span> record(s) out of <span x-text="totalCount"></span> total
+                <div class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                            <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                <i class="fas fa-layer-group text-xs"></i>
+                                <span>Page <span x-text="currentPage"></span> of <span x-text="Math.max(totalPages, 1)"></span></span>
+                            </div>
+                            <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                <span>Showing <span class="font-semibold text-slate-800" x-text="filteredCombinations.length"></span> of <span class="font-semibold text-slate-800" x-text="totalCount"></span> combinations</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 lg:justify-end">
+                            <button @click="currentPage = 1; loadCombinations()" :disabled="currentPage <= 1" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" title="First page"><i class="fas fa-angles-left text-xs"></i></button>
+                            <button @click="currentPage > 1 && (currentPage--, loadCombinations())" :disabled="currentPage <= 1" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" title="Previous page"><i class="fas fa-chevron-left text-xs"></i><span class="hidden sm:inline">Previous</span></button>
+                            <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                                <template x-for="page in getPaginatedPageNumbers()" :key="'combo-' + page">
+                                    <button @click="currentPage = page; loadCombinations()" :class="currentPage === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'" class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors" x-text="page"></button>
+                                </template>
+                            </div>
+                            <button @click="currentPage < totalPages && (currentPage++, loadCombinations())" :disabled="currentPage >= totalPages" class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" title="Next page"><span class="hidden sm:inline">Next</span><i class="fas fa-chevron-right text-xs"></i></button>
+                            <button @click="currentPage = totalPages; loadCombinations()" :disabled="currentPage >= totalPages" class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40" title="Last page"><i class="fas fa-angles-right text-xs"></i></button>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <!-- First Page -->
-                        <button 
-                            @click="currentPage = 1; loadCombinations()"
-                            :disabled="currentPage <= 1"
-                            class="px-2 py-1 bg-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded"
-                            title="First"
-                        >
-                            <i class="fas fa-chevron-double-left"></i>
-                        </button>
-                        
-                        <!-- Previous Page -->
-                        <button 
-                            @click="currentPage > 1 && (currentPage--, loadCombinations())"
-                            :disabled="currentPage <= 1"
-                            class="px-2 py-1 bg-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded"
-                            title="Previous"
-                        >
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        
-                        <!-- Page Numbers -->
-                        <template x-for="page in Array.from({length: totalPages}, (_, i) => i + 1)" :key="page">
-                            <button 
-                                @click="currentPage = page; loadCombinations()"
-                                :class="currentPage === page ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'"
-                                class="px-3 py-1 rounded text-sm font-medium transition-colors"
-                                x-text="page"
-                            ></button>
-                        </template>
-                        
-                        <!-- Next Page -->
-                        <button 
-                            @click="currentPage < totalPages && (currentPage++, loadCombinations())"
-                            :disabled="currentPage >= totalPages"
-                            class="px-2 py-1 bg-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded"
-                            title="Next"
-                        >
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                        
-                        <!-- Last Page -->
-                        <button 
-                            @click="currentPage = totalPages; loadCombinations()"
-                            :disabled="currentPage >= totalPages"
-                            class="px-2 py-1 bg-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors rounded"
-                            title="Last"
-                        >
-                            <i class="fas fa-chevron-double-right"></i>
-                        </button>
-                    </div>
-                    </div>
+                </div>
                     </div>
                     </div>
 
                     <!-- PAPER STRUCTURES Tab -->
-                    <div x-show="activeTab === 'papers'" class="space-y-6">
+                    <div x-show="activeTab === 'papers' && !examTypeLoadError" class="space-y-6">
                     <div class="bg-white rounded-lg shadow p-6 border-b">
-                     <h2 class="text-2xl font-bold text-gray-800">Paper Structures</h2>
+                    <h2 class="text-2xl font-bold text-gray-800" x-text="isPslePage() ? 'PSLE Paper Structure' : 'Paper Structures'"></h2>
                     </div>
                     <div class="bg-white rounded-lg shadow p-6">
                      <div class="text-center text-gray-500 py-12">
                          <i class="fas fa-file-alt text-4xl opacity-20 mb-4 block"></i>
-                         <p>Paper structure management coming soon</p>
+                         <p x-text="isPslePage() ? 'PSLE paper structure management is being prepared for primary examination workflows.' : 'Paper structure management coming soon'"></p>
                      </div>
                     </div>
                     </div>
 
                     <!-- TIMETABLE Tab -->
-                    <div x-show="activeTab === 'timetable'" class="space-y-6">
+                    <div x-show="activeTab === 'timetable' && !examTypeLoadError" class="space-y-6">
                     <div class="bg-white rounded-lg shadow p-6 border-b">
-                     <h2 class="text-2xl font-bold text-gray-800">Timetable</h2>
+                     <h2 class="text-2xl font-bold text-gray-800" x-text="isPslePage() ? 'PSLE Timetable' : 'Timetable'"></h2>
                     </div>
                     <div class="bg-white rounded-lg shadow p-6">
                      <div class="text-center text-gray-500 py-12">
                          <i class="fas fa-calendar-alt text-4xl opacity-20 mb-4 block"></i>
-                         <p>Timetable management coming soon</p>
+                         <p x-text="isPslePage() ? 'PSLE timetable management is being prepared for primary examination planning.' : 'Timetable management coming soon'"></p>
                      </div>
                     </div>
                     </div>
 
             <!-- CANDIDATES Tab -->
-            <div x-show="activeTab === 'candidates'" class="space-y-6">
+                    <div x-show="activeTab === 'candidates' && !examTypeLoadError" class="space-y-6">
                 <!-- Header -->
                 <div class="bg-white rounded-lg shadow p-6 border-b">
-                    <h2 class="text-2xl font-bold text-gray-800">ACSEE Candidates</h2>
+                    <h2 class="text-2xl font-bold text-gray-800" x-text="isPslePage() ? 'PSLE Pupils' : 'Exam Candidates'"></h2>
                 </div>
 
                 <!-- Filters Section -->
@@ -414,17 +421,17 @@
                             <div class="relative flex-1 flex flex-col" @click.outside="regionOpen = false">
                                 <button 
                                     @click="regionOpen = !regionOpen"
-                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10"
+                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10"
                                 >
                                     <span x-text="filterRegion ? regions.find(r => r.id == filterRegion)?.name : 'All Regions'" class="text-gray-700 whitespace-nowrap"></span>
                                     <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                                 </button>
-                                <div x-show="regionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-10 rounded-b flex flex-col">
+                                <div x-show="regionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col">
                                     <input 
                                         x-model="regionSearch"
                                         type="text"
                                         placeholder="Search regions..."
-                                        class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                        class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                     >
                                     <div class="max-h-64 overflow-y-auto">
                                         <div @click="filterRegion = ''; regionOpen = false" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">
@@ -445,25 +452,25 @@
                         
                         <!-- District Filter -->
                         <div class="col-span-2 flex flex-col h-full">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">District</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" x-text="isPslePage() ? 'Council' : 'District'"></label>
                             <div class="relative flex-1 flex flex-col" @click.outside="districtOpen = false">
                                 <button 
                                     @click="districtOpen = !districtOpen"
-                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10"
+                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10"
                                 >
-                                    <span x-text="filterDistrict ? filteredDistricts.find(d => d.id == filterDistrict)?.name : 'All Districts'" class="text-gray-700 whitespace-nowrap"></span>
+                                    <span x-text="filterDistrict ? filteredDistricts.find(d => d.id == filterDistrict)?.name : (isPslePage() ? 'All Councils' : 'All Districts')" class="text-gray-700 whitespace-nowrap"></span>
                                     <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                                 </button>
-                                <div x-show="districtOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-10 rounded-b flex flex-col">
+                                <div x-show="districtOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col">
                                     <input 
                                         x-model="districtSearch"
                                         type="text"
-                                        placeholder="Search districts..."
-                                        class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                        :placeholder="isPslePage() ? 'Search councils...' : 'Search districts...'"
+                                        class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                     >
                                     <div class="max-h-64 overflow-y-auto">
                                         <div @click="filterDistrict = ''; districtOpen = false; onDistrictChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">
-                                            All Districts
+                                            <span x-text="isPslePage() ? 'All Councils' : 'All Districts'"></span>
                                         </div>
                                         <template x-for="district in filteredDistricts.filter(d => d.name.toLowerCase().includes(districtSearch.toLowerCase()))" :key="district.id">
                                             <div 
@@ -480,25 +487,25 @@
                         
                         <!-- School Filter -->
                         <div class="col-span-6 flex flex-col h-full">
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">School</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2" x-text="isPslePage() ? 'Primary School' : 'School'"></label>
                             <div class="relative flex-1 flex flex-col" @click.outside="schoolOpen = false">
                                 <button 
                                     @click="schoolOpen = !schoolOpen"
-                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t text-sm h-10"
+                                    class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none text-sm h-10"
                                 >
-                                    <span x-text="filterSchool ? (filteredSchools.find(s => s.id == filterSchool)?.code + ' - ' + filteredSchools.find(s => s.id == filterSchool)?.name) : 'All Schools'" class="text-gray-700 whitespace-nowrap text-sm"></span>
+                                    <span x-text="filterSchool ? (filteredSchools.find(s => s.id == filterSchool)?.code + ' - ' + filteredSchools.find(s => s.id == filterSchool)?.name) : (isPslePage() ? 'All Primary Schools' : 'All Schools')" class="text-gray-700 whitespace-nowrap text-sm"></span>
                                     <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                                 </button>
-                                <div x-show="schoolOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-10 rounded-b flex flex-col">
+                                <div x-show="schoolOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col">
                                     <input 
                                         x-model="schoolSearch"
                                         type="text"
-                                        placeholder="Search schools..."
-                                        class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                        :placeholder="isPslePage() ? 'Search primary schools...' : 'Search schools...'"
+                                        class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                     >
                                     <div class="max-h-64 overflow-y-auto">
                                         <div @click="filterSchool = ''; schoolOpen = false; onSchoolChange()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">
-                                            All Schools
+                                            <span x-text="isPslePage() ? 'All Primary Schools' : 'All Schools'"></span>
                                         </div>
                                         <template x-for="school in filteredSchools.filter(s => (s.code + ' ' + s.name).toLowerCase().includes(schoolSearch.toLowerCase()))" :key="school.id">
                                             <div 
@@ -531,7 +538,7 @@
                         x-model="candidateSearch" 
                         @input="filterCandidates()"
                         type="text" 
-                        placeholder="Search candidates..." 
+                        :placeholder="isPslePage() ? 'Search pupils...' : 'Search candidates...'" 
                         class="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 placeholder-gray-400"
                         >
                         </div>
@@ -539,7 +546,7 @@
                         <!-- Bulk Actions (shown when items are selected) -->
                         <div x-show="selectedItems.size > 0" class="flex gap-2 items-center bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-sm">
                         <span class="text-sm font-medium text-gray-700">
-                        <span x-text="selectedItems.size"></span> candidate(s) selected
+                        <span x-text="selectedItems.size"></span> <span x-text="isPslePage() ? 'pupil(s) selected' : 'candidate(s) selected'"></span>
                         </span>
                         <button 
                         @click="bulkDeleteCandidates()"
@@ -566,10 +573,10 @@
                                     class="w-4 h-4 cursor-pointer"
                                 >
                             </th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Index Number</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Full Name</th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase" x-text="isPslePage() ? 'Candidate Number' : 'Index Number'"></th>
+                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase" x-text="isPslePage() ? 'Pupil Name' : 'Full Name'"></th>
                             <th class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">Sex</th>
-                            <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Combination</th>
+                            <th x-show="!isPslePage()" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Combination</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Allocated Subjects</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
                             <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Actions</th>
@@ -591,7 +598,7 @@
                                  <td class="px-3 py-2 text-sm text-gray-600 text-center">
                                      <span :class="candidate.gender === 'M' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'" class="px-2 py-0.5 rounded-full text-sm font-semibold" x-text="candidate.gender || '-'"></span>
                                  </td>
-                                 <td class="px-3 py-2 text-sm text-gray-600" x-text="candidate.combination || '-'"></td>
+                                 <td x-show="!isPslePage()" class="px-3 py-2 text-sm text-gray-600" x-text="candidate.combination || '-'"></td>
                                  <td class="px-3 py-2 text-sm text-gray-600">
                                      <span x-text="candidate.allocated_subjects && candidate.allocated_subjects.length > 0 ? candidate.allocated_subjects.map(s => s.code).join(', ') : '-'"></span>
                                  </td>
@@ -625,8 +632,8 @@
                         </template>
                         <template x-if="filteredCandidates.length === 0 && !loadingCandidates">
                             <tr>
-                                <td colspan="8" class="px-6 py-4 text-center text-gray-500 text-sm">
-                                    No candidates found. <button @click="openAddCandidateModal()" class="text-blue-600 hover:underline font-medium">Add one now</button>
+                                <td :colspan="isPslePage() ? 7 : 8" class="px-6 py-4 text-center text-gray-500 text-sm">
+                                    <span x-text="isPslePage() ? 'No pupils found.' : 'No candidates found.'"></span> <button @click="openAddCandidateModal()" class="text-blue-600 hover:underline font-medium" x-text="isPslePage() ? 'Add one now' : 'Add one now'"></button>
                                 </td>
                             </tr>
                         </template>
@@ -653,8 +660,15 @@
                         </div>
 
                         <!-- Page Info -->
-                        <div class="text-sm text-gray-600 font-medium">
-                            Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span> | <span x-text="totalCount"></span> total records
+                        <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                            <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                                <i class="fas fa-layer-group text-xs"></i>
+                                <span>Page <span x-text="currentPage"></span> of <span x-text="Math.max(totalPages, 1)"></span></span>
+                            </div>
+                            <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                <span><span class="font-semibold text-slate-800" x-text="totalCount"></span> total records</span>
+                            </div>
                         </div>
 
                         <!-- Go to Page -->
@@ -680,22 +694,22 @@
                     </div>
 
                     <!-- Page Number Buttons -->
-                    <div class="flex items-center justify-center gap-1 flex-wrap">
+                    <div class="flex items-center justify-center gap-2 flex-wrap rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
                         <button 
                             @click="previousPage()"
                             :disabled="currentPage <= 1"
-                            class="px-3 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                            class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                             title="Previous Page"
                         >
-                            <i class="fas fa-chevron-left"></i> Prev
+                            <i class="fas fa-chevron-left text-xs"></i> <span class="hidden sm:inline">Previous</span>
                         </button>
 
                         <!-- Page Buttons (limited window) -->
                         <template x-for="page in getPaginatedPageNumbers()" :key="page">
                             <button 
                                 @click="goToPage(page)"
-                                :class="currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
-                                class="px-3 py-2 rounded text-sm font-medium transition-colors min-w-10"
+                                :class="currentPage === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                                class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
                                 x-text="page"
                             ></button>
                         </template>
@@ -711,10 +725,10 @@
                         <button 
                             @click="nextPage()"
                             :disabled="currentPage >= totalPages"
-                            class="px-3 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                            class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                             title="Next Page"
                         >
-                            Next <i class="fas fa-chevron-right"></i>
+                            <span class="hidden sm:inline">Next</span> <i class="fas fa-chevron-right text-xs"></i>
                         </button>
                     </div>
                 </div>
@@ -725,26 +739,34 @@
                     <!-- Candidate Modal (Add/Edit/View) -->
 <div 
     x-show="candidateModalOpen || candidateViewModalOpen" 
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9995] p-4"
+    class="fixed inset-0 z-[9995] flex items-center justify-center bg-slate-950/55 p-4"
     @click.self="candidateModalOpen = false; candidateViewModalOpen = false;"
     x-transition
     style="display: none;"
 >
-    <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800" x-text="candidateViewModalOpen && !editingCandidateId ? 'Candidate Details' : (!candidateViewModalOpen && !editingCandidateId ? 'Register New Candidate' : 'Edit Candidate')"></h2>
-            <button 
-                @click="candidateModalOpen = false; candidateViewModalOpen = false;" 
-                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-            >
-                &times;
-            </button>
+    <div class="registration-modal-shell max-w-3xl" x-transition>
+        <div class="registration-modal-header">
+            <div class="registration-modal-header-content">
+                <div>
+                    <span class="registration-modal-kicker"><i class="fas fa-user-graduate text-amber-300"></i><span x-text="isPslePage() ? 'Pupil Record' : 'Candidate Record'"></span></span>
+                    <h2 class="registration-modal-title" x-text="candidateViewModalOpen && !editingCandidateId ? (isPslePage() ? 'Pupil Details' : 'Candidate Details') : (!candidateViewModalOpen && !editingCandidateId ? (isPslePage() ? 'Register New Pupil' : 'Register New Candidate') : (isPslePage() ? 'Edit Pupil' : 'Edit Candidate'))"></h2>
+                    <p class="registration-modal-subtitle" x-text="isPslePage() ? 'Maintain pupil identity, candidate number, and primary school assignment within the PSLE workspace.' : 'Maintain candidate identity and school assignment within the current exam type workspace.'"></p>
+                </div>
+                <button 
+                    @click="candidateModalOpen = false; candidateViewModalOpen = false;" 
+                    class="registration-modal-close"
+                    aria-label="Close candidate modal"
+                >
+                    &times;
+                </button>
+            </div>
         </div>
 
         <!-- View Mode -->
-        <div x-show="candidateViewModalOpen" class="p-4 space-y-2">
+        <div x-show="candidateViewModalOpen" class="registration-modal-body">
+        <div class="registration-modal-panel p-6 space-y-2">
             <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Index Number</label>
+                <label class="block text-xs font-semibold text-gray-700 mb-1" x-text="isPslePage() ? 'Candidate Number' : 'Index Number'"></label>
                 <input 
                     type="text" 
                     readonly
@@ -753,7 +775,7 @@
                 >
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">Full Name</label>
+                <label class="block text-xs font-semibold text-gray-700 mb-1" x-text="isPslePage() ? 'Pupil Name' : 'Full Name'"></label>
                 <input 
                     type="text" 
                     readonly
@@ -770,7 +792,7 @@
                     class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
                 >
             </div>
-            <div>
+            <div x-show="!isPslePage()">
                 <label class="block text-xs font-semibold text-gray-700 mb-1">Combination</label>
                 <input 
                     type="text" 
@@ -780,7 +802,7 @@
                 >
             </div>
             <div>
-                <label class="block text-xs font-semibold text-gray-700 mb-1">School</label>
+                <label class="block text-xs font-semibold text-gray-700 mb-1" x-text="isPslePage() ? 'Primary School' : 'School'"></label>
                 <input 
                     type="text" 
                     readonly
@@ -788,31 +810,33 @@
                     class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
                 >
             </div>
-            <div class="flex gap-2 pt-3">
-                <button @click="candidateModalOpen = false; candidateViewModalOpen = false;" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1.5 rounded text-sm transition-colors font-medium">
+            <div class="registration-modal-actions">
+                <button @click="candidateModalOpen = false; candidateViewModalOpen = false;" class="registration-modal-button registration-modal-button-secondary">
                     Close
                 </button>
-                <button @click="openEditCandidateModal(viewingCandidate); candidateViewModalOpen = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm transition-colors font-medium">
+                <button @click="openEditCandidateModal(viewingCandidate); candidateViewModalOpen = false;" class="registration-modal-button registration-modal-button-primary">
                     Edit
                 </button>
             </div>
         </div>
+        </div>
 
         <!-- Edit/Add Mode -->
-        <form x-show="!candidateViewModalOpen" @submit.prevent="saveCandidate()" class="p-6 space-y-4">
+        <form x-show="!candidateViewModalOpen" @submit.prevent="saveCandidate()" class="registration-modal-body">
+            <div class="registration-modal-panel p-6 space-y-4">
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Index Number</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" x-text="isPslePage() ? 'Candidate Number' : 'Index Number'"></label>
                 <input 
                     x-model="candidateForm.candidate_id"
                     @input="autoSelectSchool()"
                     type="text" 
-                    placeholder="e.g., S0445-0004"
+                    :placeholder="isPslePage() ? 'e.g., PS0102001-0004' : 'e.g., S0445-0004'"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                <p class="text-xs text-gray-500 mt-1">School will auto-detect based on the code before the dash (e.g., S0445 from S0445-0034)</p>
+                <p class="text-xs text-gray-500 mt-1" x-text="isPslePage() ? 'Primary school will auto-detect from the centre code before the dash when the number follows that pattern.' : 'School will auto-detect based on the code before the dash (e.g., S0445 from S0445-0034)'"></p>
             </div>
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" x-text="isPslePage() ? 'Pupil Name *' : 'Full Name *'"></label>
                 <input 
                     x-model="candidateForm.full_name"
                     type="text" 
@@ -834,7 +858,7 @@
                         <option value="F">Female (F)</option>
                     </select>
                 </div>
-                <div>
+                <div x-show="!isPslePage()">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Combination</label>
                     <input 
                         x-model="candidateForm.combination"
@@ -845,33 +869,34 @@
                 </div>
             </div>
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">School *</label>
+                <label class="block text-sm font-semibold text-gray-700 mb-2" x-text="isPslePage() ? 'Primary School *' : 'School *'"></label>
                 <select 
                     x-model="candidateForm.school_id"
                     required
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                    <option value="">Select School</option>
+                    <option value="" x-text="isPslePage() ? 'Select Primary School' : 'Select School'"></option>
                     <template x-for="school in schools" :key="school.id">
                         <option :value="school.id" x-text="school.name"></option>
                     </template>
                 </select>
             </div>
-            <div class="flex gap-3 pt-4">
+            <div class="registration-modal-actions">
                 <button 
                     type="button" 
                     @click="candidateModalOpen = false" 
-                    class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                    class="registration-modal-button registration-modal-button-secondary"
                 >
                     Cancel
                 </button>
                 <button 
                     type="submit" 
-                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                    class="registration-modal-button registration-modal-button-primary"
                 >
-                    <span x-show="!editingCandidateId">Register Candidate</span>
-                    <span x-show="editingCandidateId">Update Candidate</span>
+                    <span x-show="!editingCandidateId" x-text="isPslePage() ? 'Register Pupil' : 'Register Candidate'"></span>
+                    <span x-show="editingCandidateId" x-text="isPslePage() ? 'Update Pupil' : 'Update Candidate'"></span>
                 </button>
+            </div>
             </div>
         </form>
     </div>
@@ -880,26 +905,33 @@
 <!-- Add/Edit Subject Modal -->
 <div 
     x-show="showSubjectModal" 
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9997] p-4"
+    class="fixed inset-0 z-[9997] flex items-center justify-center bg-slate-950/55 p-4"
     @click.self="showSubjectModal = false;"
     x-transition
     style="display: none;"
 >
-    <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800">
+    <div class="registration-modal-shell max-w-2xl" x-transition>
+        <div class="registration-modal-header">
+            <div class="registration-modal-header-content">
+            <div>
+            <span class="registration-modal-kicker"><i class="fas fa-book text-amber-300"></i>Subject Record</span>
+            <h2 class="registration-modal-title">
                 <span x-show="!editingSubjectId">Add New Subject</span>
                 <span x-show="editingSubjectId">Edit Subject</span>
             </h2>
+            <p class="registration-modal-subtitle">Configure subject structure, category, and optional components for the current exam type.</p>
+            </div>
             <button 
                 @click="showSubjectModal = false;" 
-                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                class="registration-modal-close"
             >
                 &times;
             </button>
+            </div>
         </div>
 
-        <form @submit.prevent="saveSubject()" class="p-6 space-y-4">
+        <form @submit.prevent="saveSubject()" class="registration-modal-body">
+            <div class="registration-modal-panel p-6 space-y-4">
             <!-- Subject Code -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Subject Code *</label>
@@ -989,21 +1021,22 @@
             </div>
 
             <!-- Buttons -->
-            <div class="flex gap-3 pt-4">
+            <div class="registration-modal-actions">
                 <button 
                     type="button" 
                     @click="showSubjectModal = false" 
-                    class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                    class="registration-modal-button registration-modal-button-secondary text-sm"
                 >
                     Cancel
                 </button>
                 <button 
                     type="submit" 
-                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+                    class="registration-modal-button registration-modal-button-primary text-sm"
                 >
                     <span x-show="!editingSubjectId">Add Subject</span>
                     <span x-show="editingSubjectId">Update Subject</span>
                 </button>
+            </div>
             </div>
         </form>
     </div>
@@ -1012,23 +1045,30 @@
     <!-- View Subject Modal -->
     <div 
     x-show="showSubjectViewModal" 
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9998] p-4"
+    class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4"
     @click.self="showSubjectViewModal = false;"
     x-transition
     style="display: none;"
     >
-    <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800">Subject Details</h2>
+    <div class="registration-modal-shell max-w-2xl" x-transition>
+        <div class="registration-modal-header">
+            <div class="registration-modal-header-content">
+            <div>
+            <span class="registration-modal-kicker"><i class="fas fa-book text-amber-300"></i>Subject Record</span>
+            <h2 class="registration-modal-title">Subject Details</h2>
+            <p class="registration-modal-subtitle">Review the current subject definition and its configuration before editing.</p>
+            </div>
             <button 
                 @click="showSubjectViewModal = false;" 
-                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                class="registration-modal-close"
             >
                 &times;
             </button>
+            </div>
         </div>
     
-        <div class="p-6 space-y-4">
+        <div class="registration-modal-body">
+        <div class="registration-modal-panel p-6 space-y-4">
             <div>
                 <label class="block text-xs font-semibold text-gray-700 mb-1">Code</label>
                 <input 
@@ -1074,14 +1114,15 @@
                     class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
                 ></textarea>
             </div>
-            <div class="flex gap-2 pt-3">
-                <button @click="showSubjectViewModal = false;" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-2 rounded text-sm transition-colors font-medium">
+            <div class="registration-modal-actions">
+                <button @click="showSubjectViewModal = false;" class="registration-modal-button registration-modal-button-secondary">
                     Close
                 </button>
-                <button @click="editSubject(viewingSubject); showSubjectViewModal = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors font-medium">
+                <button @click="editSubject(viewingSubject); showSubjectViewModal = false;" class="registration-modal-button registration-modal-button-primary">
                     Edit
                 </button>
             </div>
+        </div>
         </div>
     </div>
     </div>
@@ -1089,26 +1130,33 @@
     <!-- Add/Edit Combination Modal -->
 <div 
     x-show="showCombinationModal" 
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9996] p-4"
+    class="fixed inset-0 z-[9996] flex items-center justify-center bg-slate-950/55 p-4"
     @click.self="showCombinationModal = false;"
     x-transition
     style="display: none;"
 >
-    <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800">
+    <div class="registration-modal-shell max-w-2xl" x-transition>
+        <div class="registration-modal-header">
+            <div class="registration-modal-header-content">
+            <div>
+            <span class="registration-modal-kicker"><i class="fas fa-layer-group text-amber-300"></i>Combination Record</span>
+            <h2 class="registration-modal-title">
                 <span x-show="!editingCombinationId">Add New Combination</span>
                 <span x-show="editingCombinationId">Edit Combination</span>
             </h2>
+            <p class="registration-modal-subtitle">Build combinations from configured subjects and keep them aligned to the current exam type.</p>
+            </div>
             <button 
                 @click="showCombinationModal = false;" 
-                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                class="registration-modal-close"
             >
                 &times;
             </button>
+            </div>
         </div>
 
-        <form @submit.prevent="saveCombination()" class="p-6 space-y-4">
+        <form @submit.prevent="saveCombination()" class="registration-modal-body">
+            <div class="registration-modal-panel p-6 space-y-4">
             <!-- Combination Name / Code Field -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Combination Name *</label>
@@ -1171,21 +1219,22 @@
             </div>
 
             <!-- Form Actions -->
-            <div class="flex gap-3 pt-4">
+            <div class="registration-modal-actions">
                 <button 
                     type="button" 
                     @click="showCombinationModal = false" 
-                    class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                    class="registration-modal-button registration-modal-button-secondary"
                 >
                     Cancel
                 </button>
                 <button 
                     type="submit" 
-                    class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                    class="registration-modal-button registration-modal-button-primary"
                 >
                     <span x-show="!editingCombinationId">Add Combination</span>
                     <span x-show="editingCombinationId">Update Combination</span>
                 </button>
+            </div>
             </div>
         </form>
         </div>
@@ -1194,23 +1243,30 @@
         <!-- View Combination Modal -->
         <div 
         x-show="showCombinationViewModal" 
-        class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9998] p-4"
+        class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4"
         @click.self="showCombinationViewModal = false;"
         x-transition
         style="display: none;"
         >
-        <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-        <div class="flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 class="text-2xl font-bold text-gray-800">Combination Details</h2>
+        <div class="registration-modal-shell max-w-2xl" x-transition>
+        <div class="registration-modal-header">
+            <div class="registration-modal-header-content">
+            <div>
+            <span class="registration-modal-kicker"><i class="fas fa-layer-group text-amber-300"></i>Combination Record</span>
+            <h2 class="registration-modal-title">Combination Details</h2>
+            <p class="registration-modal-subtitle">Review the selected combination and its configured subjects before editing.</p>
+            </div>
             <button 
                 @click="showCombinationViewModal = false;" 
-                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                class="registration-modal-close"
             >
                 &times;
             </button>
+            </div>
         </div>
         
-        <div class="p-6 space-y-4">
+        <div class="registration-modal-body">
+        <div class="registration-modal-panel p-6 space-y-4">
             <div>
                 <label class="block text-xs font-semibold text-gray-700 mb-1">Code</label>
                 <input 
@@ -1229,11 +1285,11 @@
                     class="w-full px-3 py-2 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
                 ></textarea>
             </div>
-            <div class="flex gap-2 pt-3">
-                <button @click="showCombinationViewModal = false;" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-2 rounded text-sm transition-colors font-medium">
+            <div class="registration-modal-actions">
+                <button @click="showCombinationViewModal = false;" class="registration-modal-button registration-modal-button-secondary">
                     Close
                 </button>
-                <button @click="editCombination(viewingCombination); showCombinationViewModal = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors font-medium">
+                <button @click="editCombination(viewingCombination); showCombinationViewModal = false;" class="registration-modal-button registration-modal-button-primary">
                     Edit
                 </button>
             </div>
@@ -1241,10 +1297,97 @@
         </div>
         </div>
         </div>
+    </div>
+</div>
+
+<div
+    x-show="subjectToolsModalOpen"
+    class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4"
+    style="display: none;"
+    @click.self="closeSubjectToolsModal()"
+    @keydown.escape.window="closeSubjectToolsModal()"
+    x-transition.opacity
+>
+    <div class="w-full max-w-3xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20" x-transition>
+        <div class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-800 px-6 py-6 text-white">
+            <div class="absolute inset-y-0 right-0 w-56 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_68%)]"></div>
+            <div class="relative flex items-start justify-between gap-4">
+                <div>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                        <i class="fas fa-book text-[0.7rem] text-amber-300"></i>
+                        Subject Tools
+                    </span>
+                    <h2 class="mt-4 text-2xl font-bold tracking-tight text-white">Manage subject imports and exports</h2>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-white/80">Use the existing subject template, export, and CSV import actions from one cleaner workspace.</p>
+                </div>
+                <button @click="closeSubjectToolsModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-lg text-white/80 transition hover:bg-white/15 hover:text-white" type="button" aria-label="Close subject tools">&times;</button>
+            </div>
         </div>
-        
-        <script>
-        function examTypeManager(code) {
+        <div class="grid gap-4 bg-slate-50 p-6 md:grid-cols-3">
+            <button type="button" @click="launchSubjectTemplateDownload()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><i class="fas fa-download text-lg"></i></span>
+                <h3 class="mt-5 text-base font-bold text-slate-900">Download Template</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Get the approved subject CSV structure before preparing import data.</p>
+            </button>
+            <button type="button" @click="launchSubjectsExport()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-file-csv text-lg"></i></span>
+                <h3 class="mt-5 text-base font-bold text-slate-900">Export CSV</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Export the current subject set for offline review or bulk maintenance.</p>
+            </button>
+            <button type="button" @click="launchSubjectsImport()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><i class="fas fa-file-import text-lg"></i></span>
+                <h3 class="mt-5 text-base font-bold text-slate-900">Import CSV</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Select a subject CSV file and pass it into the existing import handler.</p>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div
+    x-show="combinationToolsModalOpen"
+    class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4"
+    style="display: none;"
+    @click.self="closeCombinationToolsModal()"
+    @keydown.escape.window="closeCombinationToolsModal()"
+    x-transition.opacity
+>
+    <div class="w-full max-w-3xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20" x-transition>
+        <div class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-800 px-6 py-6 text-white">
+            <div class="absolute inset-y-0 right-0 w-56 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_68%)]"></div>
+            <div class="relative flex items-start justify-between gap-4">
+                <div>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                        <i class="fas fa-layer-group text-[0.7rem] text-amber-300"></i>
+                        Combination Tools
+                    </span>
+                    <h2 class="mt-4 text-2xl font-bold tracking-tight text-white">Manage combination imports and exports</h2>
+                    <p class="mt-2 max-w-2xl text-sm leading-6 text-white/80">Keep template download, export, and CSV import actions available without crowding the combinations toolbar.</p>
+                </div>
+                <button @click="closeCombinationToolsModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-lg text-white/80 transition hover:bg-white/15 hover:text-white" type="button" aria-label="Close combination tools">&times;</button>
+            </div>
+        </div>
+        <div class="grid gap-4 bg-slate-50 p-6 md:grid-cols-3">
+            <button type="button" @click="launchCombinationTemplateDownload()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><i class="fas fa-download text-lg"></i></span>
+                <h3 class="mt-5 text-base font-bold text-slate-900">Download Template</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Download the approved combination CSV template before preparing data.</p>
+            </button>
+            <button type="button" @click="launchCombinationsExport()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-file-csv text-lg"></i></span>
+                <h3 class="mt-5 text-base font-bold text-slate-900">Export CSV</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Export current combinations and allocated subject mappings.</p>
+            </button>
+            <button type="button" @click="launchCombinationsImport()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><i class="fas fa-file-import text-lg"></i></span>
+                <h3 class="mt-5 text-base font-bold text-slate-900">Import CSV</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">Select a combinations CSV file and pass it into the existing import handler.</p>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function examTypeManager(code) {
         return {
         // Note: URL parameter comes as lowercase (e.g., 'acsee'), but database stores as uppercase (e.g., 'ACSEE')
         // Convert to uppercase to match database values for API calls
@@ -1252,14 +1395,16 @@
         activeTab: 'subjects',
         sidebarCollapsed: false,
         examType: {},
+        examTypeLoadError: false,
         
         // Subjects
          subjects: [],
          allSubjects: [],  // All subjects for modal checkboxes
          filteredSubjects: [],
          subjectSearch: '',
-         loadingSubjects: false,
-         showSubjectModal: false,
+        loadingSubjects: false,
+        subjectToolsModalOpen: false,
+        showSubjectModal: false,
          showSubjectViewModal: false,
          viewingSubject: {},
          editingSubjectId: null,
@@ -1276,9 +1421,10 @@
         // Combinations
          combinations: [],
          filteredCombinations: [],
-         combinationSearch: '',
-         loadingCombinations: false,
-         showCombinationModal: false,
+        combinationSearch: '',
+        loadingCombinations: false,
+        combinationToolsModalOpen: false,
+        showCombinationModal: false,
          showCombinationViewModal: false,
          viewingCombination: {},
          editingCombinationId: null,
@@ -1329,6 +1475,10 @@
             return this.schools.filter(s => s.district_id == this.filterDistrict);
         },
 
+        isPslePage() {
+            return (this.examType.code || this.examTypeCode) === 'PSLE';
+        },
+
         async init() {
             // Load page size from localStorage
             const savedPageSize = localStorage.getItem('examTypeCandidatesPageSize');
@@ -1337,6 +1487,9 @@
             }
             
             await this.loadExamType(this.examTypeCode);
+            if (this.examTypeLoadError) {
+                return;
+            }
             await this.loadRegions();
             await this.loadDistricts();
             await this.loadSchools();
@@ -1355,9 +1508,13 @@
                 }
                 const data = await response.json();
                 this.examType = data.data || {};
+                this.examTypeLoadError = !this.examType.code;
                 console.log('Loaded exam type:', this.examType);
             } catch (error) {
                 console.error('Error loading exam type:', error);
+                this.examType = {};
+                this.examTypeLoadError = true;
+                this.showMessage(`Exam type ${code} is not configured`, 'error');
             }
         },
 
@@ -1455,7 +1612,7 @@
         async loadCandidates() {
              this.loadingCandidates = true;
              try {
-                 let url = `/api/exam-types/${this.examType.code}/candidates?page=${this.currentPage}&page_size=${this.pageSize}&search=${this.candidateSearch}`;
+                 let url = `/api/exam-types/${this.examType.code}/candidates?page=${this.currentPage}&per_page=${this.pageSize}&q=${encodeURIComponent(this.candidateSearch || '')}`;
                  
                  // Add filter parameters to API call (backend filtering)
                  if (this.filterRegion) {
@@ -1478,11 +1635,12 @@
                  const data = await response.json();
                  console.log('Candidates response:', data);
                  
-                 this.candidates = data.candidates || [];
+                 const pagination = data.meta || data.pagination || {};
+                 this.candidates = data.data || data.candidates || [];
                  this.filteredCandidates = this.candidates;
                  
-                 this.totalCount = data.pagination.total_count;
-                 this.totalPages = data.pagination.total_pages;
+                 this.totalCount = pagination.total_count || pagination.total || 0;
+                 this.totalPages = pagination.total_pages || pagination.last_page || 1;
                  
                  console.log(`Loaded ${this.candidates.length} candidates, totalCount: ${this.totalCount}`);
              } catch (error) {
@@ -2315,6 +2473,52 @@
             this.showMessage('Import functionality coming soon', 'info');
         },
 
+        openSubjectToolsModal() {
+            this.subjectToolsModalOpen = true;
+        },
+
+        closeSubjectToolsModal() {
+            this.subjectToolsModalOpen = false;
+        },
+
+        launchSubjectTemplateDownload() {
+            this.closeSubjectToolsModal();
+            this.downloadSubjectsTemplate();
+        },
+
+        launchSubjectsExport() {
+            this.closeSubjectToolsModal();
+            this.exportSubjectsCSV();
+        },
+
+        launchSubjectsImport() {
+            this.closeSubjectToolsModal();
+            document.getElementById('subjectsImportInput')?.click();
+        },
+
+        openCombinationToolsModal() {
+            this.combinationToolsModalOpen = true;
+        },
+
+        closeCombinationToolsModal() {
+            this.combinationToolsModalOpen = false;
+        },
+
+        launchCombinationTemplateDownload() {
+            this.closeCombinationToolsModal();
+            this.downloadCombinationsTemplate();
+        },
+
+        launchCombinationsExport() {
+            this.closeCombinationToolsModal();
+            this.exportCombinationsCSV();
+        },
+
+        launchCombinationsImport() {
+            this.closeCombinationToolsModal();
+            document.getElementById('combinationsImportInput')?.click();
+        },
+
         showMessage(message, type) {
             const alertDiv = document.createElement('div');
             let bgClass = 'bg-gray-100 text-gray-700 border-gray-300';
@@ -2331,5 +2535,6 @@
     };
 }
 </script>
+</div>
 </div>
 @endsection

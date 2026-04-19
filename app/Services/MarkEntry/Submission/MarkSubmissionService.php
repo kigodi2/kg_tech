@@ -25,14 +25,19 @@ class MarkSubmissionService {
                 throw new \Exception('Only approved batches can be locked');
             }
 
-            $approval = MarkBatchApproval::create([
-                'mark_import_batch_id' => $batch->id,
-                'approved_by' => $user->id,
-                'approval_type' => 'submission',
-                'status' => 'locked',
-                'approved_at' => now(),
-                'approval_notes' => 'Batch locked for submission',
-            ]);
+            $approval = MarkBatchApproval::updateOrCreate(
+                [
+                    'mark_import_batch_id' => $batch->id,
+                    'approval_level' => 'submission',
+                ],
+                [
+                    'approved_by' => $user->id,
+                    'approval_type' => 'submission',
+                    'status' => 'locked',
+                    'approved_at' => now(),
+                    'approval_notes' => 'Batch locked for submission',
+                ]
+            );
 
             $this->lifecycleService->transition(
                 $batch,
@@ -40,6 +45,12 @@ class MarkSubmissionService {
                 $user,
                 'Locked and submitted to exam authority'
             );
+
+            $batch->update([
+                'status' => 'locked',
+                'locked_at' => now(),
+                'locked_by' => $user->id,
+            ]);
 
             \Log::info("Batch {$batch->id} locked and submitted by {$user->name}");
 
@@ -92,6 +103,7 @@ class MarkSubmissionService {
     public function getSubmittedBatches(int $perPage = 20) {
         return MarkImportBatch::select('mark_import_batches.*')
             ->where('lifecycle_state', 'submitted')
+            ->where('status', '!=', 'locked')
             ->with(['school', 'subject', 'examType'])
             ->addSelect(['candidate_count' => \App\Models\RawMark::selectRaw('COUNT(DISTINCT candidate_index_number)')
                 ->whereColumn('mark_import_batch_id', 'mark_import_batches.id')

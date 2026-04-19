@@ -9,7 +9,7 @@
 
     <!-- Quick Links -->
     <div class="grid grid-cols-3 gap-6">
-        <a href="{{ route('results.acsee.audit.logs') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-blue-500">
+        <a href="{{ route($resultsRoutePrefix . '.audit.logs') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-blue-500">
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="font-bold text-gray-900">Audit Logs</h3>
@@ -19,7 +19,7 @@
             </div>
         </a>
 
-        <a href="{{ route('results.acsee.audit.processing-history') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-green-500">
+        <a href="{{ route($resultsRoutePrefix . '.audit.processing-history') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-green-500">
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="font-bold text-gray-900">Processing History</h3>
@@ -29,7 +29,7 @@
             </div>
         </a>
 
-        <a href="{{ route('results.acsee.audit.publication-history') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-purple-500">
+        <a href="{{ route($resultsRoutePrefix . '.audit.publication-history') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-purple-500">
             <div class="flex items-center justify-between">
                 <div>
                     <h3 class="font-bold text-gray-900">Publication History</h3>

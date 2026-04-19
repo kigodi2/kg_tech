@@ -90,6 +90,10 @@ class ZipPreviewService
             $subjectCode = explode('_', $filename)[0];
             $subjectName = $fileInfo['subject_name'] ?? $subjectCode;
             $rowCount = $this->countCsvRows($zip, $filename);
+            if ($rowCount === 0 && isset($fileInfo['candidate_count']) && is_numeric($fileInfo['candidate_count'])) {
+                // Use manifest count when exported filename differs from actual ZIP entry name.
+                $rowCount = max(0, (int) $fileInfo['candidate_count']);
+            }
 
             $files[] = [
                 'filename' => $filename,
@@ -230,15 +234,43 @@ class ZipPreviewService
     {
         $index = $zip->locateName($filename);
 
+        // Fallback when manifest filename does not include the folder path
+        if ($index === false) {
+            $base = basename($filename);
+            $index = $zip->locateName($base, ZipArchive::FL_NODIR);
+        }
+
+        // Final fallback: case-insensitive basename match
+        if ($index === false) {
+            $base = strtolower(basename($filename));
+            for ($i = 0; $i < $zip->numFiles; $i++) {
+                $entry = $zip->getNameIndex($i);
+                if (strtolower(basename($entry)) === $base) {
+                    $index = $i;
+                    break;
+                }
+            }
+        }
+
         if ($index === false) {
             return 0;
         }
 
-        $content = $zip->getFromIndex($index);
-        $lines = explode("\n", $content);
+        $content = (string) $zip->getFromIndex($index);
+        if (trim($content) === '') {
+            return 0;
+        }
 
-        // Subtract 1 for header row
-        $count = max(0, count($lines) - 2);
+        // Support mixed line endings and avoid counting empty trailing lines.
+        $lines = preg_split("/\r\n|\n|\r/", $content);
+        $lines = array_values(array_filter($lines, static fn ($line) => trim((string) $line) !== ''));
+
+        if (empty($lines)) {
+            return 0;
+        }
+
+        // CSV templates include header row; data rows are remaining lines.
+        $count = max(0, count($lines) - 1);
 
         return min($count, self::MAX_CSV_ROWS_TO_COUNT);
     }

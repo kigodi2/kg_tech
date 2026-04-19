@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
  * 
  * Validates that a candidate's subject allocation conforms to NECTA ACSEE rules:
  * - General Studies (code 111 or name "GENERAL STUDIES") is mandatory
- * - Minimum 3 principal subjects (excluding General Studies)
+ * - Minimum 3 principal subjects (excluding General Studies and BAM)
  * - No duplicate subject allocations
  */
 class AcseeAllocationValidator
@@ -86,14 +86,13 @@ class AcseeAllocationValidator
             return;
         }
 
-        // General Studies is present; mark as principal
-        $this->principalSubjectIds[] = $generalStudies->id;
+        // General Studies is mandatory but never principal.
     }
 
     /**
      * Validate minimum 3 principal subjects
      * 
-     * Principal subjects = all subjects except General Studies
+     * Principal subjects = all subjects except General Studies and BAM
      */
     protected function validatePrincipalSubjectCount()
     {
@@ -104,19 +103,31 @@ class AcseeAllocationValidator
             ->first();
 
         $generalStudiesId = $generalStudies ? $generalStudies->id : null;
+        $bamId = Subject::where('code', '141')
+            ->orWhere('name', 'BASIC APPLIED MATHEMATICS')
+            ->orWhere('name', 'Basic Applied Mathematics')
+            ->first()?->id;
 
-        // Count principals = all subjects - General Studies
-        $principalCount = count($this->allSubjectIds) - ($generalStudiesId && in_array($generalStudiesId, $this->allSubjectIds) ? 1 : 0);
+        // Count principals = all subjects - General Studies - BAM
+        $principalCount = count(array_filter($this->allSubjectIds, function ($id) use ($generalStudiesId, $bamId) {
+            if ($generalStudiesId && (int) $id === (int) $generalStudiesId) {
+                return false;
+            }
+            if ($bamId && (int) $id === (int) $bamId) {
+                return false;
+            }
+            return true;
+        }));
 
         if ($principalCount < 3) {
             $this->errors[] = "Minimum 3 principal subjects required (found " . $principalCount . ")";
             return;
         }
 
-        // Set principal subject IDs = all - General Studies
+        // Set principal subject IDs = all - General Studies - BAM
         $this->principalSubjectIds = array_filter(
             $this->allSubjectIds,
-            fn($id) => $id !== $generalStudiesId
+            fn($id) => $id !== $generalStudiesId && $id !== $bamId
         );
     }
 

@@ -80,6 +80,7 @@
             <tr>
                 <th>School Code</th>
                 <th>School Name</th>
+                <th>Candidates</th>
                 <th>Batches</th>
                 <th>Total Records</th>
                 <th>Errors</th>
@@ -91,6 +92,7 @@
             <tr>
                 <td>{{ $school['school_code'] }}</td>
                 <td>{{ $school['school_name'] }}</td>
+                <td style="text-align: center;">{{ $school['candidate_count'] ?? 0 }}</td>
                 <td style="text-align: center;">{{ $school['batch_count'] }}</td>
                 <td style="text-align: center;">{{ $school['total_records'] }}</td>
                 <td style="text-align: center;">{{ $school['total_errors'] }}</td>

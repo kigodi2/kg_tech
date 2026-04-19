@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DashboardAnnouncement;
 use App\Models\Region;
 use App\Models\District;
 use App\Models\School;
@@ -9,12 +10,37 @@ use App\Models\Candidate;
 use App\Models\ExamType;
 use App\Models\Combination;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        return view('dashboard.home');
+        $events = collect();
+        $news = collect();
+
+        if (Schema::hasTable('dashboard_announcements')) {
+            $events = DashboardAnnouncement::query()
+                ->active()
+                ->events()
+                ->orderBy('sort_order')
+                ->orderBy('publish_date')
+                ->limit(3)
+                ->get()
+                ->map(fn (DashboardAnnouncement $announcement) => $this->withNormalizedLink($announcement));
+
+            $news = DashboardAnnouncement::query()
+                ->active()
+                ->news()
+                ->orderBy('sort_order')
+                ->orderByDesc('publish_date')
+                ->limit(3)
+                ->get()
+                ->map(fn (DashboardAnnouncement $announcement) => $this->withNormalizedLink($announcement));
+        }
+
+        return view('dashboard.home', compact('events', 'news'));
     }
 
     public function oldIndex()
@@ -159,5 +185,29 @@ class DashboardController extends Controller
                 'name' => $subject->name,
             ];
         })->toArray();
+    }
+
+    private function withNormalizedLink(DashboardAnnouncement $announcement): DashboardAnnouncement
+    {
+        $announcement->setAttribute('resolved_link_url', $this->normalizeAnnouncementLink($announcement->link_url));
+
+        return $announcement;
+    }
+
+    private function normalizeAnnouncementLink(?string $link): string
+    {
+        $link = trim((string) $link);
+        if ($link === '') {
+            return '#';
+        }
+
+        $path = parse_url($link, PHP_URL_PATH);
+        if (is_string($path) && Str::startsWith($path, ['/r/', '/results/'])) {
+            $query = parse_url($link, PHP_URL_QUERY);
+
+            return $query ? $path . '?' . $query : $path;
+        }
+
+        return $link;
     }
 }

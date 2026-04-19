@@ -7,7 +7,7 @@
 @section('results-content')
 <div class="max-w-4xl">
     
-    <form method="POST" action="{{ route('results.acsee.grading.store') }}" class="space-y-6" id="gradingForm">
+    <form method="POST" action="{{ route($resultsRoutePrefix . '.grading.store') }}" class="space-y-6" id="gradingForm">
         @csrf
 
         <!-- Basic Information -->
@@ -17,7 +17,7 @@
             <div class="grid grid-cols-2 gap-6">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Profile Name *</label>
-                    <input type="text" name="name" placeholder="e.g., ACSEE 2026 Standard" value="{{ old('name') }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('name') border-red-500 @enderror">
+                    <input type="text" name="name" placeholder="e.g., {{ $resultsModuleLabel }} 2026 Standard" value="{{ old('name') }}" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 @error('name') border-red-500 @enderror">
                     @error('name')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                     @enderror
@@ -144,7 +144,7 @@
             <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
                 <i class="fas fa-save"></i> Create Profile
             </button>
-            <a href="{{ route('results.acsee.grading.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors font-medium">
+            <a href="{{ route($resultsRoutePrefix . '.grading.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors font-medium">
                 Cancel
             </a>
         </div>

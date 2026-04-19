@@ -118,7 +118,7 @@
                     <i class="fas fa-undo"></i> Unpublish Result
                 </button>
             @endif
-            <a href="{{ route('results.acsee.results.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors font-medium">
+            <a href="{{ route($resultsRoutePrefix . '.results.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors font-medium">
                 Back to Results
             </a>
         </div>

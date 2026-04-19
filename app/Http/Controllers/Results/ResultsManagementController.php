@@ -19,12 +19,25 @@ use Illuminate\Http\Request;
  */
 class ResultsManagementController extends Controller
 {
+    private function examCode(Request $request): string
+    {
+        return $request->routeIs('results.psle.*') ? 'PSLE' : 'ACSEE';
+    }
+
+    private function legacyLifecycleRedirectResponse(string $action)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => "Legacy {$action} endpoint is disabled. Use /results/acsee lifecycle snapshot publish/lock workflow instead.",
+        ], 410);
+    }
+
     public function index(Request $request)
     {
         $examYear = ExamYear::active()->first();
-        $acsee = ExamType::where('code', 'ACSEE')->first();
+        $examType = ExamType::where('code', $this->examCode($request))->first();
 
-        $query = CandidateExamRegistration::where('exam_type_id', $acsee->id)
+        $query = CandidateExamRegistration::where('exam_type_id', $examType->id)
             ->where('exam_year_id', $examYear->id)
             ->with('candidate.school', 'candidate.combination');
 
@@ -42,20 +55,40 @@ class ResultsManagementController extends Controller
         }
 
         $results = $query->paginate(15);
-        $schools = School::active()->get();
-        $combinations = Combination::where('exam_type_id', $acsee->id)->get();
+        $schools = School::query()
+            ->whereHas('candidates.examRegistrations', function ($q) use ($examType, $examYear) {
+                $q->where('exam_type_id', $examType->id)
+                  ->where('exam_year_id', $examYear->id);
+            })
+            ->orderBy('name')
+            ->get();
+        $combinations = Combination::where('exam_type_id', $examType->id)->orderBy('code')->get();
 
-        return view('results.acsee.results.index', compact('results', 'schools', 'combinations', 'examYear'));
+        $statusCounts = CandidateExamRegistration::query()
+            ->where('exam_type_id', $examType->id)
+            ->where('exam_year_id', $examYear->id)
+            ->selectRaw("COALESCE(result_status, 'draft') as status, count(*) as total")
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        return view('results.acsee.results.index', compact(
+            'results',
+            'schools',
+            'combinations',
+            'examYear',
+            'examType',
+            'statusCounts'
+        ));
     }
 
-    public function candidateResult($candidateId)
+    public function candidateResult(Request $request, $candidateId)
     {
         $candidate = Candidate::findOrFail($candidateId);
         $examYear = ExamYear::active()->first();
-        $acsee = ExamType::where('code', 'ACSEE')->first();
+        $examType = ExamType::where('code', $this->examCode($request))->first();
 
         $registration = CandidateExamRegistration::where('candidate_id', $candidateId)
-            ->where('exam_type_id', $acsee->id)
+            ->where('exam_type_id', $examType->id)
             ->where('exam_year_id', $examYear->id)
             ->first();
 
@@ -63,84 +96,46 @@ class ResultsManagementController extends Controller
             abort(404, 'Result not found for this candidate.');
         }
 
-        return view('results.acsee.results.candidate', compact('candidate', 'registration', 'examYear'));
+        return view('results.acsee.results.candidate', compact('candidate', 'registration', 'examYear', 'examType'));
     }
 
-    public function schoolResults($schoolId)
+    public function schoolResults(Request $request, $schoolId)
     {
         $school = School::findOrFail($schoolId);
         $examYear = ExamYear::active()->first();
-        $acsee = ExamType::where('code', 'ACSEE')->first();
+        $examType = ExamType::where('code', $this->examCode($request))->first();
 
         $results = CandidateExamRegistration::whereHas('candidate', fn($q) => $q->where('school_id', $schoolId))
-            ->where('exam_type_id', $acsee->id)
+            ->where('exam_type_id', $examType->id)
             ->where('exam_year_id', $examYear->id)
             ->with('candidate')
             ->paginate(20);
 
-        return view('results.acsee.results.school', compact('school', 'results', 'examYear'));
+        return view('results.acsee.results.school', compact('school', 'results', 'examYear', 'examType'));
     }
 
-    public function combinationResults($combinationId)
+    public function combinationResults(Request $request, $combinationId)
     {
         $combination = Combination::findOrFail($combinationId);
         $examYear = ExamYear::active()->first();
-        $acsee = ExamType::where('code', 'ACSEE')->first();
+        $examType = ExamType::where('code', $this->examCode($request))->first();
 
         $results = CandidateExamRegistration::whereHas('candidate', fn($q) => $q->where('combination_id', $combinationId))
-            ->where('exam_type_id', $acsee->id)
+            ->where('exam_type_id', $examType->id)
             ->where('exam_year_id', $examYear->id)
             ->with('candidate')
             ->paginate(20);
 
-        return view('results.acsee.results.combination', compact('combination', 'results', 'examYear'));
+        return view('results.acsee.results.combination', compact('combination', 'results', 'examYear', 'examType'));
     }
 
     public function publish($id)
     {
-        $registration = CandidateExamRegistration::findOrFail($id);
-
-        if ($registration->result_status === 'published') {
-            return response()->json(['error' => 'Result already published.'], 422);
-        }
-
-        if ($registration->result_status !== 'final') {
-            return response()->json(['error' => 'Only final results can be published.'], 422);
-        }
-
-        $registration->update(['result_status' => 'published', 'published_at' => now()]);
-
-        // Log audit
-        \App\Models\AuditLog::create([
-            'module' => 'results',
-            'action' => 'publish_result',
-            'exam_year_id' => $registration->exam_year_id,
-            'user_id' => auth()->id(),
-            'metadata' => ['candidate_id' => $registration->candidate_id],
-        ]);
-
-        return response()->json(['success' => true, 'message' => 'Result published.']);
+        return $this->legacyLifecycleRedirectResponse('publish');
     }
 
     public function unpublish($id)
     {
-        $registration = CandidateExamRegistration::findOrFail($id);
-
-        if ($registration->result_status !== 'published') {
-            return response()->json(['error' => 'Only published results can be unpublished.'], 422);
-        }
-
-        $registration->update(['result_status' => 'final', 'published_at' => null]);
-
-        // Log audit
-        \App\Models\AuditLog::create([
-            'module' => 'results',
-            'action' => 'unpublish_result',
-            'exam_year_id' => $registration->exam_year_id,
-            'user_id' => auth()->id(),
-            'metadata' => ['candidate_id' => $registration->candidate_id],
-        ]);
-
-        return response()->json(['success' => true, 'message' => 'Result unpublished.']);
+        return $this->legacyLifecycleRedirectResponse('unpublish');
     }
 }

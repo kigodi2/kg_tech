@@ -49,6 +49,7 @@ class SchoolImportService
 
         $rowNumber = 0;
         $validCount = 0;
+        $updateCount = 0;
         $errorRows = [];
         $errorSummary = [];
         $seenCodes = []; // Track duplicates within file
@@ -59,8 +60,8 @@ class SchoolImportService
         $districtsById = District::pluck('id')->flip()->toArray();
         $districtsByCode = District::pluck('id', 'code')->toArray();
 
-        // Preload existing school codes for duplicate check
-        $existingCodes = School::pluck('code')->flip()->toArray();
+        // Preload existing schools so matching codes can be treated as updates
+        $existingSchools = School::query()->get()->keyBy('code');
 
         while (($row = fgetcsv($handle)) !== false) {
             $rowNumber++;
@@ -75,7 +76,12 @@ class SchoolImportService
             $rowErrors = [];
 
             // Validate each field
-            $this->validateCode($record['code'] ?? null, $rowErrors, $seenCodes, $existingCodes, $rowNumber);
+            $existingSchool = null;
+            if (!empty($record['code'])) {
+                $existingSchool = $existingSchools->get(trim($record['code']));
+            }
+
+            $this->validateCode($record['code'] ?? null, $rowErrors, $seenCodes);
             $this->validateName($record['name'] ?? null, $rowErrors);
             $this->validateRegionId($record['region_id'] ?? null, $rowErrors, $regionsById, $regionsByCode);
             
@@ -92,7 +98,12 @@ class SchoolImportService
             // Collect results
             if (empty($rowErrors)) {
                 $validCount++;
-                $seenCodes[$record['code']] = true;
+                $normalizedCode = trim((string) ($record['code'] ?? ''));
+                $seenCodes[$normalizedCode] = true;
+
+                if ($existingSchool) {
+                    $updateCount++;
+                }
             } else {
                 $errorRows[] = [
                     'row_number' => $rowNumber,
@@ -122,6 +133,8 @@ class SchoolImportService
             'message' => count($errorRows) === 0 ? 'All rows valid' : count($errorRows) . ' row(s) have errors',
             'total_rows' => $rowNumber,
             'valid_count' => $validCount,
+            'update_count' => $updateCount,
+            'new_count' => max(0, $validCount - $updateCount),
             'invalid_count' => count($errorRows),
             'errors' => array_slice($errorRows, 0, 100), // Limit to first 100 for display
             'total_errors' => count($errorRows),
@@ -150,6 +163,7 @@ class SchoolImportService
                 'success' => false,
                 'message' => 'CSV file is empty',
                 'imported_count' => 0,
+                'updated_count' => 0,
                 'skipped_count' => 0,
                 'failed_count' => 0,
                 'errors' => []
@@ -162,6 +176,7 @@ class SchoolImportService
         $header = array_map(fn($h) => str_replace(' ', '_', $h), $header);
 
         $importedCount = 0;
+        $updatedCount = 0;
         $skippedCount = 0;
         $failedCount = 0;
         $errors = [];
@@ -178,6 +193,7 @@ class SchoolImportService
         try {
             DB::transaction(function () use (
                 &$importedCount,
+                &$updatedCount,
                 &$skippedCount,
                 &$failedCount,
                 &$errors,
@@ -216,9 +232,9 @@ class SchoolImportService
                         $rowErrors[] = 'Code appears multiple times in file';
                     }
 
-                    // Check for duplicates in DB
-                    if ($record['code'] && isset($existingSchools[$record['code']])) {
-                        $rowErrors[] = 'Code already exists in database';
+                    $existingSchool = null;
+                    if (!empty($record['code'])) {
+                        $existingSchool = $existingSchools->get(trim($record['code']));
                     }
 
                     // Lookup region
@@ -283,19 +299,34 @@ class SchoolImportService
                         continue;
                     }
 
-                    // Create school
+                    // Update existing school when the code matches; otherwise create a new school
                     try {
-                        School::create([
-                            'code' => trim($record['code']),
-                            'name' => trim($record['name']),
-                            'region_id' => $regionId,
-                            'district_id' => $districtId,
-                            'ownership' => $ownership ?? 'GOVERNMENT',
-                            'is_active' => true,
-                        ]);
+                        $normalizedCode = trim($record['code']);
+                        $normalizedName = trim($record['name']);
 
-                        $importedCount++;
-                        $seenCodes[$record['code']] = true;
+                        if ($existingSchool) {
+                            if ($existingSchool->name !== $normalizedName) {
+                                $existingSchool->update([
+                                    'name' => $normalizedName,
+                                ]);
+                            }
+
+                            $updatedCount++;
+                        } else {
+                            $school = School::create([
+                                'code' => $normalizedCode,
+                                'name' => $normalizedName,
+                                'region_id' => $regionId,
+                                'district_id' => $districtId,
+                                'ownership' => $ownership ?? 'GOVERNMENT',
+                                'is_active' => true,
+                            ]);
+
+                            $existingSchools->put($normalizedCode, $school);
+                            $importedCount++;
+                        }
+
+                        $seenCodes[$normalizedCode] = true;
 
                     } catch (\Exception $e) {
                         $failedCount++;
@@ -310,16 +341,17 @@ class SchoolImportService
 
             return [
                 'success' => $failedCount === 0,
-                'message' => $importedCount . ' school(s) imported successfully' . 
-                    ($failedCount > 0 ? " ($failedCount failed)" : ''),
+                'message' => $this->buildCompletionMessage($importedCount, $updatedCount, $failedCount),
                 'imported_count' => $importedCount,
+                'updated_count' => $updatedCount,
                 'skipped_count' => $skippedCount,
                 'failed_count' => $failedCount,
                 'errors' => array_slice($errors, 0, 100),
                 'total_errors' => count($errors),
                 'summary' => [
                     'total_processed' => $rowNumber,
-                    'total_succeeded' => $importedCount,
+                    'total_succeeded' => $importedCount + $updatedCount,
+                    'total_updated' => $updatedCount,
                     'total_failed' => $failedCount
                 ]
             ];
@@ -336,6 +368,7 @@ class SchoolImportService
                 'success' => false,
                 'message' => 'Import failed: ' . $e->getMessage(),
                 'imported_count' => $importedCount,
+                'updated_count' => $updatedCount,
                 'skipped_count' => $skippedCount,
                 'failed_count' => $failedCount,
                 'errors' => []
@@ -358,7 +391,7 @@ class SchoolImportService
     /**
      * Validate school code
      */
-    private function validateCode(?string $code, array &$errors, array $seenCodes, array $existingCodes, int $rowNumber): void
+    private function validateCode(?string $code, array &$errors, array $seenCodes): void
     {
         if (empty($code)) {
             $errors[] = 'Code is required';
@@ -376,9 +409,6 @@ class SchoolImportService
             $errors[] = "Code '{$code}' appears multiple times in file";
         }
 
-        if (isset($existingCodes[$code])) {
-            $errors[] = "Code '{$code}' already exists in database";
-        }
     }
 
     /**
@@ -481,5 +511,30 @@ class SchoolImportService
             }
         }
         return $grouped;
+    }
+
+    private function buildCompletionMessage(int $importedCount, int $updatedCount, int $failedCount): string
+    {
+        $parts = [];
+
+        if ($importedCount > 0) {
+            $parts[] = $importedCount . ' school(s) imported';
+        }
+
+        if ($updatedCount > 0) {
+            $parts[] = $updatedCount . ' school(s) updated';
+        }
+
+        if (empty($parts)) {
+            $parts[] = 'No schools imported or updated';
+        }
+
+        $message = implode(', ', $parts) . ' successfully';
+
+        if ($failedCount > 0) {
+            $message .= " ($failedCount failed)";
+        }
+
+        return $message;
     }
 }

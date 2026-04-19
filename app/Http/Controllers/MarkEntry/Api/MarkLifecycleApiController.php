@@ -3,7 +3,13 @@
 namespace App\Http\Controllers\MarkEntry\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\CandidateSubjectSelection;
+use App\Models\ExamYear;
 use App\Models\MarkImportBatch;
+use App\Models\RawMark;
+use App\Models\Subject;
+use App\Models\SubjectMarks;
+use App\Services\MarkImport\MarkValidationService;
 use App\Services\MarkEntry\Moderation\MarkModerationQueryService;
 use App\Services\MarkEntry\Submission\MarkSubmissionService;
 use App\Services\MarkEntry\Analytics\MarkAnalyticsService;
@@ -77,8 +83,9 @@ class MarkLifecycleApiController extends Controller
                     'status' => $batch->status,
                     'lifecycle_state' => $batch->lifecycle_state,
                     'total_records' => $batch->total_records,
-                    'valid_records' => $batch->valid_records,
-                    'error_records' => $batch->error_records,
+                    // Use live counters from raw_marks so the modal reflects latest row fixes.
+                    'valid_records' => $validCount,
+                    'error_records' => $errorCount,
                     'error_count' => $errorCount,
                     'valid_count' => $validCount,
                     'school' => [
@@ -162,10 +169,12 @@ class MarkLifecycleApiController extends Controller
     {
         try {
             $this->authorize('view', $batch);
+            $batch->loadMissing('subject');
 
             $type = $request->input('type', 'all'); // 'all', 'errors', 'valid'
             $perPage = $request->input('per_page', 20);
             $page = $request->input('page', 1);
+            $canEditBatch = $this->isBatchEditableForRowUpdates($batch);
 
             $query = $batch->rawMarks();
 
@@ -176,21 +185,16 @@ class MarkLifecycleApiController extends Controller
             }
 
             $marks = $query->paginate($perPage, ['*'], 'page', $page);
+            $candidateSubjectContext = $this->buildCandidateSubjectContext($batch, $marks->getCollection());
 
-            $formattedMarks = $marks->getCollection()->map(fn($mark) => [
-                'id' => $mark->id,
-                'row_number' => $mark->row_number,
-                'candidate_id' => $mark->candidate_id,
-                'candidate_index_number' => $mark->candidate_index_number,
-                'full_name' => $mark->full_name,
-                'paper_1_marks' => $mark->paper_1_marks,
-                'paper_2_marks' => $mark->paper_2_marks,
-                'paper_3_marks' => $mark->paper_3_marks,
-                'practical_marks' => $mark->practical_marks,
-                'project_marks' => $mark->project_marks,
-                'has_errors' => $mark->has_errors,
-                'error_messages' => $mark->error_messages ?? [],
-            ])->values();
+            $formattedMarks = $marks->getCollection()
+                ->map(fn($mark) => $this->formatRawMarkRow(
+                    $mark,
+                    $batch->subject,
+                    $canEditBatch,
+                    $candidateSubjectContext[(int) ($mark->candidate_id ?? 0)] ?? null
+                ))
+                ->values();
 
             return response()->json([
                 'success' => true,
@@ -203,12 +207,136 @@ class MarkLifecycleApiController extends Controller
                     'last_page' => $marks->lastPage(),
                     'has_more' => $marks->hasMorePages(),
                 ],
+                'counters' => $this->getBatchRowCounters($batch),
             ]);
         } catch (\Exception $e) {
             \Log::error('Error fetching batch raw marks', ['error' => $e->getMessage()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to load raw marks'
+            ], 500);
+        }
+    }
+
+    /**
+     * PATCH /api/mark-entry/moderation/batch/{batchId}/rows/{rowId}/marks
+     * Update multiple paper marks in one row and revalidate server-side.
+     */
+    public function updateBatchRowMarks(Request $request, MarkImportBatch $batch, RawMark $row)
+    {
+        $this->authorize('moderate', $batch);
+
+        if ((int) $row->mark_import_batch_id !== (int) $batch->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Row does not belong to the selected batch.'
+            ], 404);
+        }
+
+        if (!$this->isBatchEditableForRowUpdates($batch)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This batch cannot be edited in its current status.'
+            ], 403);
+        }
+
+        try {
+            $validated = $request->validate([
+                'marks' => 'required|array|min:1',
+                'reason' => 'nullable|string|max:500',
+            ]);
+
+            $paperDefinitions = $this->getPaperDefinitions($batch->subject);
+            if (empty($paperDefinitions)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Paper definitions are missing for this subject.'
+                ], 422);
+            }
+
+            $allowedCodes = collect($paperDefinitions)->pluck('code')->all();
+            $incomingMarks = $validated['marks'];
+            $unknownCodes = array_diff(array_keys($incomingMarks), $allowedCodes);
+
+            if (!empty($unknownCodes)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unknown paper code(s): ' . implode(', ', $unknownCodes),
+                ], 422);
+            }
+
+            $oldByField = [];
+            $newByField = [];
+            foreach ($paperDefinitions as $paper) {
+                if (!array_key_exists($paper['code'], $incomingMarks)) {
+                    continue;
+                }
+
+                $normalized = $this->normalizeMarkInput($incomingMarks[$paper['code']]);
+                $field = $paper['field'];
+                $oldByField[$field] = $row->{$field};
+                $newByField[$field] = $normalized;
+                $row->{$field} = $normalized;
+            }
+
+            // Clear previous validation state before running server-side validation again.
+            $row->has_errors = false;
+            $row->error_messages = [];
+            $row->has_warnings = false;
+            $row->warning_messages = [];
+            $row->subject_status = null;
+            $row->status_reason = null;
+            $row->save();
+
+            $validator = app(MarkValidationService::class);
+            $errors = $validator->validateRawMark($row, $batch);
+
+            $row->refresh();
+            if (!empty($errors)) {
+                $row->has_errors = true;
+                $row->error_messages = array_values($errors);
+            } else {
+                $row->has_errors = false;
+                $row->error_messages = [];
+            }
+            $row->save();
+            $row->refresh();
+
+            $reason = trim((string) ($validated['reason'] ?? '')) ?: null;
+            foreach ($newByField as $field => $newValue) {
+                $oldValue = $oldByField[$field] ?? null;
+                if ((string) $oldValue === (string) $newValue) {
+                    continue;
+                }
+                $this->auditService->logChange(
+                    $row,
+                    auth()->user(),
+                    'validation_fix',
+                    $field,
+                    $oldValue,
+                    $newValue,
+                    $reason,
+                    $request->ip()
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Row marks updated and revalidated.',
+                'row' => $this->formatRawMarkRow($row, $batch->subject, $this->isBatchEditableForRowUpdates($batch)),
+                'counters' => $this->getBatchRowCounters($batch),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            \Log::error('Error updating row marks', [
+                'batch_id' => $batch->id,
+                'row_id' => $row->id,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update row marks.',
             ], 500);
         }
     }
@@ -471,12 +599,26 @@ class MarkLifecycleApiController extends Controller
      * POST /api/mark-entry/submission/lock/{batchId}
      * Lock a batch for submission (prevents further modifications)
      */
-    public function lockBatchAction(Request $request, MarkImportBatch $batch)
+    public function lockBatchAction(Request $request, $batchId)
     {
-        $this->authorize('lock', $batch);
+        $batch = MarkImportBatch::find($batchId);
+        if (!$batch) {
+            return response()->json([
+                'success' => false,
+                'message' => "Batch with ID {$batchId} not found"
+            ], 404);
+        }
 
         try {
-            $moderationService = app(\App\Services\MarkEntry\Moderation\MarkModerationService::class);
+            $this->authorize('lock', $batch);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Not authorized to lock this batch. Batch must be in approved status and you must have moderator permissions.'
+            ], 403);
+        }
+
+        try {
             $approval = $this->submissionService->lockBatch($batch, auth()->user());
 
             return response()->json([
@@ -490,11 +632,186 @@ class MarkLifecycleApiController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
+            \Log::error("Lock batch {$batchId} failed: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
             ], 400);
         }
+    }
+
+    /**
+     * POST /api/mark-entry/submission/lock-bulk
+     * Lock specific batch IDs (visible rows)
+     */
+    public function lockBulkAction(Request $request)
+    {
+        $batchIds = $request->input('batch_ids', []);
+        if (empty($batchIds) || !is_array($batchIds)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No batch IDs provided'
+            ], 422);
+        }
+
+        if (count($batchIds) > 200) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Maximum 200 batches can be locked at once'
+            ], 422);
+        }
+
+        $user = auth()->user();
+        $results = ['locked' => [], 'skipped' => [], 'failed' => []];
+
+        $batches = MarkImportBatch::whereIn('id', $batchIds)
+            ->with(['school', 'subject'])
+            ->get();
+
+        foreach ($batches as $batch) {
+            $entry = [
+                'batch_id' => $batch->id,
+                'batch_code' => $batch->batch_code,
+                'school' => $batch->school->name ?? 'N/A',
+                'subject' => $batch->subject->name ?? 'N/A',
+            ];
+
+            if ($batch->lifecycle_state === 'submitted' || $batch->status === 'locked') {
+                $entry['reason'] = 'Already locked';
+                $results['skipped'][] = $entry;
+                continue;
+            }
+
+            if ($batch->status !== 'approved' && $batch->lifecycle_state !== 'approved') {
+                $entry['reason'] = "Status is '{$batch->status}', not approved";
+                $results['skipped'][] = $entry;
+                continue;
+            }
+
+            try {
+                $this->authorize('lock', $batch);
+            } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+                $entry['reason'] = 'Not authorized';
+                $results['failed'][] = $entry;
+                continue;
+            }
+
+            try {
+                $this->submissionService->lockBatch($batch, $user);
+                $results['locked'][] = $entry;
+            } catch (\Exception $e) {
+                $entry['reason'] = $e->getMessage();
+                $results['failed'][] = $entry;
+            }
+        }
+
+        // Audit log for bulk operation
+        \Log::info("Bulk lock operation by {$user->name}", [
+            'user_id' => $user->id,
+            'locked_count' => count($results['locked']),
+            'skipped_count' => count($results['skipped']),
+            'failed_count' => count($results['failed']),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf(
+                'Bulk lock complete: %d locked, %d skipped, %d failed',
+                count($results['locked']),
+                count($results['skipped']),
+                count($results['failed'])
+            ),
+            'data' => $results,
+        ]);
+    }
+
+    /**
+     * POST /api/mark-entry/submission/lock-all
+     * Lock all approved batches in scope (filtered by exam_year, region, district, etc.)
+     */
+    public function lockAllInScopeAction(Request $request)
+    {
+        $user = auth()->user();
+
+        $query = MarkImportBatch::where(function ($q) {
+                $q->where('status', 'approved')
+                  ->orWhere('lifecycle_state', 'approved');
+            })
+            ->forUserScope($user)
+            ->with(['school', 'subject']);
+
+        // Optional scope filters
+        if ($request->filled('exam_year')) {
+            $query->where('exam_year', $request->input('exam_year'));
+        }
+        if ($request->filled('region_id')) {
+            $query->where('region_id', $request->input('region_id'));
+        }
+        if ($request->filled('district_id')) {
+            $query->where('district_id', $request->input('district_id'));
+        }
+        if ($request->filled('school_id')) {
+            $query->where('school_id', $request->input('school_id'));
+        }
+
+        $batches = $query->limit(200)->get();
+
+        if ($batches->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No approved batches found matching the current scope',
+                'data' => ['locked' => [], 'skipped' => [], 'failed' => []],
+            ]);
+        }
+
+        $results = ['locked' => [], 'skipped' => [], 'failed' => []];
+
+        foreach ($batches as $batch) {
+            $entry = [
+                'batch_id' => $batch->id,
+                'batch_code' => $batch->batch_code,
+                'school' => $batch->school->name ?? 'N/A',
+                'subject' => $batch->subject->name ?? 'N/A',
+            ];
+
+            try {
+                $this->authorize('lock', $batch);
+            } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+                $entry['reason'] = 'Not authorized';
+                $results['failed'][] = $entry;
+                continue;
+            }
+
+            try {
+                $this->submissionService->lockBatch($batch, $user);
+                $results['locked'][] = $entry;
+            } catch (\Exception $e) {
+                $entry['reason'] = $e->getMessage();
+                $results['failed'][] = $entry;
+            }
+        }
+
+        // Audit log for bulk operation
+        \Log::info("Lock-all-in-scope operation by {$user->name}", [
+            'user_id' => $user->id,
+            'scope' => $request->only(['exam_year', 'region_id', 'district_id', 'school_id']),
+            'total_found' => $batches->count(),
+            'locked_count' => count($results['locked']),
+            'skipped_count' => count($results['skipped']),
+            'failed_count' => count($results['failed']),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => sprintf(
+                'Lock all complete: %d locked, %d skipped, %d failed (of %d found)',
+                count($results['locked']),
+                count($results['skipped']),
+                count($results['failed']),
+                $batches->count()
+            ),
+            'data' => $results,
+        ]);
     }
 
     /**
@@ -582,5 +899,237 @@ class MarkLifecycleApiController extends Controller
                 'message' => $e->getMessage()
             ], 400);
         }
+    }
+
+    private function formatRawMarkRow(RawMark $mark, ?Subject $subject, bool $canEdit, ?array $candidateSubjectContext = null): array
+    {
+        $papers = $this->getPaperDefinitions($subject);
+        $marks = [];
+        foreach ($papers as $paper) {
+            $marks[$paper['code']] = $mark->{$paper['field']};
+        }
+
+        $errors = array_values($mark->error_messages ?? []);
+        $invalidFields = $this->inferInvalidFields($errors, $papers);
+
+        return [
+            'id' => $mark->id,
+            'row_id' => $mark->id,
+            'row_number' => $mark->row_number,
+            'row_no' => $mark->row_number,
+            'candidate_id' => $mark->candidate_id,
+            'candidate_index_number' => $mark->candidate_index_number,
+            'index_number' => $mark->candidate_index_number,
+            'full_name' => $mark->full_name,
+            'paper_1_marks' => $mark->paper_1_marks,
+            'paper_2_marks' => $mark->paper_2_marks,
+            'paper_3_marks' => $mark->paper_3_marks,
+            'practical_marks' => $mark->practical_marks,
+            'project_marks' => $mark->project_marks,
+            'papers' => $papers,
+            'marks' => $marks,
+            'invalid_fields' => $invalidFields,
+            'errors' => $errors,
+            'error_messages' => $errors,
+            'warnings' => array_values($mark->warning_messages ?? []),
+            'has_errors' => (bool) $mark->has_errors,
+            'has_warnings' => (bool) $mark->has_warnings,
+            'subject_status' => $mark->subject_status,
+            'status_reason' => $mark->status_reason,
+            'registered_subjects' => $candidateSubjectContext['registered_subjects'] ?? [],
+            'registered_subject_count' => $candidateSubjectContext['registered_subject_count'] ?? 0,
+            'entered_subject_count' => $candidateSubjectContext['entered_subject_count'] ?? 0,
+            'missing_subject_count' => $candidateSubjectContext['missing_subject_count'] ?? 0,
+            'current_subject_registered' => $candidateSubjectContext['current_subject_registered'] ?? false,
+            'can_edit' => $canEdit,
+        ];
+    }
+
+    private function buildCandidateSubjectContext(MarkImportBatch $batch, $marks): array
+    {
+        $candidateIds = collect($marks)
+            ->pluck('candidate_id')
+            ->filter()
+            ->map(fn($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($candidateIds->isEmpty() || !$batch->subject) {
+            return [];
+        }
+
+        $examYearLabel = (string) $batch->exam_year;
+        $examYearId = ExamYear::query()
+            ->where('year_label', $examYearLabel)
+            ->value('id');
+
+        $selectionQuery = CandidateSubjectSelection::query()
+            ->with('subject:id,code,name')
+            ->whereIn('candidate_id', $candidateIds)
+            ->where('exam_type_id', $batch->subject->exam_type_id)
+            ->where('is_active', true)
+            ->where(function ($query) use ($examYearId, $examYearLabel) {
+                if ($examYearId) {
+                    $query->where('exam_year_id', $examYearId)
+                        ->orWhere('year', (int) $examYearLabel);
+                    return;
+                }
+
+                $query->where('year', (int) $examYearLabel);
+            })
+            ->get();
+
+        $enteredSubjectIdsByCandidate = SubjectMarks::query()
+            ->whereIn('candidate_id', $candidateIds)
+            ->where('exam_type_id', $batch->subject->exam_type_id)
+            ->where('year', (int) $examYearLabel)
+            ->whereNull('snapshot_id')
+            ->get(['candidate_id', 'subject_id'])
+            ->groupBy('candidate_id')
+            ->map(fn($rows) => $rows->pluck('subject_id')->map(fn($id) => (int) $id)->unique()->values()->all());
+
+        return $selectionQuery
+            ->groupBy('candidate_id')
+            ->map(function ($rows, $candidateId) use ($batch, $enteredSubjectIdsByCandidate) {
+                $enteredSubjectIds = collect($enteredSubjectIdsByCandidate->get($candidateId, []))
+                    ->map(fn($id) => (int) $id)
+                    ->all();
+
+                $registeredSubjects = $rows
+                    ->filter(fn($selection) => $selection->subject)
+                    ->sortBy(fn($selection) => $selection->subject->code)
+                    ->values()
+                    ->map(function ($selection) use ($enteredSubjectIds) {
+                        $subjectId = (int) $selection->subject_id;
+
+                        return [
+                            'id' => $subjectId,
+                            'code' => $selection->subject->code,
+                            'name' => $selection->subject->name,
+                            'entered' => in_array($subjectId, $enteredSubjectIds, true),
+                        ];
+                    })
+                    ->values()
+                    ->all();
+
+                $enteredCount = collect($registeredSubjects)->where('entered', true)->count();
+
+                return [
+                    'registered_subjects' => $registeredSubjects,
+                    'registered_subject_count' => count($registeredSubjects),
+                    'entered_subject_count' => $enteredCount,
+                    'missing_subject_count' => max(count($registeredSubjects) - $enteredCount, 0),
+                    'current_subject_registered' => in_array((int) $batch->subject->id, array_column($registeredSubjects, 'id'), true),
+                ];
+            })
+            ->all();
+    }
+
+    private function getPaperDefinitions(?Subject $subject): array
+    {
+        if (!$subject) {
+            return [];
+        }
+
+        $papers = [];
+        $writtenPapers = max(0, (int) ($subject->written_papers ?? 0));
+        for ($i = 1; $i <= $writtenPapers; $i++) {
+            $papers[] = [
+                'code' => "P{$i}",
+                'label' => "Paper {$i}",
+                'field' => "paper_{$i}_marks",
+                'min' => 0,
+                'max' => 100,
+                'max_mark' => 100,
+                'required' => true,
+                'sort_order' => $i,
+            ];
+        }
+
+        if ((bool) ($subject->has_practical ?? false)) {
+            $papers[] = [
+                'code' => 'PR',
+                'label' => 'Practical',
+                'field' => 'practical_marks',
+                'min' => 0,
+                'max' => 50,
+                'max_mark' => 50,
+                'required' => true,
+                'sort_order' => 90,
+            ];
+        }
+
+        if ((bool) ($subject->has_project ?? false)) {
+            $papers[] = [
+                'code' => 'PJ',
+                'label' => 'Project',
+                'field' => 'project_marks',
+                'min' => 0,
+                'max' => 100,
+                'max_mark' => 100,
+                'required' => true,
+                'sort_order' => 100,
+            ];
+        }
+
+        return $papers;
+    }
+
+    private function inferInvalidFields(array $errors, array $papers): array
+    {
+        if (empty($errors)) {
+            return [];
+        }
+
+        $invalid = [];
+        foreach ($errors as $error) {
+            $message = strtoupper((string) $error);
+            if (preg_match_all('/PAPER[\s_]*(\d+)/i', (string) $error, $matches)) {
+                foreach ($matches[1] as $number) {
+                    $invalid[] = 'P' . (int) $number;
+                }
+            }
+            if (str_contains($message, 'PRACTICAL')) {
+                $invalid[] = 'PR';
+            }
+            if (str_contains($message, 'PROJECT')) {
+                $invalid[] = 'PJ';
+            }
+        }
+
+        $allowed = collect($papers)->pluck('code')->all();
+        return array_values(array_unique(array_values(array_intersect($invalid, $allowed))));
+    }
+
+    private function normalizeMarkInput($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return $value;
+    }
+
+    private function isBatchEditableForRowUpdates(MarkImportBatch $batch): bool
+    {
+        // Pending-review batches can still be corrected; block only post-moderation/locking states.
+        $blocked = ['approved', 'locked', 'processed'];
+        $status = strtolower((string) $batch->status);
+        $lifecycleState = strtolower((string) ($batch->lifecycle_state ?? ''));
+
+        return !in_array($status, $blocked, true) && !in_array($lifecycleState, $blocked, true);
+    }
+
+    private function getBatchRowCounters(MarkImportBatch $batch): array
+    {
+        return [
+            'error_rows_count' => $batch->rawMarks()->where('has_errors', true)->count(),
+            'valid_rows_count' => $batch->rawMarks()->where('has_errors', false)->count(),
+            'warnings_count' => $batch->rawMarks()->where('has_warnings', true)->count(),
+        ];
     }
 }

@@ -116,8 +116,13 @@ class ProcessCandidateBulkImport implements ShouldQueue
             $skipCount = 0;
             $updateCount = 0;
             $errorCount = 0;
+            $warningCount = 0;
             $batch = [];
             $chunkSize = 100;
+            $seenPsleSignals = [
+                'prem_school' => [],
+                'name_gender_school' => [],
+            ];
 
             while (($row = fgetcsv($handle)) !== false) {
                 $rowNumber++;
@@ -132,12 +137,18 @@ class ProcessCandidateBulkImport implements ShouldQueue
 
                     // Validate record
                     $errors = [];
-                    $this->validateRecord($record, $errors);
+                    $warnings = [];
+                    $this->validateRecord($record, $errors, $warnings, $seenPsleSignals);
 
                     if (!empty($errors)) {
                         Log::warning("Row $rowNumber validation errors: " . implode('; ', $errors));
                         $errorCount++;
                         continue;
+                    }
+
+                    if (!empty($warnings)) {
+                        Log::info("Row $rowNumber PSLE import warnings: " . implode('; ', $warnings));
+                        $warningCount++;
                     }
 
                     // Check for duplicates
@@ -190,6 +201,7 @@ class ProcessCandidateBulkImport implements ShouldQueue
                 'skipped' => $skipCount,
                 'updated' => $updateCount,
                 'errors' => $errorCount,
+                'warnings' => $warningCount,
             ]);
         } finally {
             if (is_resource($handle)) {
@@ -205,15 +217,40 @@ class ProcessCandidateBulkImport implements ShouldQueue
     {
         $record = [];
         foreach ($header as $index => $columnName) {
-            $record[$columnName] = $row[$index] ?? null;
+            $record[$columnName] = trim((string) ($row[$index] ?? ''));
         }
+
+        if (empty($record['candidate_id']) && !empty($record['candidate_number'])) {
+            $record['candidate_id'] = $record['candidate_number'];
+        }
+
+        if (empty($record['full_name']) && !empty($record['pupil_name'])) {
+            $record['full_name'] = $record['pupil_name'];
+        }
+
+        if (empty($record['gender']) && !empty($record['sex'])) {
+            $record['gender'] = $record['sex'];
+        }
+
+        if (empty($record['prem_no']) && !empty($record['prem no'])) {
+            $record['prem_no'] = $record['prem no'];
+        }
+
+        if (empty($record['prem_no']) && !empty($record['premno'])) {
+            $record['prem_no'] = $record['premno'];
+        }
+
+        if (empty($record['prem_no']) && !empty($record['prem_number'])) {
+            $record['prem_no'] = $record['prem_number'];
+        }
+
         return $record;
     }
 
     /**
      * Validate a candidate record
      */
-    private function validateRecord(array $record, array &$errors): void
+    private function validateRecord(array $record, array &$errors, array &$warnings, array &$seenPsleSignals): void
     {
         if (empty($record['candidate_id'])) {
             $errors[] = 'candidate_id is required';
@@ -238,6 +275,66 @@ class ProcessCandidateBulkImport implements ShouldQueue
         if (strtoupper($examType) === 'ACSEE') {
             if (empty($record['combination'])) {
                 $errors[] = 'combination is required for ACSEE';
+            }
+        }
+
+        if (strtoupper($examType) === 'PSLE') {
+            $this->validatePsleWarnings($record, $warnings, $seenPsleSignals);
+        }
+    }
+
+    private function validatePsleWarnings(array $record, array &$warnings, array &$seenSignals): void
+    {
+        $schoolCode = strtoupper(trim((string) ($record['school_code'] ?? '')));
+        if ($schoolCode === '') {
+            return;
+        }
+
+        $school = School::where('code', $schoolCode)->first();
+        if (!$school) {
+            return;
+        }
+
+        $candidateId = strtoupper(trim((string) ($record['candidate_id'] ?? '')));
+        $premNo = strtoupper(trim((string) ($record['prem_no'] ?? '')));
+        $fullName = trim((string) ($record['full_name'] ?? ''));
+        $gender = strtoupper(substr(trim((string) ($record['gender'] ?? '')), 0, 1));
+
+        if ($candidateId !== '' && str_contains($candidateId, '-')) {
+            $candidatePrefix = strtoupper(trim((string) strtok($candidateId, '-')));
+            if ($candidatePrefix !== '' && $candidatePrefix !== $schoolCode) {
+                $warnings[] = "candidate_number prefix {$candidatePrefix} does not match school_code {$schoolCode}";
+            }
+        }
+
+        if ($premNo !== '') {
+            $premKey = $schoolCode . '|' . $premNo;
+            if (isset($seenSignals['prem_school'][$premKey])) {
+                $warnings[] = "duplicate PReM_No detected in this file for school {$schoolCode}";
+            } else {
+                $seenSignals['prem_school'][$premKey] = true;
+            }
+
+            if (Candidate::where('school_id', $school->id)->where('prem_no', $premNo)->exists()) {
+                $warnings[] = "PReM_No already exists for school {$schoolCode}";
+            }
+        }
+
+        if ($fullName !== '' && $gender !== '') {
+            $identityKey = $schoolCode . '|' . strtoupper($fullName) . '|' . $gender;
+            if (isset($seenSignals['name_gender_school'][$identityKey])) {
+                $warnings[] = 'possible duplicate pupil in this file by name, sex, and school';
+            } else {
+                $seenSignals['name_gender_school'][$identityKey] = true;
+            }
+
+            if (
+                Candidate::where('school_id', $school->id)
+                    ->whereRaw('UPPER(full_name) = ?', [strtoupper($fullName)])
+                    ->where('gender', $gender)
+                    ->exists()
+            ) {
+                $warnings[] = 'possible existing pupil match in system by name, sex, and school';
             }
         }
     }
@@ -275,6 +372,7 @@ class ProcessCandidateBulkImport implements ShouldQueue
                 $candidate = Candidate::create([
                     'school_id' => $school->id,
                     'candidate_id' => $record['candidate_id'],
+                    'prem_no' => $record['prem_no'] ?? null,
                     'full_name' => $record['full_name'],
                     'gender' => strtoupper($record['gender'][0] ?? 'M'),
                     'exam_type' => $examType,
@@ -387,6 +485,7 @@ class ProcessCandidateBulkImport implements ShouldQueue
         $updateData = [
             'school_id' => $school->id,
             'full_name' => $record['full_name'],
+            'prem_no' => $record['prem_no'] ?? null,
             'gender' => strtoupper($record['gender'][0] ?? 'M'),
             'exam_type' => $examType ?? $candidate->exam_type,
         ];

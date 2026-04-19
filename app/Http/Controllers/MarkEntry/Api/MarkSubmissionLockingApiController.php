@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\MarkEntry\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ExamYear;
 use App\Models\MarkImportBatch;
+use App\Models\School;
+use App\Models\Subject;
 use App\Services\MarkEntry\MarkBatchStateMachine;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -190,12 +193,25 @@ class MarkSubmissionLockingApiController extends Controller
     {
         try {
             $user = $request->user();
-            $perPage = $request->input('per_page', 20);
+            $perPage = max(10, min(100, (int) $request->input('per_page', 25)));
 
-            $query = MarkImportBatch::query()
+            $baseQuery = MarkImportBatch::query()
                 ->forUserScope($user)
+                ->where('status', '!=', 'superseded');
+
+            $query = (clone $baseQuery)
                 ->with(['school', 'subject', 'examType', 'district', 'importedByUser'])
                 ->orderBy('updated_at', 'desc');
+
+            $examYearId = $request->input('exam_year_id');
+            if (!empty($examYearId)) {
+                $yearLabel = ExamYear::query()->where('id', $examYearId)->value('year_label');
+                if ($yearLabel) {
+                    $query->where('exam_year', (int) $yearLabel);
+                }
+            } elseif ($request->filled('exam_year')) {
+                $query->where('exam_year', $request->input('exam_year'));
+            }
 
             // Filter by status
             // Note: upload flow creates batches as 'draft'; they are effectively
@@ -214,11 +230,6 @@ class MarkSubmissionLockingApiController extends Controller
                 $query->where('status', $status);
             }
 
-            // Filter by exam year
-            if ($request->filled('exam_year')) {
-                $query->where('exam_year', $request->input('exam_year'));
-            }
-
             // Filter by district
             if ($request->filled('district_id')) {
                 $query->where('district_id', $request->input('district_id'));
@@ -234,17 +245,77 @@ class MarkSubmissionLockingApiController extends Controller
                 $query->where('subject_id', $request->input('subject_id'));
             }
 
+            if ($request->filled('q')) {
+                $q = trim((string) $request->input('q'));
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('batch_code', 'like', "%{$q}%")
+                        ->orWhereHas('school', fn ($s) => $s->where('name', 'like', "%{$q}%")->orWhere('code', 'like', "%{$q}%"))
+                        ->orWhereHas('subject', fn ($s) => $s->where('name', 'like', "%{$q}%")->orWhere('code', 'like', "%{$q}%"));
+                });
+            }
+
             $batches = $query->paginate($perPage);
+
+            $scopedBatchesForFilters = (clone $baseQuery)->get(['exam_year', 'school_id', 'subject_id']);
+            $schoolIds = $scopedBatchesForFilters->pluck('school_id')->filter()->unique()->values();
+            $subjectIds = $scopedBatchesForFilters->pluck('subject_id')->filter()->unique()->values();
+            $years = $scopedBatchesForFilters->pluck('exam_year')->filter()->unique()->sortDesc()->values();
+
+            $examYearMap = ExamYear::query()
+                ->whereIn('year_label', $years->map(fn ($y) => (string) $y))
+                ->get(['id', 'year_label'])
+                ->keyBy('year_label');
+
+            $examYears = $years->map(function ($year) use ($examYearMap) {
+                $match = $examYearMap->get((string) $year);
+                return [
+                    'id' => $match?->id,
+                    'year_label' => (string) $year,
+                ];
+            })->filter(fn ($row) => !empty($row['id']))->values();
+
+            $schools = School::query()
+                ->whereIn('id', $schoolIds)
+                ->orderBy('name')
+                ->get(['id', 'code', 'name']);
+
+            $subjects = Subject::query()
+                ->whereIn('id', $subjectIds)
+                ->orderBy('name')
+                ->get(['id', 'code', 'name']);
 
             return response()->json([
                 'success' => true,
                 'data' => $batches->items(),
+                'meta' => [
+                    'total' => $batches->total(),
+                    'per_page' => $batches->perPage(),
+                    'current_page' => $batches->currentPage(),
+                    'last_page' => $batches->lastPage(),
+                    'from' => $batches->firstItem() ?? 0,
+                    'to' => $batches->lastItem() ?? 0,
+                ],
                 'pagination' => [
                     'total' => $batches->total(),
                     'per_page' => $batches->perPage(),
                     'current_page' => $batches->currentPage(),
                     'last_page' => $batches->lastPage(),
+                    'from' => $batches->firstItem() ?? 0,
+                    'to' => $batches->lastItem() ?? 0,
                     'has_more' => $batches->hasMorePages(),
+                ],
+                'filters' => [
+                    'exam_years' => $examYears,
+                    'schools' => $schools,
+                    'subjects' => $subjects,
+                    'statuses' => [
+                        ['value' => 'validated', 'label' => 'Validated / Ready'],
+                        ['value' => 'submitted', 'label' => 'Submitted'],
+                        ['value' => 'approved', 'label' => 'Approved'],
+                        ['value' => 'rejected', 'label' => 'Rejected'],
+                        ['value' => 'locked', 'label' => 'Locked'],
+                        ['value' => 'all', 'label' => 'All'],
+                    ],
                 ],
             ]);
         } catch (\Exception $e) {
@@ -265,6 +336,8 @@ class MarkSubmissionLockingApiController extends Controller
     {
         try {
             $user = $request->user();
+            $approvedLimit = max(10, min(200, (int) $request->input('approved_limit', 100)));
+            $lockedLimit = max(10, min(200, (int) $request->input('locked_limit', 50)));
 
             $baseQuery = MarkImportBatch::query()->forUserScope($user);
 
@@ -272,27 +345,40 @@ class MarkSubmissionLockingApiController extends Controller
                 $baseQuery->where('exam_year', $request->input('exam_year'));
             }
 
+            // Ready to lock follows approval decision: once approved, it can be locked.
+            $approvedReadyQuery = (clone $baseQuery)->where('status', 'approved');
+
             // Stats
             $submittedPending = (clone $baseQuery)->where('status', 'submitted')->count();
-            $approvedReady = (clone $baseQuery)->where('status', 'approved')->count();
+            $approvedReady = (clone $approvedReadyQuery)->count();
             $lockedToday = (clone $baseQuery)->where('status', 'locked')
                 ->whereDate('locked_at', today())->count();
             $rejectedToday = (clone $baseQuery)->where('status', 'rejected')
                 ->whereDate('updated_at', today())->count();
 
             // Approved batches ready to lock
-            $approvedBatches = (clone $baseQuery)
-                ->where('status', 'approved')
+            $approvedBatches = (clone $approvedReadyQuery)
+                ->select([
+                    'id', 'batch_code', 'school_id', 'subject_id', 'exam_type_id',
+                    'status', 'lifecycle_state', 'total_records', 'error_records',
+                    'approved_by', 'approved_at', 'updated_at',
+                ])
                 ->with(['school', 'subject', 'examType', 'approvedByUser'])
                 ->orderBy('approved_at', 'desc')
+                ->limit($approvedLimit)
                 ->get();
 
             // Recently locked batches
             $lockedBatches = (clone $baseQuery)
                 ->where('status', 'locked')
+                ->select([
+                    'id', 'batch_code', 'school_id', 'subject_id', 'exam_type_id',
+                    'status', 'lifecycle_state', 'total_records',
+                    'locked_by', 'locked_at', 'updated_at',
+                ])
                 ->with(['school', 'subject', 'examType', 'lockedByUser'])
                 ->orderBy('locked_at', 'desc')
-                ->limit(50)
+                ->limit($lockedLimit)
                 ->get();
 
             return response()->json([

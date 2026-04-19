@@ -148,6 +148,9 @@
 
     <!-- Report Table -->
     <div class="px-8 py-8">
+        <template x-if="dailyMarksInfoMessage">
+            <div class="mb-3 px-4 py-2 rounded border border-amber-300 bg-amber-50 text-amber-800 text-sm" x-text="dailyMarksInfoMessage"></div>
+        </template>
         <div class="bg-white rounded-lg shadow overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full border-collapse" style="font-size: 12px;">
@@ -236,6 +239,7 @@
                 entry_date: ''
             },
             dailyMarksReportData: [],
+            dailyMarksInfoMessage: '',
             dailyMarksExamYears: [],
             dailyMarksRegions: [],
             dailyMarksSubjects: [],
@@ -249,13 +253,14 @@
                     this.loadDailyMarksRegions(),
                     this.loadDailyMarksSubjects()
                 ]);
+                await this.loadDailyMarksReport();
             },
 
             async loadDailyMarksExamYears() {
                 try {
                     const response = await fetch('/api/exam-years');
                     const data = await response.json();
-                    this.dailyMarksExamYears = data.data || [];
+                    this.dailyMarksExamYears = data.data || data.exam_years || data.years || [];
                     console.log('Loaded exam years:', this.dailyMarksExamYears.length);
                 } catch (error) {
                     console.error('Failed to load exam years:', error);
@@ -293,12 +298,30 @@
                     if (this.dailyMarksFilters.entry_date) params.append('entry_date', this.dailyMarksFilters.entry_date);
 
                     const response = await fetch(`/api/daily-marks-entry-report?${params}`);
-                    const data = await response.json();
-                    this.dailyMarksReportData = data;
-                    console.log(`Loaded ${data.length} records`);
+                    let data = await response.json();
+                    this.dailyMarksInfoMessage = '';
+
+                    // If a specific date has no rows, fallback to same filters without entry_date.
+                    if (Array.isArray(data) && data.length === 0 && this.dailyMarksFilters.entry_date) {
+                        const fallbackParams = new URLSearchParams();
+                        if (this.dailyMarksFilters.exam_year_id) fallbackParams.append('exam_year_id', this.dailyMarksFilters.exam_year_id);
+                        if (this.dailyMarksFilters.region_id) fallbackParams.append('region_id', this.dailyMarksFilters.region_id);
+                        if (this.dailyMarksFilters.subject_id) fallbackParams.append('subject_id', this.dailyMarksFilters.subject_id);
+
+                        const fallbackResponse = await fetch(`/api/daily-marks-entry-report?${fallbackParams}`);
+                        const fallbackData = await fallbackResponse.json();
+                        if (Array.isArray(fallbackData) && fallbackData.length > 0) {
+                            data = fallbackData;
+                            this.dailyMarksInfoMessage = 'No entries found for the selected date; showing all dates for the selected filters.';
+                        }
+                    }
+
+                    this.dailyMarksReportData = Array.isArray(data) ? data : [];
+                    console.log(`Loaded ${this.dailyMarksReportData.length} records`);
                 } catch (error) {
                     console.error('Failed to load report:', error);
                     this.dailyMarksReportData = [];
+                    this.dailyMarksInfoMessage = '';
                 }
             },
 
@@ -315,6 +338,7 @@
                 this.examYearOpen = false;
                 this.regionOpen = false;
                 this.subjectOpen = false;
+                this.dailyMarksInfoMessage = '';
 
                 // Load unfiltered report
                 this.loadDailyMarksReport();

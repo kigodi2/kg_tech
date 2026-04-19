@@ -1,7 +1,7 @@
 @extends('results.acsee.layout')
 
-@section('page-title', 'ACSEE Results Dashboard')
-@section('page-subtitle', 'Overview of results processing and status')
+@section('page-title', $resultsModuleLabel . ' Results Dashboard')
+@section('page-subtitle', $resultsModuleLabel === 'PSLE' ? 'Overview of PSLE grading, processing, and release status' : 'Overview of results processing and status')
 @section('breadcrumb-active', 'Dashboard')
 
 @section('results-content')
@@ -16,7 +16,7 @@
                 <div>
                     <p class="text-sm text-gray-600 font-medium">Total Candidates</p>
                     <p class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($metrics['total_candidates'] ?? 0) }}</p>
-                    <p class="text-xs text-gray-500 mt-2">Registered for ACSEE {{ $exam_year }}</p>
+                    <p class="text-xs text-gray-500 mt-2">Registered for {{ $resultsModuleLabel }} {{ $exam_year }}</p>
                 </div>
                 <div class="bg-blue-100 p-3 rounded-lg">
                     <i class="fas fa-users text-blue-600 text-xl"></i>
@@ -28,9 +28,9 @@
         <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
             <div class="flex items-start justify-between">
                 <div>
-                    <p class="text-sm text-gray-600 font-medium">Schools Submitted</p>
+                    <p class="text-sm text-gray-600 font-medium">{{ $resultsModuleLabel === 'PSLE' ? 'Schools in Scope' : 'Schools Submitted' }}</p>
                     <p class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($metrics['schools_submitted'] ?? 0) }}</p>
-                    <p class="text-xs text-gray-500 mt-2">Out of {{ number_format($metrics['total_schools'] ?? 0) }} schools</p>
+                    <p class="text-xs text-gray-500 mt-2">{{ $resultsModuleLabel === 'PSLE' ? 'Schools with ' . $resultsModuleLabel . ' registrations in scope' : 'Out of ' . number_format($metrics['total_schools'] ?? 0) . ' schools' }}</p>
                 </div>
                 <div class="bg-green-100 p-3 rounded-lg">
                     <i class="fas fa-school text-green-600 text-xl"></i>
@@ -91,7 +91,7 @@
                         <span class="inline-block px-2 py-1 bg-green-100 text-green-700 text-xs font-bold rounded">ACTIVE</span>
                     @endif
                 </p>
-                <a href="{{ route('results.acsee.grading.index') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
+                <a href="{{ route($resultsRoutePrefix . '.grading.index') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
                     Manage Grading <i class="fas fa-arrow-right text-xs ml-1"></i>
                 </a>
             </div>
@@ -114,7 +114,7 @@
         <!-- Result Linking Status -->
         <div class="bg-white rounded-lg shadow p-6">
             <div class="flex items-start justify-between mb-4">
-                <h3 class="font-semibold text-gray-900">Result Linking</h3>
+                <h3 class="font-semibold text-gray-900">{{ $resultsModuleLabel === 'PSLE' ? 'Data Readiness' : 'Result Linking' }}</h3>
                 <i class="fas fa-link text-gray-400"></i>
             </div>
             <div class="space-y-2">
@@ -125,10 +125,10 @@
                         <span class="inline-block px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded">INCOMPLETE</span>
                     @endif
                 </p>
-                <p class="text-sm"><span class="text-gray-600">Missing Links:</span> <span class="font-bold text-red-600">{{ $linking_status['missing_count'] ?? 0 }}</span></p>
-                <p class="text-sm"><span class="text-gray-600">Invalid Combos:</span> <span class="font-bold text-red-600">{{ $linking_status['invalid_combinations'] ?? 0 }}</span></p>
-                <a href="{{ route('results.acsee.linking.index') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
-                    Review Linking <i class="fas fa-arrow-right text-xs ml-1"></i>
+                <p class="text-sm"><span class="text-gray-600">{{ $resultsModuleLabel === 'PSLE' ? 'Missing Setup:' : 'Missing Links:' }}</span> <span class="font-bold text-red-600">{{ $linking_status['missing_count'] ?? 0 }}</span></p>
+                <p class="text-sm"><span class="text-gray-600">{{ $resultsModuleLabel === 'PSLE' ? 'Invalid Configurations:' : 'Invalid Combos:' }}</span> <span class="font-bold text-red-600">{{ $linking_status['invalid_configurations'] ?? 0 }}</span></p>
+                <a href="{{ route($resultsRoutePrefix . '.linking.index') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
+                    {{ $resultsModuleLabel === 'PSLE' ? 'Review Readiness' : 'Review Linking' }} <i class="fas fa-arrow-right text-xs ml-1"></i>
                 </a>
             </div>
         </div>
@@ -138,33 +138,33 @@
     <div class="grid grid-cols-3 gap-6">
         
         <!-- Data Integrity Check -->
-        <a href="{{ route('results.acsee.linking.index') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-yellow-500">
+        <a href="{{ route($resultsRoutePrefix . '.linking.index') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-yellow-500">
             <div class="flex items-center justify-between">
                 <div>
                     <h4 class="font-semibold text-gray-900 mb-1">Data Integrity Check</h4>
-                    <p class="text-sm text-gray-600">Validate marks completeness before processing</p>
+                    <p class="text-sm text-gray-600">{{ $resultsModuleLabel === 'PSLE' ? 'Validate PSLE marks and grading readiness before processing' : 'Validate marks completeness before processing' }}</p>
                 </div>
                 <i class="fas fa-check-circle text-yellow-500 text-2xl"></i>
             </div>
         </a>
         
         <!-- Start Processing -->
-        <a href="{{ route('results.acsee.processing.index') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-blue-500">
+        <a href="{{ route($resultsRoutePrefix . '.processing.index') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-blue-500">
             <div class="flex items-center justify-between">
                 <div>
                     <h4 class="font-semibold text-gray-900 mb-1">Result Processing</h4>
-                    <p class="text-sm text-gray-600">Run draft or final processing batch</p>
+                    <p class="text-sm text-gray-600">{{ $resultsModuleLabel === 'PSLE' ? 'Run draft or final PSLE processing batch' : 'Run draft or final processing batch' }}</p>
                 </div>
                 <i class="fas fa-cog text-blue-500 text-2xl"></i>
             </div>
         </a>
         
         <!-- View Results -->
-        <a href="{{ route('results.acsee.results.index') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-green-500">
+        <a href="{{ route($resultsRoutePrefix . '.results.index') }}" class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow cursor-pointer border-l-4 border-green-500">
             <div class="flex items-center justify-between">
                 <div>
                     <h4 class="font-semibold text-gray-900 mb-1">Manage Results</h4>
-                    <p class="text-sm text-gray-600">View and publish final results</p>
+                    <p class="text-sm text-gray-600">{{ $resultsModuleLabel === 'PSLE' ? 'View and release final PSLE results' : 'View and publish final results' }}</p>
                 </div>
                 <i class="fas fa-list-check text-green-500 text-2xl"></i>
             </div>

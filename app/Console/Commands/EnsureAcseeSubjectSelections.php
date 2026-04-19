@@ -7,6 +7,7 @@ use App\Models\CandidateSubjectSelection;
 use App\Models\Combination;
 use App\Models\ExamType;
 use App\Models\ExamYear;
+use App\Models\Subject;
 use Illuminate\Console\Command;
 
 class EnsureAcseeSubjectSelections extends Command
@@ -41,6 +42,9 @@ class EnsureAcseeSubjectSelections extends Command
         }
 
         $this->info("Processing ACSEE candidates for {$examYearLabel}...\n");
+
+        $gsId = Subject::query()->where('code', '111')->value('id');
+        $bamId = Subject::query()->where('code', '141')->value('id');
 
         // Get all ACSEE candidates with registrations for this year
         $candidates = Candidate::query()
@@ -94,6 +98,7 @@ class EnsureAcseeSubjectSelections extends Command
                         'exam_year_id' => $examYear->id,
                         'subject_id' => $subject->id,
                         'year' => (int)$examYear->year_label,
+                        'is_principal' => (int) $subject->id !== (int) $gsId && (int) $subject->id !== (int) $bamId,
                         'is_active' => true,
                     ]);
                     $totalCreated++;

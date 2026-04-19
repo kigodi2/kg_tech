@@ -122,7 +122,7 @@
             x-show="isOpen"
             x-transition.duration.300ms.opacity
             @class([
-                'fi-modal-close-overlay fixed inset-0 z-40 bg-gray-950/50 dark:bg-gray-950/75',
+                'fi-modal-close-overlay fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-[2px] dark:bg-gray-950/80',
             ])
         ></div>
 
@@ -181,12 +181,12 @@
                     @endif
                     {{
                         ($extraModalWindowAttributeBag ?? new \Illuminate\View\ComponentAttributeBag)->class([
-                            'fi-modal-window pointer-events-auto relative row-start-2 flex w-full cursor-default flex-col bg-white shadow-xl ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10',
+                            'fi-modal-window pointer-events-auto relative row-start-2 flex w-full cursor-default flex-col overflow-hidden border border-slate-200/90 bg-white shadow-2xl shadow-slate-900/20 ring-1 ring-slate-950/5 dark:border-white/10 dark:bg-gray-900 dark:ring-white/10',
                             'fi-modal-slide-over-window ms-auto overflow-y-auto' => $slideOver,
                             // Using an arbitrary value instead of the h-dvh class that was added in Tailwind CSS v3.4.0
                             // to ensure compatibility with custom themes that may use an older version of Tailwind CSS.
                             'h-[100dvh]' => $slideOver || ($width === MaxWidth::Screen),
-                            'mx-auto rounded-xl' => ! ($slideOver || ($width === MaxWidth::Screen)),
+                            'mx-auto rounded-[28px]' => ! ($slideOver || ($width === MaxWidth::Screen)),
                             'hidden' => ! $visible,
                             match ($width) {
                                 MaxWidth::ExtraSmall => 'max-w-xs',
@@ -222,10 +222,11 @@
                                 wire:key="{{ isset($this) ? "{$this->getId()}." : '' }}modal.{{ $id }}.header"
                             @endif
                             @class([
-                                'fi-modal-header flex px-6 pt-6',
-                                'pb-6' => (! $hasSlot) && (! $hasFooter),
-                                'fi-sticky sticky top-0 z-10 border-b border-gray-200 bg-white pb-6 dark:border-white/10 dark:bg-gray-900' => $stickyHeader,
-                                'rounded-t-xl' => $stickyHeader && ! ($slideOver || ($width === MaxWidth::Screen)),
+                                'fi-modal-header relative flex px-7 pt-7',
+                                'pb-7' => (! $hasSlot) && (! $hasFooter),
+                                'border-b border-slate-200 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.18),_transparent_34%),linear-gradient(135deg,rgba(20,48,88,0.98)_0%,rgba(37,82,145,0.96)_58%,rgba(16,116,95,0.92)_100%)] text-white dark:border-white/10 dark:bg-gray-900' => ! $stickyHeader,
+                                'fi-sticky sticky top-0 z-10 border-b border-slate-200 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.18),_transparent_34%),linear-gradient(135deg,rgba(20,48,88,0.98)_0%,rgba(37,82,145,0.96)_58%,rgba(16,116,95,0.92)_100%)] pb-7 text-white dark:border-white/10 dark:bg-gray-900' => $stickyHeader,
+                                'rounded-t-[28px]' => $stickyHeader && ! ($slideOver || ($width === MaxWidth::Screen)),
                                 match ($alignment) {
                                     Alignment::Start, Alignment::Left => 'gap-x-5',
                                     Alignment::Center => 'flex-col',
@@ -250,7 +251,7 @@
                                         :label="__('filament::components/modal.actions.close.label')"
                                         tabindex="-1"
                                         :x-on:click="$closeEventHandler"
-                                        class="fi-modal-close-btn"
+                                        class="fi-modal-close-btn rounded-full border border-white/15 bg-white/10 text-white/80 shadow-none ring-0 transition hover:bg-white/15 hover:text-white dark:border-white/15 dark:bg-white/10"
                                     />
                                 </div>
                             @endif
@@ -266,15 +267,15 @@
                                     >
                                         <div
                                             @class([
-                                                'rounded-full',
+                                                'rounded-[18px] border border-white/10 shadow-none',
                                                 match ($iconColor) {
-                                                    'gray' => 'bg-gray-100 dark:bg-gray-500/20',
-                                                    default => 'fi-color-custom bg-custom-100 dark:bg-custom-500/20',
+                                                    'gray' => 'bg-white/10 dark:bg-gray-500/20',
+                                                    default => 'fi-color-custom bg-white/10 dark:bg-custom-500/20',
                                                 },
                                                 is_string($iconColor) ? "fi-color-{$iconColor}" : null,
                                                 match ($alignment) {
-                                                    Alignment::Start, Alignment::Left => 'p-2',
-                                                    Alignment::Center => 'p-3',
+                                                    Alignment::Start, Alignment::Left => 'p-3',
+                                                    Alignment::Center => 'p-3.5',
                                                     default => null,
                                                 },
                                             ])
@@ -292,8 +293,8 @@
                                                 @class([
                                                     'fi-modal-icon h-6 w-6',
                                                     match ($iconColor) {
-                                                        'gray' => 'text-gray-500 dark:text-gray-400',
-                                                        default => 'text-custom-600 dark:text-custom-400',
+                                                        'gray' => 'text-white/80 dark:text-gray-400',
+                                                        default => 'text-amber-300 dark:text-custom-400',
                                                     },
                                                 ])
                                             />
@@ -333,10 +334,10 @@
                                 wire:key="{{ isset($this) ? "{$this->getId()}." : '' }}modal.{{ $id }}.content"
                             @endif
                             @class([
-                                'fi-modal-content flex flex-col gap-y-4 py-6',
+                                'fi-modal-content flex flex-col gap-y-4 bg-[linear-gradient(180deg,rgba(248,250,252,0.86)_0%,rgba(241,245,249,0.76)_100%)] py-7',
                                 'flex-1' => ($width === MaxWidth::Screen) || $slideOver,
                                 'pe-6 ps-[5.25rem]' => $hasIcon && ($alignment === Alignment::Start) && (! $stickyHeader),
-                                'px-6' => ! ($hasIcon && ($alignment === Alignment::Start) && (! $stickyHeader)),
+                                'px-7' => ! ($hasIcon && ($alignment === Alignment::Start) && (! $stickyHeader)),
                             ])
                         >
                             {{ $slot }}
@@ -351,10 +352,10 @@
                             @class([
                                 'fi-modal-footer w-full',
                                 'pe-6 ps-[5.25rem]' => $hasIcon && ($alignment === Alignment::Start) && ($footerActionsAlignment !== Alignment::Center) && (! $stickyFooter),
-                                'px-6' => ! ($hasIcon && ($alignment === Alignment::Start) && ($footerActionsAlignment !== Alignment::Center) && (! $stickyFooter)),
-                                'fi-sticky sticky bottom-0 border-t border-gray-200 bg-white py-5 dark:border-white/10 dark:bg-gray-900' => $stickyFooter,
-                                'rounded-b-xl' => $stickyFooter && ! ($slideOver || ($width === MaxWidth::Screen)),
-                                'pb-6' => ! $stickyFooter,
+                                'px-7' => ! ($hasIcon && ($alignment === Alignment::Start) && ($footerActionsAlignment !== Alignment::Center) && (! $stickyFooter)),
+                                'fi-sticky sticky bottom-0 border-t border-slate-200 bg-white/95 py-5 backdrop-blur dark:border-white/10 dark:bg-gray-900' => $stickyFooter,
+                                'rounded-b-[28px]' => $stickyFooter && ! ($slideOver || ($width === MaxWidth::Screen)),
+                                'pb-7' => ! $stickyFooter,
                                 'mt-6' => (! $stickyFooter) && (! $hasSlot),
                                 'mt-auto' => $slideOver,
                             ])

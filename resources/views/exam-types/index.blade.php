@@ -1,17 +1,49 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full px-8 py-8">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Exam Types Management</h1>
-        <p class="text-gray-600">Manage examination types (PSLE, CSEE, ACSEE) and their configurations</p>
-    </div>
+@include('registration.partials.theme')
+<style>
+    .exam-type-search-input {
+        width: 100%;
+        min-height: 46px;
+        padding: 0 14px;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 0 !important;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 14px;
+    }
+
+    .exam-type-search-input:focus {
+        outline: 2px solid rgba(59, 130, 246, 0.15);
+        outline-offset: 0;
+        border-color: #3b82f6 !important;
+    }
+</style>
+<div class="registration-shell">
+    <div class="registration-page-stack">
+    @include('registration.partials.header', [
+        'kicker' => 'Exam Setup Workspace',
+        'title' => 'Exam Types Management',
+        'subtitle' => 'Manage examination types, codes, levels, and high-level configurations for PSLE, CSEE, ACSEE, and related exam structures.',
+        'highlights' => [
+            ['icon' => 'fas fa-file-lines', 'text' => 'Exam type registry'],
+            ['icon' => 'fas fa-sliders', 'text' => 'Configuration control'],
+            ['icon' => 'fas fa-user-graduate', 'text' => 'Candidate-linked totals'],
+        ],
+        'noteTitle' => 'Setup Scope',
+        'noteText' => 'Exam types sit at the top of exam configuration, so this workspace is designed for clear maintenance and low-friction updates.',
+        'noteItems' => [
+            ['icon' => 'fas fa-magnifying-glass', 'title' => 'Search', 'text' => 'Filter the current exam type list quickly.'],
+            ['icon' => 'fas fa-plus', 'title' => 'Create', 'text' => 'Add new exam types from the same management surface.'],
+        ],
+    ])
 
     <!-- Exam Types Component -->
     <div x-data="examTypesManager()" @init="init()" class="space-y-6">
         <!-- Toolbar -->
-        <div class="bg-white rounded-lg shadow p-6">
-            <div class="flex gap-4 items-center">
+        <div class="registration-surface registration-toolbar-card">
+            <div class="registration-toolbar-grid">
                 <!-- Search Input -->
                 <input 
                     x-model="search" 
@@ -32,7 +64,7 @@
         </div>
 
         <!-- Exam Types Table -->
-        <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="registration-surface registration-table-card overflow-hidden">
             <div x-show="loading" class="p-6 text-center text-gray-500">
                 <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
             </div>
@@ -87,26 +119,44 @@
         <!-- Modal (Add/Edit) -->
         <div 
             x-show="modalOpen" 
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+            class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4"
             @click.self="modalOpen = false;"
             x-transition
             style="display: none;"
         >
-            <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800">
-                        <span x-show="!editingId">Add New Exam Type</span>
-                        <span x-show="editingId">Edit Exam Type</span>
-                    </h2>
-                    <button 
-                        @click="modalOpen = false;" 
-                        class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                    >
-                        &times;
-                    </button>
+            <div class="registration-modal-shell max-w-2xl" x-transition>
+                <div class="registration-modal-header">
+                    <div class="registration-modal-header-content">
+                        <div>
+                            <span class="registration-modal-kicker">
+                                <i class="fas fa-layer-group text-amber-300"></i>
+                                Exam Type Record
+                            </span>
+                            <h2 class="registration-modal-title">
+                                <span x-show="!editingId">Add New Exam Type</span>
+                                <span x-show="editingId">Edit Exam Type</span>
+                            </h2>
+                            <p class="registration-modal-subtitle">Keep the top-level exam catalog structured before configuring subjects, papers, and candidates.</p>
+                        </div>
+                        <button 
+                            @click="modalOpen = false;" 
+                            class="registration-modal-close"
+                            aria-label="Close exam type modal"
+                        >
+                            &times;
+                        </button>
+                    </div>
                 </div>
 
-                <form @submit.prevent="saveExamType()" class="p-6 space-y-4">
+                <form @submit.prevent="saveExamType()" class="registration-modal-body space-y-5">
+                    <div class="registration-modal-note">
+                        <span class="registration-modal-note-icon"><i class="fas fa-circle-info"></i></span>
+                        <div>
+                            <strong>Form Guidance</strong>
+                            <p>Use a unique code and a clear level so downstream exam configuration screens remain predictable.</p>
+                        </div>
+                    </div>
+                    <div class="registration-modal-panel p-6 space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
                         <input 
@@ -131,15 +181,19 @@
 
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Level</label>
-                        <select 
+                        <input
                             x-model="formData.level"
-                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            list="exam-type-level-options"
+                            type="text"
+                            placeholder="Search level"
+                            autocomplete="off"
+                            class="exam-type-search-input"
                         >
-                            <option value="">Select Level</option>
-                            <option value="Primary">Primary</option>
-                            <option value="Secondary">Secondary</option>
-                            <option value="Advanced Secondary">Advanced Secondary</option>
-                        </select>
+                        <datalist id="exam-type-level-options">
+                            <option value="Primary"></option>
+                            <option value="Secondary"></option>
+                            <option value="Advanced Secondary"></option>
+                        </datalist>
                     </div>
 
                     <div>
@@ -152,26 +206,28 @@
                         ></textarea>
                     </div>
 
-                    <div class="flex gap-3 pt-4">
+                    <div class="registration-modal-actions">
                         <button 
                             type="button" 
                             @click="modalOpen = false" 
-                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-secondary"
                         >
                             Cancel
                         </button>
                         <button 
                             type="submit" 
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-primary"
                         >
                             <span x-show="!editingId">Add</span>
                             <span x-show="editingId">Update</span>
                         </button>
                     </div>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <script>
@@ -184,6 +240,7 @@ function examTypesManager() {
         modalOpen: false,
         editingId: null,
         formData: { name: '', code: '', level: '', description: '' },
+        allowedLevels: ['Primary', 'Secondary', 'Advanced Secondary'],
 
         async init() {
             await this.loadExamTypes();
@@ -192,7 +249,7 @@ function examTypesManager() {
         async loadExamTypes() {
             this.loading = true;
             try {
-                const response = await fetch('/api/exam-types');
+                const response = await fetch('/admin/api/exam-types');
                 const data = await response.json();
                 this.examTypes = data.data || [];
                 this.filteredExamTypes = this.examTypes;
@@ -236,8 +293,13 @@ function examTypesManager() {
         },
 
         async saveExamType() {
+            if (!this.resolveLevelChoice()) {
+                this.showMessage('Please choose Level from the searchable list.', 'error');
+                return;
+            }
+
             try {
-                const url = this.editingId ? `/api/exam-types/${this.editingId}` : '/api/exam-types';
+                const url = this.editingId ? `/admin/api/exam-types/${this.editingId}` : '/admin/api/exam-types';
                 const method = this.editingId ? 'PUT' : 'POST';
                 
                 const response = await fetch(url, {
@@ -271,7 +333,7 @@ function examTypesManager() {
             if (!confirm('Are you sure you want to delete this exam type?')) return;
 
             try {
-                const response = await fetch(`/api/exam-types/${id}`, {
+                const response = await fetch(`/admin/api/exam-types/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -303,6 +365,20 @@ function examTypesManager() {
             
             document.body.appendChild(alertDiv);
             setTimeout(() => alertDiv.remove(), 4000);
+        },
+
+        resolveLevelChoice() {
+            const value = (this.formData.level || '').trim();
+
+            if (value === '') {
+                this.formData.level = '';
+                return true;
+            }
+
+            const matched = this.allowedLevels.find(level => level === value);
+            this.formData.level = matched || '';
+
+            return Boolean(matched);
         },
     };
 }

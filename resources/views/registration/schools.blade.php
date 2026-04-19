@@ -1,34 +1,47 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full px-8 py-8">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Schools Management</h1>
-        <p class="text-gray-600">Manage schools within each district</p>
-    </div>
+@include('registration.partials.theme')
+<div class="registration-shell">
+    <div class="registration-page-stack">
+    @include('registration.partials.header', [
+        'title' => 'Schools Management',
+        'subtitle' => 'Manage school records within the district hierarchy, control imports, and review candidate-linked school totals from one page.',
+        'highlights' => [
+            ['icon' => 'fas fa-school', 'text' => 'School registry control'],
+            ['icon' => 'fas fa-building-columns', 'text' => 'Ownership visibility'],
+            ['icon' => 'fas fa-user-graduate', 'text' => 'Candidate-linked totals'],
+        ],
+        'noteTitle' => 'Management Focus',
+        'noteText' => 'Schools sit at the operational centre of candidate registration, so this screen is optimized for filtering, imports, and direct maintenance.',
+        'noteItems' => [
+            ['icon' => 'fas fa-filter-circle-dollar', 'title' => 'Region and District Scope', 'text' => 'Narrow the data set before editing or exporting.'],
+            ['icon' => 'fas fa-file-import', 'title' => 'Import Controls', 'text' => 'Run structured import and template workflows from the toolbar.'],
+        ],
+    ])
 
     <!-- Schools Component -->
     <div x-data="schoolManager()" @init="init()" class="space-y-6">
         <!-- Toolbar -->
-         <div class="bg-white rounded-lg shadow p-6">
-             <div class="flex gap-4 items-end">
+         <div class="registration-surface registration-toolbar-card">
+             <div class="registration-toolbar-grid">
                  <!-- Region Filter -->
                  <div class="flex flex-col min-w-[180px]">
                      <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
                      <div class="relative" @click.outside="regionOpen = false">
                          <button 
                              @click="regionOpen = !regionOpen"
-                             class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t"
+                             class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none"
                          >
                              <span x-text="filterRegion ? regions.find(r => r.id == filterRegion)?.name : 'All Regions'" class="text-gray-700 whitespace-nowrap"></span>
                              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                          </button>
-                         <div x-show="regionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-10 rounded-b flex flex-col">
+                         <div x-show="regionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col">
                              <input 
                                  x-model="regionSearch"
                                  type="text"
                                  placeholder="Search regions..."
-                                 class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                 class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                              >
                              <div class="max-h-64 overflow-y-auto">
                                  <div @click="filterRegion = ''; regionOpen = false; filterSchools()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">
@@ -53,17 +66,17 @@
                     <div class="relative" @click.outside="districtOpen = false">
                         <button 
                             @click="districtOpen = !districtOpen"
-                            class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-t"
+                            class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none"
                         >
                              <span x-text="filterDistrict ? filteredDistricts.find(d => d.id == filterDistrict)?.name : 'All Districts'" class="text-gray-700 whitespace-nowrap"></span>
                              <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                          </button>
-                         <div x-show="districtOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-10 rounded-b flex flex-col">
+                         <div x-show="districtOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col">
                              <input 
                                  x-model="districtSearch"
                                  type="text"
                                  placeholder="Search districts..."
-                                 class="px-3 py-2 border-b border-gray-200 focus:outline-none focus:ring-0 text-sm flex-shrink-0"
+                                 class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                              >
                              <div class="max-h-64 overflow-y-auto">
                                  <div @click="filterDistrict = ''; districtOpen = false; filterSchools()" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">
@@ -90,30 +103,20 @@
                          @input="filterSchools()"
                          type="text" 
                          placeholder="Search schools by name or code..." 
-                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         class="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-0 focus:border-blue-500"
                      >
                  </div>
                  
-                 <!-- Tools Dropdown -->
+                 <!-- Tools Modal Trigger -->
                  <div>
-                     <div class="relative" @click.outside="showToolsMenu = false">
-                         <button @click="showToolsMenu = !showToolsMenu" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap font-medium">
-                             <i class="fas fa-wrench"></i> Tools
-                             <i :class="showToolsMenu ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-xs"></i>
-                         </button>
-                         <div x-show="showToolsMenu" class="absolute top-full right-0 mt-2 bg-white border border-gray-300 rounded shadow-lg z-10 min-w-48" @click="showToolsMenu = false">
-                             <button @click="openImportModal()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200">
-                                 <i class="fas fa-upload text-blue-600"></i> Import Schools
-                             </button>
-                             <button @click="downloadTemplate()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200">
-                                 <i class="fas fa-download text-blue-600"></i> CSV Template
-                             </button>
-                             <button @click="exportCSV()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
-                                 <i class="fas fa-file-csv text-blue-600"></i> Export CSV
-                             </button>
-                         </div>
-                     </div>
-                     </div>
+                     <button
+                         @click="openToolsModal()"
+                         class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap font-medium shadow-sm shadow-blue-200/80"
+                     >
+                         <i class="fas fa-wrench"></i> Tools
+                         <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
+                     </button>
+                 </div>
                      
                      <!-- Add School Button -->
                      <button
@@ -125,7 +128,7 @@
                      </div>
             
             <!-- Bulk Actions (shown when items are selected) -->
-            <div x-show="selectedItems.size > 0" class="mt-4 flex gap-2 items-center bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <div x-show="selectedItems.size > 0" class="registration-bulk-bar">
                 <span class="text-sm font-medium text-gray-700">
                     <span x-text="selectedItems.size"></span> school(s) selected
                 </span>
@@ -139,7 +142,7 @@
         </div>
 
         <!-- Schools Table -->
-        <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="registration-surface registration-table-card overflow-hidden">
             <div x-show="loading" class="p-6 text-center text-gray-500">
                 <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
             </div>
@@ -218,34 +221,174 @@
             </table>
             
             <!-- Pagination -->
-            <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200">
-                <div class="text-sm text-gray-600">
-                    Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span>, showing <span x-text="filteredSchools.length"></span> record(s) out of <span x-text="totalCount"></span> total
-                </div>
-                <div class="flex items-center gap-1">
-                    <button 
-                        @click="currentPage > 1 && (currentPage--, loadSchools())"
-                        :disabled="currentPage <= 1"
-                        class="px-2 py-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        title="Previous"
-                    >
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <template x-for="page in Array.from({length: totalPages}, (_, i) => i + 1)" :key="page">
+            <div class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-5">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                            <i class="fas fa-layer-group text-xs"></i>
+                            <span>Page <span x-text="currentPage"></span> of <span x-text="Math.max(totalPages, 1)"></span></span>
+                        </div>
+                        <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                            <i class="fas fa-table-list text-xs text-slate-400"></i>
+                            <span>Showing <span class="font-semibold text-slate-800" x-text="filteredSchools.length"></span> of <span class="font-semibold text-slate-800" x-text="totalCount"></span> schools</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2 lg:justify-end">
                         <button 
-                            @click="currentPage = page; loadSchools()"
-                            :class="currentPage === page ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-gray-900'"
-                            class="px-3 py-1 rounded text-sm font-medium transition-colors"
-                            x-text="page"
-                        ></button>
-                    </template>
-                    <button 
-                        @click="currentPage < totalPages && (currentPage++, loadSchools())"
-                        :disabled="currentPage >= totalPages"
-                        class="px-2 py-1 text-gray-600 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                        title="Next"
+                            @click="currentPage > 1 && (currentPage = 1, loadSchools())"
+                            :disabled="currentPage <= 1"
+                            class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="First page"
+                        >
+                            <i class="fas fa-angles-left text-xs"></i>
+                        </button>
+                        <button 
+                            @click="currentPage > 1 && (currentPage--, loadSchools())"
+                            :disabled="currentPage <= 1"
+                            class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Previous page"
+                        >
+                            <i class="fas fa-chevron-left text-xs"></i>
+                            <span class="hidden sm:inline">Previous</span>
+                        </button>
+
+                        <div class="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm">
+                            <template x-for="page in visiblePages" :key="page">
+                                <button 
+                                    @click="currentPage = page; loadSchools()"
+                                    :class="currentPage === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                                    class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
+                                    x-text="page"
+                                ></button>
+                            </template>
+                        </div>
+
+                        <button 
+                            @click="currentPage < totalPages && (currentPage++, loadSchools())"
+                            :disabled="currentPage >= totalPages"
+                            class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Next page"
+                        >
+                            <span class="hidden sm:inline">Next</span>
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                        <button 
+                            @click="currentPage < totalPages && (currentPage = totalPages, loadSchools())"
+                            :disabled="currentPage >= totalPages"
+                            class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Last page"
+                        >
+                            <i class="fas fa-angles-right text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tools Modal -->
+        <div
+            x-show="toolsModalOpen"
+            class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4"
+            style="display: none;"
+            @click.self="closeToolsModal()"
+            @keydown.escape.window="closeToolsModal()"
+            x-transition.opacity
+        >
+            <div
+                class="w-full max-w-3xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20"
+                x-transition
+            >
+                <div class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-800 px-6 py-6 text-white">
+                    <div class="absolute inset-y-0 right-0 w-56 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_68%)]"></div>
+                    <div class="relative flex items-start justify-between gap-4">
+                        <div>
+                            <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                                <i class="fas fa-screwdriver-wrench text-[0.7rem] text-amber-300"></i>
+                                School Tools
+                            </span>
+                            <h2 class="mt-4 text-2xl font-bold tracking-tight text-white">Choose a school management action</h2>
+                            <p class="mt-2 max-w-2xl text-sm leading-6 text-white/80">
+                                Use import, template, and export actions from one controlled workspace without cluttering the toolbar.
+                            </p>
+                        </div>
+                        <button
+                            @click="closeToolsModal()"
+                            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-lg text-white/80 transition hover:bg-white/15 hover:text-white"
+                            type="button"
+                            aria-label="Close tools"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 bg-slate-50 p-6 md:grid-cols-3">
+                    <button
+                        type="button"
+                        @click="launchImportFlow()"
+                        class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70"
                     >
-                        <i class="fas fa-chevron-right"></i>
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700">
+                            <i class="fas fa-file-import text-lg"></i>
+                        </span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">Import Schools</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            Open the guided import workflow, validate CSV content, and commit only clean records.
+                        </p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">
+                            Open import modal
+                            <i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i>
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="downloadSchoolTemplate()"
+                        class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70"
+                    >
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                            <i class="fas fa-download text-lg"></i>
+                        </span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">CSV Template</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            Download the approved import layout before preparing school data for upload.
+                        </p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-amber-700">
+                            Download template
+                            <i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i>
+                        </span>
+                    </button>
+
+                    <button
+                        type="button"
+                        @click="exportSchoolCsv()"
+                        class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70"
+                    >
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                            <i class="fas fa-file-csv text-lg"></i>
+                        </span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">Export CSV</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            Generate a current extract of the school register using the active page filters.
+                        </p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                            Export current data
+                            <i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i>
+                        </span>
+                    </button>
+                </div>
+
+                <div class="flex flex-col gap-3 border-t border-slate-200 bg-white px-6 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="leading-6">
+                        Import and export behavior is unchanged. This modal only replaces the compact dropdown for a cleaner workflow.
+                    </p>
+                    <button
+                        type="button"
+                        @click="closeToolsModal()"
+                        class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-100"
+                    >
+                        Close
                     </button>
                 </div>
             </div>
@@ -254,39 +397,64 @@
         <!-- Import Modal -->
         <div 
             x-show="importModalOpen" 
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+            x-cloak
+            class="fixed inset-0 z-[9999] flex items-start justify-center overflow-y-auto bg-slate-950/55 px-4 pb-6 pt-8"
             style="display: none;"
             @click.self="importModalOpen = false;"
             x-transition
         >
-            <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" x-transition>
-                <div class="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
-                    <h2 class="text-2xl font-bold text-gray-800">Import Schools</h2>
-                    <button 
-                        @click="importModalOpen = false" 
-                        class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                    >
-                        &times;
-                    </button>
+            <div class="registration-modal-shell flex max-h-[calc(100vh-4rem)] flex-col" x-transition>
+                <div class="registration-modal-header">
+                    <div class="registration-modal-header-content">
+                        <div>
+                            <span class="registration-modal-kicker">
+                                <i class="fas fa-school text-amber-300"></i>
+                                School Import
+                            </span>
+                            <h2 class="registration-modal-title">Import Schools</h2>
+                            <p class="registration-modal-subtitle">
+                                Upload a structured CSV, review validation results, and commit only clean records into the school registry.
+                            </p>
+                        </div>
+                        <button 
+                            @click="importModalOpen = false" 
+                            class="registration-modal-close"
+                            type="button"
+                            aria-label="Close import schools modal"
+                        >
+                            &times;
+                        </button>
+                    </div>
                 </div>
 
+                <div class="registration-modal-body flex-1 space-y-5">
                 <!-- Import Form (Upload State) -->
-                <div x-show="importState === 'idle' || importState === 'uploading'" class="p-6 space-y-4">
-                    <div class="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-blue-800">
-                        <strong>Instructions:</strong> Upload a CSV file with school data. Click "Download Template" to see the required format.
+                <div x-show="importState === 'idle' || importState === 'uploading'" x-cloak class="space-y-5">
+                    <div class="registration-modal-note">
+                        <div class="registration-modal-note-icon">
+                            <i class="fas fa-circle-info"></i>
+                        </div>
+                        <div>
+                            <strong>Upload Instructions</strong>
+                            <p>Upload a CSV file with school data. Use the template below if you need the approved import format before validation.</p>
+                        </div>
                     </div>
 
                     <!-- File Upload Area -->
-                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50">
+                    <div class="registration-dropzone">
                         <div x-show="!importFile" class="cursor-pointer" @click="document.getElementById('importFileInput').click()">
-                            <i class="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-3"></i>
-                            <p class="text-gray-700 font-medium">Click to upload or drag and drop</p>
-                            <p class="text-xs text-gray-500 mt-1">CSV files up to 10MB</p>
+                            <span class="registration-dropzone-icon">
+                                <i class="fas fa-cloud-arrow-up"></i>
+                            </span>
+                            <p class="text-slate-700 font-semibold text-lg">Click to upload or drag and drop</p>
+                            <p class="text-sm text-slate-500 mt-2">CSV files up to 10MB</p>
                         </div>
                         <div x-show="importFile" class="text-green-600">
-                            <i class="fas fa-check-circle text-4xl mb-3"></i>
-                            <p class="font-medium" x-text="importFile?.name"></p>
-                            <p class="text-xs text-gray-500 mt-1" x-text="'Size: ' + (importFile?.size ? (importFile.size / 1024 / 1024).toFixed(2) + ' MB' : '')"></p>
+                            <span class="registration-dropzone-icon !bg-green-100 !text-green-700">
+                                <i class="fas fa-circle-check"></i>
+                            </span>
+                            <p class="font-semibold text-lg text-slate-900" x-text="importFile?.name"></p>
+                            <p class="text-sm text-slate-500 mt-2" x-text="'Size: ' + (importFile?.size ? (importFile.size / 1024 / 1024).toFixed(2) + ' MB' : '')"></p>
                         </div>
                     </div>
 
@@ -299,24 +467,24 @@
                     >
 
                     <!-- Action Buttons -->
-                    <div class="flex gap-3 pt-4">
+                    <div class="registration-modal-actions">
                         <button 
                             @click="downloadImportTemplate()"
-                            class="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                            class="registration-modal-button registration-modal-button-muted"
                             :disabled="importState === 'uploading' || importState === 'validating'"
                         >
                             <i class="fas fa-download"></i> Download Template
                         </button>
                         <button 
                             @click="importModalOpen = false" 
-                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-secondary"
                             :disabled="importState === 'uploading' || importState === 'validating'"
                         >
                             Cancel
                         </button>
                         <button 
                             @click="validateImport()"
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                            class="registration-modal-button registration-modal-button-primary"
                             :disabled="!importFile || importState === 'uploading' || importState === 'validating'"
                         >
                             <span x-show="importState === 'idle'"><i class="fas fa-check"></i> Upload & Validate</span>
@@ -326,29 +494,29 @@
                 </div>
 
                 <!-- Validation Report (Report State) -->
-                <div x-show="importState === 'report'" class="p-6 space-y-4">
+                <div x-show="importState === 'report'" x-cloak class="space-y-5">
                     <!-- Summary Stats -->
-                    <div class="grid grid-cols-4 gap-4">
-                        <div class="bg-blue-50 border border-blue-200 rounded p-3 text-center">
-                            <div class="text-2xl font-bold text-blue-700" x-text="importReport.total_rows || 0"></div>
-                            <div class="text-xs text-gray-600 mt-1">Total Rows</div>
+                    <div class="registration-modal-stats">
+                        <div class="registration-modal-stat">
+                            <div class="registration-modal-stat-value text-blue-700" x-text="importReport.total_rows || 0"></div>
+                            <div class="registration-modal-stat-label">Total Rows</div>
                         </div>
-                        <div class="bg-green-50 border border-green-200 rounded p-3 text-center">
-                            <div class="text-2xl font-bold text-green-700" x-text="importReport.valid_count || 0"></div>
-                            <div class="text-xs text-gray-600 mt-1">Valid</div>
+                        <div class="registration-modal-stat">
+                            <div class="registration-modal-stat-value text-green-700" x-text="importReport.valid_count || 0"></div>
+                            <div class="registration-modal-stat-label">Valid</div>
                         </div>
-                        <div class="bg-red-50 border border-red-200 rounded p-3 text-center">
-                            <div class="text-2xl font-bold text-red-700" x-text="importReport.invalid_count || 0"></div>
-                            <div class="text-xs text-gray-600 mt-1">Failed</div>
+                        <div class="registration-modal-stat">
+                            <div class="registration-modal-stat-value text-red-700" x-text="importReport.invalid_count || 0"></div>
+                            <div class="registration-modal-stat-label">Failed</div>
                         </div>
-                        <div class="bg-purple-50 border border-purple-200 rounded p-3 text-center">
-                            <div class="text-2xl font-bold text-purple-700" x-text="importReport.can_import ? 'Ready' : 'Fix Required'"></div>
-                            <div class="text-xs text-gray-600 mt-1">Status</div>
+                        <div class="registration-modal-stat">
+                            <div class="registration-modal-stat-value text-purple-700 text-[1.35rem]" x-text="importReport.can_import ? 'Ready' : 'Fix Required'"></div>
+                            <div class="registration-modal-stat-label">Status</div>
                         </div>
                     </div>
 
                     <!-- Error Summary -->
-                    <div x-show="importReport.invalid_count > 0" class="bg-yellow-50 border border-yellow-200 rounded p-4">
+                    <div x-show="importReport.invalid_count > 0" class="registration-modal-panel bg-yellow-50/80 border-yellow-200 p-4">
                         <h3 class="font-semibold text-gray-800 mb-2">Error Summary</h3>
                         <div class="space-y-1 text-sm">
                             <template x-for="(count, error) in importReport.summary" :key="error">
@@ -361,8 +529,8 @@
                     </div>
 
                     <!-- Error Table -->
-                    <div x-show="importReport.errors && importReport.errors.length > 0" class="border rounded">
-                        <div class="bg-gray-100 px-4 py-3 border-b font-semibold text-gray-800">
+                    <div x-show="importReport.errors && importReport.errors.length > 0" class="registration-modal-panel overflow-hidden">
+                        <div class="bg-slate-100 px-4 py-3 border-b border-slate-200 font-semibold text-gray-800">
                             Failed Rows (<span x-text="importReport.total_errors || 0"></span> total)
                         </div>
                         <div class="max-h-64 overflow-y-auto">
@@ -394,23 +562,23 @@
                     </div>
 
                     <!-- Action Buttons -->
-                    <div class="flex gap-3 pt-4 border-t">
+                    <div class="registration-modal-actions">
                         <button 
                             @click="downloadImportErrors()"
-                            class="flex-1 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                            class="registration-modal-button registration-modal-button-warn"
                             x-show="importReport.errors && importReport.errors.length > 0"
                         >
                             <i class="fas fa-download"></i> Download Errors
                         </button>
                         <button 
                             @click="resetImportModal()"
-                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-secondary"
                         >
                             Back to Upload
                         </button>
                         <button 
                             @click="commitImport()"
-                            class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors font-medium flex items-center justify-center gap-2"
+                            class="registration-modal-button registration-modal-button-success"
                             :disabled="!importReport.can_import || importState === 'committing'"
                             x-show="importReport.can_import"
                         >
@@ -421,21 +589,24 @@
                 </div>
 
                 <!-- Success State -->
-                <div x-show="importState === 'done'" class="p-6 text-center space-y-4">
-                    <i class="fas fa-check-circle text-green-500 text-6xl"></i>
-                    <h3 class="text-xl font-bold text-gray-800">Import Successful!</h3>
-                    <p class="text-gray-600">
+                <div x-show="importState === 'done'" x-cloak class="registration-modal-panel p-8 text-center space-y-4">
+                    <div class="mx-auto inline-flex h-20 w-20 items-center justify-center rounded-[28px] bg-green-100 text-green-700 shadow-inner shadow-green-200/70">
+                        <i class="fas fa-check-circle text-4xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">Import Successful</h3>
+                    <p class="text-slate-600">
                         <span x-text="importResult.imported_count || 0"></span> school(s) have been imported successfully.
                     </p>
-                    <div class="bg-green-50 border border-green-200 rounded p-3 text-sm text-green-800" x-show="importResult.imported_count > 0">
+                    <div class="mx-auto max-w-xl rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800" x-show="importResult.imported_count > 0">
                         Schools will be visible in the table below.
                     </div>
                     <button 
                         @click="importModalOpen = false; loadSchools();"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                        class="registration-modal-button registration-modal-button-primary w-full"
                     >
                         Close and Refresh
                     </button>
+                </div>
                 </div>
             </div>
         </div>
@@ -443,35 +614,52 @@
         <!-- Modal (Add/Edit/View) -->
         <div 
             x-show="modalOpen || viewModalOpen" 
-            class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+            class="fixed inset-0 bg-slate-950/55 flex items-center justify-center z-[9999] p-4"
             style="display: none;"
             @click.self="modalOpen = false; viewModalOpen = false;"
             x-transition
         >
-            <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800">
+            <div class="registration-modal-shell max-w-2xl" x-transition>
+                <div class="registration-modal-header">
+                    <div class="registration-modal-header-content">
+                    <div>
+                    <span class="registration-modal-kicker">
+                        <i class="fas fa-school text-amber-300"></i>
+                        School Record
+                    </span>
+                    <h2 class="registration-modal-title">
                         <span x-show="viewModalOpen && !editingId">School Details</span>
                         <span x-show="!viewModalOpen && !editingId">Add New School</span>
                         <span x-show="!viewModalOpen && editingId">Edit School</span>
                     </h2>
+                    <p class="registration-modal-subtitle">
+                        <span x-show="!viewModalOpen && !editingId">Create a new school record with ownership and hierarchy details.</span>
+                        <span x-show="!viewModalOpen && editingId">Update the selected school while preserving its district and region relationships.</span>
+                        <span x-show="viewModalOpen && !editingId">Review the selected school’s current hierarchy and candidate totals.</span>
+                    </p>
+                    </div>
                     <button 
                         @click="modalOpen = false; viewModalOpen = false;" 
-                        class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                        class="registration-modal-close"
+                        type="button"
+                        aria-label="Close school modal"
                     >
                         &times;
                     </button>
+                    </div>
                 </div>
 
                 <!-- View Mode -->
-                <div x-show="viewModalOpen" class="p-4 space-y-2">
+                <div x-show="viewModalOpen" class="registration-modal-body">
+                    <div class="registration-modal-panel p-6 space-y-4">
+                    <div class="grid gap-4 md:grid-cols-2">
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">School Number</label>
                         <input 
                             type="text" 
                             readonly
                             :value="viewingSchool.code"
-                            class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-100 text-gray-600 font-mono text-center focus:outline-none"
+                            class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-slate-100 text-slate-700 font-mono text-center focus:outline-none"
                         >
                     </div>
                     <div>
@@ -480,7 +668,7 @@
                             type="text" 
                             readonly
                             :value="viewingSchool.name"
-                            class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                            class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700 focus:outline-none"
                         >
                     </div>
                     <div>
@@ -489,7 +677,7 @@
                             type="text" 
                             readonly
                             :value="viewingSchool.ownership || '-'"
-                            class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                            class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700 focus:outline-none"
                         >
                     </div>
                     <div>
@@ -498,7 +686,7 @@
                             type="text" 
                             readonly
                             :value="viewingSchool.region_name || '-'"
-                            class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                            class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700 focus:outline-none"
                         >
                     </div>
                     <div>
@@ -507,7 +695,7 @@
                             type="text" 
                             readonly
                             :value="viewingSchool.district_name || '-'"
-                            class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                            class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700 focus:outline-none"
                         >
                     </div>
                     <div>
@@ -516,21 +704,33 @@
                             type="text" 
                             readonly
                             :value="viewingSchool.candidates_count || 0"
-                            class="w-full px-3 py-1 border border-gray-300 rounded text-sm bg-gray-50 text-gray-700 focus:outline-none"
+                            class="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700 focus:outline-none"
                         >
                     </div>
+                    </div>
                     <div class="flex gap-2 pt-3">
-                        <button @click="viewModalOpen = false" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-1.5 rounded text-sm transition-colors font-medium">
+                        <button @click="viewModalOpen = false" class="registration-modal-button registration-modal-button-secondary text-sm">
                             Close
                         </button>
-                        <button @click="openEditModal(viewingSchool); viewModalOpen = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-sm transition-colors font-medium">
+                        <button @click="openEditModal(viewingSchool); viewModalOpen = false;" class="registration-modal-button registration-modal-button-primary text-sm">
                             Edit
                         </button>
+                    </div>
                     </div>
                 </div>
 
                 <!-- Edit/Add Mode -->
-                <form x-show="!viewModalOpen" @submit.prevent="saveSchool()" class="p-6 space-y-4">
+                <form x-show="!viewModalOpen" @submit.prevent="saveSchool()" class="registration-modal-body space-y-5">
+                    <div class="registration-modal-note">
+                        <div class="registration-modal-note-icon">
+                            <i class="fas fa-circle-info"></i>
+                        </div>
+                        <div>
+                            <strong>Form Guidance</strong>
+                            <p>Enter a unique school number, then assign the correct ownership, region, and district before saving the record.</p>
+                        </div>
+                    </div>
+                    <div class="registration-modal-panel p-6 space-y-5">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">School Number * <span class="text-xs text-gray-500">(Must be unique)</span></label>
                         <input 
@@ -540,8 +740,9 @@
                             required
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                        <p class="text-xs text-gray-500 mt-1">Enter a unique number to identify this school (e.g., SCH001, SCHOOL-ARUSHA)</p>
+                        <p class="text-xs text-gray-500 mt-2">Enter a unique number to identify this school, for example `SCH001` or `SCHOOL-ARUSHA`.</p>
                     </div>
+                    <div class="grid gap-5 md:grid-cols-2">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">School Name *</label>
                         <input 
@@ -564,6 +765,8 @@
                             <option value="NON-GOVERNMENT">NON-GOVERNMENT</option>
                         </select>
                     </div>
+                    </div>
+                    <div class="grid gap-5 md:grid-cols-2">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Region * <span class="text-xs text-gray-500">(Select first)</span></label>
                         <select 
@@ -591,21 +794,23 @@
                             </template>
                         </select>
                     </div>
-                    <div class="flex gap-3 pt-4">
+                    </div>
+                    <div class="registration-modal-actions">
                         <button 
                             type="button" 
                             @click="modalOpen = false" 
-                            class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-secondary"
                         >
                             Cancel
                         </button>
                         <button 
                             type="submit" 
-                            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-primary"
                         >
                             <span x-show="!editingId">Add School</span>
                             <span x-show="editingId">Update School</span>
                         </button>
+                    </div>
                     </div>
                 </form>
             </div>
@@ -635,7 +840,7 @@ function schoolManager() {
         viewingSchool: {},
         formData: { code: '', name: '', ownership: '', region_id: '', district_id: '' },
         selectedItems: new Set(),
-        showToolsMenu: false,
+        toolsModalOpen: false,
         currentPage: 1,
         pageSize: 10,
         totalCount: 0,
@@ -652,6 +857,19 @@ function schoolManager() {
             if (!this.filterRegion) return this.districts;
             return this.districts.filter(d => d.region_id == this.filterRegion);
         },
+        get visiblePages() {
+            const total = this.totalPages || 1;
+            const current = this.currentPage || 1;
+            const windowSize = 5;
+            let start = Math.max(1, current - Math.floor(windowSize / 2));
+            let end = Math.min(total, start + windowSize - 1);
+
+            if (end - start + 1 < windowSize) {
+                start = Math.max(1, end - windowSize + 1);
+            }
+
+            return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+        },
         totalPages: 0,
 
         async init() {
@@ -662,7 +880,7 @@ function schoolManager() {
 
         async loadRegions() {
             try {
-                const response = await fetch('/api/regions');
+                const response = await fetch('/admin/api/regions');
                 const data = await response.json();
                 this.regions = data.data || [];
             } catch (error) {
@@ -673,7 +891,7 @@ function schoolManager() {
 
         async loadDistricts() {
             try {
-                const response = await fetch('/api/districts?page_size=1000');
+                const response = await fetch('/admin/api/districts?page_size=1000');
                 const data = await response.json();
                 this.districts = data.data || [];
             } catch (error) {
@@ -685,7 +903,7 @@ function schoolManager() {
         async loadSchools() {
             this.loading = true;
             try {
-                let url = `/api/schools?page=${this.currentPage}&page_size=${this.pageSize}&search=${this.search}`;
+                let url = `/admin/api/schools?page=${this.currentPage}&page_size=${this.pageSize}&search=${this.search}`;
                 if (this.filterRegion) {
                     url += `&region_id=${this.filterRegion}`;
                 }
@@ -743,6 +961,29 @@ function schoolManager() {
             this.viewModalOpen = true;
         },
 
+        openToolsModal() {
+            this.toolsModalOpen = true;
+        },
+
+        closeToolsModal() {
+            this.toolsModalOpen = false;
+        },
+
+        launchImportFlow() {
+            this.closeToolsModal();
+            this.openImportModal();
+        },
+
+        downloadSchoolTemplate() {
+            this.closeToolsModal();
+            this.downloadTemplate();
+        },
+
+        exportSchoolCsv() {
+            this.closeToolsModal();
+            this.exportCSV();
+        },
+
         openEditModal(school) {
             this.editingId = school.id;
             this.formData = { 
@@ -764,7 +1005,7 @@ function schoolManager() {
                      return;
                  }
                  
-                 const url = this.editingId ? `/api/schools/${this.editingId}` : '/api/schools';
+                 const url = this.editingId ? `/admin/api/schools/${this.editingId}` : '/admin/api/schools';
                  const method = this.editingId ? 'PUT' : 'POST';
                  
                  // Send all required fields including region_id
@@ -822,7 +1063,7 @@ function schoolManager() {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]');
                 const token = csrfToken ? csrfToken.content : '';
                 
-                const response = await fetch(`/api/schools/${id}`, {
+                const response = await fetch(`/admin/api/schools/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -873,7 +1114,7 @@ function schoolManager() {
 
             try {
                 const ids = Array.from(this.selectedItems);
-                const response = await fetch('/api/schools/bulk-delete', {
+                const response = await fetch('/admin/api/schools/bulk-delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -938,7 +1179,7 @@ function schoolManager() {
             formData.append('file', file);
 
             try {
-                const response = await fetch('/api/schools/import', {
+                const response = await fetch('/admin/api/schools/import', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -996,7 +1237,7 @@ function schoolManager() {
                 const formData = new FormData();
                 formData.append('file', this.importFile);
 
-                const response = await fetch('/api/schools/import/validate', {
+                const response = await fetch('/admin/api/schools/import/validate', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1032,7 +1273,7 @@ function schoolManager() {
                 const formData = new FormData();
                 formData.append('file', this.importFile);
 
-                const response = await fetch('/api/schools/import/commit', {
+                const response = await fetch('/admin/api/schools/import/commit', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1059,7 +1300,7 @@ function schoolManager() {
 
         async downloadImportTemplate() {
             try {
-                const response = await fetch('/api/schools/import/template');
+                const response = await fetch('/admin/api/schools/import/template');
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
@@ -1078,7 +1319,7 @@ function schoolManager() {
 
         async downloadImportErrors() {
             try {
-                const response = await fetch('/api/schools/import/download-errors', {
+                const response = await fetch('/admin/api/schools/import/download-errors', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1121,4 +1362,6 @@ function schoolManager() {
     };
 }
 </script>
+</div>
+</div>
 @endsection

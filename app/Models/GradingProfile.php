@@ -18,7 +18,9 @@ class GradingProfile extends Model
     protected $fillable = [
         'exam_type_id',
         'exam_year_id',
+        'code',
         'name',
+        'description',
         'version',
         'grade_boundaries',
         'gpa_mapping',
@@ -72,6 +74,15 @@ class GradingProfile extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeForYear($query, ?int $examYearId)
+    {
+        if ($examYearId === null) {
+            return $query;
+        }
+
+        return $query->where('exam_year_id', $examYearId);
     }
 
     /**

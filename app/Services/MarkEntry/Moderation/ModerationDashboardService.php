@@ -9,27 +9,25 @@ use App\Models\MarkModerationAction;
 use App\Models\MarkModerationReview;
 use App\Models\MarkRejection;
 use App\Models\RawMark;
+use App\Services\MarkImport\MarkValidationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 
 class ModerationDashboardService
 {
+    public function __construct(
+        private MarkValidationService $markValidationService
+    ) {
+    }
+
     /**
      * Get dashboard statistics for review dashboard
      */
     public function getDashboardStats(?int $examYear = null): array
     {
-        $pendingQuery = MarkImportBatch::where(function ($outer) {
-            $outer->whereIn('lifecycle_state', ['awaiting_moderation', 'validated', 'submitted'])
-                  ->orWhere(function ($q) {
-                      $q->whereIn('status', ['validated', 'submitted'])
-                        ->where(function ($q2) {
-                            $q2->whereNull('lifecycle_state')
-                               ->orWhere('lifecycle_state', 'draft');
-                        });
-                  });
-        });
+        $pendingQuery = MarkImportBatch::query();
+        $this->applyPendingModerationScope($pendingQuery);
 
         if ($examYear) {
             $pendingQuery->where('exam_year', $examYear);
@@ -41,16 +39,7 @@ class ModerationDashboardService
         $runErrors = MarkImportRunError::where('severity', 'error')
             ->whereHas('run', function ($q) use ($examYear) {
                 $q->whereHas('batch', function ($bq) use ($examYear) {
-                    $bq->where(function ($outer) {
-                        $outer->whereIn('lifecycle_state', ['awaiting_moderation', 'validated', 'submitted'])
-                              ->orWhere(function ($inner) {
-                                  $inner->whereIn('status', ['validated', 'submitted', 'draft'])
-                                        ->where(function ($q2) {
-                                            $q2->whereNull('lifecycle_state')
-                                               ->orWhere('lifecycle_state', 'draft');
-                                        });
-                              });
-                    });
+                    $this->applyPendingModerationScope($bq);
                     if ($examYear) {
                         $bq->where('exam_year', $examYear);
                     }
@@ -61,16 +50,7 @@ class ModerationDashboardService
         // Also count raw_marks with errors in pending batches (fallback path)
         $rawMarkErrors = RawMark::where('has_errors', true)
             ->whereHas('batch', function ($bq) use ($examYear) {
-                $bq->where(function ($outer) {
-                    $outer->whereIn('lifecycle_state', ['awaiting_moderation', 'validated', 'submitted'])
-                          ->orWhere(function ($inner) {
-                              $inner->whereIn('status', ['validated', 'submitted', 'draft'])
-                                    ->where(function ($q2) {
-                                        $q2->whereNull('lifecycle_state')
-                                           ->orWhere('lifecycle_state', 'draft');
-                                    });
-                          });
-                });
+                $this->applyPendingModerationScope($bq);
                 if ($examYear) {
                     $bq->where('exam_year', $examYear);
                 }
@@ -123,17 +103,7 @@ class ModerationDashboardService
                 ->whereColumn('mark_import_batch_id', 'mark_import_batches.id')
             ]);
 
-        // Match batches pending moderation: explicit lifecycle_state OR legacy status
-        $query->where(function ($outer) {
-            $outer->whereIn('lifecycle_state', ['awaiting_moderation', 'validated', 'submitted'])
-                  ->orWhere(function ($q) {
-                      $q->whereIn('status', ['validated', 'submitted'])
-                        ->where(function ($q2) {
-                            $q2->whereNull('lifecycle_state')
-                               ->orWhere('lifecycle_state', 'draft');
-                        });
-                  });
-        });
+        $this->applyPendingModerationScope($query);
 
         if (!empty($filters['exam_year'])) {
             $query->where('exam_year', $filters['exam_year']);
@@ -154,7 +124,89 @@ class ModerationDashboardService
             $query->where('error_records', '>', 0);
         }
 
-        return $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $paginator = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $collection = $paginator->getCollection();
+
+        if ($collection->isEmpty()) {
+            return $paginator;
+        }
+
+        $batchIds = $collection->pluck('id')->map(fn ($v) => (int) $v)->all();
+        $this->reconcileStaleCandidateNotFoundErrors($batchIds);
+
+        // Resolve latest import run per batch, then count unresolved blocking errors on that run.
+        $latestRuns = MarkImportRun::query()
+            ->select('id', 'mark_import_batch_id')
+            ->whereIn('mark_import_batch_id', $batchIds)
+            ->orderByDesc('id')
+            ->get()
+            ->unique('mark_import_batch_id')
+            ->values();
+
+        $runIdByBatch = $latestRuns
+            ->mapWithKeys(fn ($run) => [(int) $run->mark_import_batch_id => (int) $run->id]);
+
+        $runIds = $latestRuns->pluck('id')->map(fn ($v) => (int) $v)->all();
+
+        $unresolvedByRun = empty($runIds)
+            ? collect()
+            : MarkImportRunError::query()
+                ->selectRaw('run_id, COUNT(*) as cnt')
+                ->whereIn('run_id', $runIds)
+                ->where('severity', 'error')
+                ->where(function ($q) {
+                    $q->where('is_actionable', false)
+                        ->orWhere(function ($q2) {
+                            $q2->where('is_actionable', true)->where('is_resolved', false);
+                        });
+                })
+                ->groupBy('run_id')
+                ->pluck('cnt', 'run_id');
+
+        // Fallback for legacy batches with no linked runs.
+        $legacyRawErrors = RawMark::query()
+            ->selectRaw('mark_import_batch_id, COUNT(*) as cnt')
+            ->whereIn('mark_import_batch_id', $batchIds)
+            ->where('has_errors', true)
+            ->groupBy('mark_import_batch_id')
+            ->pluck('cnt', 'mark_import_batch_id');
+
+        $collection->transform(function ($batch) use ($runIdByBatch, $unresolvedByRun, $legacyRawErrors) {
+            $batchId = (int) $batch->id;
+            $latestRunId = $runIdByBatch->get($batchId);
+
+            if ($latestRunId) {
+                $batch->error_marks_count = (int) ($unresolvedByRun->get((int) $latestRunId) ?? 0);
+            } else {
+                $batch->error_marks_count = (int) ($legacyRawErrors->get($batchId) ?? 0);
+            }
+
+            return $batch;
+        });
+
+        $paginator->setCollection($collection);
+        return $paginator;
+    }
+
+    /**
+     * Scope batches that are truly pending moderation.
+     * Prevent historical terminal batches (locked/approved/processed/rejected/archived/superseded)
+     * from leaking into approval-stage queue due to stale lifecycle_state values.
+     */
+    private function applyPendingModerationScope($query): void
+    {
+        $query->where(function ($q) {
+            $q->whereIn('status', ['validated', 'submitted'])
+              ->orWhere(function ($legacy) {
+                  $legacy->whereNull('status')
+                         ->where(function ($lq) {
+                             $lq->whereIn('lifecycle_state', ['awaiting_moderation', 'validated', 'submitted'])
+                                ->orWhereNull('lifecycle_state');
+                         });
+              });
+        });
+
+        $query->whereNotIn('status', ['approved', 'locked', 'processed', 'rejected', 'archived', 'superseded']);
     }
 
     /**
@@ -179,12 +231,21 @@ class ModerationDashboardService
      */
     public function getBatchErrors(int $batchId, int $perPage = 50): LengthAwarePaginator
     {
-        return MarkImportRunError::whereHas('run', function ($q) use ($batchId) {
-            $q->where('mark_import_batch_id', $batchId);
-        })
-        ->with(['run:id,file_name,created_at', 'subject:id,code,name'])
-        ->orderBy('row_number', 'asc')
-        ->paginate($perPage);
+        $latestRunId = MarkImportRun::query()
+            ->where('mark_import_batch_id', $batchId)
+            ->latest('id')
+            ->value('id');
+
+        if (!$latestRunId) {
+            return MarkImportRunError::query()->whereRaw('1 = 0')->paginate($perPage);
+        }
+
+        return MarkImportRunError::query()
+            ->where('run_id', $latestRunId)
+            ->with(['run:id,file_name,created_at', 'subject:id,code,name'])
+            ->orderByRaw("CASE WHEN is_resolved = 0 THEN 0 ELSE 1 END")
+            ->orderBy('row_number', 'asc')
+            ->paginate($perPage);
     }
 
     /**
@@ -222,6 +283,8 @@ class ModerationDashboardService
      */
     public function getBatchRawMarkErrors(int $batchId, int $perPage = 50): LengthAwarePaginator
     {
+        $this->reconcileStaleCandidateNotFoundErrors([$batchId]);
+
         $paginator = RawMark::where('mark_import_batch_id', $batchId)
             ->where(function ($q) {
                 $q->where('has_errors', true)->orWhere('has_warnings', true);
@@ -358,5 +421,57 @@ class ModerationDashboardService
     public function batchHasLinkedRuns(int $batchId): bool
     {
         return MarkImportRun::where('mark_import_batch_id', $batchId)->exists();
+    }
+
+    /**
+     * Reconcile stale "candidate not found" errors when candidate registration happens after initial validation.
+     * This only updates raw_marks validation state; candidate registration data is not modified.
+     */
+    private function reconcileStaleCandidateNotFoundErrors(array $batchIds): void
+    {
+        $batchIds = array_values(array_unique(array_filter(array_map('intval', $batchIds))));
+        if (empty($batchIds)) {
+            return;
+        }
+
+        $marks = RawMark::query()
+            ->whereIn('mark_import_batch_id', $batchIds)
+            ->where('has_errors', true)
+            ->whereNull('candidate_id')
+            ->whereNotNull('candidate_index_number')
+            ->where('error_messages', 'like', '%Candidate with index number%not found%')
+            ->with(['batch:id,school_id,exam_year,subject_id'])
+            ->get();
+
+        if ($marks->isEmpty()) {
+            return;
+        }
+
+        foreach ($marks as $mark) {
+            $batch = $mark->batch;
+            if (!$batch) {
+                continue;
+            }
+
+            $candidateId = DB::table('candidates')
+                ->where('candidate_id', $mark->candidate_index_number)
+                ->where('school_id', (int) $batch->school_id)
+                ->value('id');
+
+            if (!$candidateId) {
+                continue;
+            }
+
+            $mark->candidate_id = (int) $candidateId;
+            $mark->save();
+            $mark->refresh();
+            $mark->unsetRelation('candidate');
+
+            $errors = $this->markValidationService->validateRawMark($mark, $batch);
+            $mark->update([
+                'has_errors' => !empty($errors),
+                'error_messages' => array_values($errors),
+            ]);
+        }
     }
 }

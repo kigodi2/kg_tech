@@ -77,7 +77,7 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 text-sm">
-                            <a href="{{ route('results.acsee.results.candidate', $result->candidate_id) }}" class="text-blue-600 hover:text-blue-800 font-medium">
+                            <a href="{{ route($resultsRoutePrefix . '.results.candidate', $result->candidate_id) }}" class="text-blue-600 hover:text-blue-800 font-medium">
                                 View
                             </a>
                         </td>

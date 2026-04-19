@@ -13,6 +13,7 @@ use App\Models\MarkImportBatch;
 use App\Models\Role;
 use App\Models\Subject;
 use App\Models\User;
+use App\Models\ExamDevelopment\ExamDevelopmentRolePermission;
 use App\Policies\BulkImportPolicy;
 use App\Policies\CombinationPolicy;
 use App\Policies\DistrictCouncilPolicy;
@@ -96,6 +97,24 @@ class AuthServiceProvider extends ServiceProvider
             return $user->isAdmin();
         });
 
+        Gate::define('mark-entry.questions', function (User $user) {
+            return in_array($user->roleCode(), [
+                'admin',
+                'super_admin',
+                'regional_admin',
+                'regional_officer',
+                'district_admin',
+                'district_supervisor',
+                'district_data_entry_officer',
+                'school_registrar',
+                'school_user',
+            ], true);
+        });
+
+        Gate::define('mark-entry.questions.override-submitted', function (User $user) {
+            return in_array($user->roleCode(), ['admin', 'super_admin'], true);
+        });
+
         // ACSEE granular permissions (checked against acsee_role_permissions table)
         $acseePermissions = [
             'acsee.upload_marks', 'acsee.view_moderation', 'acsee.approve_marks',
@@ -114,6 +133,16 @@ class AuthServiceProvider extends ServiceProvider
                 }
                 // Check granular permission table
                 return \App\Models\AcseeRolePermission::roleHas($user->role_id, $perm);
+            });
+        }
+
+        foreach (array_keys(ExamDevelopmentRolePermission::definedPermissions()) as $permission) {
+            Gate::define($permission, function (User $user) use ($permission) {
+                if ($user->isAdmin()) {
+                    return true;
+                }
+
+                return ExamDevelopmentRolePermission::roleHas($user->role_id, $permission);
             });
         }
     }

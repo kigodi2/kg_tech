@@ -1,0 +1,216 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ExamType;
+use App\Models\ExamYear;
+use App\Models\ResultPortalItem;
+use App\Models\ResultPortalLink;
+use App\Models\School;
+use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+
+class PublicResultsPortalController extends Controller
+{
+    public function index(string $token)
+    {
+        $token = $this->normalizeIncomingToken($token);
+        $link = $this->resolveActiveLink($token);
+
+        $items = ResultPortalItem::query()
+            ->where('result_portal_link_id', $link->id)
+            ->orderBy('sort_key')
+            ->get(['id', 'label']);
+
+        $meta = $link->meta_json ?? [];
+        $examYearValue = $this->resolvePortalExamYear($link, $meta);
+        $examTypeCode = $this->resolvePortalExamType($meta);
+
+        $entries = $items->map(function ($it) use ($token) {
+            return [
+                'label' => $it->label,
+                'url' => route('public.results.portal.file', ['token' => $token, 'item' => $it->id]),
+            ];
+        });
+
+        // Fallback: auto-populate all registered schools when no portal items are configured.
+        if ($entries->isEmpty()) {
+            $entries = $this->getRegisteredSchoolEntries($link, $examYearValue, $examTypeCode);
+        }
+
+        return view('public.results-portal.index', [
+            'link' => $link,
+            'entries' => $entries,
+            'meta' => $meta,
+            'token' => $token,
+        ]);
+    }
+
+    public function indexFromPath(string $tokenPath)
+    {
+        return $this->index($tokenPath);
+    }
+
+    public function download(string $token, int $item)
+    {
+        $token = $this->normalizeIncomingToken($token);
+        $link = $this->resolveActiveLink($token);
+
+        $portalItem = ResultPortalItem::query()
+            ->where('result_portal_link_id', $link->id)
+            ->where('id', $item)
+            ->firstOrFail();
+
+        $path = $portalItem->file_path;
+
+        abort_unless($path && Storage::disk('private')->exists($path), 404);
+
+        return Storage::disk('private')->download($path, $portalItem->label . '.pdf');
+    }
+
+    public function landing(Request $request, string $examYear, string $examType)
+    {
+        $token = $this->normalizeIncomingToken((string) $request->query('token', ''));
+        $examTypeUpper = strtoupper($examType);
+
+        if ($token !== '') {
+            return redirect()->route('public.results.portal', ['token' => $token]);
+        }
+
+        // Optional convenience redirect so /results/2026/acsee can open
+        // the full portal directly when an explicit default token is configured.
+        $defaultToken = trim((string) config('services.results_portal.default_token', ''));
+        if ($defaultToken !== '' && (string) $examYear === '2026' && $examTypeUpper === 'ACSEE') {
+            return redirect()->route('public.results.portal', ['token' => $defaultToken]);
+        }
+
+        return view('public.results.landing', [
+            'examYear' => $examYear,
+            'examType' => $examTypeUpper,
+        ]);
+    }
+
+    private function resolveLink(string $token): ?ResultPortalLink
+    {
+        $tokenHash = hash('sha256', $token);
+
+        return ResultPortalLink::query()
+            ->where('token_hash', $tokenHash)
+            ->where('is_active', true)
+            ->first();
+    }
+
+    private function resolveActiveLink(string $token): ResultPortalLink
+    {
+        $link = $this->resolveLink($token);
+
+        if (!$link) {
+            abort(404, 'The requested results link is invalid or inactive.');
+        }
+
+        if (
+            $link->expires_at
+            && now()->greaterThan($link->expires_at)
+            && !$this->isConfiguredDefaultToken($token)
+        ) {
+            abort(410, 'The requested results link has expired.');
+        }
+
+        return $link;
+    }
+
+    private function isConfiguredDefaultToken(string $token): bool
+    {
+        $defaultToken = trim((string) config('services.results_portal.default_token', ''));
+
+        return $defaultToken !== '' && hash_equals($defaultToken, $token);
+    }
+
+    private function normalizeIncomingToken(string $token): string
+    {
+        $normalized = trim(rawurldecode($token));
+
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (filter_var($normalized, FILTER_VALIDATE_URL)) {
+            $path = (string) parse_url($normalized, PHP_URL_PATH);
+            $segments = array_values(array_filter(explode('/', trim($path, '/'))));
+            $portalIndex = array_search('r', $segments, true);
+
+            if ($portalIndex !== false && isset($segments[$portalIndex + 1])) {
+                return trim($segments[$portalIndex + 1]);
+            }
+        }
+
+        if (str_contains($normalized, '/')) {
+            if (preg_match('#(?:^|/)r/([^/?#]+)#', $normalized, $matches) === 1) {
+                return trim($matches[1]);
+            }
+
+            $segments = array_values(array_filter(explode('/', $normalized)));
+            return trim((string) end($segments));
+        }
+
+        return $normalized;
+    }
+
+    private function resolvePortalExamYear(ResultPortalLink $link, array $meta): int
+    {
+        $metaYear = (int) data_get($meta, 'exam_year', 0);
+        if ($metaYear > 0) {
+            return $metaYear;
+        }
+
+        // Historical links stored year label in exam_id (e.g. 2026).
+        $linkYear = (int) ($link->exam_id ?? 0);
+        if ($linkYear > 0) {
+            return $linkYear;
+        }
+
+        $activeYear = ExamYear::query()->where('is_active', true)->first();
+        return (int) ($activeYear->year_label ?? now()->year);
+    }
+
+    private function resolvePortalExamType(array $meta): string
+    {
+        $code = strtoupper(trim((string) data_get($meta, 'exam_type', 'ACSEE')));
+        return $code !== '' ? $code : 'ACSEE';
+    }
+
+    private function getRegisteredSchoolEntries(ResultPortalLink $link, int $examYearValue, string $examTypeCode): Collection
+    {
+        $examType = ExamType::query()->where('code', $examTypeCode)->first();
+        if (!$examType) {
+            return collect();
+        }
+
+        $schools = School::query()
+            ->whereHas('candidates.examRegistrations', function ($q) use ($examType, $examYearValue) {
+                $q->where('exam_type_id', $examType->id)
+                  ->where(function ($yy) use ($examYearValue) {
+                      $yy->where('year', $examYearValue)
+                         ->orWhereHas('examYear', function ($ey) use ($examYearValue) {
+                             $ey->where('year_label', $examYearValue);
+                         });
+                  });
+            })
+            ->when($link->region_id, fn ($q) => $q->where('region_id', $link->region_id))
+            ->when($link->school_id, fn ($q) => $q->where('id', $link->school_id))
+            ->orderBy('name')
+            ->get(['id', 'code', 'name']);
+
+        return $schools->map(function ($school) use ($examYearValue, $examTypeCode) {
+            return [
+                'label' => trim(($school->code ? $school->code . ' - ' : '') . $school->name),
+                'url' => route('public.results.school', [
+                    'examYear' => $examYearValue,
+                    'examType' => strtolower($examTypeCode),
+                    'schoolId' => $school->id,
+                ]),
+            ];
+        });
+    }
+}

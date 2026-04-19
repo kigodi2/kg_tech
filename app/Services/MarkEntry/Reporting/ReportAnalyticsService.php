@@ -226,9 +226,20 @@ class ReportAnalyticsService
             $schoolsQuery->where('district_id', $districtId);
         }
 
+        $candidateCounts = DB::table('raw_marks')
+            ->join('mark_import_batches', 'mark_import_batches.id', '=', 'raw_marks.mark_import_batch_id')
+            ->where('mark_import_batches.exam_year', $yearValue)
+            ->when($districtId, fn ($q) => $q->where('mark_import_batches.district_id', $districtId))
+            ->whereNotNull('mark_import_batches.school_id')
+            ->whereNotNull('raw_marks.candidate_index_number')
+            ->groupBy('mark_import_batches.school_id')
+            ->select('mark_import_batches.school_id', DB::raw('COUNT(DISTINCT raw_marks.candidate_index_number) as candidate_count'))
+            ->pluck('candidate_count', 'mark_import_batches.school_id');
+
         $worstSchools = $schoolsQuery->get()->map(fn($b) => [
             'school_code' => $b->school?->code,
             'school_name' => $b->school?->name,
+            'candidate_count' => (int) ($candidateCounts[$b->school_id] ?? 0),
             'total_errors' => $b->total_errors,
             'total_records' => $b->total_records,
             'batch_count' => $b->batch_count,

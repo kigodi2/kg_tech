@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'results_portal' => [
+        'default_token' => env('RESULTS_PORTAL_DEFAULT_TOKEN', ''),
+    ],
+
 ];

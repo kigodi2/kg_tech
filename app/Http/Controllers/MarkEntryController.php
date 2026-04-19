@@ -23,10 +23,13 @@ use App\Services\MarkImport\BulkCsvExportService;
 use App\Services\MarkImport\ZipPreviewService;
 use App\Services\ExamYear\ExamYearValidationService;
 use App\Models\MarkImportRun;
+use App\Models\GovernanceAuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
 use ZipArchive;
 
@@ -120,11 +123,28 @@ class MarkEntryController extends Controller
      */
     public function getSchools(Request $request)
     {
-        $validated = $request->validate([
-            'district_id' => 'required|integer|exists:districts,id'
-        ]);
-        
-        $schools = School::where('district_id', $validated['district_id'])
+        $districtInput = trim((string) $request->query('district_id', ''));
+        if ($districtInput === '') {
+            return response()->json([
+                'message' => 'The district_id field is required.'
+            ], 422);
+        }
+
+        $district = null;
+        if (ctype_digit($districtInput)) {
+            $district = District::find((int) $districtInput);
+        } else {
+            $district = District::query()
+                ->where('code', $districtInput)
+                ->orWhere('name', $districtInput)
+                ->first();
+        }
+
+        if (!$district) {
+            return response()->json(['data' => []]);
+        }
+
+        $schools = School::where('district_id', $district->id)
             ->get(['id', 'code', 'name', 'district_id']);
         
         return response()->json(['data' => $schools]);
@@ -160,7 +180,14 @@ class MarkEntryController extends Controller
         // Get distinct schools that have ACSEE registrations for this year
         $schools = School::query()
             ->distinct()
-            ->select('schools.id', 'schools.code', 'schools.name', 'schools.district_id')
+            ->leftJoin('districts', 'districts.id', '=', 'schools.district_id')
+            ->select(
+                'schools.id',
+                'schools.code',
+                'schools.name',
+                'schools.district_id',
+                DB::raw('COALESCE(schools.region_id, districts.region_id) as region_id')
+            )
             ->join('candidates', 'schools.id', '=', 'candidates.school_id')
             ->join('candidate_exam_registrations', function ($join) use ($acsee, $examYear) {
                 $join->on('candidates.id', '=', 'candidate_exam_registrations.candidate_id')
@@ -187,32 +214,44 @@ class MarkEntryController extends Controller
         $validated = $request->validate([
             'exam_year' => 'required|string|regex:/^\d{4}$/'
         ]);
-        
-        // Find exam year by year_label
+
+        // Validate that the selected exam year exists (kept for API contract consistency).
         $examYear = ExamYear::where('year_label', $validated['exam_year'])->first();
         if (!$examYear) {
             return response()->json(['data' => []]);
         }
 
-        // Get ACSEE exam type
-        $acsee = ExamType::where('code', 'ACSEE')->first();
-        if (!$acsee) {
-            return response()->json(['data' => []]);
+        // District Bulk ZIP should allow selecting from all scoped districts.
+        // Do not restrict this picker to districts already having registrations/marks.
+        $districtsQuery = District::query()
+            ->leftJoin('regions', 'districts.region_id', '=', 'regions.id')
+            ->select(
+                'districts.id',
+                'districts.code',
+                'districts.name',
+                'districts.region_id',
+                'regions.code as region_code',
+                'regions.name as region_name'
+            )
+            ->orderBy('districts.code');
+
+        $user = auth()->user();
+        if ($user) {
+            if ($user->isRegionalOfficer() && $user->getRegionId()) {
+                $districtsQuery->where('region_id', $user->getRegionId());
+            } elseif (($user->isDistrictDataEntryOfficer() || $user->isDistrictSupervisor()) && $user->getDistrictId()) {
+                $districtsQuery->where('id', $user->getDistrictId());
+            } elseif ($user->isSchoolRegistrar() && $user->getSchoolId()) {
+                $schoolDistrictId = School::whereKey($user->getSchoolId())->value('district_id');
+                if ($schoolDistrictId) {
+                    $districtsQuery->where('id', $schoolDistrictId);
+                } else {
+                    $districtsQuery->whereRaw('1 = 0');
+                }
+            }
         }
 
-        // Get distinct districts that have ACSEE registrations for this year
-        $districts = District::query()
-            ->distinct()
-            ->select('districts.id', 'districts.code', 'districts.name', 'districts.region_id')
-            ->join('schools', 'districts.id', '=', 'schools.district_id')
-            ->join('candidates', 'schools.id', '=', 'candidates.school_id')
-            ->join('candidate_exam_registrations', function ($join) use ($acsee, $examYear) {
-                $join->on('candidates.id', '=', 'candidate_exam_registrations.candidate_id')
-                     ->where('candidate_exam_registrations.exam_type_id', '=', $acsee->id)
-                     ->where('candidate_exam_registrations.exam_year_id', '=', $examYear->id);
-            })
-            ->orderBy('districts.code')
-            ->get();
+        $districts = $districtsQuery->get();
 
         return response()->json(['data' => $districts]);
     }
@@ -1591,9 +1630,10 @@ class MarkEntryController extends Controller
                     $basename = pathinfo($filename, PATHINFO_FILENAME);
                     $subjectCode = explode('_', $basename)[0];
 
-                    // Count rows (subtract header)
+                    // Count rows (subtract header) with robust line ending handling.
                     $content = $zip->getFromIndex($i);
-                    $lines = array_filter(explode("\n", $content), fn($l) => trim($l) !== '');
+                    $lines = preg_split("/\r\n|\n|\r/", (string) $content);
+                    $lines = array_filter($lines, fn($l) => trim((string) $l) !== '');
                     $rowCount = max(0, count($lines) - 1);
 
                     $subjects[] = [
@@ -1743,7 +1783,8 @@ class MarkEntryController extends Controller
                                 if ($innerExt !== 'csv' && $innerExt !== 'txt') continue;
 
                                 $content = $innerZip->getFromIndex($j);
-                                $lines = array_filter(explode("\n", $content), fn($l) => trim($l) !== '');
+                                $lines = preg_split("/\r\n|\n|\r/", (string) $content);
+                                $lines = array_filter($lines, fn($l) => trim((string) $l) !== '');
                                 $rowCount = max(0, count($lines) - 1);
                                 $subjectCode = explode('_', pathinfo($innerFile, PATHINFO_FILENAME))[0];
 
@@ -1776,7 +1817,8 @@ class MarkEntryController extends Controller
                         if ($ext !== 'csv' && $ext !== 'txt') continue;
 
                         $content = $zip->getFromIndex($i);
-                        $lines = array_filter(explode("\n", $content), fn($l) => trim($l) !== '');
+                        $lines = preg_split("/\r\n|\n|\r/", (string) $content);
+                        $lines = array_filter($lines, fn($l) => trim((string) $l) !== '');
                         $rowCount = max(0, count($lines) - 1);
 
                         // Detect subject code: try first segment, then last, then all
@@ -1814,14 +1856,79 @@ class MarkEntryController extends Controller
                 }
             }
 
-            session(['district_zip_temp_path' => $fullPath]);
+            // Existing duplicate handling observed:
+            // - Prior flow only blocked LOCKED/APPROVED during commit and did not prevent duplicate ZIP/file/row uploads.
+            // - This validation step now computes duplicate fingerprints and returns a managed duplicate report.
+            $trackingEnabled = $this->isDuplicateTrackingEnabled();
+            $duplicateReport = $this->analyzeDistrictZipDuplicates(
+                $fullPath,
+                (int) ($request->input('district_id') ?? 0),
+                (int) ($request->input('exam_year_id') ?? 0),
+                $trackingEnabled
+            );
+
+            $bulkUploadId = 0;
+            if ($trackingEnabled) {
+                $bulkUploadId = DB::table('bulk_uploads')->insertGetId([
+                    'exam_year_id' => (int) ($request->input('exam_year_id') ?? 0) ?: null,
+                    'region_id' => District::whereKey((int) ($request->input('district_id') ?? 0))->value('region_id'),
+                    'district_id' => (int) ($request->input('district_id') ?? 0) ?: null,
+                    'upload_type' => 'district_zip',
+                    'original_filename' => $file->getClientOriginalName(),
+                    'zip_hash' => $duplicateReport['zip_hash'] ?? null,
+                    'zip_size' => filesize($fullPath),
+                    'uploaded_by' => auth()->id(),
+                    'uploaded_at' => now(),
+                    'status' => 'validated',
+                    'duplicate_status' => $duplicateReport['duplicate_status'] ?? 'new',
+                    'metadata' => json_encode([
+                        'validation_issues' => $issues,
+                        'duplicate_report' => $duplicateReport,
+                    ]),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                foreach (($duplicateReport['duplicate_files'] ?? []) as $dupFile) {
+                    DB::table('bulk_upload_files')->insert([
+                        'bulk_upload_id' => $bulkUploadId,
+                        'filename' => $dupFile['filename'] ?? '',
+                        'file_hash' => $dupFile['file_hash'] ?? null,
+                        'derived_scope' => json_encode($dupFile['derived_scope'] ?? []),
+                        'duplicate_of_file_id' => null,
+                        'status' => 'duplicate',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                foreach (($duplicateReport['new_files'] ?? []) as $newFile) {
+                    DB::table('bulk_upload_files')->insert([
+                        'bulk_upload_id' => $bulkUploadId,
+                        'filename' => $newFile['filename'] ?? '',
+                        'file_hash' => $newFile['file_hash'] ?? null,
+                        'derived_scope' => json_encode($newFile['derived_scope'] ?? []),
+                        'duplicate_of_file_id' => null,
+                        'status' => 'new',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            session([
+                'district_zip_temp_path' => $fullPath,
+                'district_bulk_upload_id' => $bulkUploadId,
+                'district_duplicate_report' => $duplicateReport,
+            ]);
 
             $status = empty($issues) && $totalCandidates > 0 ? 'completed' : (empty($issues) ? 'partial' : 'failed');
+            $canCommit = $totalCandidates > 0;
 
             return response()->json([
                 'success' => true,
                 'status' => $status,
-                'can_commit' => $totalCandidates > 0 && empty($issues),
+                'can_commit' => $canCommit,
                 'totals' => [
                     'total_rows' => $totalCandidates,
                     'valid_rows' => $totalCandidates,
@@ -1841,6 +1948,9 @@ class MarkEntryController extends Controller
                     'field' => 'structure',
                     'message' => $issue,
                 ])->toArray(),
+                'bulk_upload_id' => $bulkUploadId,
+                'duplicate_report' => $duplicateReport,
+                'tracking_enabled' => $trackingEnabled,
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Error validating ZIP: ' . $e->getMessage()], 500);
@@ -1894,6 +2004,25 @@ class MarkEntryController extends Controller
             $totalSuccess = 0;
             $totalErrors = 0;
             $totalRows = 0;
+            $trackingEnabled = $this->isDuplicateTrackingEnabled();
+            $bulkUploadId = (int) (session('district_bulk_upload_id') ?: $request->input('bulk_upload_id', 0));
+            $duplicateReport = session('district_duplicate_report', []);
+            $duplicateStrategy = strtolower((string) ($request->input('duplicate_strategy', 'skip')));
+            $replaceConflicts = filter_var($request->input('replace_conflicts', false), FILTER_VALIDATE_BOOLEAN);
+            $replaceReason = trim((string) $request->input('reason', ''));
+            $forceReplaceLocked = filter_var($request->input('force_replace_locked', false), FILTER_VALIDATE_BOOLEAN);
+
+            if (!in_array($duplicateStrategy, ['skip', 'merge', 'replace'], true)) {
+                return response()->json(['success' => false, 'message' => 'Invalid duplicate strategy selected.'], 422);
+            }
+
+            $isAdmin = auth()->user() && (auth()->user()->isAdmin() || Gate::allows('mark-entry.admin'));
+            if ($duplicateStrategy === 'replace' && !$isAdmin) {
+                return response()->json(['success' => false, 'message' => 'Replace strategy requires admin permission.'], 403);
+            }
+            if ($duplicateStrategy === 'replace' && $replaceReason === '') {
+                return response()->json(['success' => false, 'message' => 'Reason is required for replace strategy.'], 422);
+            }
 
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $filename = $zip->getNameIndex($i);
@@ -1919,11 +2048,21 @@ class MarkEntryController extends Controller
                     ->whereIn('status', [MarkImportBatch::STATUS_LOCKED, MarkImportBatch::STATUS_APPROVED])
                     ->first();
 
-                if ($lockedBatch) {
+                if ($lockedBatch && $duplicateStrategy !== 'replace') {
                     $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'LOCKED_CONFLICT', 'error',
                         "Subject {$subjectCode} already has " . strtoupper($lockedBatch->status) . " marks (batch {$lockedBatch->batch_code}). Skipped.",
                         $lockedBatch->batch_code, $filename);
                     $results[] = ['subject_code' => $subjectCode, 'status' => 'skipped', 'message' => 'Locked/approved conflict'];
+                    $totalErrors++;
+                    continue;
+                }
+
+                if ($lockedBatch && $duplicateStrategy === 'replace' && (!$isAdmin || !$forceReplaceLocked)) {
+                    $results[] = [
+                        'subject_code' => $subjectCode,
+                        'status' => 'failed',
+                        'message' => 'Replace against approved/locked data requires super-admin confirmation.',
+                    ];
                     $totalErrors++;
                     continue;
                 }
@@ -1934,6 +2073,29 @@ class MarkEntryController extends Controller
 
                 try {
                     DB::beginTransaction();
+
+                    if ($duplicateStrategy === 'replace') {
+                        $replaceExcludedStatuses = [MarkImportBatch::STATUS_PROCESSED];
+                        if (!$forceReplaceLocked) {
+                            $replaceExcludedStatuses[] = MarkImportBatch::STATUS_LOCKED;
+                            $replaceExcludedStatuses[] = MarkImportBatch::STATUS_APPROVED;
+                        }
+
+                        $existingReplaceable = MarkImportBatch::where('school_id', (int) $schoolId)
+                            ->where('subject_id', (int) $subject->id)
+                            ->where('exam_year', (int) $examYear)
+                            ->whereNotIn('status', $replaceExcludedStatuses)
+                            ->get();
+
+                        foreach ($existingReplaceable as $oldBatch) {
+                            $oldBatch->update([
+                                'status' => 'superseded',
+                                'lifecycle_state' => 'archived',
+                                'notes' => trim(($oldBatch->notes ? $oldBatch->notes . ' | ' : '') . "Superseded via school replace: {$replaceReason}"),
+                            ]);
+                        }
+                    }
+
                     $batch = $this->importService->createBatch((int)$examYear, (int)$schoolId, (int)$subject->id, auth()->id() ?? 1);
                     $uploadedFile = new \Illuminate\Http\UploadedFile($tmpCsv, $filename, 'text/csv', null, true);
                     $result = $this->importService->processCSVUpload($batch, $uploadedFile, (int)$examYear, (int)$schoolId, (int)$subject->id);
@@ -2036,6 +2198,25 @@ class MarkEntryController extends Controller
             $totalSuccess = 0;
             $totalErrors = 0;
             $totalRows = 0;
+            $trackingEnabled = $this->isDuplicateTrackingEnabled();
+            $bulkUploadId = (int) (session('district_bulk_upload_id') ?: $request->input('bulk_upload_id', 0));
+            $duplicateReport = session('district_duplicate_report', []);
+            $duplicateStrategy = strtolower((string) ($request->input('duplicate_strategy', 'skip')));
+            $replaceConflicts = filter_var($request->input('replace_conflicts', false), FILTER_VALIDATE_BOOLEAN);
+            $replaceReason = trim((string) $request->input('reason', ''));
+            $forceReplaceLocked = filter_var($request->input('force_replace_locked', false), FILTER_VALIDATE_BOOLEAN);
+
+            if (!in_array($duplicateStrategy, ['skip', 'merge', 'replace'], true)) {
+                return response()->json(['success' => false, 'message' => 'Invalid duplicate strategy selected.'], 422);
+            }
+
+            $isAdmin = auth()->user() && (auth()->user()->isAdmin() || Gate::allows('mark-entry.admin'));
+            if ($duplicateStrategy === 'replace' && !$isAdmin) {
+                return response()->json(['success' => false, 'message' => 'Replace strategy requires admin permission.'], 403);
+            }
+            if ($duplicateStrategy === 'replace' && $replaceReason === '') {
+                return response()->json(['success' => false, 'message' => 'Reason is required for replace strategy.'], 422);
+            }
 
             $hasManifest = ($zip->locateName('manifest.json') !== false);
             $hasNestedZips = false;
@@ -2047,15 +2228,47 @@ class MarkEntryController extends Controller
             }
 
             // Helper closure for processing a single CSV in the district context
-            $processCsv = function (string $csvContent, string $csvName, $school, $subject, string $examYear) use (&$results, &$batchIds, &$totalSuccess, &$totalErrors, &$totalRows, $parentRun) {
-                // Check locked conflict
+            $processCsv = function (string $csvContent, string $csvName, $school, $subject, string $examYear) use (
+                &$results, &$batchIds, &$totalSuccess, &$totalErrors, &$totalRows, $parentRun,
+                $duplicateStrategy, $replaceConflicts, $replaceReason, $forceReplaceLocked, $isAdmin, $bulkUploadId, $trackingEnabled
+            ) {
+                $duplicateAnalysis = $this->analyzeCsvRowDuplicates(
+                    $csvContent,
+                    (int) $school->id,
+                    (int) $subject->id,
+                    (int) $examYear
+                );
+
+                $selectedCsvContent = $csvContent;
+                if (in_array($duplicateStrategy, ['skip', 'merge'], true)) {
+                    $selectedRows = $duplicateStrategy === 'skip'
+                        ? $duplicateAnalysis['new_rows']
+                        : ($replaceConflicts ? array_merge($duplicateAnalysis['new_rows'], $duplicateAnalysis['conflict_rows']) : $duplicateAnalysis['new_rows']);
+                    $selectedCsvContent = $this->buildCsvFromHeaderAndRows($duplicateAnalysis['header'], $selectedRows);
+
+                    if (count($selectedRows) === 0) {
+                        $results[] = [
+                            'school_code' => $school->code,
+                            'school_id' => $school->id,
+                            'school_name' => $school->name,
+                            'status' => 'skipped',
+                            'message' => 'No new rows to commit after duplicate filtering.',
+                            'duplicates' => $duplicateAnalysis['exact_duplicate_count'],
+                            'conflicts' => $duplicateAnalysis['conflict_count'],
+                        ];
+                        return;
+                    }
+                }
+
+                // Check locked/approved conflict
                 $lockedBatch = MarkImportBatch::where('school_id', $school->id)
                     ->where('subject_id', $subject->id)
                     ->where('exam_year', (int) $examYear)
                     ->whereIn('status', [MarkImportBatch::STATUS_LOCKED, MarkImportBatch::STATUS_APPROVED])
+                    ->latest('id')
                     ->first();
 
-                if ($lockedBatch) {
+                if ($lockedBatch && $duplicateStrategy !== 'replace') {
                     $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'LOCKED_CONFLICT', 'error',
                         "{$school->code}/{$subject->code}: Already " . strtoupper($lockedBatch->status) . ". Skipped.", $lockedBatch->batch_code, $csvName);
                     $results[] = ['school_code' => $school->code, 'school_id' => $school->id, 'school_name' => $school->name, 'status' => 'skipped', 'message' => 'Locked/approved conflict'];
@@ -2063,12 +2276,51 @@ class MarkEntryController extends Controller
                     return;
                 }
 
+                if ($lockedBatch && $duplicateStrategy === 'replace' && (!$isAdmin || !$forceReplaceLocked)) {
+                    $results[] = [
+                        'school_code' => $school->code,
+                        'school_id' => $school->id,
+                        'school_name' => $school->name,
+                        'status' => 'failed',
+                        'message' => 'Replace against approved/locked data requires super-admin confirmation.',
+                    ];
+                    $totalErrors++;
+                    return;
+                }
+
                 $tmpCsv = tempnam(sys_get_temp_dir(), 'csv_');
-                file_put_contents($tmpCsv, $csvContent);
+                file_put_contents($tmpCsv, $selectedCsvContent);
 
                 try {
                     DB::beginTransaction();
-                    $batch = $this->importService->createBatch((int) $examYear, (int) $school->id, (int) $subject->id, auth()->id() ?? 1);
+
+                    if ($duplicateStrategy === 'replace') {
+                        $replaceExcludedStatuses = [MarkImportBatch::STATUS_PROCESSED];
+                        if (!$forceReplaceLocked) {
+                            $replaceExcludedStatuses[] = MarkImportBatch::STATUS_LOCKED;
+                            $replaceExcludedStatuses[] = MarkImportBatch::STATUS_APPROVED;
+                        }
+
+                        $existingReplaceable = MarkImportBatch::where('school_id', $school->id)
+                            ->where('subject_id', $subject->id)
+                            ->where('exam_year', (int) $examYear)
+                            ->whereNotIn('status', $replaceExcludedStatuses)
+                            ->get();
+
+                        foreach ($existingReplaceable as $oldBatch) {
+                            $oldUpdate = [
+                                'status' => 'superseded',
+                                'lifecycle_state' => 'archived',
+                                'notes' => trim(($oldBatch->notes ? $oldBatch->notes . ' | ' : '') . "Superseded via district replace: {$replaceReason}"),
+                            ];
+                            if ($trackingEnabled && Schema::hasColumn('mark_import_batches', 'superseded_by_bulk_upload_id')) {
+                                $oldUpdate['superseded_by_bulk_upload_id'] = $bulkUploadId ?: null;
+                            }
+                            $oldBatch->update($oldUpdate);
+                        }
+                    }
+
+                    $batch = $this->createImportBatchWithoutSupersede((int) $examYear, (int) $school->id, (int) $subject->id, (int) (auth()->id() ?? 1));
                     $uploadedFile = new \Illuminate\Http\UploadedFile($tmpCsv, $csvName, 'text/csv', null, true);
                     $result = $this->importService->processCSVUpload($batch, $uploadedFile, (int) $examYear, (int) $school->id, (int) $subject->id);
 
@@ -2089,7 +2341,17 @@ class MarkEntryController extends Controller
                         $fileValid = $validation['valid'] ?? 0;
                         $totalRows += $fileRows;
                         $totalSuccess += $fileValid;
-                        $results[] = ['school_code' => $school->code, 'school_id' => $school->id, 'school_name' => $school->name, 'status' => 'success', 'successful_candidates' => $fileValid, 'total_candidates' => $fileRows];
+                        $results[] = [
+                            'school_code' => $school->code,
+                            'school_id' => $school->id,
+                            'school_name' => $school->name,
+                            'status' => 'success',
+                            'successful_candidates' => $fileValid,
+                            'total_candidates' => $fileRows,
+                            'duplicates' => $duplicateAnalysis['exact_duplicate_count'],
+                            'conflicts' => $duplicateAnalysis['conflict_count'],
+                            'strategy' => $duplicateStrategy,
+                        ];
                     } else {
                         DB::rollBack();
                         $this->runService->addRunError($parentRun, 0, null, $subject->id, null, null, 'PROCESSING_FAILED', 'error',
@@ -2148,17 +2410,60 @@ class MarkEntryController extends Controller
                         }
                     }
                     if (!$school) {
-                        // Try to match school name from ZIP filename (e.g. IGOWOLE_SECONDARY_SCHOOL_ACSEE_2026_MarkTemplate.zip)
+                        // Try to match school name from ZIP filename.
+                        // Supports patterns like:
+                        //  - IGOWOLE_SECONDARY_SCHOOL_ACSEE_2026_MarkTemplate.zip
+                        //  - ISIMILA_SECONDARY_SCHOOL_ACSEE_2026.zip
+                        //  - "NAME_A - NAME_B.zip" (uses each side as a candidate)
                         $zipBasename = pathinfo($filename, PATHINFO_FILENAME);
-                        // Remove common suffixes: _ACSEE_YYYY_MarkTemplate
-                        $cleanedName = preg_replace('/_ACSEE_\d{4}_MarkTemplate$/i', '', $zipBasename);
-                        $cleanedName = str_replace('_', ' ', $cleanedName);
-                        if ($cleanedName) {
-                            // Exact name match
-                            $school = School::whereRaw('LOWER(name) = ?', [strtolower($cleanedName)])->first();
-                            // Partial match: school name starts with the cleaned filename
+                        $nameCandidates = [$zipBasename];
+                        if (str_contains($zipBasename, ' - ')) {
+                            $nameCandidates = array_merge($nameCandidates, explode(' - ', $zipBasename));
+                        }
+
+                        $normalize = static function (?string $value): string {
+                            $value = strtolower((string) $value);
+                            return preg_replace('/[^a-z0-9]+/', '', $value) ?: '';
+                        };
+
+                        $schoolQuery = School::query();
+                        if (!empty($district?->id)) {
+                            $schoolQuery->where('district_id', $district->id);
+                        }
+                        $candidateSchools = $schoolQuery->get(['id', 'name', 'code']);
+
+                        foreach ($nameCandidates as $candidateNameRaw) {
+                            $candidateName = (string) $candidateNameRaw;
+                            $candidateName = preg_replace('/_(ACSEE|CSEE|PSLE)_\d{4}(?:_MARKTEMPLATE)?$/i', '', $candidateName);
+                            $candidateName = preg_replace('/_(MARKTEMPLATE|TEMPLATE)$/i', '', $candidateName);
+                            $candidateName = trim(preg_replace('/\s+/', ' ', str_replace('_', ' ', $candidateName)));
+                            if ($candidateName === '') {
+                                continue;
+                            }
+
+                            // Exact name match (case-insensitive)
+                            $school = $candidateSchools->first(function ($s) use ($candidateName) {
+                                return strtolower((string) $s->name) === strtolower($candidateName);
+                            });
+
+                            // Normalized match (ignores spaces, punctuation, underscores)
                             if (!$school) {
-                                $school = School::whereRaw('LOWER(name) LIKE ?', [strtolower($cleanedName) . '%'])->first();
+                                $target = $normalize($candidateName);
+                                $school = $candidateSchools->first(function ($s) use ($target, $normalize) {
+                                    return $normalize((string) $s->name) === $target;
+                                });
+                            }
+
+                            // Starts-with fallback for slight suffix/prefix variance
+                            if (!$school) {
+                                $target = strtolower($candidateName);
+                                $school = $candidateSchools->first(function ($s) use ($target) {
+                                    return str_starts_with(strtolower((string) $s->name), $target);
+                                });
+                            }
+
+                            if ($school) {
+                                break;
                             }
                         }
                     }
@@ -2343,6 +2648,8 @@ class MarkEntryController extends Controller
             $zip->close();
             @unlink($zipPath);
             session()->forget('district_zip_temp_path');
+            session()->forget('district_duplicate_report');
+            session()->forget('district_bulk_upload_id');
 
             $allFailed = $totalSuccess === 0 && $totalErrors > 0;
             if ($allFailed) {
@@ -2352,17 +2659,380 @@ class MarkEntryController extends Controller
                     count($results) . " entries processed, {$totalSuccess} rows committed");
             }
 
+            if ($trackingEnabled && $bulkUploadId > 0) {
+                DB::table('bulk_uploads')
+                    ->where('id', $bulkUploadId)
+                    ->update([
+                        'status' => $allFailed ? 'rejected' : 'committed',
+                        'metadata' => json_encode([
+                            'strategy' => $duplicateStrategy,
+                            'replace_conflicts' => $replaceConflicts,
+                            'reason' => $replaceReason ?: null,
+                            'result_totals' => [
+                                'rows' => $totalRows,
+                                'success' => $totalSuccess,
+                                'errors' => $totalErrors,
+                            ],
+                        ]),
+                        'updated_at' => now(),
+                    ]);
+            }
+
+            GovernanceAuditLog::log(
+                $allFailed ? GovernanceAuditLog::ACTION_IMPORT_FAILED : GovernanceAuditLog::ACTION_IMPORT_COMPLETED,
+                auth()->id(),
+                auth()->id(),
+                [
+                    'module' => 'mark-entry',
+                    'scope' => 'district_zip',
+                    'district_id' => (int) $districtId,
+                    'exam_year_id' => (int) $examYearId,
+                    'bulk_upload_id' => $bulkUploadId,
+                    'strategy' => $duplicateStrategy,
+                    'replace_conflicts' => $replaceConflicts,
+                    'reason' => $replaceReason ?: null,
+                    'totals' => ['rows' => $totalRows, 'success' => $totalSuccess, 'errors' => $totalErrors],
+                ]
+            );
+
             return response()->json([
                 'success' => !$allFailed,
                 'run_id' => $parentRun->id,
                 'batch' => ['id' => $batchIds[0] ?? null],
                 'schools' => $results,
                 'message' => $allFailed ? 'All files failed to import. Check the error details.' : null,
+                'duplicate_strategy' => $duplicateStrategy,
+                'bulk_upload_id' => $bulkUploadId,
             ]);
         } catch (\Exception $e) {
             $parentRun->fail('Error committing ZIP: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error committing ZIP: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function analyzeDistrictZipDuplicates(string $zipPath, int $districtId, int $examYearId, bool $trackingEnabled = true): array
+    {
+        $zipHash = hash_file('sha256', $zipPath);
+        $duplicateZip = false;
+        if ($trackingEnabled) {
+            $duplicateZip = DB::table('bulk_uploads')
+                ->where('upload_type', 'district_zip')
+                ->where('district_id', $districtId)
+                ->where('exam_year_id', $examYearId)
+                ->where('zip_hash', $zipHash)
+                ->exists();
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($zipPath) !== true) {
+            return [
+                'zip_hash' => $zipHash,
+                'duplicate_zip' => $duplicateZip,
+                'duplicate_status' => $duplicateZip ? 'dup_zip' : 'new',
+                'summary' => [
+                    'duplicate_files_count' => 0,
+                    'duplicate_rows_count' => 0,
+                    'conflicting_rows_count' => 0,
+                    'new_rows_count' => 0,
+                ],
+                'duplicate_files' => [],
+                'new_files' => [],
+                'conflicting_rows' => [],
+                'exact_duplicate_rows' => [],
+            ];
+        }
+
+        $duplicateFiles = [];
+        $newFiles = [];
+        $conflictingRows = [];
+        $exactDuplicateRows = [];
+        $newRowsCount = 0;
+
+        $collectFile = function (string $filename, string $content) use (&$duplicateFiles, &$newFiles, &$conflictingRows, &$exactDuplicateRows, &$newRowsCount, $districtId, $examYearId, $trackingEnabled) {
+            $fileHash = hash('sha256', $content);
+            $scope = $this->deriveCsvScope($filename, $districtId);
+            $scopeSignature = json_encode([
+                'district_id' => $districtId,
+                'school_id' => $scope['school_id'] ?? null,
+                'subject_id' => $scope['subject_id'] ?? null,
+                'paper_code' => $scope['paper_code'] ?? null,
+            ]);
+
+            $priorFile = null;
+            if ($trackingEnabled) {
+                $priorFile = DB::table('bulk_upload_files')
+                    ->where('file_hash', $fileHash)
+                    ->whereRaw("json_extract(derived_scope, '$.scope_signature') = ?", [$scopeSignature])
+                    ->first();
+            }
+
+            $entry = [
+                'filename' => $filename,
+                'file_hash' => $fileHash,
+                'derived_scope' => array_merge($scope, ['scope_signature' => $scopeSignature]),
+            ];
+
+            if ($priorFile) {
+                $duplicateFiles[] = $entry;
+            } else {
+                $newFiles[] = $entry;
+            }
+
+            if (!empty($scope['school_id']) && !empty($scope['subject_id'])) {
+                $rowAnalysis = $this->analyzeCsvRowDuplicates($content, (int) $scope['school_id'], (int) $scope['subject_id'], (int) $scope['exam_year']);
+                $newRowsCount += (int) ($rowAnalysis['new_rows_count'] ?? 0);
+                foreach (($rowAnalysis['conflict_details'] ?? []) as $conflict) {
+                    $conflict['source_file'] = $filename;
+                    $conflictingRows[] = $conflict;
+                }
+                foreach (($rowAnalysis['duplicate_details'] ?? []) as $dup) {
+                    $dup['source_file'] = $filename;
+                    $exactDuplicateRows[] = $dup;
+                }
+            }
+        };
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $filename = $zip->getNameIndex($i);
+            if (str_starts_with($filename, '__MACOSX/') || str_contains($filename, '/__MACOSX/')) {
+                continue;
+            }
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            if ($ext === 'csv' || $ext === 'txt') {
+                $content = $zip->getFromIndex($i);
+                if ($content !== false) {
+                    $collectFile($filename, $content);
+                }
+                continue;
+            }
+
+            if ($ext === 'zip') {
+                $schoolZipContent = $zip->getFromIndex($i);
+                $tmpSchoolZip = tempnam(sys_get_temp_dir(), 'dup_school_zip_');
+                file_put_contents($tmpSchoolZip, $schoolZipContent);
+                $inner = new ZipArchive();
+                if ($inner->open($tmpSchoolZip) === true) {
+                    for ($j = 0; $j < $inner->numFiles; $j++) {
+                        $innerName = $inner->getNameIndex($j);
+                        $innerExt = strtolower(pathinfo($innerName, PATHINFO_EXTENSION));
+                        if ($innerExt !== 'csv' && $innerExt !== 'txt') {
+                            continue;
+                        }
+                        $innerContent = $inner->getFromIndex($j);
+                        if ($innerContent !== false) {
+                            $collectFile(basename($filename) . ':' . $innerName, $innerContent);
+                        }
+                    }
+                    $inner->close();
+                }
+                @unlink($tmpSchoolZip);
+            }
+        }
+        $zip->close();
+
+        $duplicateStatus = 'new';
+        if ($duplicateZip) {
+            $duplicateStatus = 'dup_zip';
+        } elseif (!empty($duplicateFiles)) {
+            $duplicateStatus = 'has_dup_files';
+        } elseif (!empty($exactDuplicateRows) || !empty($conflictingRows)) {
+            $duplicateStatus = 'has_dup_rows';
+        }
+
+        return [
+            'zip_hash' => $zipHash,
+            'duplicate_zip' => $duplicateZip,
+            'duplicate_status' => $duplicateStatus,
+            'summary' => [
+                'duplicate_files_count' => count($duplicateFiles),
+                'duplicate_rows_count' => count($exactDuplicateRows),
+                'conflicting_rows_count' => count($conflictingRows),
+                'new_rows_count' => $newRowsCount,
+            ],
+            'duplicate_files' => $duplicateFiles,
+            'new_files' => $newFiles,
+            'conflicting_rows' => array_slice($conflictingRows, 0, 200),
+            'exact_duplicate_rows' => array_slice($exactDuplicateRows, 0, 200),
+        ];
+    }
+
+    private function isDuplicateTrackingEnabled(): bool
+    {
+        return Schema::hasTable('bulk_uploads') && Schema::hasTable('bulk_upload_files');
+    }
+
+    private function deriveCsvScope(string $filename, int $districtId): array
+    {
+        $basename = pathinfo($filename, PATHINFO_FILENAME);
+        $parts = explode('_', $basename);
+        $subject = null;
+        foreach ($parts as $part) {
+            $subject = Subject::where('code', strtoupper($part))->first();
+            if ($subject) {
+                break;
+            }
+        }
+
+        $school = null;
+        if (preg_match('/\bS\d{4,}\b/i', $basename, $m)) {
+            $school = School::where('code', strtoupper($m[0]))->first();
+        }
+
+        return [
+            'district_id' => $districtId,
+            'exam_year' => (int) (request('exam_year_id') ? ExamYear::find(request('exam_year_id'))?->year_label : date('Y')),
+            'school_id' => $school?->id,
+            'school_code' => $school?->code,
+            'subject_id' => $subject?->id,
+            'subject_code' => $subject?->code,
+            'paper_code' => null,
+        ];
+    }
+
+    private function analyzeCsvRowDuplicates(string $csvContent, int $schoolId, int $subjectId, int $examYear): array
+    {
+        $lines = preg_split('/\r\n|\r|\n/', trim($csvContent));
+        if (empty($lines) || count($lines) < 2) {
+            return [
+                'header' => '',
+                'new_rows' => [],
+                'conflict_rows' => [],
+                'new_rows_count' => 0,
+                'exact_duplicate_count' => 0,
+                'conflict_count' => 0,
+                'conflict_details' => [],
+                'duplicate_details' => [],
+            ];
+        }
+
+        $header = array_shift($lines);
+        $rows = [];
+        $indexNumbers = [];
+
+        foreach ($lines as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $row = str_getcsv($line);
+            $index = trim((string) ($row[0] ?? ''));
+            if ($index === '') {
+                continue;
+            }
+            $rows[] = ['line' => $line, 'cols' => $row, 'index' => $index];
+            $indexNumbers[] = $index;
+        }
+
+        $existingRows = DB::table('raw_marks')
+            ->join('mark_import_batches', 'mark_import_batches.id', '=', 'raw_marks.mark_import_batch_id')
+            ->where('mark_import_batches.school_id', $schoolId)
+            ->where('mark_import_batches.subject_id', $subjectId)
+            ->where('mark_import_batches.exam_year', $examYear)
+            ->whereNotIn('mark_import_batches.status', ['rejected', 'superseded'])
+            ->whereIn('raw_marks.candidate_index_number', $indexNumbers)
+            ->select(
+                'raw_marks.candidate_index_number',
+                'raw_marks.paper_1_marks',
+                'raw_marks.paper_2_marks',
+                'raw_marks.paper_3_marks',
+                'raw_marks.practical_marks',
+                'raw_marks.project_marks',
+                'mark_import_batches.batch_code',
+                'mark_import_batches.status'
+            )
+            ->get()
+            ->keyBy('candidate_index_number');
+
+        $newRows = [];
+        $conflictRows = [];
+        $duplicateCount = 0;
+        $conflictCount = 0;
+        $conflictDetails = [];
+        $duplicateDetails = [];
+
+        foreach ($rows as $row) {
+            $existing = $existingRows->get($row['index']);
+            if (!$existing) {
+                $newRows[] = $row['line'];
+                continue;
+            }
+
+            $incomingSig = $this->normalizeCsvMarkSignature($row['cols']);
+            $existingSig = $this->normalizeDbMarkSignature($existing);
+            if ($incomingSig === $existingSig) {
+                $duplicateCount++;
+                $duplicateDetails[] = [
+                    'index_number' => $row['index'],
+                    'batch_code' => $existing->batch_code,
+                    'status' => $existing->status,
+                ];
+            } else {
+                $conflictCount++;
+                $conflictRows[] = $row['line'];
+                $conflictDetails[] = [
+                    'index_number' => $row['index'],
+                    'old_mark' => $existingSig,
+                    'new_mark' => $incomingSig,
+                    'batch_code' => $existing->batch_code,
+                    'status' => $existing->status,
+                ];
+            }
+        }
+
+        return [
+            'header' => $header,
+            'new_rows' => $newRows,
+            'conflict_rows' => $conflictRows,
+            'new_rows_count' => count($newRows),
+            'exact_duplicate_count' => $duplicateCount,
+            'conflict_count' => $conflictCount,
+            'conflict_details' => $conflictDetails,
+            'duplicate_details' => $duplicateDetails,
+        ];
+    }
+
+    private function buildCsvFromHeaderAndRows(string $header, array $rows): string
+    {
+        $body = implode("\n", $rows);
+        return trim($header) . "\n" . $body . "\n";
+    }
+
+    private function normalizeCsvMarkSignature(array $cols): string
+    {
+        $values = array_slice($cols, 2);
+        return implode('|', array_map(function ($v) {
+            $v = trim((string) $v);
+            return $v === '' ? '' : (string) ((float) $v);
+        }, $values));
+    }
+
+    private function normalizeDbMarkSignature(object $row): string
+    {
+        return implode('|', [
+            $row->paper_1_marks === null ? '' : (string) ((float) $row->paper_1_marks),
+            $row->paper_2_marks === null ? '' : (string) ((float) $row->paper_2_marks),
+            $row->paper_3_marks === null ? '' : (string) ((float) $row->paper_3_marks),
+            $row->practical_marks === null ? '' : (string) ((float) $row->practical_marks),
+            $row->project_marks === null ? '' : (string) ((float) $row->project_marks),
+        ]);
+    }
+
+    private function createImportBatchWithoutSupersede(int $examYear, int $schoolId, int $subjectId, int $importedBy): MarkImportBatch
+    {
+        $subject = Subject::findOrFail($subjectId);
+        $school = School::findOrFail($schoolId);
+
+        return MarkImportBatch::create([
+            'batch_code' => "BATCH-{$schoolId}-{$subjectId}-{$examYear}-" . now()->format('YmdHis') . '-' . Str::random(6),
+            'exam_year' => $examYear,
+            'school_id' => $schoolId,
+            'region_id' => $school->region_id,
+            'district_id' => $school->district_id,
+            'subject_id' => $subjectId,
+            'exam_type_id' => $subject->exam_type_id,
+            'status' => MarkImportBatch::STATUS_DRAFT,
+            'imported_by' => $importedBy,
+            'imported_at' => now(),
+        ]);
     }
 
     /**

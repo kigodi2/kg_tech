@@ -11,7 +11,7 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1280, height: 800 },
     actionTimeout: 10000,
-    baseURL: 'http://127.0.0.1:8000'
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8000'
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } }

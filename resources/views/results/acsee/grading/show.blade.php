@@ -85,14 +85,17 @@
         <h3 class="text-lg font-bold text-gray-900 mb-4">GPA Mapping</h3>
         
         <div class="grid grid-cols-3 gap-6">
-            @php $gpas = ['A' => 'a', 'B' => 'b', 'C' => 'c', 'D' => 'd', 'F' => 'f', 'Special/Absent' => 'special']; @endphp
-            @foreach($gpas as $label => $key)
+            @php
+                $gradePoints = collect($profile->gpa_mapping['grade_points'] ?? [])
+                    ->mapWithKeys(fn ($item) => [strtoupper((string) ($item['grade'] ?? '')) => $item['gpa_point_value'] ?? '-']);
+            @endphp
+            @foreach($gradePoints as $label => $value)
                 <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <p class="text-gray-600 text-sm font-semibold mb-1">Grade {{ $label }}</p>
                     <p class="text-3xl font-bold text-purple-600">
-                        {{ $profile->gpa_mapping[$key] ?? '-' }}
+                        {{ $value }}
                     </p>
-                    <p class="text-xs text-gray-500 mt-1">{{ $profile->gpa_mapping[$key] ?? 0 }}/4.0</p>
+                    <p class="text-xs text-gray-500 mt-1">Point value</p>
                 </div>
             @endforeach
         </div>
@@ -102,14 +105,24 @@
     <div class="bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-bold text-gray-900 mb-4">Competence Levels</h3>
         
+        @php $competenceRules = collect($profile->competence_levels['rules'] ?? []); @endphp
         <div class="grid grid-cols-2 gap-6">
-            @php $levels = ['A' => 'a', 'B' => 'b', 'C' => 'c', 'D' => 'd', 'F' => 'f', 'Special' => 'special']; @endphp
-            @foreach($levels as $grade => $key)
+            @foreach($competenceRules as $rule)
                 <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <p class="text-gray-600 text-sm font-semibold mb-2">Grade {{ $grade }}</p>
-                    <p class="text-lg font-semibold text-gray-900">
-                        {{ $profile->competence_levels[$key] ?? 'Unknown' }}
-                    </p>
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-gray-600 text-sm font-semibold mb-2">
+                                {{ $rule['basis'] ?? 'GPA' }} {{ $rule['min_value'] ?? '-' }}@if(($rule['max_value'] ?? null) !== ($rule['min_value'] ?? null)) - {{ $rule['max_value'] ?? '-' }}@endif
+                            </p>
+                            <p class="text-lg font-semibold text-gray-900">
+                                {{ $rule['level_label'] ?? 'Unknown' }}
+                            </p>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-flex h-8 w-8 rounded-full border border-gray-300" style="background-color: {{ $rule['color_code'] ?? '#e5e7eb' }}"></span>
+                            <p class="mt-2 text-xs font-mono text-gray-500">{{ $rule['color_code'] ?? '-' }}</p>
+                        </div>
+                    </div>
                 </div>
             @endforeach
         </div>
@@ -134,17 +147,17 @@
     <!-- Actions -->
     <div class="flex gap-4">
         @if(!$profile->is_locked)
-            <a href="{{ route('results.acsee.grading.edit', $profile->id) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
+            <a href="{{ route($resultsRoutePrefix . '.grading.edit', $profile->id) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
                 <i class="fas fa-edit"></i> Edit Profile
             </a>
-            <form method="POST" action="{{ route('results.acsee.grading.lock', $profile->id) }}" class="inline" onclick="return confirm('Lock this profile? It cannot be edited after locking.');">
+            <form method="POST" action="{{ route($resultsRoutePrefix . '.grading.lock', $profile->id) }}" class="inline" onclick="return confirm('Lock this profile? It cannot be edited after locking.');">
                 @csrf
                 <button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 rounded-lg transition-colors font-medium flex items-center gap-2">
                     <i class="fas fa-lock"></i> Lock Profile
                 </button>
             </form>
         @endif
-        <a href="{{ route('results.acsee.grading.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors font-medium">
+        <a href="{{ route($resultsRoutePrefix . '.grading.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg transition-colors font-medium">
             Back to Profiles
         </a>
     </div>

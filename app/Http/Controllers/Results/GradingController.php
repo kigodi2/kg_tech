@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\GradingProfile;
 use App\Models\ExamYear;
 use App\Models\ExamType;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * GradingController
@@ -16,10 +18,62 @@ use Illuminate\Http\Request;
  */
 class GradingController extends Controller
 {
+    private function routePrefix(Request $request): string
+    {
+        return $request->routeIs('results.psle.*') ? 'results.psle' : 'results.acsee';
+    }
+
+    private function examCode(Request $request): string
+    {
+        return $request->routeIs('results.psle.*') ? 'PSLE' : 'ACSEE';
+    }
+
+    private function examType(Request $request): ExamType
+    {
+        return ExamType::query()->where('code', $this->examCode($request))->firstOrFail();
+    }
+
+    private function scopedProfile(Request $request, $id): GradingProfile
+    {
+        $profile = GradingProfile::query()
+            ->where('exam_type_id', $this->examType($request)->id)
+            ->find($id);
+
+        if (!$profile) {
+            throw new NotFoundHttpException('Grading profile not found for this exam type.');
+        }
+
+        return $profile;
+    }
+
+    private function primaryProfile(Request $request): ?GradingProfile
+    {
+        return GradingProfile::query()
+            ->where('exam_type_id', $this->examType($request)->id)
+            ->orderByDesc('is_active')
+            ->orderByDesc('exam_year_id')
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function fallbackProfileRedirect(Request $request): ?RedirectResponse
+    {
+        if (!$request->routeIs('results.psle.*')) {
+            return null;
+        }
+
+        $profile = $this->primaryProfile($request);
+        if (!$profile) {
+            return null;
+        }
+
+        return redirect()->route($this->routePrefix($request) . '.grading.show', $profile->id);
+    }
+
     public function index()
     {
-        $acsee = ExamType::where('code', 'ACSEE')->first();
-        $profiles = GradingProfile::where('exam_type_id', $acsee->id)
+        $examType = $this->examType(request());
+        $profiles = GradingProfile::where('exam_type_id', $examType->id)
             ->with('examYear')
             ->latest()
             ->paginate(10);
@@ -37,13 +91,33 @@ class GradingController extends Controller
 
     public function show($id)
     {
-        $profile = GradingProfile::findOrFail($id);
+        try {
+            $profile = $this->scopedProfile(request(), $id);
+        } catch (NotFoundHttpException $e) {
+            $fallback = $this->fallbackProfileRedirect(request());
+            if ($fallback) {
+                return $fallback;
+            }
+
+            throw $e;
+        }
+
         return view('results.acsee.grading.show', compact('profile'));
     }
 
     public function edit($id)
     {
-        $profile = GradingProfile::findOrFail($id);
+        try {
+            $profile = $this->scopedProfile(request(), $id);
+        } catch (NotFoundHttpException $e) {
+            $fallback = $this->fallbackProfileRedirect(request());
+            if ($fallback) {
+                return $fallback;
+            }
+
+            throw $e;
+        }
+
         $examYears = ExamYear::where('is_active', true)->get();
         return view('results.acsee.grading.edit', compact('profile', 'examYears'));
     }
@@ -59,17 +133,17 @@ class GradingController extends Controller
         ]);
 
         $grading = GradingProfile::create([
-            'exam_type_id' => ExamType::where('code', 'ACSEE')->first()->id,
+            'exam_type_id' => $this->examType($request)->id,
             ...$validated,
         ]);
 
-        return redirect()->route('results.acsee.grading.show', $grading)
+        return redirect()->route($this->routePrefix($request) . '.grading.show', $grading)
             ->with('success', 'Grading profile created successfully.');
     }
 
     public function update(Request $request, $id)
     {
-        $profile = GradingProfile::findOrFail($id);
+        $profile = $this->scopedProfile($request, $id);
         
         if ($profile->is_locked) {
             return back()->with('error', 'Cannot edit locked grading profile.');
@@ -89,7 +163,7 @@ class GradingController extends Controller
 
     public function lock($id)
     {
-        $profile = GradingProfile::findOrFail($id);
+        $profile = $this->scopedProfile(request(), $id);
         $profile->update(['is_locked' => true]);
 
         return back()->with('success', 'Grading profile locked. No further changes allowed.');
@@ -97,7 +171,7 @@ class GradingController extends Controller
 
     public function destroy($id)
     {
-        $profile = GradingProfile::findOrFail($id);
+        $profile = $this->scopedProfile(request(), $id);
         
         if ($profile->is_locked) {
             return back()->with('error', 'Cannot delete locked grading profile.');
@@ -105,7 +179,7 @@ class GradingController extends Controller
 
         $profile->delete();
 
-        return redirect()->route('results.acsee.grading.index')
+        return redirect()->route($this->routePrefix(request()) . '.grading.index')
             ->with('success', 'Grading profile deleted.');
     }
 

@@ -15,10 +15,18 @@ class MarkModerationQueryService
      */
     public function getPendingReviews(int $perPage = 20): LengthAwarePaginator
     {
-        return MarkImportBatch::where(function ($q) {
-                $q->whereIn('lifecycle_state', ['awaiting_moderation', 'validated', 'draft', 'imported'])
-                  ->orWhereNull('lifecycle_state');
+        return MarkImportBatch::query()
+            ->where(function ($q) {
+                $q->whereIn('status', ['validated', 'submitted'])
+                  ->orWhere(function ($legacy) {
+                      $legacy->whereNull('status')
+                             ->where(function ($lq) {
+                                 $lq->whereIn('lifecycle_state', ['awaiting_moderation', 'validated', 'submitted'])
+                                    ->orWhereNull('lifecycle_state');
+                             });
+                  });
             })
+            ->whereNotIn('status', ['approved', 'locked', 'processed', 'rejected', 'archived', 'superseded'])
             ->with(['school', 'subject', 'examType', 'latestReview.reviewer'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
@@ -56,7 +64,15 @@ class MarkModerationQueryService
      */
     public function searchPending(string $query): Collection
     {
-        return MarkImportBatch::where('lifecycle_state', 'awaiting_moderation')
+        return MarkImportBatch::query()
+            ->where(function ($q) {
+                $q->whereIn('status', ['validated', 'submitted'])
+                  ->orWhere(function ($legacy) {
+                      $legacy->whereNull('status')
+                             ->whereIn('lifecycle_state', ['awaiting_moderation', 'validated', 'submitted']);
+                  });
+            })
+            ->whereNotIn('status', ['approved', 'locked', 'processed', 'rejected', 'archived', 'superseded'])
             ->where(function ($q) use ($query) {
                 $q->where('batch_code', 'like', "%{$query}%")
                     ->orWhereHas('school', function ($sq) use ($query) {

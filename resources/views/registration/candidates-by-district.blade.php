@@ -1,59 +1,66 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full">
-    <!-- Page Header -->
-    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
-        <h1 class="text-2xl font-bold text-gray-800">District Candidates Registration</h1>
-        <p class="text-sm text-gray-600 mt-1">Import and register candidates from CSV file - missing schools will be auto-registered</p>
-    </div>
-
-    <!-- Main Content -->
-    <div class="px-8 py-8">
+@include('registration.partials.theme')
+<div class="registration-shell">
+    <div class="registration-page-stack">
+    @include('registration.partials.header', [
+        'title' => 'District Candidates Registration',
+        'subtitle' => 'Import and register candidates from CSV files with district-level validation, school auto-registration, and clear processing feedback.',
+        'highlights' => [
+            ['icon' => 'fas fa-file-csv', 'text' => 'CSV candidate import'],
+            ['icon' => 'fas fa-school-circle-check', 'text' => 'Automatic school registration'],
+            ['icon' => 'fas fa-list-check', 'text' => 'Preview before commit'],
+        ],
+        'noteTitle' => 'Import Workflow',
+        'noteText' => 'Select the district first, review the file preview and school list, then commit the import once the payload is ready.',
+        'noteItems' => [
+            ['icon' => 'fas fa-map-pin', 'title' => 'District Scope', 'text' => 'Every upload remains tied to a selected district.'],
+            ['icon' => 'fas fa-circle-check', 'title' => 'Processing Feedback', 'text' => 'The page returns detailed success and error messages after import.'],
+        ],
+    ])
         <div x-data="districtCandidatesManager()" @init="init()" class="space-y-6">
             
             <!-- District Selection & Import Section -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="grid grid-cols-12 gap-4 items-end">
+            <div class="registration-surface registration-toolbar-card">
+                <div class="registration-toolbar-grid items-end">
                     <!-- District Selector -->
-                    <div class="col-span-4">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-map-marker text-blue-600"></i> Select District
-                        </label>
+                    <div class="flex flex-col min-w-[260px]">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">District</label>
                         <div class="relative" @click.outside="districtDropdownOpen = false">
                             <button 
                                 @click="districtDropdownOpen = !districtDropdownOpen"
-                                class="w-full px-4 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 rounded-lg flex justify-between items-center text-sm font-medium"
+                                class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none"
                             >
                                 <span x-text="selectedDistrict ? selectedDistrict.name : 'Select a district...'" class="text-gray-700"></span>
-                                <i :class="districtDropdownOpen ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-xs text-gray-500"></i>
+                                <i class="fas fa-chevron-down text-xs text-gray-500"></i>
                             </button>
-                            <div x-show="districtDropdownOpen" class="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-64 overflow-y-auto">
+                            <div x-show="districtDropdownOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col">
                                 <input 
                                     x-model="districtSearch"
                                     type="text"
                                     placeholder="Search districts..."
-                                    class="w-full px-4 py-2 border-b border-gray-200 focus:outline-none text-sm sticky top-0 bg-white"
+                                    class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0"
                                 >
-                                <template x-for="district in filteredDistricts" :key="district.id">
-                                    <div 
-                                        @click="selectedDistrict = district; districtDropdownOpen = false; onDistrictChange()"
-                                        :class="selectedDistrict?.id === district.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-50'"
-                                        class="px-4 py-3 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0"
-                                    >
-                                        <div class="font-medium" x-text="district.name"></div>
-                                        <div class="text-xs" :class="selectedDistrict?.id === district.id ? 'text-blue-100' : 'text-gray-500'" x-text="'Schools: ' + (district.schools_count || 0)"></div>
-                                    </div>
-                                </template>
+                                <div class="max-h-64 overflow-y-auto">
+                                    <template x-for="district in filteredDistricts" :key="district.id">
+                                        <div 
+                                            @click="selectedDistrict = district; districtDropdownOpen = false; onDistrictChange()"
+                                            :class="selectedDistrict?.id === district.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                            class="px-3 py-2 cursor-pointer text-sm transition-colors"
+                                        >
+                                            <div class="font-medium" x-text="district.name"></div>
+                                            <div class="text-xs" :class="selectedDistrict?.id === district.id ? 'text-blue-100' : 'text-gray-500'" x-text="'Schools: ' + (district.schools_count || 0)"></div>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- File Upload -->
-                    <div class="col-span-5">
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-file-csv text-green-600"></i> Upload CSV File
-                        </label>
+                    <div class="flex flex-col flex-1 min-w-[320px]">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Upload CSV File</label>
                         <div class="flex gap-2">
                             <input 
                                 type="file" 
@@ -76,7 +83,7 @@
                     </div>
 
                     <!-- Import Button -->
-                    <div class="col-span-3 flex gap-2 items-end">
+                    <div class="flex gap-2 items-end self-end">
                         <button 
                             @click="processImport()"
                             :disabled="!selectedFile || !selectedDistrict || isProcessing"
@@ -90,8 +97,8 @@
             </div>
 
             <!-- Info Cards -->
-            <div class="grid grid-cols-3 gap-4">
-                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="registration-mini-grid">
+                <div class="registration-surface p-4">
                     <div class="flex items-center gap-3">
                         <div class="bg-blue-100 p-3 rounded-lg">
                             <i class="fas fa-building text-blue-600 text-lg"></i>
@@ -103,7 +110,7 @@
                     </div>
                 </div>
 
-                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div class="registration-surface p-4">
                     <div class="flex items-center gap-3">
                         <div class="bg-green-100 p-3 rounded-lg">
                             <i class="fas fa-users text-green-600 text-lg"></i>
@@ -115,7 +122,7 @@
                     </div>
                 </div>
 
-                <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div class="registration-surface p-4">
                     <div class="flex items-center gap-3">
                         <div class="bg-orange-100 p-3 rounded-lg">
                             <i class="fas fa-exclamation-triangle text-orange-600 text-lg"></i>
@@ -130,7 +137,7 @@
 
             <!-- Registered Schools List -->
             <template x-if="registeredSchools.length > 0">
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="registration-surface p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-check-circle text-green-600"></i> Registered Schools in <span x-text="selectedDistrict?.name || 'Selected District'" class="text-blue-600"></span>
                     </h3>
@@ -152,7 +159,7 @@
 
             <!-- Schools To Register -->
             <template x-if="schoolsToRegister.length > 0">
-                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
+                <div class="registration-surface p-6 border-l-4 border-orange-500">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
                         <i class="fas fa-plus-circle text-orange-600"></i> New Schools to Auto-Register (<span x-text="schoolsToRegister.length" class="text-orange-600 font-bold"></span>)
                     </h3>
@@ -183,7 +190,7 @@
 
             <!-- CSV Preview Table -->
             <template x-if="csvData.length > 0">
-                <div class="bg-white rounded-lg shadow p-6">
+                <div class="registration-surface registration-table-card p-6">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">
                         <i class="fas fa-eye text-blue-600"></i> CSV Preview (First 10 records)
                     </h3>
@@ -241,7 +248,7 @@
 
             <!-- Processing Status -->
             <template x-if="processingStatus">
-                <div class="bg-white rounded-lg shadow p-6 border-l-4" :class="processingStatus.type === 'success' ? 'border-green-500' : 'border-red-500'">
+                <div class="registration-surface p-6 border-l-4" :class="processingStatus.type === 'success' ? 'border-green-500' : 'border-red-500'">
                     <div class="flex items-start gap-4">
                         <div :class="processingStatus.type === 'success' ? 'text-green-600' : 'text-red-600'">
                             <i :class="processingStatus.type === 'success' ? 'fas fa-check-circle text-2xl' : 'fas fa-exclamation-circle text-2xl'"></i>
@@ -291,7 +298,7 @@ function districtCandidatesManager() {
         // Load districts
         async loadDistricts() {
             try {
-                const response = await fetch('/api/districts', {
+                const response = await fetch('/admin/api/districts', {
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
@@ -334,7 +341,7 @@ function districtCandidatesManager() {
             if (!this.selectedDistrict) return;
 
             try {
-                const response = await fetch(`/api/districts/${this.selectedDistrict.id}/schools`, {
+                const response = await fetch(`/admin/api/districts/${this.selectedDistrict.id}/schools`, {
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     }
@@ -456,7 +463,7 @@ function districtCandidatesManager() {
                 formData.append('file', this.selectedFile);
                 formData.append('district_id', this.selectedDistrict.id);
 
-                const response = await fetch('/api/registration/import-by-district', {
+                const response = await fetch('/admin/api/registration/import-by-district', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -521,5 +528,7 @@ function districtCandidatesManager() {
     };
 }
 </script>
+</div>
+</div>
 
 @endsection

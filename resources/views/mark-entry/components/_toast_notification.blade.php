@@ -1,5 +1,9 @@
 <!-- Toast Notification Component -->
-<div x-show="toastMessage" class="fixed top-24 right-4 z-50 max-w-sm">
+<div
+    x-data="{ toastMessage: '', toastType: 'info', toastDetails: '', closeToast(){ this.toastMessage=''; this.toastDetails=''; } }"
+    x-show="toastMessage"
+    class="fixed top-24 right-4 z-50 max-w-sm"
+>
     <div 
         :class="{
             'bg-green-50 border-l-4 border-green-500 text-green-700': toastType === 'success',

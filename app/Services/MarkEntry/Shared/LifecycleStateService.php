@@ -34,7 +34,7 @@ class LifecycleStateService {
     ): MarkEntryLifecycleState {
         
         return DB::transaction(function () use ($batch, $newState, $user, $reason) {
-            $currentState = $batch->lifecycle_state ?? 'draft';
+            $currentState = $this->getCurrentState($batch);
             
             if (!$this->isValidTransition($currentState, $newState)) {
                 throw new \Exception(
@@ -77,7 +77,20 @@ class LifecycleStateService {
     }
 
     public function getCurrentState(MarkImportBatch $batch): string {
-        return $batch->lifecycle_state ?? 'draft';
+        if (!empty($batch->lifecycle_state)) {
+            return (string) $batch->lifecycle_state;
+        }
+
+        // Legacy fallback: infer lifecycle from persisted batch status.
+        $status = (string) ($batch->status ?? '');
+        return match ($status) {
+            'submitted' => 'submitted',
+            'approved' => 'approved',
+            'rejected' => 'rejected',
+            'locked' => 'locked',
+            'validated' => 'validated',
+            default => 'draft',
+        };
     }
 
     public function canTransition(MarkImportBatch $batch, string $targetState): bool {

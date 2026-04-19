@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\ExamDevelopment\ExamProject;
+use App\Models\ExamDevelopment\Question;
+use App\Models\ExamDevelopment\SubjectFormat;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -14,6 +17,7 @@ class ExamType extends Model
     protected $fillable = [
         'code',
         'name',
+        'level',
         'description',
         'education_level',
         'is_active',
@@ -34,6 +38,21 @@ class ExamType extends Model
     public function subjects()
     {
         return $this->hasMany(Subject::class);
+    }
+
+    public function subjectFormats()
+    {
+        return $this->hasMany(SubjectFormat::class);
+    }
+
+    public function examProjects()
+    {
+        return $this->hasMany(ExamProject::class);
+    }
+
+    public function questions()
+    {
+        return $this->hasMany(Question::class);
     }
 
     public function combinations()

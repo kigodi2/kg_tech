@@ -17,7 +17,7 @@
     role="navigation"
     {{
         $attributes->class([
-            'fi-pagination grid grid-cols-[1fr_auto_1fr] items-center gap-x-3',
+            'fi-pagination grid gap-4 rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 px-4 py-4 shadow-sm sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-x-3',
             'fi-simple' => $isSimple,
         ])
     }}
@@ -36,7 +36,7 @@
             rel="prev"
             :wire:click="$wireClickAction"
             :wire:key="$this->getId() . '.pagination.previous'"
-            class="fi-pagination-previous-btn justify-self-start"
+            class="fi-pagination-previous-btn justify-self-start !rounded-xl !border !border-slate-200 !bg-white !px-4 !py-2 !text-sm !font-semibold !text-slate-600 !shadow-sm transition hover:!border-blue-200 hover:!bg-blue-50 hover:!text-blue-700"
         >
             {{ __('filament::components/pagination.actions.previous.label') }}
         </x-filament::button>
@@ -44,8 +44,9 @@
 
     @if (! $isSimple)
         <span
-            class="fi-pagination-overview text-sm font-medium text-gray-700 dark:text-gray-200"
+            class="fi-pagination-overview inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-gray-200"
         >
+            <x-filament::icon icon="heroicon-m-table-cells" class="h-4 w-4 text-slate-400 dark:text-gray-400" />
             {{
                 trans_choice(
                     'filament::components/pagination.overview',
@@ -63,7 +64,7 @@
     @if (count($pageOptions) > 1)
         <div class="col-start-2 justify-self-center">
             <label class="fi-pagination-records-per-page-select fi-compact">
-                <x-filament::input.wrapper>
+                <x-filament::input.wrapper class="!rounded-xl !border !border-slate-200 !bg-white !shadow-sm">
                     <x-filament::input.select
                         :wire:model.live="$currentPageOptionProperty"
                     >
@@ -82,6 +83,7 @@
 
             <label class="fi-pagination-records-per-page-select">
                 <x-filament::input.wrapper
+                    class="!rounded-xl !border !border-slate-200 !bg-white !shadow-sm"
                     :prefix="__('filament::components/pagination.fields.records_per_page.label')"
                 >
                     <x-filament::input.select
@@ -112,7 +114,7 @@
             rel="next"
             :wire:click="$wireClickAction"
             :wire:key="$this->getId() . '.pagination.next'"
-            class="fi-pagination-next-btn col-start-3 justify-self-end"
+            class="fi-pagination-next-btn col-start-3 justify-self-end !rounded-xl !border !border-slate-200 !bg-white !px-4 !py-2 !text-sm !font-semibold !text-slate-600 !shadow-sm transition hover:!border-blue-200 hover:!bg-blue-50 hover:!text-blue-700"
         >
             {{ __('filament::components/pagination.actions.next.label') }}
         </x-filament::button>
@@ -120,7 +122,7 @@
 
     @if ((! $isSimple) && $paginator->hasPages())
         <ol
-            class="fi-pagination-items justify-self-end rounded-lg bg-white shadow-sm ring-1 ring-gray-950/10 dark:bg-white/5 dark:ring-white/20"
+            class="fi-pagination-items justify-self-end rounded-2xl border border-slate-200 bg-white px-2 py-2 shadow-sm dark:border-white/10 dark:bg-white/5"
         >
             @if (! $paginator->onFirstPage())
                 @if ($extremeLinks)

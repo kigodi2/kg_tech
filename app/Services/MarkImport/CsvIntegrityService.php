@@ -96,12 +96,19 @@ class CsvIntegrityService
             // (Checksum validation disabled due to template download issues)
 
             // Additional structural checks
-            if ($uploadedData['header_count'] !== count($this->getExpectedHeaders($paperStructure))) {
+            $expectedHeaders = $this->getExpectedHeaders($paperStructure);
+            $normalizedExpected = array_map(fn ($header, $index) => $this->normalizeHeaderToken($header, $paperStructure, $index), $expectedHeaders, array_keys($expectedHeaders));
+            $foundHeaders = $uploadedData['headers'] ?? [];
+            $normalizedFound = array_map(fn ($header, $index) => $this->normalizeHeaderToken($header, $paperStructure, $index), $foundHeaders, array_keys($foundHeaders));
+
+            if (count($normalizedFound) !== count($normalizedExpected) || $normalizedFound !== $normalizedExpected) {
                 return [
                     'valid' => false,
                     'error' => 'CSV header structure is incorrect. Expected ' .
-                        count($this->getExpectedHeaders($paperStructure)) .
-                        ' columns but found ' . $uploadedData['header_count'] . '.',
+                        count($expectedHeaders) .
+                        ' columns but found ' . $uploadedData['header_count'] . '. '
+                        . 'Expected headers: [' . implode(', ', $expectedHeaders) . ']. '
+                        . 'Found headers: [' . implode(', ', $uploadedData['headers'] ?? []) . '].',
                 ];
             }
 
@@ -186,14 +193,22 @@ class CsvIntegrityService
         $indexNumbers = [];
 
         $lineNumber = 0;
-        while (($row = fgetcsv($handle)) !== false) {
+        $delimiter = ',';
+        while (($rawLine = fgets($handle)) !== false) {
             $lineNumber++;
 
             if ($lineNumber === 1) {
-                // First row is header
-                $headers = array_map('trim', $row);
+                $delimiter = $this->detectDelimiter($rawLine);
+                $row = str_getcsv($rawLine, $delimiter);
+                $headers = array_map(function ($h) {
+                    $token = trim((string) $h);
+                    $token = preg_replace('/^\xEF\xBB\xBF/', '', $token); // UTF-8 BOM
+                    return $token;
+                }, $row);
                 continue;
             }
+
+            $row = str_getcsv($rawLine, $delimiter);
 
             // Extract index number from first column
             if (!empty($row[0])) {
@@ -208,6 +223,57 @@ class CsvIntegrityService
             'header_count' => count($headers ?? []),
             'index_numbers' => $indexNumbers,
         ];
+    }
+
+    private function detectDelimiter(string $line): string
+    {
+        $line = preg_replace('/^\xEF\xBB\xBF/', '', $line);
+        $candidates = [',', ';', "\t", '|'];
+        $best = ',';
+        $bestCount = 0;
+
+        foreach ($candidates as $candidate) {
+            $count = count(str_getcsv($line, $candidate));
+            if ($count > $bestCount) {
+                $bestCount = $count;
+                $best = $candidate;
+            }
+        }
+
+        return $best;
+    }
+
+    private function normalizeHeaderToken(string $header, array $paperStructure = [], int $index = -1): string
+    {
+        $key = strtolower(trim($header));
+        $key = preg_replace('/^\xEF\xBB\xBF/', '', $key);
+        $key = str_replace([' ', '-'], '_', $key);
+
+        if ($index === 0 && $key === '') {
+            $key = 'index_number';
+        }
+
+        $aliases = [
+            'paper_1' => 'paper_p1',
+            'paper1' => 'paper_p1',
+            'paper_2' => 'paper_p2',
+            'paper2' => 'paper_p2',
+            'practical_marks' => 'practical',
+            'index_no' => 'index_number',
+            'indexnumber' => 'index_number',
+            'gender' => 'sex',
+        ];
+
+        if (!empty($paperStructure['has_practical'])) {
+            $practicalOrdinal = max(1, (int) ($paperStructure['written_papers'] ?? 0) + 1);
+            $aliases["paper_p{$practicalOrdinal}"] = 'practical';
+            $aliases["paper_{$practicalOrdinal}"] = 'practical';
+            $aliases["paper{$practicalOrdinal}"] = 'practical';
+            $aliases['paper_3'] = 'practical';
+            $aliases['paper3'] = 'practical';
+        }
+
+        return $aliases[$key] ?? $key;
     }
 
     /**

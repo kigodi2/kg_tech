@@ -54,6 +54,7 @@ class MarkImportService
                 MarkImportBatch::STATUS_DRAFT,
                 MarkImportBatch::STATUS_VALIDATED,
                 MarkImportBatch::STATUS_APPROVED,
+                MarkImportBatch::STATUS_REJECTED,
             ])
             ->get();
 
@@ -258,10 +259,22 @@ class MarkImportService
         $validRecords = 0;
         $errorRecords = 0;
         $warningRecords = 0;
+        $removedRecords = 0;
         $allErrors = [];
 
         foreach ($rawMarks as $rawMark) {
             $errors = $this->validationService->validateRawMark($rawMark, $batch);
+
+            // Auto-remove mistaken rows: subject not allocated to candidate/combination.
+            $hasAllocationMismatch = collect($errors)->contains(
+                fn ($msg) => is_string($msg) && str_contains($msg, 'is not allocated to candidate for ACSEE')
+            );
+
+            if ($hasAllocationMismatch) {
+                $rawMark->delete();
+                $removedRecords++;
+                continue;
+            }
 
             if (!empty($errors)) {
                 $rawMark->update([
@@ -282,16 +295,19 @@ class MarkImportService
             }
         }
 
+        $totalRecords = $batch->rawMarks()->count();
         $batch->update([
             'valid_records' => $validRecords,
             'error_records' => $errorRecords,
+            'total_records' => $totalRecords,
         ]);
 
         return [
             'valid' => $validRecords,
             'invalid' => $errorRecords,
             'warnings' => $warningRecords,
-            'total' => $batch->total_records,
+            'removed' => $removedRecords,
+            'total' => $totalRecords,
             'errors' => $allErrors,
         ];
     }

@@ -11,9 +11,9 @@
     <div class="flex items-center justify-between">
         <div>
             <h3 class="text-lg font-bold text-gray-900">Grading Profiles</h3>
-            <p class="text-sm text-gray-600 mt-1">Define and manage grading configurations for ACSEE</p>
+            <p class="text-sm text-gray-600 mt-1">Define and manage grading configurations for {{ $resultsModuleLabel }}</p>
         </div>
-        <a href="{{ route('results.acsee.grading.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+        <a href="{{ route($resultsRoutePrefix . '.grading.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
             <i class="fas fa-plus"></i> New Profile
         </a>
     </div>
@@ -95,14 +95,14 @@
                         <td class="px-6 py-4 text-sm text-gray-600">{{ $profile->created_at?->format('M d, Y') ?? '-' }}</td>
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-2">
-                                <a href="{{ route('results.acsee.grading.show', $profile->id) }}" class="text-blue-600 hover:text-blue-800 transition-colors" title="View">
+                                <a href="{{ route($resultsRoutePrefix . '.grading.show', $profile->id) }}" class="text-blue-600 hover:text-blue-800 transition-colors" title="View">
                                     <i class="fas fa-eye"></i>
                                 </a>
                                 @if(!$profile->is_locked)
-                                    <a href="{{ route('results.acsee.grading.edit', $profile->id) }}" class="text-blue-600 hover:text-blue-800 transition-colors" title="Edit">
+                                    <a href="{{ route($resultsRoutePrefix . '.grading.edit', $profile->id) }}" class="text-blue-600 hover:text-blue-800 transition-colors" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form method="POST" action="{{ route('results.acsee.grading.lock', $profile->id) }}" class="inline" onclick="return confirm('Lock this profile? It cannot be edited after locking.');">
+                                    <form method="POST" action="{{ route($resultsRoutePrefix . '.grading.lock', $profile->id) }}" class="inline" onclick="return confirm('Lock this profile? It cannot be edited after locking.');">
                                         @csrf
                                         <button type="submit" class="text-yellow-600 hover:text-yellow-800 transition-colors" title="Lock">
                                             <i class="fas fa-lock"></i>
@@ -110,7 +110,7 @@
                                     </form>
                                 @endif
                                 @if(!$profile->is_locked && !$profile->is_active)
-                                    <form method="POST" action="{{ route('results.acsee.grading.destroy', $profile->id) }}" class="inline" onclick="return confirm('Delete this profile? This action cannot be undone.');">
+                                    <form method="POST" action="{{ route($resultsRoutePrefix . '.grading.destroy', $profile->id) }}" class="inline" onclick="return confirm('Delete this profile? This action cannot be undone.');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="text-red-600 hover:text-red-800 transition-colors" title="Delete">
@@ -126,7 +126,7 @@
                         <td colspan="7" class="px-6 py-8 text-center text-gray-500">
                             <i class="fas fa-inbox text-3xl mb-2"></i>
                             <p class="mt-2">No grading profiles found</p>
-                            <a href="{{ route('results.acsee.grading.create') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
+                            <a href="{{ route($resultsRoutePrefix . '.grading.create') }}" class="text-blue-600 hover:text-blue-800 text-sm font-medium mt-2 inline-block">
                                 Create your first profile
                             </a>
                         </td>
@@ -145,11 +145,19 @@
                 <p class="text-sm text-blue-800 mb-2">
                     Grading profiles define how marks are converted to grades. Each profile includes:
                 </p>
-                <ul class="text-sm text-blue-800 space-y-1 ml-4">
-                    <li>✓ Grade boundaries (A-F, S)</li>
-                    <li>✓ GPA mapping (0.0-4.0 scale)</li>
-                    <li>✓ Competence levels (Excellent, Very Good, etc.)</li>
-                </ul>
+                @if($resultsModuleLabel === 'PSLE')
+                    <ul class="text-sm text-blue-800 space-y-1 ml-4">
+                        <li>✓ Grade boundaries (A-E)</li>
+                        <li>✓ Point mapping (1.0-5.0 scale)</li>
+                        <li>✓ Competence levels (Excellent to Unsatisfactory)</li>
+                    </ul>
+                @else
+                    <ul class="text-sm text-blue-800 space-y-1 ml-4">
+                        <li>✓ Grade boundaries (A-F, S)</li>
+                        <li>✓ GPA mapping (1.0-7.0 scale)</li>
+                        <li>✓ Competence levels (Excellent, Very Good, etc.)</li>
+                    </ul>
+                @endif
                 <p class="text-sm text-blue-800 mt-2">
                     <strong>Important:</strong> Once locked, a profile cannot be edited. Lock profiles after results are published.
                 </p>

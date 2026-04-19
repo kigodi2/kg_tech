@@ -1,113 +1,142 @@
 @extends('layout')
 
 @section('content')
-<style>
-    .filter-input {
-        height: 36px;
-        padding: 0.25rem 0.75rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        font-size: 14px;
-        width: 100%;
-    }
-    .filter-button {
-        height: 36px;
-        padding: 0 1rem;
-        border-radius: 0.375rem;
-        font-size: 14px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        transition: all 0.2s;
-        white-space: nowrap;
-    }
-    .filter-label {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 0.5rem;
-        display: block;
-    }
-    .filter-group {
-        flex: 1;
-        min-width: 200px;
-    }
-</style>
-<div class="w-full">
-    <!-- Page Header -->
-    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
-        <h1 class="text-2xl font-bold text-gray-800">Candidates Management</h1>
-    </div>
-
-    <!-- Main Content -->
-    <div class="px-8 py-8">
+@include('registration.partials.theme')
+@php
+    $workspaceExamType = strtoupper((string) request()->query('exam_type', ''));
+    $isPsleWorkspace = $workspaceExamType === 'PSLE';
+@endphp
+<div class="registration-shell">
+    <div class="registration-page-stack">
+    @include('registration.partials.header', [
+        'title' => $isPsleWorkspace ? 'PSLE Pupil Management' : 'Candidates Management',
+        'subtitle' => $isPsleWorkspace
+            ? 'Search, filter, import, and manage PSLE pupil records across regions, councils, primary schools, and examination scope from one professional workspace.'
+            : 'Search, filter, import, and manage candidate records across regions, districts, schools, and examination types from one professional workspace.',
+        'highlights' => [
+            ['icon' => 'fas fa-filter', 'text' => 'Multi-level hierarchy filters'],
+            ['icon' => 'fas fa-file-import', 'text' => $isPsleWorkspace ? 'Pupil import workflows' : 'Candidate import workflows'],
+            ['icon' => 'fas fa-id-card', 'text' => $isPsleWorkspace ? 'Detailed pupil record operations' : 'Detailed record operations'],
+        ],
+        'noteTitle' => 'Operational Focus',
+        'noteText' => $isPsleWorkspace
+            ? 'This page supports high-volume PSLE pupil administration, so the interface emphasizes filtering, bulk actions, and controlled imports.'
+            : 'This page supports high-volume candidate administration, so the interface emphasizes filtering, bulk actions, and controlled imports.',
+        'noteItems' => [
+            ['icon' => 'fas fa-users-viewfinder', 'title' => $isPsleWorkspace ? 'Pupil Search' : 'Candidate Search', 'text' => 'Narrow the data set quickly before editing or exporting.'],
+            ['icon' => 'fas fa-triangle-exclamation', 'title' => 'Import Controls', 'text' => 'Keep import decisions explicit and reviewable.'],
+        ],
+    ])
 
     <!-- Candidates Component -->
     <div x-data="candidatesManager()" @init="init()" class="space-y-6">
          <!-- Filters Section using Reusable Component -->
-         <div class="px-8 py-6 bg-gray-50 border-b border-gray-200">
-             <div class="bg-white p-6 rounded-lg shadow">
-                 <div class="flex gap-4 items-end flex-wrap">
+         <div class="registration-surface registration-toolbar-card">
+                 <div class="registration-toolbar-grid">
                      <!-- Region Filter -->
-                     <div class="filter-group">
-                         <label class="filter-label">
-                             <i class="fas fa-map-pin mr-2 text-blue-600"></i>Region
-                         </label>
-                         <select id="region-filter" class="filter-input w-full" @change="filterRegion = $el.value; onRegionChange()">
-                             <option value="">All Regions</option>
-                             <template x-for="region in regions" :key="region.id">
-                                 <option :value="region.id" x-text="region.name"></option>
-                             </template>
-                         </select>
+                     <div class="flex flex-col min-w-[180px]">
+                         <label class="block text-sm font-semibold text-gray-700 mb-2">Region</label>
+                         <div class="relative" @click.outside="regionOpen = false">
+                             <button
+                                 type="button"
+                                 class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none"
+                                 @click="regionOpen = !regionOpen; districtOpen = false; schoolOpen = false"
+                             >
+                                 <span class="truncate" x-text="filterRegion ? (regions.find(r => r.id == filterRegion)?.name || 'All Regions') : 'All Regions'"></span>
+                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                             </button>
+
+                             <div x-show="regionOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col" x-transition>
+                                 <input x-model="regionSearch" type="text" placeholder="Search regions..." class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                 <div class="max-h-56 overflow-y-auto">
+                                     <div @click="selectRegion('')" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Regions</div>
+                                     <template x-for="region in filteredRegionOptions" :key="region.id">
+                                         <div @click="selectRegion(region.id)" :class="filterRegion == region.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'" class="px-3 py-2 cursor-pointer text-sm transition-colors" x-text="region.name"></div>
+                                     </template>
+                                     <div x-show="filteredRegionOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">No regions found.</div>
+                                 </div>
+                             </div>
+                         </div>
                      </div>
                      
                      <!-- District Filter -->
-                     <div class="filter-group">
-                         <label class="filter-label">
-                             <i class="fas fa-flag mr-2 text-green-600"></i>District
-                         </label>
-                         <select id="district-filter" class="filter-input w-full" @change="filterDistrict = $el.value; onDistrictChange()">
-                             <option value="">All Districts</option>
-                             <template x-for="district in filteredDistricts" :key="district.id">
-                                 <option :value="district.id" x-text="district.name"></option>
-                             </template>
-                         </select>
+                     <div class="flex flex-col min-w-[180px]">
+                         <label class="block text-sm font-semibold text-gray-700 mb-2">District</label>
+                         <div class="relative" @click.outside="districtOpen = false">
+                             <button
+                                 type="button"
+                                 class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none"
+                                 @click="districtOpen = !districtOpen; regionOpen = false; schoolOpen = false"
+                             >
+                                 <span class="truncate" x-text="filterDistrict ? (filteredDistricts.find(d => d.id == filterDistrict)?.name || 'All Districts') : 'All Districts'"></span>
+                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                             </button>
+
+                             <div x-show="districtOpen" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col" x-transition>
+                                 <input x-model="districtSearch" type="text" placeholder="Search districts..." class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                 <div class="max-h-56 overflow-y-auto">
+                                     <div @click="selectDistrict('')" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Districts</div>
+                                     <template x-for="district in filteredDistrictOptions" :key="district.id">
+                                         <div @click="selectDistrict(district.id)" :class="filterDistrict == district.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'" class="px-3 py-2 cursor-pointer text-sm transition-colors" x-text="district.name"></div>
+                                     </template>
+                                     <div x-show="filteredDistrictOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">No districts found.</div>
+                                 </div>
+                             </div>
+                         </div>
                      </div>
                      
                      <!-- School Filter -->
-                     <div class="filter-group">
-                         <label class="filter-label">
-                             <i class="fas fa-school mr-2 text-purple-600"></i>School
-                         </label>
-                         <select id="school-filter" class="filter-input w-full" @change="filterSchool = $el.value; onSchoolChange()" :disabled="!filterDistrict">
-                             <option value="">All Schools</option>
-                             <template x-for="school in filteredSchools" :key="school.id">
-                                 <option :value="school.id" x-text="school.code + ' - ' + school.name"></option>
-                             </template>
-                         </select>
+                     <div class="flex flex-col min-w-[220px]">
+                         <label class="block text-sm font-semibold text-gray-700 mb-2">School</label>
+                         <div class="relative" @click.outside="schoolOpen = false">
+                             <button
+                                 type="button"
+                                 class="w-full px-3 py-2 border border-gray-300 text-left bg-white hover:bg-gray-50 transition-colors flex justify-between items-center rounded-none disabled:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+                                 :disabled="!filterDistrict"
+                                 @click="if (!filterDistrict) return; schoolOpen = !schoolOpen; regionOpen = false; districtOpen = false"
+                             >
+                                 <span class="truncate" x-text="filterSchool ? ((filteredSchools.find(s => s.id == filterSchool)?.code ? filteredSchools.find(s => s.id == filterSchool)?.code + ' - ' : '') + (filteredSchools.find(s => s.id == filterSchool)?.name || 'All Schools')) : (filterDistrict ? 'All Schools' : 'Select District First')"></span>
+                                 <i class="fas fa-chevron-down text-xs text-gray-500"></i>
+                             </button>
+
+                             <div x-show="schoolOpen && filterDistrict" class="absolute top-full left-0 right-0 bg-white border border-t-0 border-gray-300 z-30 rounded-none flex flex-col" x-transition>
+                                 <input x-model="schoolSearch" type="text" placeholder="Search schools..." class="filter-search-input px-3 py-2 border-b border-gray-200 rounded-none focus:outline-none focus:ring-0 text-sm flex-shrink-0">
+                                 <div class="max-h-56 overflow-y-auto">
+                                     <div @click="selectSchool('')" class="px-3 py-2 hover:bg-blue-500 hover:text-white cursor-pointer text-sm transition-colors">All Schools</div>
+                                     <template x-for="school in filteredSchoolOptions" :key="school.id">
+                                         <div
+                                             @click="selectSchool(school.id)"
+                                             :class="filterSchool == school.id ? 'bg-blue-500 text-white' : 'hover:bg-blue-500 hover:text-white'"
+                                             class="px-3 py-2 cursor-pointer text-sm transition-colors"
+                                             x-text="(school.code ? school.code + ' - ' : '') + school.name"
+                                         ></div>
+                                     </template>
+                                     <div x-show="filteredSchoolOptions.length === 0" class="px-3 py-2 text-sm text-gray-500">No schools found.</div>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+
+                     <!-- Search Input -->
+                     <div class="flex flex-col flex-1 min-w-[220px]">
+                         <label class="block text-sm font-semibold text-gray-700 mb-2">Search</label>
+                         <input 
+                             x-model="search" 
+                             @input="filterCandidates()"
+                             type="text" 
+                             :placeholder="isPsleWorkspace() ? 'Search pupils...' : 'Search candidates...'" 
+                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                         >
                      </div>
 
                      <!-- Action Buttons -->
-                     <div class="ml-auto flex gap-2 items-end h-9">
-                         <!-- Tools Dropdown -->
-                         <div class="relative" @click.outside="showToolsMenu = false">
-                             <button @click="showToolsMenu = !showToolsMenu" class="filter-button bg-blue-600 hover:bg-blue-700 text-white">
+                     <div class="ml-auto flex gap-2 items-end self-end">
+                         <!-- Tools Modal Trigger -->
+                         <div>
+                             <button @click="openToolsModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition-colors text-sm flex items-center justify-center gap-2 whitespace-nowrap font-medium shadow-sm shadow-blue-200/80">
                                  <i class="fas fa-wrench"></i> Tools
-                                 <i :class="showToolsMenu ? 'fas fa-chevron-up' : 'fas fa-chevron-down'" class="text-xs"></i>
+                                 <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
                              </button>
-                             <div x-show="showToolsMenu" class="absolute top-full right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-10 min-w-48 pointer-events-auto" @click.stop>
-                                 <button type="button" @click="downloadTemplate(); showToolsMenu = false" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200 pointer-events-auto">
-                                     <i class="fas fa-download text-blue-600"></i> CSV Template
-                                 </button>
-                                 <button type="button" @click="openImportModal(); showToolsMenu = false" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 border-b border-gray-200 pointer-events-auto">
-                                     <i class="fas fa-upload text-blue-600"></i> Import CSV
-                                 </button>
-                                 <button type="button" @click="exportExcel(); showToolsMenu = false" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2 pointer-events-auto">
-                                      <i class="fas fa-file-excel text-green-600"></i> Export Excel
-                                    </button>
-                             </div>
                              <input id="importInput" type="file" accept=".csv" @change="importCSV($event)" class="hidden">
                              <input id="quickImportInput" type="file" accept=".csv" onchange="handleQuickImport(this)" class="hidden">
                          </div>
@@ -115,7 +144,7 @@
                          <!-- Register Candidate Button -->
                          <button 
                              @click="openAddModal()"
-                             class="filter-button bg-green-600 hover:bg-green-700 text-white"
+                             class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
                          >
                              <i class="fas fa-plus"></i> Register
                          </button>
@@ -123,30 +152,77 @@
                          <!-- Reset Button -->
                          <button 
                              @click="resetFilters()"
-                             class="filter-button bg-gray-500 hover:bg-gray-600 text-white"
+                             class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium whitespace-nowrap"
                          >
                              <i class="fas fa-redo"></i> Reset
                          </button>
                      </div>
                  </div>
-             </div>
          </div>
 
-        <!-- Search Bar (Above Table) -->
-         <div class="bg-gray-50 rounded-lg px-6 py-4">
-             <input 
-                 x-model="search" 
-                 @input="filterCandidates()"
-                 type="text" 
-                 placeholder="Search candidates..." 
-                 class="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 placeholder-gray-400"
-             >
-         </div>
+        <!-- Tools Modal -->
+        <div
+            x-show="toolsModalOpen"
+            class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4"
+            style="display: none;"
+            @click.self="closeToolsModal()"
+            @keydown.escape.window="closeToolsModal()"
+            x-transition.opacity
+        >
+            <div class="w-full max-w-4xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20" x-transition>
+                <div class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-800 px-6 py-6 text-white">
+                    <div class="absolute inset-y-0 right-0 w-56 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_68%)]"></div>
+                    <div class="relative flex items-start justify-between gap-4">
+                        <div>
+                            <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                                <i class="fas fa-screwdriver-wrench text-[0.7rem] text-amber-300"></i>
+                                <span x-text="isPsleWorkspace() ? 'Pupil Tools' : 'Candidate Tools'"></span>
+                            </span>
+                            <h2 class="mt-4 text-2xl font-bold tracking-tight text-white" x-text="isPsleWorkspace() ? 'PSLE pupil import and export workspace' : 'Candidate import and export workspace'"></h2>
+                            <p class="mt-2 max-w-2xl text-sm leading-6 text-white/80">
+                                <span x-text="isPsleWorkspace() ? 'Launch the PSLE pupil import workflow, download pupil-ready templates, or export pupil data from one controlled panel.' : 'Launch the existing candidate import workflow, download templates, or export candidate data from one controlled panel.'"></span>
+                            </p>
+                        </div>
+                        <button @click="closeToolsModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-lg text-white/80 transition hover:bg-white/15 hover:text-white" type="button" aria-label="Close tools">&times;</button>
+                    </div>
+                </div>
+                <div class="grid gap-4 bg-slate-50 p-6 md:grid-cols-2 xl:grid-cols-4">
+                    <button type="button" @click="launchCandidateImportFlow()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><i class="fas fa-file-import text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900" x-text="isPsleWorkspace() ? 'Import Pupils' : 'Import Candidates'"></h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600" x-text="isPsleWorkspace() ? 'Open the PSLE pupil import modal with validation, duplicate review, and controlled commit workflow.' : 'Open the existing candidate import modal with validation, conflict handling, and commit workflow.'"></p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700"><span x-text="isPsleWorkspace() ? 'Open import workspace' : 'Open import modal'"></span><i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i></span>
+                    </button>
+                    <button type="button" @click="downloadCandidateTemplate()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-amber-700"><i class="fas fa-download text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900" x-text="isPsleWorkspace() ? 'PSLE Template' : 'General Template'"></h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600" x-text="isPsleWorkspace() ? 'Download the PSLE pupil CSV template with candidate number, PReM number, pupil name, sex, and school code.' : 'Download the standard candidate CSV template for structured uploads.'"></p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-amber-700">Download template<i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i></span>
+                    </button>
+                    <button type="button" @click="downloadManagedSchoolTemplate()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-700"><i class="fas fa-school text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900">School Template</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">Download the school-based candidate template with combination codes for managed institutions.</p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-indigo-700">Download school template<i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i></span>
+                    </button>
+                    <button type="button" @click="exportCandidateExcel()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                        <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-file-excel text-lg"></i></span>
+                        <h3 class="mt-5 text-base font-bold text-slate-900" x-text="isPsleWorkspace() ? 'Export Pupils' : 'Export Excel'"></h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600" x-text="isPsleWorkspace() ? 'Export the current filtered PSLE pupil register for offline review.' : 'Export the current filtered candidate list in spreadsheet format for offline review.'"></p>
+                        <span class="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700"><span x-text="isPsleWorkspace() ? 'Export pupil data' : 'Export current data'"></span><i class="fas fa-arrow-right text-xs transition group-hover:translate-x-0.5"></i></span>
+                    </button>
+                </div>
+                <div class="flex flex-col gap-3 border-t border-slate-200 bg-white px-6 py-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="leading-6" x-text="isPsleWorkspace() ? 'Pupil import, validation, duplicate review, and export behavior is centralized here for the PSLE registration workflow.' : 'Candidate import, validation, and export behavior is unchanged. This modal only gives the tools a cleaner operational surface.'"></p>
+                    <button type="button" @click="closeToolsModal()" class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 font-semibold text-slate-700 transition hover:bg-slate-100">Close</button>
+                </div>
+            </div>
+        </div>
 
          <!-- Bulk Actions -->
          <div x-show="selectedItems.size > 0" class="flex gap-2 items-center bg-blue-50 p-4 rounded-lg border border-blue-200 shadow-sm">
-             <span class="text-sm font-medium text-gray-700">
-                 <span x-text="selectedItems.size"></span> candidate(s) selected
+                             <span class="text-sm font-medium text-gray-700">
+                 <span x-text="selectedItems.size"></span> <span x-text="isPsleWorkspace() ? 'pupil(s) selected' : 'candidate(s) selected'"></span>
              </span>
              <button 
                  @click="bulkDeleteCandidates()"
@@ -159,7 +235,7 @@
 
 
         <!-- Candidates Table -->
-        <div class="bg-white rounded-lg shadow overflow-x-auto">
+        <div class="registration-surface registration-table-card overflow-x-auto">
             <div x-show="loading" class="p-6 text-center text-gray-500">
                 <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
             </div>
@@ -262,7 +338,7 @@
                     </template>
                     <tr x-show="filteredCandidates.length === 0 && !loading">
                          <td colspan="11" class="px-6 py-4 text-center text-gray-500 text-sm">
-                             No candidates found. <button @click="openAddModal()" class="text-blue-600 hover:underline">Register one now</button>
+                             <span x-text="isPsleWorkspace() ? 'No pupils found.' : 'No candidates found.'"></span> <button @click="openAddModal()" class="text-blue-600 hover:underline" x-text="isPsleWorkspace() ? 'Register one now' : 'Register one now'"></button>
                          </td>
                      </tr>
                 </tbody>
@@ -305,8 +381,15 @@
                     </div>
 
                     <!-- Page Info -->
-                    <div class="text-sm text-gray-600 font-medium">
-                        Page <span x-text="currentPage"></span> of <span x-text="totalPages"></span> | <span x-text="totalCount"></span> total records
+                    <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 font-semibold text-blue-700">
+                            <i class="fas fa-layer-group text-xs"></i>
+                            <span>Page <span x-text="currentPage"></span> of <span x-text="Math.max(totalPages, 1)"></span></span>
+                        </div>
+                        <div class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                            <i class="fas fa-table-list text-xs text-slate-400"></i>
+                            <span><span class="font-semibold text-slate-800" x-text="totalCount"></span> total records</span>
+                        </div>
                     </div>
 
                     <!-- Go to Page -->
@@ -332,22 +415,22 @@
                 </div>
 
                 <!-- Page Number Buttons -->
-                <div class="flex items-center justify-center gap-1 flex-wrap">
+                <div class="flex items-center justify-center gap-2 flex-wrap rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
                     <button 
                         @click="previousPage()"
                         :disabled="currentPage <= 1"
-                        class="px-3 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                         title="Previous Page"
                     >
-                        <i class="fas fa-chevron-left"></i> Prev
+                        <i class="fas fa-chevron-left text-xs"></i> <span class="hidden sm:inline">Previous</span>
                     </button>
 
                     <!-- Page Buttons (limited window) -->
                     <template x-for="page in getPaginatedPageNumbers()" :key="page">
                         <button 
                             @click="goToPage(page)"
-                            :class="currentPage === page ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
-                            class="px-3 py-2 rounded text-sm font-medium transition-colors min-w-10"
+                            :class="currentPage === page ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                            class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
                             x-text="page"
                         ></button>
                     </template>
@@ -363,10 +446,10 @@
                     <button 
                         @click="nextPage()"
                         :disabled="currentPage >= totalPages"
-                        class="px-3 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                        class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                         title="Next Page"
                     >
-                        Next <i class="fas fa-chevron-right"></i>
+                        <span class="hidden sm:inline">Next</span> <i class="fas fa-chevron-right text-xs"></i>
                     </button>
                 </div>
             </div>
@@ -375,28 +458,38 @@
         <!-- Modal (Add/Edit/View) -->
          <div 
              x-show="modalOpen || viewModalOpen" 
-             class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+             class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4"
              @click.self="modalOpen = false; viewModalOpen = false;"
              x-transition
          >
-         <div class="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" x-transition @click.stop>
-             <div class="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
-                 <div>
-                     <h2 class="text-2xl font-bold text-gray-800" x-text="viewModalOpen && !editingId ? 'Candidate Details' : (!viewModalOpen && !editingId ? 'Register New Candidate' : 'Edit Candidate')"></h2>
-                     <p class="text-xs text-gray-500 mt-1" x-show="!viewModalOpen && formData.exam_type === 'ACSEE'">
-                         Index format: <span class="font-mono font-semibold">CCCC-SSSS</span> (e.g., <span class="font-mono">S0445-0001</span>)
-                     </p>
+         <div class="registration-modal-shell max-w-4xl" x-transition @click.stop>
+             <div class="registration-modal-header">
+                 <div class="registration-modal-header-content">
+                     <div>
+                         <span class="registration-modal-kicker">
+                             <i class="fas fa-user-graduate text-amber-300"></i>
+                             Candidate Record
+                         </span>
+                         <h2 class="registration-modal-title" x-text="viewModalOpen && !editingId ? 'Candidate Details' : (!viewModalOpen && !editingId ? 'Register New Candidate' : 'Edit Candidate')"></h2>
+                         <p class="registration-modal-subtitle" x-show="viewModalOpen">Review registration details, assigned school, exam setup, and candidate type at a glance.</p>
+                         <p class="registration-modal-subtitle" x-show="!viewModalOpen && formData.exam_type === 'ACSEE'">
+                             ACSEE candidates should use NECTA index format <span class="font-mono font-semibold">CCCC-SSSS</span>, for example <span class="font-mono">S0445-0001</span>.
+                         </p>
+                         <p class="registration-modal-subtitle" x-show="!viewModalOpen && formData.exam_type !== 'ACSEE'">Maintain candidate identity, school assignment, and exam metadata from one guided form.</p>
+                     </div>
+                     <button 
+                         @click="modalOpen = false; viewModalOpen = false;" 
+                         class="registration-modal-close"
+                         aria-label="Close candidate modal"
+                     >
+                         &times;
+                     </button>
                  </div>
-                 <button 
-                     @click="modalOpen = false; viewModalOpen = false;" 
-                     class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                 >
-                     &times;
-                 </button>
              </div>
 
              <!-- View Mode -->
-             <div x-show="viewModalOpen" class="p-6 space-y-3">
+             <div x-show="viewModalOpen" class="registration-modal-body">
+                 <div class="registration-modal-panel p-6 space-y-3">
                  <div>
                      <label class="block text-xs font-semibold text-gray-700 mb-1">Index Number</label>
                      <div class="flex items-center gap-2">
@@ -479,18 +572,27 @@
                          >
                      </div>
                  </div>
-                 <div class="flex gap-2 pt-3">
-                     <button type="button" @click="modalOpen = false; viewModalOpen = false;" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-3 py-2 rounded text-sm transition-colors font-medium cursor-pointer">
+                 <div class="registration-modal-actions">
+                     <button type="button" @click="modalOpen = false; viewModalOpen = false;" class="registration-modal-button registration-modal-button-secondary cursor-pointer">
                          Close
                      </button>
-                     <button type="button" @click="openEditModal(viewingCandidate); viewModalOpen = false;" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm transition-colors font-medium cursor-pointer">
+                     <button type="button" @click="openEditModal(viewingCandidate); viewModalOpen = false;" class="registration-modal-button registration-modal-button-primary cursor-pointer">
                          Edit
                      </button>
+                 </div>
                  </div>
              </div>
 
              <!-- Edit/Add Mode -->
-             <form x-show="!viewModalOpen" @submit.prevent="saveCandidate()" class="p-6 space-y-4">
+             <form x-show="!viewModalOpen" @submit.prevent="saveCandidate()" class="registration-modal-body space-y-5">
+                 <div class="registration-modal-note">
+                     <span class="registration-modal-note-icon"><i class="fas fa-circle-info"></i></span>
+                     <div>
+                         <strong>Form Guidance</strong>
+                         <p>Keep the candidate index, school assignment, and exam type aligned before saving to avoid downstream allocation issues.</p>
+                     </div>
+                 </div>
+                 <div class="registration-modal-panel p-6 space-y-4">
                  <div>
                      <label class="block text-sm font-semibold text-gray-700 mb-2">
                          Index Number <span class="text-red-600">*</span>
@@ -631,29 +733,83 @@
                         Private candidates can allocate subjects individually without a school affiliation.
                     </p>
                 </div>
-                <div class="flex gap-3 pt-4">
+                <div class="registration-modal-actions">
                     <button 
                         type="button" 
                         @click="modalOpen = false" 
-                        class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg transition-colors font-medium"
+                        class="registration-modal-button registration-modal-button-secondary"
                     >
                         Cancel
                     </button>
                     <button 
                         type="submit" 
-                        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                        class="registration-modal-button registration-modal-button-primary"
                     >
                         <span x-show="!editingId">Register Candidate</span>
                         <span x-show="editingId">Update Candidate</span>
                     </button>
                 </div>
+                </div>
             </form>
-        </div>
-    </div>
+         </div>
+     </div>
+
+     <!-- Delete Confirmation Modal -->
+     <div
+         x-show="deleteConfirm.open"
+         x-transition
+         class="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/55 p-4"
+         @click.self="closeDeleteConfirm()"
+     >
+         <div class="registration-modal-shell max-w-xl" @click.stop>
+             <div class="registration-modal-header">
+                 <div class="registration-modal-header-content">
+                 <div>
+                     <span class="registration-modal-kicker"><i class="fas fa-triangle-exclamation text-amber-300"></i>Delete Action</span>
+                     <h3 class="registration-modal-title !mt-4 !text-[1.6rem]">Confirm Deletion</h3>
+                     <p class="registration-modal-subtitle">This action removes the selected candidate record from the registration workspace.</p>
+                 </div>
+                 <button
+                     type="button"
+                     class="registration-modal-close"
+                     @click="closeDeleteConfirm()"
+                     :disabled="deleteConfirm.processing"
+                 >
+                     &times;
+                 </button>
+                 </div>
+             </div>
+             <div class="registration-modal-body">
+                 <div class="registration-modal-panel p-6">
+                 <p class="text-sm text-gray-700" x-text="deleteConfirm.message"></p>
+                 <div class="registration-modal-actions mt-6">
+                 <button
+                     type="button"
+                     class="registration-modal-button registration-modal-button-secondary text-sm"
+                     @click="closeDeleteConfirm()"
+                     :disabled="deleteConfirm.processing"
+                 >
+                     Cancel
+                 </button>
+                 <button
+                     type="button"
+                     class="registration-modal-button registration-modal-button-warn text-sm min-w-28"
+                     @click="confirmDeleteAction()"
+                     :disabled="deleteConfirm.processing"
+                 >
+                     <span x-show="!deleteConfirm.processing">Delete</span>
+                     <span x-show="deleteConfirm.processing">Deleting...</span>
+                 </button>
+                 </div>
+                 </div>
+             </div>
+         </div>
+     </div>
 
 <script>
 function candidatesManager() {
     return {
+        workspaceExamType: '{{ $workspaceExamType }}',
         candidates: [],
         filteredCandidates: [],
         schools: [],
@@ -679,7 +835,7 @@ function candidatesManager() {
         modalOpen: false,
         viewModalOpen: false,
         viewingCandidate: {},
-        showToolsMenu: false,
+        toolsModalOpen: false,
         indexValidation: { ok: false, errors: [], parsed: null, resolved: {} },
         currentPage: 1,
         pageSize: 10,
@@ -698,11 +854,13 @@ function candidatesManager() {
         importPhase: 'upload', // 'upload', 'report', 'processing'
         importReport: {
             errors: [],
+            warnings: [],
             total_rows: 0,
             create_count: 0,
             update_count: 0,
             skip_count: 0,
             error_count: 0,
+            warning_count: 0,
             can_import: false,
             rows: [],
             summary: {},
@@ -719,11 +877,32 @@ function candidatesManager() {
         auditResults: null,
         auditLoading: false,
         schoolDistrictMismatch: [],
+        deleteConfirm: {
+            open: false,
+            type: null,
+            candidateId: null,
+            count: 0,
+            message: '',
+            processing: false,
+        },
         
         // Computed - Filtered Districts
         get filteredDistricts() {
             if (!this.filterRegion) return this.districts;
             return this.districts.filter(d => d.region_id == this.filterRegion);
+        },
+
+        get filteredRegionOptions() {
+            const q = (this.regionSearch || '').trim().toLowerCase();
+            if (!q) return this.regions;
+            return this.regions.filter(r => (r.name || '').toLowerCase().includes(q));
+        },
+
+        get filteredDistrictOptions() {
+            const base = this.filteredDistricts;
+            const q = (this.districtSearch || '').trim().toLowerCase();
+            if (!q) return base;
+            return base.filter(d => (d.name || '').toLowerCase().includes(q));
         },
         
         // Computed - Filtered Schools
@@ -731,9 +910,27 @@ function candidatesManager() {
             if (!this.filterDistrict) return this.schools;
             return this.schools.filter(s => s.district_id == this.filterDistrict);
         },
+
+        get filteredSchoolOptions() {
+            const base = this.filteredSchools;
+            const q = (this.schoolSearch || '').trim().toLowerCase();
+            if (!q) return base;
+            return base.filter(s => {
+                const name = (s.name || '').toLowerCase();
+                const code = (s.code || '').toLowerCase();
+                return name.includes(q) || code.includes(q);
+            });
+        },
         totalPages: 0,
 
         async init() {
+             const params = new URLSearchParams(window.location.search);
+             const examTypeFromUrl = (params.get('exam_type') || this.workspaceExamType || '').toUpperCase();
+             if (examTypeFromUrl) {
+                 this.workspaceExamType = examTypeFromUrl;
+                 this.importExamType = examTypeFromUrl;
+                 this.formData.exam_type = examTypeFromUrl;
+             }
              // Load page size from localStorage
              const savedPageSize = localStorage.getItem('candidatesPageSize');
              if (savedPageSize) {
@@ -748,9 +945,13 @@ function candidatesManager() {
              await this.loadCandidates();
          },
 
+        isPsleWorkspace() {
+            return (this.workspaceExamType || '').toUpperCase() === 'PSLE';
+        },
+
         async loadRegions() {
             try {
-                const response = await fetch('/api/regions');
+                const response = await fetch('/admin/api/regions');
                 const data = await response.json();
                 this.regions = data.data || [];
             } catch (error) {
@@ -760,7 +961,7 @@ function candidatesManager() {
 
         async loadDistricts() {
             try {
-                const response = await fetch('/api/districts?page_size=999');
+                const response = await fetch('/admin/api/districts?page_size=999');
                 const data = await response.json();
                 this.districts = data.data || [];
             } catch (error) {
@@ -770,7 +971,7 @@ function candidatesManager() {
 
         async loadSchools(districtId = null) {
              try {
-                 let url = '/api/schools?page_size=999';
+                 let url = '/admin/api/schools?page_size=999';
                  if (districtId) {
                      url += `&district_id=${districtId}`;
                  }
@@ -784,7 +985,7 @@ function candidatesManager() {
 
          async loadExamYears() {
              try {
-                 const response = await fetch('/api/exam-years');
+                 const response = await fetch('/admin/api/exam-years');
                  const data = await response.json();
                  this.examYears = data.exam_years || [];
              } catch (error) {
@@ -794,7 +995,7 @@ function candidatesManager() {
 
          async setDefaultExamYear() {
              try {
-                 const response = await fetch('/api/exam-years/active');
+                 const response = await fetch('/admin/api/exam-years/active');
                  const data = await response.json();
                  if (data.active_year) {
                      // Set default exam year from active year
@@ -811,7 +1012,7 @@ function candidatesManager() {
               this.loading = true;
               try {
                   // Build query with filters
-                  let url = `/api/candidates?page=${this.currentPage}&page_size=${this.pageSize}&search=${this.search}`;
+                  let url = `/admin/api/candidates?page=${this.currentPage}&page_size=${this.pageSize}&search=${this.search}`;
                   
                   // Add filter parameters to API call (backend filtering)
                   if (this.filterRegion) {
@@ -858,12 +1059,32 @@ function candidatesManager() {
             this.loadCandidates();
         },
 
+        selectRegion(regionId) {
+            this.filterRegion = regionId ? String(regionId) : '';
+            this.regionOpen = false;
+            this.onRegionChange();
+        },
+
+        selectDistrict(districtId) {
+            this.filterDistrict = districtId ? String(districtId) : '';
+            this.districtOpen = false;
+            this.onDistrictChange();
+        },
+
+        selectSchool(schoolId) {
+            this.filterSchool = schoolId ? String(schoolId) : '';
+            this.schoolOpen = false;
+            this.onSchoolChange();
+        },
+
         // Region filter changed
         onRegionChange() {
             this.filterDistrict = '';
             this.filterSchool = '';
             this.districtSearch = '';
             this.schoolSearch = '';
+            this.districtOpen = false;
+            this.schoolOpen = false;
             this.currentPage = 1;
             this.loadSchools();
             this.loadCandidates();
@@ -873,6 +1094,7 @@ function candidatesManager() {
         onDistrictChange() {
             this.filterSchool = '';
             this.schoolSearch = '';
+            this.schoolOpen = false;
             this.currentPage = 1;
             this.loadSchools(this.filterDistrict);
             this.loadCandidates();
@@ -889,7 +1111,14 @@ function candidatesManager() {
             this.filterRegion = '';
             this.filterDistrict = '';
             this.filterSchool = '';
+            this.regionSearch = '';
+            this.districtSearch = '';
+            this.schoolSearch = '';
+            this.regionOpen = false;
+            this.districtOpen = false;
+            this.schoolOpen = false;
             this.currentPage = 1;
+            this.loadSchools();
             this.loadCandidates();
         },
 
@@ -1161,7 +1390,7 @@ function candidatesManager() {
 
         async saveCandidate() {
              try {
-                 const url = this.editingId ? `/api/candidates/${this.editingId}` : '/api/candidates';
+                 const url = this.editingId ? `/admin/api/candidates/${this.editingId}` : '/admin/api/candidates';
                  const method = this.editingId ? 'PUT' : 'POST';
                  
                  // Prepare data with school_id as integer
@@ -1198,13 +1427,22 @@ function candidatesManager() {
          },
 
         async deleteCandidate(id) {
-             if (!confirm('Are you sure you want to delete this candidate?')) return;
+             this.deleteConfirm = {
+                 open: true,
+                 type: 'single',
+                 candidateId: id,
+                 count: 1,
+                 message: 'Are you sure you want to delete this candidate? This action cannot be undone.',
+                 processing: false,
+             };
+        },
 
+        async executeDeleteCandidate(id) {
              try {
                  const csrfToken = document.querySelector('meta[name="csrf-token"]');
                  const token = csrfToken ? csrfToken.content : '';
                  
-                 const response = await fetch(`/api/candidates/${id}`, {
+                 const response = await fetch(`/admin/api/candidates/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1248,7 +1486,7 @@ function candidatesManager() {
                 this.loading = true;
                 try {
                     // Fetch all candidate IDs from the API (with applied filters)
-                    let url = '/api/candidates?page_size=99999';
+                    let url = '/admin/api/candidates?page_size=99999';
                     
                     // Apply same filters that are currently active
                     if (this.filterRegion) {
@@ -1289,11 +1527,20 @@ function candidatesManager() {
              if (this.selectedItems.size === 0) return;
              
              const count = this.selectedItems.size;
-             if (!confirm(`Are you sure you want to delete ${count} candidate(s)? This action cannot be undone.`)) return;
+             this.deleteConfirm = {
+                 open: true,
+                 type: 'bulk',
+                 candidateId: null,
+                 count,
+                 message: `Are you sure you want to delete ${count} candidate(s)? This action cannot be undone.`,
+                 processing: false,
+             };
+        },
 
-             try {
-                 const ids = Array.from(this.selectedItems);
-                 const response = await fetch('/api/candidates/bulk-delete', {
+        async executeBulkDeleteCandidates() {
+            try {
+                const ids = Array.from(this.selectedItems);
+                const response = await fetch('/admin/api/candidates/bulk-delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1317,6 +1564,33 @@ function candidatesManager() {
             }
         },
 
+        closeDeleteConfirm() {
+            if (this.deleteConfirm.processing) return;
+            this.deleteConfirm.open = false;
+        },
+
+        async confirmDeleteAction() {
+            if (!this.deleteConfirm.open || this.deleteConfirm.processing) return;
+            this.deleteConfirm.processing = true;
+
+            try {
+                if (this.deleteConfirm.type === 'single' && this.deleteConfirm.candidateId) {
+                    await this.executeDeleteCandidate(this.deleteConfirm.candidateId);
+                } else if (this.deleteConfirm.type === 'bulk') {
+                    await this.executeBulkDeleteCandidates();
+                }
+            } finally {
+                this.deleteConfirm = {
+                    open: false,
+                    type: null,
+                    candidateId: null,
+                    count: 0,
+                    message: '',
+                    processing: false,
+                };
+            }
+        },
+
         openImportModal() {
             // Reset import state for new modal
             this.importPhase = 'upload';
@@ -1330,7 +1604,34 @@ function candidatesManager() {
             this.onExistsMode = 'skip';
             this.showReplaceConfirmation = false;
             this.showImportModal = true;
-            this.showToolsMenu = false;
+        },
+
+        openToolsModal() {
+            this.toolsModalOpen = true;
+        },
+
+        closeToolsModal() {
+            this.toolsModalOpen = false;
+        },
+
+        launchCandidateImportFlow() {
+            this.closeToolsModal();
+            this.openImportModal();
+        },
+
+        downloadCandidateTemplate() {
+            this.closeToolsModal();
+            this.downloadTemplate();
+        },
+
+        downloadManagedSchoolTemplate() {
+            this.closeToolsModal();
+            this.downloadSchoolTemplate();
+        },
+
+        exportCandidateExcel() {
+            this.closeToolsModal();
+            this.exportExcel();
         },
 
         // New import modal handlers
@@ -1370,7 +1671,7 @@ function candidatesManager() {
                 }
                 formData.append('on_exists_mode', this.onExistsMode);
 
-                const response = await fetch('/api/candidates/import/validate', {
+                const response = await fetch('/admin/api/candidates/import/validate', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1388,7 +1689,8 @@ function candidatesManager() {
                     this.showMessage(`Validation complete: ${data.error_count} error(s) found`, 'error');
                 } else if (data.can_import) {
                     const total = data.create_count + data.update_count;
-                    this.showMessage(`Validation complete: ${total} record(s) ready to import`, 'success');
+                    const warningText = data.warning_count > 0 ? ` with ${data.warning_count} warning(s)` : '';
+                    this.showMessage(`Validation complete: ${total} record(s) ready to import${warningText}`, data.warning_count > 0 ? 'error' : 'success');
                 } else {
                     this.showMessage('Validation complete: No valid records to import', 'error');
                 }
@@ -1422,7 +1724,7 @@ function candidatesManager() {
                 }
                 formData.append('on_exists_mode', this.onExistsMode);
 
-                const response = await fetch('/api/candidates/import/commit', {
+                const response = await fetch('/admin/api/candidates/import/commit', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1501,7 +1803,7 @@ function candidatesManager() {
 
         async downloadImportTemplate() {
             try {
-                const response = await fetch('/api/candidates/import/template', {
+                const response = await fetch('/admin/api/candidates/import/template', {
                     method: 'GET',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1536,7 +1838,7 @@ function candidatesManager() {
                     return;
                 }
 
-                const response = await fetch('/api/candidates/import/download-errors', {
+                const response = await fetch('/admin/api/candidates/import/download-errors', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1661,7 +1963,7 @@ function candidatesManager() {
                   conflictFormData.append('exam_year', this.importExamYear);
                   conflictFormData.append('exam_type', this.importExamType);
 
-                  const conflictResponse = await fetch('/api/candidates/import/check', {
+                  const conflictResponse = await fetch('/admin/api/candidates/import/check', {
                       method: 'POST',
                       headers: {
                           'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1715,7 +2017,7 @@ function candidatesManager() {
                  formData.append('exam_year', this.importExamYear);
                  formData.append('exam_type', this.importExamType);
 
-                 const response = await fetch('/api/candidates/import', {
+                 const response = await fetch('/admin/api/candidates/import', {
                      method: 'POST',
                      headers: {
                          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1778,7 +2080,7 @@ function candidatesManager() {
         async auditDataIntegrity() {
             this.auditLoading = true;
             try {
-                const response = await fetch('/api/audit/candidates', {
+                const response = await fetch('/admin/api/audit/candidates', {
                     method: 'GET',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1802,7 +2104,7 @@ function candidatesManager() {
             if (this.schoolDistrictMismatch.length === 0) return;
             
             try {
-                const response = await fetch('/api/audit/candidates/fix', {
+                const response = await fetch('/admin/api/audit/candidates/fix', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1935,36 +2237,57 @@ function handleQuickImport(fileInput) {
 <!-- New Import Candidates Modal (Two-Phase) -->
 <div 
     x-show="showImportModal" 
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+    class="fixed inset-0 bg-slate-950/55 flex items-center justify-center z-[9999] p-4"
     @click.self="showImportModal = false;"
     x-transition
     style="display: none;"
 >
-    <div class="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col" x-transition @click.stop>
+    <div class="registration-modal-shell max-w-5xl flex flex-col" x-transition @click.stop>
         <!-- Header -->
-        <div class="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
-            <h2 class="text-xl font-bold text-gray-800">Import Candidates</h2>
-            <button 
-                @click="showImportModal = false" 
-                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-                :disabled="importProcessing"
-            >
-                &times;
-            </button>
+        <div class="registration-modal-header flex-shrink-0">
+            <div class="registration-modal-header-content">
+                <div>
+                    <span class="registration-modal-kicker">
+                        <i class="fas fa-user-graduate text-amber-300"></i>
+                        Candidate Import
+                    </span>
+                    <h2 class="registration-modal-title">Import Candidates</h2>
+                    <p class="registration-modal-subtitle">
+                        Validate candidate files, review planned changes, and commit only approved records through a controlled multi-step workflow.
+                    </p>
+                </div>
+                <button 
+                    @click="showImportModal = false" 
+                    class="registration-modal-close"
+                    :disabled="importProcessing"
+                    type="button"
+                    aria-label="Close import candidates modal"
+                >
+                    &times;
+                </button>
+            </div>
         </div>
 
         <!-- Content (Scrollable) -->
-        <div class="overflow-y-auto flex-1 p-6 space-y-6">
+        <div class="registration-modal-body flex-1 space-y-6">
             <!-- Phase 1: Upload & Validation -->
             <div x-show="importPhase === 'upload'">
                 <div class="space-y-4">
                     <!-- Download Template Button -->
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-700">Step 1: Prepare File</h3>
+                    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+                        <div class="registration-modal-note max-w-2xl">
+                            <div class="registration-modal-note-icon">
+                                <i class="fas fa-circle-info"></i>
+                            </div>
+                            <div>
+                                <strong>Step 1: Prepare File</strong>
+                                <p>Choose the correct template for school or private candidates, then upload the completed CSV for validation.</p>
+                            </div>
+                        </div>
                         <div class="flex gap-2">
                             <button
                                 @click="downloadSchoolTemplate()"
-                                class="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                class="registration-modal-button registration-modal-button-success text-sm"
                                 :disabled="importProcessing"
                                 title="Download template for SCHOOL candidates"
                             >
@@ -1972,7 +2295,7 @@ function handleQuickImport(fileInput) {
                             </button>
                             <button
                                 @click="downloadPrivateTemplate()"
-                                class="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium"
+                                class="registration-modal-button text-sm !bg-gradient-to-br !from-purple-600 !to-violet-700 !text-white !shadow-[0_16px_28px_rgba(124,58,237,0.2)]"
                                 :disabled="importProcessing"
                                 title="Download template for PRIVATE candidates"
                             >
@@ -1986,8 +2309,8 @@ function handleQuickImport(fileInput) {
                         @drop.prevent="handleImportDrop($event)"
                         @dragover.prevent="importDragActive = true"
                         @dragleave.prevent="importDragActive = false"
-                        :class="importDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'"
-                        class="border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer"
+                        :class="importDragActive ? 'border-blue-500 bg-blue-50 shadow-[0_18px_30px_rgba(59,130,246,0.12)]' : ''"
+                        class="registration-dropzone cursor-pointer"
                     >
                         <input 
                             type="file"
@@ -1998,14 +2321,16 @@ function handleQuickImport(fileInput) {
                             :disabled="importProcessing"
                         >
                         <label for="import-file-input" class="cursor-pointer block">
-                            <i class="fas fa-cloud-upload-alt text-4xl text-blue-600 mb-2"></i>
-                            <p class="text-lg font-semibold text-gray-700">Drop CSV file here or click to select</p>
-                            <p class="text-sm text-gray-500 mt-1">Accepts .csv and .txt files</p>
+                            <span class="registration-dropzone-icon">
+                                <i class="fas fa-cloud-arrow-up"></i>
+                            </span>
+                            <p class="text-lg font-semibold text-slate-700">Drop CSV file here or click to select</p>
+                            <p class="text-sm text-slate-500 mt-2">Accepts .csv and .txt files</p>
                         </label>
                     </div>
 
                     <!-- File Info -->
-                    <div x-show="importFile" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div x-show="importFile" class="registration-modal-panel border-blue-200 bg-blue-50/80 p-4">
                         <p class="text-sm text-gray-700">
                             <strong>Selected file:</strong> <span x-text="importFile ? importFile.name : ''"></span>
                             <span class="text-gray-500" x-text="importFile ? '(' + (importFile.size / 1024).toFixed(1) + ' KB)' : ''"></span>
@@ -2013,7 +2338,7 @@ function handleQuickImport(fileInput) {
                     </div>
 
                     <!-- Options -->
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Exam Type (Optional)</label>
                             <select 
@@ -2044,7 +2369,7 @@ function handleQuickImport(fileInput) {
                     </div>
 
                     <!-- If Existing Candidate Option -->
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div class="registration-modal-panel p-4">
                         <p class="text-sm font-semibold text-gray-700 mb-3">If candidate already exists:</p>
                         <div class="space-y-2">
                             <label class="flex items-center gap-3 cursor-pointer">
@@ -2081,36 +2406,46 @@ function handleQuickImport(fileInput) {
                 <h3 class="text-lg font-semibold text-gray-700">Step 2: Review Results</h3>
 
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                        <p class="text-xs font-semibold text-gray-600 uppercase">Total Rows</p>
-                        <p class="text-2xl font-bold text-gray-800 mt-1" x-text="importReport.total_rows || 0"></p>
+                <div class="registration-modal-stats !grid-cols-2 xl:!grid-cols-3">
+                    <div class="registration-modal-stat">
+                        <p class="registration-modal-stat-label">Total Rows</p>
+                        <p class="registration-modal-stat-value text-gray-800 mt-1" x-text="importReport.total_rows || 0"></p>
                     </div>
 
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                        <p class="text-xs font-semibold text-blue-600 uppercase">New</p>
-                        <p class="text-2xl font-bold text-blue-800 mt-1" x-text="importReport.create_count || 0"></p>
+                    <div class="registration-modal-stat">
+                        <p class="registration-modal-stat-label text-blue-600">New</p>
+                        <p class="registration-modal-stat-value text-blue-800 mt-1" x-text="importReport.create_count || 0"></p>
                     </div>
 
-                    <div x-show="onExistsMode === 'replace'" class="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                        <p class="text-xs font-semibold text-purple-600 uppercase">Will Update</p>
-                        <p class="text-2xl font-bold text-purple-800 mt-1" x-text="importReport.update_count || 0"></p>
+                    <div x-show="onExistsMode === 'replace'" class="registration-modal-stat">
+                        <p class="registration-modal-stat-label text-purple-600">Will Update</p>
+                        <p class="registration-modal-stat-value text-purple-800 mt-1" x-text="importReport.update_count || 0"></p>
                     </div>
 
-                    <div x-show="onExistsMode === 'skip'" class="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <p class="text-xs font-semibold text-amber-600 uppercase">Will Skip</p>
-                        <p class="text-2xl font-bold text-amber-800 mt-1" x-text="importReport.skip_count || 0"></p>
+                    <div x-show="onExistsMode === 'skip'" class="registration-modal-stat">
+                        <p class="registration-modal-stat-label text-amber-600">Will Skip</p>
+                        <p class="registration-modal-stat-value text-amber-800 mt-1" x-text="importReport.skip_count || 0"></p>
                     </div>
 
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-3">
-                        <p class="text-xs font-semibold text-red-600 uppercase">Errors</p>
-                        <p class="text-2xl font-bold text-red-800 mt-1" x-text="importReport.error_count || 0"></p>
+                    <div class="registration-modal-stat">
+                        <p class="registration-modal-stat-label text-red-600">Errors</p>
+                        <p class="registration-modal-stat-value text-red-800 mt-1" x-text="importReport.error_count || 0"></p>
                     </div>
 
-                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-                        <p class="text-xs font-semibold text-green-600 uppercase">Can Import</p>
-                        <p class="text-2xl font-bold text-green-800 mt-1" x-text="importReport.can_import ? 'Yes ✓' : 'No ✗'"></p>
+                    <div class="registration-modal-stat">
+                        <p class="registration-modal-stat-label text-amber-600">Warnings</p>
+                        <p class="registration-modal-stat-value text-amber-800 mt-1" x-text="importReport.warning_count || 0"></p>
                     </div>
+
+                    <div class="registration-modal-stat">
+                        <p class="registration-modal-stat-label text-green-600">Can Import</p>
+                        <p class="registration-modal-stat-value text-green-800 mt-1" x-text="importReport.can_import ? 'Yes ✓' : 'No ✗'"></p>
+                    </div>
+                </div>
+
+                <div x-show="importReport.warning_count > 0" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <p class="font-semibold">Potential duplicates or PSLE data-quality warnings were detected.</p>
+                    <p class="mt-1">Import can still proceed, but these rows should be reviewed before commit.</p>
                 </div>
 
                 <!-- Error Table (if any) -->
@@ -2126,7 +2461,7 @@ function handleQuickImport(fileInput) {
                         </button>
                     </div>
 
-                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="registration-modal-panel overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead class="bg-gray-100 border-b border-gray-200">
@@ -2159,20 +2494,63 @@ function handleQuickImport(fileInput) {
                     </div>
                 </div>
 
-                <!-- Row Status Preview (if rows detail available) -->
-                <div x-show="importReport.rows && importReport.rows.length > 0" class="mt-4">
-                    <h4 class="font-semibold text-gray-700 mb-2">Import Plan</h4>
-                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div x-show="importReport.warning_count > 0">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-semibold text-gray-700">Warnings Found</h4>
+                        <span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                            <i class="fas fa-triangle-exclamation text-[11px]"></i>
+                            <span x-text="(importReport.warning_count || 0) + ' warning(s)'"></span>
+                        </span>
+                    </div>
+
+                    <div class="registration-modal-panel overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead class="bg-gray-100 border-b border-gray-200">
                                     <tr>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">PReM No</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Warning</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-200">
+                                    <template x-for="(warning, idx) in importReport.warnings.slice(0, 10)" :key="idx">
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="px-3 py-2 text-gray-600 text-xs" x-text="warning.row_number"></td>
+                                            <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="warning.candidate_id || '-'"></td>
+                                            <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="warning.prem_no || '-'"></td>
+                                            <td class="px-3 py-2">
+                                                <span class="inline-block bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium" x-text="warning.primary_warning || (warning.warning_messages && warning.warning_messages[0]) || 'Warning'"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div x-show="importReport.total_warnings > 10" class="bg-gray-50 px-4 py-2 text-xs text-gray-600 border-t border-gray-200">
+                            Showing 10 of <span x-text="importReport.total_warnings"></span> warnings
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row Status Preview (if rows detail available) -->
+                <div x-show="importReport.rows && importReport.rows.length > 0" class="mt-4">
+                    <h4 class="font-semibold text-gray-700 mb-2">Import Plan</h4>
+                    <div class="registration-modal-panel overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100 border-b border-gray-200">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">ID</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">PReM No</th>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">Name</th>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">CSV Combination</th>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">Resolved Combination</th>
                                         <th class="px-3 py-2 text-left font-semibold text-gray-700">Status</th>
+                                        <th class="px-3 py-2 text-left font-semibold text-gray-700">Message</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-200">
@@ -2180,6 +2558,7 @@ function handleQuickImport(fileInput) {
                                         <tr class="hover:bg-gray-50">
                                             <td class="px-3 py-2 text-gray-600 text-xs" x-text="row.row_number"></td>
                                             <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="row.candidate_id || '-'"></td>
+                                            <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="row.prem_no || '-'"></td>
                                             <td class="px-3 py-2 text-gray-600 text-xs" x-text="row.full_name || '-'"></td>
                                             
                                             <!-- CSV Combination Column -->
@@ -2214,9 +2593,15 @@ function handleQuickImport(fileInput) {
                                                 <template x-if="row.status === 'REPLACE'">
                                                     <span class="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold">↻ UPDATE</span>
                                                 </template>
+                                                <template x-if="row.status === 'WARNING'">
+                                                    <span class="inline-block bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-semibold">! WARNING</span>
+                                                </template>
                                                 <template x-if="row.status === 'ERROR'">
                                                     <span class="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">✗ ERROR</span>
                                                 </template>
+                                            </td>
+                                            <td class="px-3 py-2 text-xs text-gray-600">
+                                                <span x-text="row.messages && row.messages.length ? row.messages[0] : '-'"></span>
                                             </td>
                                         </tr>
                                     </template>
@@ -2234,27 +2619,29 @@ function handleQuickImport(fileInput) {
 
             <!-- Phase 3: Processing -->
             <div x-show="importPhase === 'processing'" class="flex flex-col items-center justify-center py-12">
-                <i class="fas fa-spinner animate-spin text-4xl text-blue-600 mb-4"></i>
+                <div class="inline-flex h-20 w-20 items-center justify-center rounded-[28px] bg-blue-100 text-blue-700 shadow-inner shadow-blue-200/70 mb-4">
+                    <i class="fas fa-spinner animate-spin text-4xl"></i>
+                </div>
                 <p class="text-lg font-semibold text-gray-700" x-text="importPhase === 'processing' ? 'Processing Import...' : 'Validating File...'"></p>
                 <p class="text-sm text-gray-500 mt-2" x-text="importProcessingMessage"></p>
             </div>
         </div>
 
         <!-- Footer (Sticky) -->
-        <div class="flex gap-3 justify-end p-6 border-t border-gray-200 flex-shrink-0 bg-gray-50">
+        <div class="registration-modal-actions flex-shrink-0 !px-6 !pb-6 !pt-5 bg-white border-t border-slate-200">
             <!-- Phase 1: Upload -->
             <template x-if="importPhase === 'upload'">
                 <div class="flex gap-3 w-full">
                     <button 
                         @click="showImportModal = false"
-                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                        class="registration-modal-button registration-modal-button-secondary"
                         :disabled="importProcessing"
                     >
                         Cancel
                     </button>
                     <button 
                         @click="validateImportFile()"
-                        class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                        class="registration-modal-button registration-modal-button-primary disabled:opacity-50"
                         :disabled="!importFile || importProcessing"
                     >
                         <i class="fas fa-check mr-2"></i> Validate
@@ -2282,21 +2669,21 @@ function handleQuickImport(fileInput) {
                     <div class="flex gap-3 w-full">
                         <button 
                             @click="importPhase = 'upload'; importFile = null; importReport = {}"
-                            class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-secondary"
                             :disabled="importProcessing"
                         >
                             <i class="fas fa-arrow-left mr-2"></i> Back
                         </button>
                         <button 
                             @click="showImportModal = false"
-                            class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                            class="registration-modal-button registration-modal-button-secondary"
                             :disabled="importProcessing"
                         >
                             Cancel
                         </button>
                         <button 
                             @click="commitImportFile()"
-                            class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50"
+                            class="registration-modal-button registration-modal-button-success disabled:opacity-50"
                             :disabled="!importReport.can_import || importProcessing"
                         >
                             <i class="fas fa-upload mr-2"></i> Import <span x-text="(importReport.create_count || 0) + (importReport.update_count || 0)"></span> Records
@@ -2310,7 +2697,7 @@ function handleQuickImport(fileInput) {
                 <div class="flex gap-3 w-full">
                     <button 
                         @click="showImportModal = false"
-                        class="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium"
+                        class="registration-modal-button registration-modal-button-secondary"
                         disabled
                     >
                         Processing...
@@ -2324,26 +2711,30 @@ function handleQuickImport(fileInput) {
 <!-- Data Audit Modal -->
 <div 
     x-show="showDataAuditModal" 
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4"
+    class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4"
     @click.self="showDataAuditModal = false;"
     x-transition
 >
-    <div class="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-96 overflow-y-auto" x-transition @click.stop>
-        <div class="sticky top-0 bg-white flex justify-between items-center p-6 border-b border-gray-200">
-            <h2 class="text-xl font-bold text-gray-800">
-                Data Integrity Audit
-            </h2>
+    <div class="registration-modal-shell max-w-3xl" x-transition @click.stop>
+        <div class="registration-modal-header">
+            <div class="registration-modal-header-content">
+            <div>
+                <span class="registration-modal-kicker"><i class="fas fa-shield-halved text-amber-300"></i>Audit</span>
+                <h2 class="registration-modal-title !mt-4 !text-[1.6rem]">Data Integrity Audit</h2>
+                <p class="registration-modal-subtitle">Review candidate and school consistency issues before running corrective actions.</p>
+            </div>
             <button 
                 @click="showDataAuditModal = false" 
-                class="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+                class="registration-modal-close"
             >
                 &times;
             </button>
+            </div>
         </div>
 
-        <div class="p-6 space-y-4">
+        <div class="registration-modal-body space-y-4">
             <template x-if="auditLoading">
-                <div class="text-center py-8">
+                <div class="registration-modal-panel text-center py-8">
                     <i class="fas fa-spinner animate-spin text-2xl text-blue-600"></i>
                     <p class="text-gray-600 mt-2">Running audit...</p>
                 </div>
@@ -2352,7 +2743,7 @@ function handleQuickImport(fileInput) {
             <template x-if="!auditLoading && auditResults">
                 <div class="space-y-4">
                     <!-- Summary -->
-                    <div class="bg-blue-50 rounded-lg p-4">
+                    <div class="registration-modal-panel bg-blue-50/90 border-blue-200 p-4">
                         <h3 class="font-bold text-gray-800 mb-2">Summary</h3>
                         <div class="grid grid-cols-2 gap-4 text-sm">
                             <div>
@@ -2376,7 +2767,7 @@ function handleQuickImport(fileInput) {
 
                     <!-- Mismatches -->
                     <template x-if="schoolDistrictMismatch.length > 0">
-                        <div class="bg-red-50 rounded-lg p-4">
+                        <div class="registration-modal-panel bg-red-50/90 border-red-200 p-4">
                             <h3 class="font-bold text-red-800 mb-2">School-District Mismatches</h3>
                             <div class="text-xs text-gray-600 mb-3">
                                 <p>These schools are registered to a different district than their candidates:</p>
@@ -2405,7 +2796,7 @@ function handleQuickImport(fileInput) {
 
                     <!-- All Clear -->
                     <template x-if="schoolDistrictMismatch.length === 0 && auditResults.schools_without_district === 0">
-                        <div class="bg-green-50 rounded-lg p-4">
+                        <div class="registration-modal-panel bg-green-50/90 border-green-200 p-4">
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-check-circle text-green-600 text-xl"></i>
                                 <div>
@@ -2419,18 +2810,18 @@ function handleQuickImport(fileInput) {
             </template>
 
             <!-- Close Button -->
-            <div class="flex gap-3">
+            <div class="registration-modal-actions">
                 <button 
                     type="button"
                     @click="auditDataIntegrity()"
-                    class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                    class="registration-modal-button registration-modal-button-secondary text-sm cursor-pointer"
                 >
                     <i class="fas fa-redo mr-2"></i>Re-run Audit
                 </button>
                 <button 
                     type="button"
                     @click="showDataAuditModal = false"
-                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium text-sm cursor-pointer"
+                    class="registration-modal-button registration-modal-button-primary text-sm cursor-pointer"
                 >
                     Close
                 </button>
@@ -2439,12 +2830,20 @@ function handleQuickImport(fileInput) {
 
         <!-- Import Modal with x-teleport to body -->
         <template x-teleport="body">
-            <div x-show="showImportModal" x-transition.opacity class="fixed inset-0 bg-black/50 z-[9998] flex items-center justify-center p-4" @click="if($event.target === $event.currentTarget) showImportModal = false">
-                <div class="bg-white rounded-lg shadow-xl max-w-md w-full" @click.stop>
-                    <div class="p-6 border-b border-gray-200">
-                        <h2 class="text-xl font-bold text-gray-800">Import Candidates</h2>
+            <div x-show="showImportModal" x-transition.opacity class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4" @click="if($event.target === $event.currentTarget) showImportModal = false">
+                <div class="registration-modal-shell max-w-2xl" @click.stop>
+                    <div class="registration-modal-header">
+                        <div class="registration-modal-header-content">
+                            <div>
+                                <span class="registration-modal-kicker"><i class="fas fa-file-import text-amber-300"></i>Candidate Import</span>
+                                <h2 class="registration-modal-title !mt-4 !text-[1.6rem]">Import Candidates</h2>
+                                <p class="registration-modal-subtitle">Prepare exam context first, then continue to the existing file-selection flow.</p>
+                            </div>
+                            <button @click="showImportModal = false" class="registration-modal-close">&times;</button>
+                        </div>
                     </div>
-                    <div class="p-6 space-y-4">
+                    <div class="registration-modal-body space-y-4">
+                         <div class="registration-modal-panel p-6 space-y-4">
                          <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
                              <i class="fas fa-info-circle text-blue-600 mr-2"></i>
                              <strong>Note:</strong> School codes not in the database will be auto-registered. Upload your CSV and the system will handle missing schools.
@@ -2467,14 +2866,15 @@ function handleQuickImport(fileInput) {
                                  <option value="ACSEE">ACSEE</option>
                              </select>
                          </div>
-                        <div class="flex gap-3">
-                            <button type="button" @click="showImportModal = false" class="flex-1 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium">
+                        <div class="registration-modal-actions">
+                            <button type="button" @click="showImportModal = false" class="registration-modal-button registration-modal-button-secondary">
                                 Cancel
                             </button>
-                            <button type="button" @click="$nextTick(() => document.getElementById('importInput').click())" :disabled="!importExamYear" class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium">
+                            <button type="button" @click="$nextTick(() => document.getElementById('importInput').click())" :disabled="!importExamYear" class="registration-modal-button registration-modal-button-primary disabled:bg-gray-400">
                                 Select File
                             </button>
                         </div>
+                    </div>
                     </div>
                     </div>
                     </div>
@@ -2484,26 +2884,26 @@ function handleQuickImport(fileInput) {
         <template x-teleport="body">
             <div x-show="showImportConflictModal" x-transition.opacity style="display: none;" class="fixed inset-0 z-[9998] flex items-center justify-center p-4" @click.self="showImportConflictModal = false">
                             <!-- Backdrop -->
-                            <div class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+                            <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm"></div>
                             
                             <!-- Modal -->
-                            <div class="relative z-[9999] bg-white rounded-xl shadow-2xl max-w-3xl w-full flex flex-col max-h-[90vh] pointer-events-auto" @click.stop>
+                            <div class="registration-modal-shell relative z-[9999] max-w-3xl w-full flex flex-col max-h-[90vh] pointer-events-auto" @click.stop>
                                 <!-- Header -->
-                                <div class="bg-gradient-to-r from-orange-50 to-yellow-50 px-8 py-6 border-b border-gray-200 flex-shrink-0 rounded-t-xl">
+                                <div class="registration-modal-header !bg-[linear-gradient(135deg,rgba(124,45,18,0.98)_0%,rgba(194,65,12,0.95)_55%,rgba(146,64,14,0.92)_100%)] flex-shrink-0">
                                     <div class="flex items-center justify-between">
                                         <div class="flex items-center gap-3">
-                                            <div class="bg-orange-100 p-3 rounded-lg">
-                                                <i class="fas fa-exclamation-triangle text-orange-600 text-xl"></i>
+                                            <div class="bg-white/10 p-3 rounded-2xl border border-white/10">
+                                                <i class="fas fa-exclamation-triangle text-amber-300 text-xl"></i>
                                             </div>
                                             <div>
-                                                <h2 class="text-2xl font-bold text-gray-800">Import Conflicts Detected</h2>
-                                                <p class="text-sm text-gray-600 mt-1"><span x-text="importConflicts.length"></span> candidate(s) already exist in the system</p>
+                                                <h2 class="registration-modal-title !mt-0 !text-[1.6rem]">Import Conflicts Detected</h2>
+                                                <p class="registration-modal-subtitle"><span x-text="importConflicts.length"></span> candidate(s) already exist in the system</p>
                                             </div>
                                         </div>
                                         <button 
                                             type="button"
                                             @click.stop="showImportConflictModal = false" 
-                                            class="text-gray-400 hover:text-gray-600 transition text-2xl"
+                                            class="registration-modal-close"
                                         >
                                             ✕
                                         </button>
@@ -2511,7 +2911,7 @@ function handleQuickImport(fileInput) {
                                 </div>
 
                                 <!-- Content -->
-                                <div class="p-8 overflow-y-auto flex-1 space-y-6" @click.stop>
+                                <div class="registration-modal-body overflow-y-auto flex-1 space-y-6" @click.stop>
                                     <!-- Summary -->
                                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                         <p class="text-sm text-blue-900">
@@ -2638,6 +3038,8 @@ function handleQuickImport(fileInput) {
             </div>
         </template>
     </div>
+    </div>
+</div>
 </div>
 
 @endsection

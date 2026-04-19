@@ -149,7 +149,10 @@ class SimpleBulkImporter
 
                     // Parse mark
                     $mark = (float)$mark;
-                    if ($mark < 0 || $mark > 100) {
+                    $subject = Subject::find($subjectId);
+                    $maxMarks = (float) ($subject?->max_marks ?? 100);
+
+                    if ($mark < 0 || $mark > $maxMarks) {
                         $failureCount++;
                         continue;
                     }
@@ -171,6 +174,7 @@ class SimpleBulkImporter
                         ],
                         [
                             'marks_obtained' => $mark,
+                            'max_marks' => (int) $maxMarks,
                         ]
                     );
 

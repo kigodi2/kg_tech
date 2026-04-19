@@ -21,6 +21,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'first_name',
         'last_name',
         'phone',
+        'portal_role',
         'role_id',
         'is_admin',
         'password_reset_required',
@@ -95,7 +96,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
 
     public function isAdmin()
     {
-        return $this->hasRole(Role::CODE_ADMIN);
+        return $this->portal_role === 'admin' || $this->hasRole(Role::CODE_ADMIN);
     }
 
     public function isRegionalOfficer()

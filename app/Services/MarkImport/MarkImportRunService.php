@@ -126,10 +126,19 @@ class MarkImportRunService
             return $this->buildResult($run, 0, 0, 1, 0);
         }
 
-        $actualHeaders = array_map(fn($h) => strtolower(trim($h)), $headerRow);
+        $actualHeaders = array_map(
+            fn($h, $index) => $this->normalizeHeaderToken((string) $h, $paperStructure, $index),
+            $headerRow,
+            array_keys($headerRow)
+        );
+        $normalizedExpectedHeaders = array_map(
+            fn($h, $index) => $this->normalizeHeaderToken((string) $h, $paperStructure, $index),
+            $expectedHeaders,
+            array_keys($expectedHeaders)
+        );
 
         // Header validation
-        if (count($actualHeaders) !== count($expectedHeaders)) {
+        if (count($actualHeaders) !== count($normalizedExpectedHeaders)) {
             $this->addRunError($run, 0, null, $subjectId, null, null, 'HEADER_MISMATCH', 'error',
                 'Expected ' . count($expectedHeaders) . ' columns (' . implode(', ', $expectedHeaders) . ') but found ' . count($actualHeaders) . '.',
                 implode(',', $actualHeaders));
@@ -139,7 +148,7 @@ class MarkImportRunService
         }
 
         // Check for unknown/reordered headers
-        foreach ($expectedHeaders as $i => $expected) {
+        foreach ($normalizedExpectedHeaders as $i => $expected) {
             if (!isset($actualHeaders[$i]) || $actualHeaders[$i] !== $expected) {
                 $this->addRunError($run, 0, null, $subjectId, null, $expected, 'HEADER_MISMATCH', 'error',
                     "Column " . ($i + 1) . " should be '{$expected}' but found '" . ($actualHeaders[$i] ?? 'MISSING') . "'.",
@@ -618,5 +627,38 @@ class MarkImportRunService
             $headers[] = 'project';
         }
         return $headers;
+    }
+
+    private function normalizeHeaderToken(string $header, array $paperStructure, int $index = -1): string
+    {
+        $key = strtolower(trim($header));
+        $key = preg_replace('/^\xEF\xBB\xBF/', '', $key);
+        $key = str_replace([' ', '-'], '_', $key);
+
+        if ($index === 0 && $key === '') {
+            $key = 'index_number';
+        }
+
+        $aliases = [
+            'paper_1' => 'paper_p1',
+            'paper1' => 'paper_p1',
+            'paper_2' => 'paper_p2',
+            'paper2' => 'paper_p2',
+            'practical_marks' => 'practical',
+            'index_no' => 'index_number',
+            'indexnumber' => 'index_number',
+            'gender' => 'sex',
+        ];
+
+        if (!empty($paperStructure['has_practical'])) {
+            $practicalOrdinal = max(1, (int) ($paperStructure['written_papers'] ?? 0) + 1);
+            $aliases["paper_p{$practicalOrdinal}"] = 'practical';
+            $aliases["paper_{$practicalOrdinal}"] = 'practical';
+            $aliases["paper{$practicalOrdinal}"] = 'practical';
+            $aliases['paper_3'] = 'practical';
+            $aliases['paper3'] = 'practical';
+        }
+
+        return $aliases[$key] ?? $key;
     }
 }

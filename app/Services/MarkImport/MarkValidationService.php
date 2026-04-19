@@ -6,6 +6,7 @@ use App\Models\MarkImportBatch;
 use App\Models\RawMark;
 use App\Models\Candidate;
 use App\Models\ExamType;
+use App\Models\ExamYear;
 
 class MarkValidationService
 {
@@ -32,24 +33,19 @@ class MarkValidationService
         }
 
         $registration = $candidate->examRegistrations()
-            ->where('exam_type_id', $acseeExamType->id)
-            ->where('year', $batch->exam_year)
-            ->first();
+            ->where('exam_type_id', $acseeExamType->id);
+        $this->applyYearFilter($registration, $batch->exam_year);
+        $registration = $registration->first();
 
         if (!$registration) {
             $errors[] = "Candidate is not registered for ACSEE in year {$batch->exam_year}";
             return $errors;
         }
 
-        // Rule 3: Retrieve candidate's registered combination and validate subject
-        $candidateCombination = $this->getCandidateCombination($candidate, $batch->exam_year);
-        if (!$candidateCombination) {
-            $errors[] = "Candidate's ACSEE combination not found";
-            return $errors;
-        }
-
-        if (!$this->subjectInCombination($candidateCombination, $subject)) {
-            $errors[] = "Subject '{$subject->code}' is not registered under candidate's ACSEE combination";
+        // Rule 3: Subject must be allocated to candidate for the ACSEE year.
+        // Prefer candidate_subject_selections (source of truth), then fallback to combination mapping.
+        if (!$this->subjectRegisteredForCandidate($candidate, $subject, $acseeExamType->id, $batch->exam_year)) {
+            $errors[] = "Subject '{$subject->code}' is not allocated to candidate for ACSEE {$batch->exam_year}";
             return $errors;
         }
 
@@ -94,20 +90,20 @@ class MarkValidationService
 
         // Get candidate's registration for the year
         $registration = $candidate->examRegistrations()
-            ->where('exam_type_id', $acseeExamType->id)
-            ->where('year', $year)
-            ->first();
+            ->where('exam_type_id', $acseeExamType->id);
+        $this->applyYearFilter($registration, $year);
+        $registration = $registration->first();
 
         if (!$registration) {
             return null;
         }
 
         // Get subjects the candidate selected for this exam/year
-        $subjectIds = $candidate->subjectSelections()
+        $subjectSelectionQuery = $candidate->subjectSelections()
             ->where('exam_type_id', $acseeExamType->id)
-            ->where('year', $year)
-            ->pluck('subject_id')
-            ->toArray();
+            ->where('is_active', true);
+        $this->applyYearFilter($subjectSelectionQuery, $year);
+        $subjectIds = $subjectSelectionQuery->pluck('subject_id')->toArray();
 
         if (!empty($subjectIds)) {
             // Find combination that contains ALL candidate's selected subjects
@@ -154,6 +150,50 @@ class MarkValidationService
         }
 
         return $combination->subjects()->where('subject_id', $subject->id)->exists();
+    }
+
+    /**
+     * Check whether a subject is actually allocated to a candidate for the given ACSEE year.
+     * Uses candidate_subject_selections first, then legacy combination fallback.
+     */
+    private function subjectRegisteredForCandidate($candidate, $subject, int $examTypeId, $year): bool
+    {
+        if (!$candidate || !$subject) {
+            return false;
+        }
+
+        $selectionQuery = $candidate->subjectSelections()
+            ->where('exam_type_id', $examTypeId)
+            ->where('subject_id', $subject->id)
+            ->where('is_active', true);
+        $this->applyYearFilter($selectionQuery, $year);
+
+        if ($selectionQuery->exists()) {
+            return true;
+        }
+
+        $candidateCombination = $this->getCandidateCombination($candidate, $year);
+        return $this->subjectInCombination($candidateCombination, $subject);
+    }
+
+    /**
+     * Apply year filtering that supports both legacy `year` and new `exam_year_id`.
+     */
+    private function applyYearFilter($query, $year): void
+    {
+        $examYearId = ExamYear::query()
+            ->where('year_label', (string) $year)
+            ->value('id');
+
+        if ($examYearId) {
+            $query->where(function ($q) use ($examYearId, $year) {
+                $q->where('exam_year_id', $examYearId)
+                  ->orWhere('year', $year);
+            });
+            return;
+        }
+
+        $query->where('year', $year);
     }
 
     /**

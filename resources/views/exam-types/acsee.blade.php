@@ -1,19 +1,26 @@
 @extends('layout')
 
 @section('content')
-<div class="w-full">
-    <!-- Page Header -->
-    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
-        <h1 class="text-2xl font-bold text-gray-800">ACSEE Management</h1>
-    </div>
-
-    <!-- Main Content -->
-    <div class="px-8 py-8">
+@include('registration.partials.theme')
+<div class="registration-shell">
+    <div class="registration-page-stack">
+    @include('registration.partials.header', [
+        'kicker' => 'Exam Setup Workspace',
+        'title' => 'ACSEE Management',
+        'subtitle' => 'Configure ACSEE subjects, combinations, and candidate-facing structures from one coordinated administration workspace.',
+        'highlights' => [
+            ['icon' => 'fas fa-book-open', 'text' => 'Subject administration'],
+            ['icon' => 'fas fa-layer-group', 'text' => 'Combination management'],
+            ['icon' => 'fas fa-users', 'text' => 'Candidate visibility'],
+        ],
+        'noteTitle' => 'Module Scope',
+        'noteText' => 'ACSEE carries the most complex exam structure in the system, so this page is organized around subjects, combinations, and candidate operations.',
+    ])
 
     <!-- ACSEE Component -->
-    <div x-data="acseeManager()" @init="init()" class="space-y-6">
+    <div x-data="acseeManager()" x-init="init()" class="space-y-6">
         <!-- Tabs Navigation -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="registration-surface overflow-hidden">
             <div class="flex border-b border-gray-200">
                 <button @click="activeTab = 'subjects'" :class="activeTab === 'subjects' ? 'bg-blue-50 border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="flex-1 py-4 px-6 font-medium transition-colors">Subjects</button>
                 <button @click="activeTab = 'combinations'" :class="activeTab === 'combinations' ? 'bg-blue-50 border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="flex-1 py-4 px-6 font-medium transition-colors">Combinations</button>
@@ -23,16 +30,16 @@
 
         <!-- SUBJECTS TAB -->
         <div x-show="activeTab === 'subjects'" class="space-y-6">
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="registration-surface registration-toolbar-card">
                 <div class="flex gap-4 items-center">
                     <input x-model="subjectSearch" @input="filterSubjects()" type="text" placeholder="Search subjects..." class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button @click="console.log('Button clicked'); console.log('subjectModalOpen:', subjectModalOpen); openSubjectModal(); console.log('After openSubjectModal, subjectModalOpen:', subjectModalOpen);" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium">
+                    <button type="button" @click="openSubjectModal()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium">
                         <i class="fas fa-plus"></i> Add Subject
                     </button>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow overflow-x-auto">
+            <div class="registration-surface registration-table-card overflow-x-auto">
                 <div x-show="loadingSubjects" class="p-6 text-center text-gray-500">
                     <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
                 </div>
@@ -94,16 +101,16 @@
 
         <!-- COMBINATIONS TAB -->
         <div x-show="activeTab === 'combinations'" class="space-y-6">
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="registration-surface registration-toolbar-card">
                 <div class="flex gap-4 items-center">
                     <input x-model="combinationSearch" @input="filterCombinations()" type="text" placeholder="Search combinations..." class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <button @click="console.log('Combination button clicked'); openCombinationModal(); console.log('combinationModalOpen:', combinationModalOpen);" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium">
+                    <button type="button" @click="openCombinationModal()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium">
                         <i class="fas fa-plus"></i> Add Combination
                     </button>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow overflow-x-auto">
+            <div class="registration-surface registration-table-card overflow-x-auto">
                 <div x-show="loadingCombinations" class="p-6 text-center text-gray-500">
                     <i class="fas fa-spinner animate-spin text-2xl"></i> Loading...
                 </div>
@@ -132,10 +139,10 @@
                                     <span x-show="!combination.is_active" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>
                                 </td>
                                 <td class="px-6 py-4 text-sm space-x-3">
-                                    <button @click="openEditCombinationModal(combination)" class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors">
+                                    <button type="button" @click.prevent="openEditCombinationModal(combination)" class="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors">
                                         <i class="fas fa-edit text-sm"></i>
                                     </button>
-                                    <button @click="deleteCombination(combination.id)" class="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors">
+                                    <button type="button" @click.prevent="deleteCombination(combination.id)" class="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors">
                                         <i class="fas fa-trash text-sm"></i>
                                     </button>
                                 </td>
@@ -143,7 +150,7 @@
                         </template>
                         <tr x-show="filteredCombinations.length === 0 && !loadingCombinations">
                             <td colspan="7" class="px-6 py-8 text-center text-gray-500">
-                                No combinations found. <button @click="openCombinationModal()" class="text-blue-600 hover:underline">Add one now</button>
+                                No combinations found. <button type="button" @click="openCombinationModal()" class="text-blue-600 hover:underline">Add one now</button>
                             </td>
                         </tr>
                     </tbody>
@@ -154,7 +161,7 @@
         <!-- CANDIDATES TAB (READ-ONLY) -->
          <div x-show="activeTab === 'candidates'" class="space-y-6">
              <!-- Search and Filter Section -->
-             <div class="bg-gray-50 rounded-lg px-6 py-4 flex gap-4 items-center flex-wrap">
+             <div class="registration-surface registration-toolbar-card flex gap-4 items-center flex-wrap">
                  <input x-model="candidateSearch" @input="filterAcseeCandicates()" type="text" placeholder="Search candidates..." class="flex-1 px-4 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-gray-700 placeholder-gray-400 min-w-64">
                  <div class="flex gap-2 items-center">
                      <label class="text-sm font-medium text-gray-700">Candidate Type:</label>
@@ -164,16 +171,52 @@
                          <option value="PRIVATE">Private</option>
                      </select>
                  </div>
-                 <button @click="exportAcseeCandicates()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors text-sm whitespace-nowrap">
-                     <i class="fas fa-download"></i> Export Excel
-                 </button>
-                 <button @click="openBulkImportModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors text-sm whitespace-nowrap" data-testid="bulk-import-button">
-                     <i class="fas fa-upload"></i> Bulk Import CSV
+                 <button @click="openCandidateToolsModal()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center gap-2 transition-colors text-sm whitespace-nowrap shadow-sm shadow-blue-200/80" data-testid="bulk-import-button">
+                     <i class="fas fa-wrench"></i> Candidate Tools
+                     <i class="fas fa-arrow-up-right-from-square text-xs opacity-80"></i>
                  </button>
              </div>
 
+            <div
+                x-show="candidateToolsModalOpen"
+                class="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/55 p-4"
+                style="display: none;"
+                @click.self="closeCandidateToolsModal()"
+                @keydown.escape.window="closeCandidateToolsModal()"
+                x-transition.opacity
+            >
+                <div class="w-full max-w-3xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-2xl shadow-slate-900/20" x-transition>
+                    <div class="relative overflow-hidden border-b border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-emerald-800 px-6 py-6 text-white">
+                        <div class="absolute inset-y-0 right-0 w-56 bg-[radial-gradient(circle_at_top_right,_rgba(255,255,255,0.16),_transparent_68%)]"></div>
+                        <div class="relative flex items-start justify-between gap-4">
+                            <div>
+                                <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
+                                    <i class="fas fa-user-graduate text-[0.7rem] text-amber-300"></i>
+                                    ACSEE Candidate Tools
+                                </span>
+                                <h2 class="mt-4 text-2xl font-bold tracking-tight text-white">Candidate import and export workspace</h2>
+                                <p class="mt-2 max-w-2xl text-sm leading-6 text-white/80">Open the existing bulk import workflow or export the ACSEE candidate list from one cleaner action panel.</p>
+                            </div>
+                            <button @click="closeCandidateToolsModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/10 text-lg text-white/80 transition hover:bg-white/15 hover:text-white" type="button" aria-label="Close candidate tools">&times;</button>
+                        </div>
+                    </div>
+                    <div class="grid gap-4 bg-slate-50 p-6 md:grid-cols-2">
+                        <button type="button" @click="launchAcseeCandidateExport()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                            <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700"><i class="fas fa-file-excel text-lg"></i></span>
+                            <h3 class="mt-5 text-base font-bold text-slate-900">Export Excel</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">Export the current ACSEE candidate list in spreadsheet format for offline analysis.</p>
+                        </button>
+                        <button type="button" @click="launchAcseeBulkImport()" class="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg hover:shadow-blue-100/70">
+                            <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-blue-700"><i class="fas fa-file-import text-lg"></i></span>
+                            <h3 class="mt-5 text-base font-bold text-slate-900">Bulk Import CSV</h3>
+                            <p class="mt-2 text-sm leading-6 text-slate-600">Open the existing ACSEE bulk import modal with school/private template options and review flow.</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Candidates Table (Read-Only) -->
-            <div class="bg-white rounded-lg shadow overflow-x-auto" data-testid="candidates-table">
+            <div class="registration-surface registration-table-card overflow-x-auto" data-testid="candidates-table">
                 <div x-show="loadingAcseeCandicates" class="p-6 text-center text-gray-500">
                     <i class="fas fa-spinner animate-spin text-2xl"></i> Loading candidates...
                 </div>
@@ -221,15 +264,18 @@
             </div>
 
             <!-- Professional Pagination -->
-             <div class="bg-white rounded-lg shadow border-t border-gray-200">
-                 <div class="px-6 py-4 space-y-4">
+             <div class="border-t border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50">
+                 <div class="px-6 py-5 space-y-4">
                      <!-- Row 1: Info and Per-Page Selector -->
                      <div class="flex items-center justify-between gap-4 flex-wrap">
-                         <div class="text-sm text-gray-600">
+                         <div class="flex flex-wrap items-center gap-3 text-sm text-slate-600">
                              <span x-show="pagination.total > 0">
-                                 Showing <span class="font-semibold" x-text="pagination.from"></span> to <span class="font-semibold" x-text="pagination.to"></span> of <span class="font-semibold" x-text="pagination.total"></span> candidates
+                                 <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+                                     <i class="fas fa-table-list text-xs text-slate-400"></i>
+                                     <span>Showing <span class="font-semibold text-slate-800" x-text="pagination.from"></span> to <span class="font-semibold text-slate-800" x-text="pagination.to"></span> of <span class="font-semibold text-slate-800" x-text="pagination.total"></span> candidates</span>
+                                 </span>
                              </span>
-                             <span x-show="pagination.total === 0" class="text-gray-500">No candidates found</span>
+                             <span x-show="pagination.total === 0" class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-gray-500"><i class="fas fa-circle-info text-xs"></i>No candidates found</span>
                          </div>
                          
                          <div class="flex items-center gap-3">
@@ -249,7 +295,7 @@
                              <button 
                                  @click="pagination.page > 1 && (pagination.page--, loadAcseeCandicates())" 
                                  :disabled="pagination.page <= 1 || loadingAcseeCandicates"
-                                 class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                 class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                                  title="Go to first page"
                                  aria-label="First page">
                                  <i class="fas fa-step-backward"></i>
@@ -257,7 +303,7 @@
                              <button 
                                  @click="pagination.page > 1 && (pagination.page--, loadAcseeCandicates())" 
                                  :disabled="pagination.page <= 1 || loadingAcseeCandicates"
-                                 class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                 class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                                  title="Previous page"
                                  aria-label="Previous page">
                                  <i class="fas fa-chevron-left"></i>
@@ -265,7 +311,7 @@
                          </div>
 
                          <!-- Page Numbers with Ellipsis -->
-                         <div class="flex gap-1 items-center flex-wrap justify-center">
+                         <div class="flex gap-2 items-center flex-wrap justify-center rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm">
                              <template x-for="page in (() => {
                                  const pages = [];
                                  const current = pagination.page;
@@ -295,8 +341,8 @@
                                  <template x-if="page.type === 'number'">
                                      <button 
                                          @click="pagination.page = page.num; loadAcseeCandicates()"
-                                         :class="pagination.page === page.num ? 'bg-blue-600 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-100'"
-                                         class="px-3 py-1.5 rounded-lg transition-colors font-medium text-sm"
+                                         :class="pagination.page === page.num ? 'bg-blue-600 text-white shadow-md shadow-blue-200/80' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'"
+                                         class="min-w-[2.5rem] rounded-xl px-3 py-2 text-sm font-semibold transition-colors"
                                          :disabled="loadingAcseeCandicates"
                                          :aria-current="pagination.page === page.num ? 'page' : undefined"
                                          x-text="page.num">
@@ -313,7 +359,7 @@
                              <button 
                                  @click="pagination.page < pagination.lastPage && (pagination.page++, loadAcseeCandicates())" 
                                  :disabled="pagination.page >= pagination.lastPage || loadingAcseeCandicates"
-                                 class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                 class="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                                  title="Next page"
                                  aria-label="Next page">
                                  <i class="fas fa-chevron-right"></i>
@@ -321,7 +367,7 @@
                              <button 
                                  @click="pagination.page < pagination.lastPage && (pagination.page = pagination.lastPage, loadAcseeCandicates())" 
                                  :disabled="pagination.page >= pagination.lastPage || loadingAcseeCandicates"
-                                 class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                 class="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                                  title="Go to last page"
                                  aria-label="Last page">
                                  <i class="fas fa-step-forward"></i>
@@ -352,8 +398,9 @@
                          </div>
 
                          <!-- Mobile Page Display -->
-                         <div class="md:hidden text-sm text-gray-600">
-                             Page <span class="font-semibold" x-text="pagination.page"></span> of <span class="font-semibold" x-text="pagination.lastPage"></span>
+                         <div class="md:hidden inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700">
+                             <i class="fas fa-layer-group text-xs"></i>
+                             <span>Page <span class="font-semibold" x-text="pagination.page"></span> of <span class="font-semibold" x-text="pagination.lastPage"></span></span>
                          </div>
 
                          <!-- Loading Indicator -->
@@ -366,26 +413,33 @@
         </div>
 
         <!-- SUBJECT MODAL -->
-        <div x-show="subjectModalOpen || editingSubjectId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @mousedown.self="subjectModalOpen = false; editingSubjectId = null;" x-transition style="display: none;">
-            <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800" x-text="editingSubjectId ? 'Edit Subject' : 'Add Subject'"></h2>
-                    <button @click="subjectModalOpen = false; editingSubjectId = null;" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+        <div x-show="subjectModalOpen || editingSubjectId" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4" @mousedown.self="subjectModalOpen = false; editingSubjectId = null;" x-transition style="display: none;">
+            <div class="registration-modal-shell max-w-2xl" x-transition>
+                <div class="registration-modal-header">
+                    <div class="registration-modal-header-content">
+                        <div>
+                            <span class="registration-modal-kicker"><i class="fas fa-book text-amber-300"></i>ACSEE Subject</span>
+                            <h2 class="registration-modal-title" x-text="editingSubjectId ? 'Edit Subject' : 'Add Subject'"></h2>
+                            <p class="registration-modal-subtitle">Configure subject identity, category, paper count, and optional practical or project components.</p>
+                        </div>
+                        <button @click="subjectModalOpen = false; editingSubjectId = null;" class="registration-modal-close" aria-label="Close subject modal">&times;</button>
+                    </div>
                 </div>
 
                 <form @submit.prevent="saveSubject()">
-                    <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+                    <div class="registration-modal-body">
+                    <div class="registration-modal-panel p-6 space-y-4 max-h-[60vh] overflow-y-auto">
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Code *</label>
-                            <input x-model="subjectForm.code" type="text" placeholder="e.g., ENG" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input x-model="subjectForm.code" @input="syncSubjectDescription()" type="text" placeholder="e.g., ENG" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
-                            <input x-model="subjectForm.name" type="text" placeholder="e.g., English" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input x-model="subjectForm.name" @input="syncSubjectDescription()" type="text" placeholder="e.g., English" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Category *</label>
-                            <select x-model="subjectForm.category" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <select x-model="subjectForm.category" @change="syncSubjectDescription()" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                                 <option value="">Select Category</option>
                                 <option value="SCIENCE">SCIENCE</option>
                                 <option value="ARTS">ARTS</option>
@@ -394,25 +448,25 @@
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Written Papers</label>
-                            <input x-model.number="subjectForm.written_papers" type="number" placeholder="e.g., 2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input x-model.number="subjectForm.written_papers" @input="syncSubjectDescription()" type="number" placeholder="e.g., 2" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="flex items-center gap-2">
-                                <input x-model="subjectForm.has_practical" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                                <input x-model="subjectForm.has_practical" @change="syncSubjectDescription()" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
                                 <span class="text-sm font-medium text-gray-700">Has Practical</span>
                             </label>
                             <label class="flex items-center gap-2">
-                                <input x-model="subjectForm.has_project" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                                <input x-model="subjectForm.has_project" @change="syncSubjectDescription()" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
                                 <span class="text-sm font-medium text-gray-700">Has Project</span>
                             </label>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Max Marks</label>
-                            <input x-model.number="subjectForm.max_marks" type="number" placeholder="e.g., 100" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input x-model.number="subjectForm.max_marks" @input="syncSubjectDescription()" type="number" placeholder="e.g., 100" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
-                            <textarea x-model="subjectForm.description" placeholder="Subject description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-16 resize-none"></textarea>
+                            <textarea x-model="subjectForm.description" @input="markSubjectDescriptionManual()" placeholder="Subject description" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-16 resize-none"></textarea>
                         </div>
                         <label class="flex items-center gap-2">
                             <input x-model="subjectForm.is_active" type="checkbox" class="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
@@ -420,23 +474,31 @@
                         </label>
                     </div>
 
-                    <div class="flex gap-3 p-6 border-t border-gray-200">
-                        <button type="button" @click="subjectModalOpen = false; editingSubjectId = null;" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium">Cancel</button>
-                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save Subject</button>
+                    <div class="registration-modal-actions mt-5">
+                        <button type="button" @click="subjectModalOpen = false; editingSubjectId = null;" class="registration-modal-button registration-modal-button-secondary">Cancel</button>
+                        <button type="submit" class="registration-modal-button registration-modal-button-primary">Save Subject</button>
+                    </div>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- COMBINATION MODAL -->
-        <div x-show="combinationModalOpen || editingCombinationId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @mousedown.self="combinationModalOpen = false; editingCombinationId = null;" x-transition style="display: none;">
-            <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800" x-text="editingCombinationId ? 'Edit Combination' : 'Add Combination'"></h2>
-                    <button @click="combinationModalOpen = false; editingCombinationId = null;" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+        <div x-show="combinationModalOpen || editingCombinationId" x-cloak class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4" @mousedown.self="combinationModalOpen = false; editingCombinationId = null;" x-transition style="display: none;">
+            <div class="registration-modal-shell max-w-2xl" x-transition>
+                <div class="registration-modal-header">
+                    <div class="registration-modal-header-content">
+                        <div>
+                            <span class="registration-modal-kicker"><i class="fas fa-layer-group text-amber-300"></i>ACSEE Combination</span>
+                            <h2 class="registration-modal-title" x-text="editingCombinationId ? 'Edit Combination' : 'Add Combination'"></h2>
+                            <p class="registration-modal-subtitle">Assemble allowed subject combinations and keep their categories and active state aligned.</p>
+                        </div>
+                        <button @click="combinationModalOpen = false; editingCombinationId = null;" class="registration-modal-close" aria-label="Close combination modal">&times;</button>
+                    </div>
                 </div>
 
-                <form @submit.prevent="saveCombination()" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <form @submit.prevent="saveCombination()" class="registration-modal-body">
+                    <div class="registration-modal-panel p-6 space-y-4 max-h-[80vh] overflow-y-auto">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Code *</label>
                         <input x-model="combinationForm.code" type="text" placeholder="e.g., SC1" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -485,23 +547,31 @@
                         <span class="text-sm font-medium text-gray-700">Active</span>
                     </label>
 
-                    <div class="flex gap-3 pt-4">
-                        <button type="button" @click="combinationModalOpen = false; editingCombinationId = null;" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium">Cancel</button>
-                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save Combination</button>
+                    <div class="registration-modal-actions">
+                        <button type="button" @click="combinationModalOpen = false; editingCombinationId = null;" class="registration-modal-button registration-modal-button-secondary">Cancel</button>
+                        <button type="submit" class="registration-modal-button registration-modal-button-primary">Save Combination</button>
+                    </div>
                     </div>
                 </form>
             </div>
         </div>
 
         <!-- CANDIDATE MODAL -->
-        <div x-show="candidateModalOpen || editingCandidateId" class="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4" @mousedown.self="candidateModalOpen = false; editingCandidateId = null;" x-transition style="display: none;">
-            <div class="bg-white rounded-lg shadow-2xl max-w-md w-full" x-transition>
-                <div class="flex justify-between items-center p-6 border-b border-gray-200">
-                    <h2 class="text-2xl font-bold text-gray-800" x-text="editingCandidateId ? 'Edit Candidate' : 'Register Candidate'"></h2>
-                    <button @click="candidateModalOpen = false; editingCandidateId = null;" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">&times;</button>
+        <div x-show="candidateModalOpen || editingCandidateId" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/55 p-4" @mousedown.self="candidateModalOpen = false; editingCandidateId = null;" x-transition style="display: none;">
+            <div class="registration-modal-shell max-w-2xl" x-transition>
+                <div class="registration-modal-header">
+                    <div class="registration-modal-header-content">
+                        <div>
+                            <span class="registration-modal-kicker"><i class="fas fa-user-graduate text-amber-300"></i>ACSEE Candidate</span>
+                            <h2 class="registration-modal-title" x-text="editingCandidateId ? 'Edit Candidate' : 'Register Candidate'"></h2>
+                            <p class="registration-modal-subtitle">Maintain candidate identity, exam assignment, and school linkage from a single workflow.</p>
+                        </div>
+                        <button @click="candidateModalOpen = false; editingCandidateId = null;" class="registration-modal-close" aria-label="Close candidate modal">&times;</button>
+                    </div>
                 </div>
 
-                <form @submit.prevent="saveCandidate()" class="p-6 space-y-4">
+                <form @submit.prevent="saveCandidate()" class="registration-modal-body">
+                    <div class="registration-modal-panel p-6 space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
                         <input x-model="candidateForm.full_name" type="text" placeholder="e.g., John Doe" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -528,38 +598,46 @@
                         </select>
                     </div>
 
-                    <div class="flex gap-3 pt-4">
-                        <button type="button" @click="candidateModalOpen = false; editingCandidateId = null;" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium">Cancel</button>
-                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Save Candidate</button>
+                    <div class="registration-modal-actions">
+                        <button type="button" @click="candidateModalOpen = false; editingCandidateId = null;" class="registration-modal-button registration-modal-button-secondary">Cancel</button>
+                        <button type="submit" class="registration-modal-button registration-modal-button-primary">Save Candidate</button>
+                    </div>
                     </div>
                 </form>
             </div>
         <!-- ALLOCATION MODAL - TELEPORTED TO BODY TO ESCAPE HIDDEN TAB CONTAINER -->
         <template x-teleport="body">
-         <div 
+          <div 
                x-cloak 
                @click.self="closeAllocationModal()" 
                :style="(allocationModalOpen || bulkImportModalOpen) 
                    ? 'display: flex; position: fixed; inset: 0; z-index: 9999;' 
                    : 'display: none;'"
-               class="bg-black/50 items-center justify-center p-4" 
+               class="bg-slate-950/55 items-center justify-center p-4" 
                data-testid="bulk-import-modal"
           >
-              <div class="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto" x-transition>
-                 <div class="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white">
+              <div class="registration-modal-shell max-w-5xl" x-transition>
+                 <div class="registration-modal-header">
+                     <div class="registration-modal-header-content">
                      <div>
-                         <h2 class="text-2xl font-bold text-gray-800" x-text="bulkImportModalOpen ? 'Bulk Import Allocations' : 'Allocate Subjects'"></h2>
-                         <p class="text-sm text-gray-600 mt-1" x-show="!bulkImportModalOpen" x-text="allocationCandidate ? `${allocationCandidate.full_name} (${allocationCandidate.candidate_id})` : ''"></p>
+                         <span class="registration-modal-kicker">
+                             <i class="fas fa-layer-group text-amber-300"></i>
+                             <span x-text="bulkImportModalOpen ? 'Bulk Import' : 'Allocation'"></span>
+                         </span>
+                         <h2 class="registration-modal-title" x-text="bulkImportModalOpen ? 'Bulk Import Allocations' : 'Allocate Subjects'"></h2>
+                         <p class="registration-modal-subtitle" x-show="!bulkImportModalOpen" x-text="allocationCandidate ? `${allocationCandidate.full_name} (${allocationCandidate.candidate_id})` : ''"></p>
+                         <p class="registration-modal-subtitle" x-show="bulkImportModalOpen">Validate ACSEE allocation CSV files, review issues, and commit subject allocations through one guided workflow.</p>
                      </div>
-                     <button @click="closeAllocationModal()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none" data-testid="modal-close-button">&times;</button>
+                     <button @click="closeAllocationModal()" class="registration-modal-close" data-testid="modal-close-button" aria-label="Close allocation modal">&times;</button>
+                     </div>
                  </div>
 
                  <!-- Tab Switcher (for bulk import) -->
-                 <div x-show="bulkImportModalOpen" class="flex border-b border-gray-200 px-6 pt-6">
+                 <div x-show="bulkImportModalOpen" class="flex border-b border-slate-200 px-6 pt-6 bg-white">
                      <button @click="bulkPhase = 'idle'" :class="bulkPhase === 'idle' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'" class="pb-3 px-4 font-medium transition-colors">Import CSV</button>
                  </div>
 
-                 <div class="p-6 space-y-6">
+                 <div class="registration-modal-body space-y-6">
                      <!-- PHASE 2b: Bulk CSV import UI integrated with Phase 2a backend endpoints:
                          - GET /api/exam-types/acsee/templates/school-allocation.csv
                          - GET /api/exam-types/acsee/templates/private-allocation.csv
@@ -717,9 +795,14 @@
                     </div> <!-- End of single-candidate allocation section -->
 
                     <!-- BULK IMPORT LOADING SPINNER -->
-                     <div x-show="bulkLoadingContexts" class="bg-blue-50 border border-blue-200 rounded-lg p-6 flex items-center gap-3">
+                     <div x-show="bulkLoadingContexts" class="registration-modal-note">
+                         <div class="registration-modal-note-icon">
                          <i class="fas fa-spinner animate-spin text-blue-600 text-lg"></i>
-                         <span class="text-sm font-medium text-blue-900">Loading exam years…</span>
+                         </div>
+                         <div>
+                             <strong>Loading context</strong>
+                             <p>Fetching exam years and allocation context before the import workflow can continue.</p>
+                         </div>
                      </div>
 
                     <!-- BULK IMPORT ERROR MESSAGE -->
@@ -730,23 +813,28 @@
                     <!-- BULK IMPORT SECTION (shown when bulkImportModalOpen) -->
                      <div x-show="bulkImportModalOpen" class="space-y-6">
                         <!-- Template Download Section -->
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="registration-modal-note">
+                            <div class="registration-modal-note-icon">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <div>
                             <h3 class="font-semibold text-blue-900 mb-3">1. Download Template</h3>
                             <div class="flex gap-3">
                                 <button 
                                     @click="downloadTemplate('SCHOOL')"
-                                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                                    class="registration-modal-button registration-modal-button-primary text-sm flex-1"
                                     data-testid="download-school-template"
                                 >
                                     <i class="fas fa-download"></i> School Template
                                 </button>
                                 <button 
                                     @click="downloadTemplate('PRIVATE')"
-                                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 transition-colors"
+                                    class="registration-modal-button text-sm flex-1 !bg-gradient-to-br !from-purple-600 !to-violet-700 !text-white !shadow-[0_16px_28px_rgba(124,58,237,0.2)]"
                                     data-testid="download-private-template"
                                 >
                                     <i class="fas fa-download"></i> Private Template
                                 </button>
+                            </div>
                             </div>
                         </div>
 
@@ -768,7 +856,7 @@
                         <!-- File Upload -->
                          <div>
                              <label class="block text-sm font-semibold text-gray-700 mb-2">3. Upload CSV File</label>
-                             <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                             <div class="registration-dropzone">
                                  <input 
                                      type="file" 
                                      accept=".csv"
@@ -782,11 +870,11 @@
                                  <button 
                                      @click="$refs.bulkFileInput.click()"
                                      :disabled="bulkLoadingContexts"
-                                     class="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                     class="registration-modal-button registration-modal-button-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                                  >
                                     <i class="fas fa-folder-open"></i> Select CSV File
                                 </button>
-                                <p class="text-sm text-gray-600 mt-2" x-text="bulkUploadedFileName ? `Selected: ${bulkUploadedFileName} (${(bulkUploadedFileSize / 1024).toFixed(2)} KB)` : 'No file selected'"></p>
+                                <p class="text-sm text-slate-600 mt-3" x-text="bulkUploadedFileName ? `Selected: ${bulkUploadedFileName} (${(bulkUploadedFileSize / 1024).toFixed(2)} KB)` : 'No file selected'"></p>
                             </div>
                         </div>
 
@@ -822,7 +910,7 @@
                         </div>
 
                         <!-- Replace Allocations Checkbox -->
-                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                        <div class="registration-modal-panel bg-orange-50/90 border-orange-200 p-4">
                             <div class="flex items-start gap-3">
                                 <input 
                                     type="checkbox" 
@@ -843,20 +931,20 @@
                         <!-- Validation Phase UI -->
                          <div x-show="bulkPhase !== 'idle'" class="space-y-4" data-testid="validation-phase">
                              <!-- Validation Report -->
-                             <div x-show="bulkValidationReport" class="bg-gray-50 border border-gray-200 rounded-lg p-4" data-testid="validation-report">
+                             <div x-show="bulkValidationReport" class="registration-modal-panel p-4" data-testid="validation-report">
                                 <h3 class="font-semibold text-gray-800 mb-3">Validation Report</h3>
-                                <div class="grid grid-cols-3 gap-4 mb-4">
-                                    <div class="text-center">
-                                        <div class="text-2xl font-bold text-blue-600" x-text="(bulkValidationReport && bulkValidationReport.total_rows) || 0"></div>
-                                        <div class="text-xs text-gray-600">Total Rows</div>
+                                <div class="registration-modal-stats !grid-cols-3 mb-4">
+                                    <div class="registration-modal-stat">
+                                        <div class="registration-modal-stat-value text-blue-600" x-text="(bulkValidationReport && bulkValidationReport.total_rows) || 0"></div>
+                                        <div class="registration-modal-stat-label">Total Rows</div>
                                     </div>
-                                    <div class="text-center">
-                                        <div class="text-2xl font-bold text-green-600" x-text="(bulkValidationReport && bulkValidationReport.valid_count) || 0"></div>
-                                        <div class="text-xs text-gray-600">Valid</div>
+                                    <div class="registration-modal-stat">
+                                        <div class="registration-modal-stat-value text-green-600" x-text="(bulkValidationReport && bulkValidationReport.valid_count) || 0"></div>
+                                        <div class="registration-modal-stat-label">Valid</div>
                                     </div>
-                                    <div class="text-center">
-                                        <div class="text-2xl font-bold text-red-600" x-text="(bulkValidationReport && bulkValidationReport.invalid_count) || 0"></div>
-                                        <div class="text-xs text-gray-600">Invalid</div>
+                                    <div class="registration-modal-stat">
+                                        <div class="registration-modal-stat-value text-red-600" x-text="(bulkValidationReport && bulkValidationReport.invalid_count) || 0"></div>
+                                        <div class="registration-modal-stat-label">Invalid</div>
                                     </div>
                                 </div>
 
@@ -871,7 +959,7 @@
                                             <i class="fas fa-download text-xs"></i> Download Errors
                                         </button>
                                     </div>
-                                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                    <div class="registration-modal-panel overflow-hidden">
                                         <div class="overflow-x-auto">
                                             <table class="w-full text-sm">
                                                 <thead class="bg-gray-100 border-b border-gray-200">
@@ -904,20 +992,20 @@
                             </div>
 
                             <!-- Commit Report (after commit) -->
-                            <div x-show="bulkCommitReport" class="bg-gray-50 border border-gray-200 rounded-lg p-4" data-testid="commit-report">
+                            <div x-show="bulkCommitReport" class="registration-modal-panel p-4" data-testid="commit-report">
                                 <h3 class="font-semibold text-gray-800 mb-3">Import Complete</h3>
-                                <div class="grid grid-cols-3 gap-4 mb-4">
-                                    <div class="text-center">
-                                        <div class="text-2xl font-bold text-green-600" x-text="(bulkCommitReport && bulkCommitReport.success_count) || 0"></div>
-                                        <div class="text-xs text-gray-600">Successful</div>
+                                <div class="registration-modal-stats !grid-cols-3 mb-4">
+                                    <div class="registration-modal-stat">
+                                        <div class="registration-modal-stat-value text-green-600" x-text="(bulkCommitReport && bulkCommitReport.success_count) || 0"></div>
+                                        <div class="registration-modal-stat-label">Successful</div>
                                     </div>
-                                    <div class="text-center">
-                                        <div class="text-2xl font-bold text-yellow-600" x-text="(bulkCommitReport && bulkCommitReport.skipped_count) || 0"></div>
-                                        <div class="text-xs text-gray-600">Skipped</div>
+                                    <div class="registration-modal-stat">
+                                        <div class="registration-modal-stat-value text-yellow-600" x-text="(bulkCommitReport && bulkCommitReport.skipped_count) || 0"></div>
+                                        <div class="registration-modal-stat-label">Skipped</div>
                                     </div>
-                                    <div class="text-center">
-                                        <div class="text-2xl font-bold text-red-600" x-text="(bulkCommitReport && bulkCommitReport.failed_count) || 0"></div>
-                                        <div class="text-xs text-gray-600">Failed</div>
+                                    <div class="registration-modal-stat">
+                                        <div class="registration-modal-stat-value text-red-600" x-text="(bulkCommitReport && bulkCommitReport.failed_count) || 0"></div>
+                                        <div class="registration-modal-stat-label">Failed</div>
                                     </div>
                                 </div>
 
@@ -946,7 +1034,7 @@
                                             <i class="fas fa-download text-xs"></i> Download Errors
                                         </button>
                                     </div>
-                                    <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                    <div class="registration-modal-panel overflow-hidden">
                                         <div class="overflow-x-auto">
                                             <table class="w-full text-sm">
                                                 <thead class="bg-gray-100 border-b border-gray-200">
@@ -979,20 +1067,20 @@
                             </div>
 
                             <!-- Error Messages -->
-                            <div x-show="bulkErrorMessage" class="bg-red-50 border border-red-200 rounded-lg p-4" data-testid="error-message">
+                            <div x-show="bulkErrorMessage" class="registration-modal-panel bg-red-50/90 border-red-200 p-4" data-testid="error-message">
                                 <p class="text-sm text-red-800" x-text="bulkErrorMessage"></p>
                             </div>
-                            <div x-show="bulkSuccessMessage" class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div x-show="bulkSuccessMessage" class="registration-modal-panel bg-green-50/90 border-green-200 p-4">
                                 <p class="text-sm text-green-800" x-text="bulkSuccessMessage"></p>
                             </div>
                         </div>
 
                         <!-- Action Buttons -->
-                        <div class="flex gap-3 pt-4 border-t border-gray-200">
+                        <div class="registration-modal-actions">
                             <button 
                                 type="button"
                                 @click="closeAllocationModal()"
-                                class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-medium transition-colors"
+                                class="registration-modal-button registration-modal-button-secondary"
                             >
                                 Close
                             </button>
@@ -1001,7 +1089,7 @@
                                 @click="validateBulkCSV()"
                                 x-show="bulkPhase === 'idle'"
                                 :disabled="!bulkUploadedFile || !bulkExamYearId || bulkProcessing || bulkLoadingContexts"
-                                class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                class="registration-modal-button registration-modal-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
                                 data-testid="validate-button"
                             >
                                 <span x-show="!bulkProcessing">Validate CSV</span>
@@ -1014,7 +1102,7 @@
                                 @click="commitBulkCSV()"
                                 x-show="bulkPhase === 'reviewing' && bulkValidationReport && bulkValidationReport.invalid_count === 0"
                                 :disabled="bulkProcessing || bulkLoadingContexts"
-                                class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                class="registration-modal-button registration-modal-button-success disabled:opacity-50 disabled:cursor-not-allowed"
                                 data-testid="commit-button"
                             >
                                 <span x-show="!bulkProcessing">Commit Import</span>
@@ -1032,7 +1120,7 @@
 </div>
 
 <script>
-function acseeManager() {
+window.acseeManager = function () {
     return {
         activeTab: 'subjects',
         
@@ -1044,6 +1132,8 @@ function acseeManager() {
         subjectModalOpen: false,
         editingSubjectId: null,
         subjectForm: { code: '', name: '', category: '', written_papers: null, has_practical: false, has_project: false, max_marks: null, description: '', is_active: true },
+        subjectDescriptionManual: false,
+        lastAutoSubjectDescription: '',
         
         // Combinations
         combinations: [],
@@ -1090,6 +1180,7 @@ function acseeManager() {
         // Allocation Modal
         allocationModalOpen: false,
         bulkImportModalOpen: false,
+        candidateToolsModalOpen: false,
         allocationCandidate: null,
         allocationMode: 'template',
         allocationExamYearId: '',
@@ -1152,7 +1243,7 @@ function acseeManager() {
         async loadSubjects() {
             this.loadingSubjects = true;
             try {
-                const response = await fetch('/api/exam-types/ACSEE/subjects');
+                const response = await fetch('/admin/api/exam-types/ACSEE/subjects');
                 const data = await response.json();
                 this.subjects = data.data || [];
                 this.filteredSubjects = this.subjects;
@@ -1167,7 +1258,7 @@ function acseeManager() {
         async loadCombinations() {
             this.loadingCombinations = true;
             try {
-                const response = await fetch('/api/exam-types/ACSEE/combinations');
+                const response = await fetch('/admin/api/exam-types/ACSEE/combinations');
                 const data = await response.json();
                 this.combinations = data.data || [];
                 this.filteredCombinations = this.combinations;
@@ -1181,7 +1272,7 @@ function acseeManager() {
 
         async loadSchools() {
             try {
-                const response = await fetch('/api/schools');
+                const response = await fetch('/admin/api/schools');
                 const data = await response.json();
                 this.schools = data.data || [];
             } catch (error) {
@@ -1192,7 +1283,7 @@ function acseeManager() {
         async loadCandidates() {
             this.loadingCandidates = true;
             try {
-                const response = await fetch('/api/candidates?exam_type=ACSEE');
+                const response = await fetch('/admin/api/candidates?exam_type=ACSEE');
                 const data = await response.json();
                 this.candidates = data.data || [];
                 this.filteredCandidates = this.candidates;
@@ -1239,9 +1330,68 @@ function acseeManager() {
         },
 
         // SUBJECT FUNCTIONS
+        defaultSubjectForm() {
+            return { code: '', name: '', category: '', written_papers: null, has_practical: false, has_project: false, max_marks: null, description: '', is_active: true };
+        },
+
+        buildSubjectDescription() {
+            const code = String(this.subjectForm.code || '').trim().toUpperCase();
+            const name = String(this.subjectForm.name || '').trim();
+            const category = String(this.subjectForm.category || '').trim();
+            const writtenPapers = Number(this.subjectForm.written_papers || 1);
+            const maxMarks = this.subjectForm.max_marks ? ` Maximum marks: ${this.subjectForm.max_marks}.` : '';
+            const extras = [];
+
+            if (this.subjectForm.has_practical) extras.push('practical component');
+            if (this.subjectForm.has_project) extras.push('project component');
+
+            if (!name && !code) return '';
+
+            const intro = code
+                ? `${name || 'Subject'} (${code})`
+                : name;
+
+            const paperText = writtenPapers > 1
+                ? `${writtenPapers} written papers`
+                : '1 written paper';
+
+            const extraText = extras.length
+                ? ` Includes ${extras.join(' and ')}.`
+                : '';
+
+            const categoryText = category
+                ? ` ${category} category subject with ${paperText}.`
+                : ` Subject with ${paperText}.`;
+
+            return `${intro}.${categoryText}${extraText}${maxMarks}`.replace(/\s+/g, ' ').trim();
+        },
+
+        syncSubjectDescription(force = false) {
+            const autoDescription = this.buildSubjectDescription();
+
+            if (
+                force ||
+                !this.subjectDescriptionManual ||
+                !String(this.subjectForm.description || '').trim() ||
+                this.subjectForm.description === this.lastAutoSubjectDescription
+            ) {
+                this.subjectForm.description = autoDescription;
+                this.subjectDescriptionManual = false;
+            }
+
+            this.lastAutoSubjectDescription = autoDescription;
+        },
+
+        markSubjectDescriptionManual() {
+            this.subjectDescriptionManual = this.subjectForm.description !== this.lastAutoSubjectDescription;
+        },
+
         openSubjectModal() {
             this.editingSubjectId = null;
-            this.subjectForm = { code: '', name: '', category: '', written_papers: null, has_practical: false, has_project: false, max_marks: null, description: '', is_active: true };
+            this.subjectForm = this.defaultSubjectForm();
+            this.subjectDescriptionManual = false;
+            this.lastAutoSubjectDescription = '';
+            this.syncSubjectDescription(true);
             this.subjectModalOpen = true;
         },
 
@@ -1253,14 +1403,23 @@ function acseeManager() {
                 has_practical: subject.has_practical ?? false,
                 has_project: subject.has_project ?? false
             };
+            this.lastAutoSubjectDescription = this.buildSubjectDescription();
+            this.subjectDescriptionManual = !!String(subject.description || '').trim() && subject.description !== this.lastAutoSubjectDescription;
+            if (!String(this.subjectForm.description || '').trim()) {
+                this.syncSubjectDescription(true);
+            }
             this.subjectModalOpen = true;
         },
 
         async saveSubject() {
             try {
+                if (!String(this.subjectForm.description || '').trim()) {
+                    this.syncSubjectDescription(true);
+                }
+
                 const url = this.editingSubjectId 
-                    ? `/api/exam-types/ACSEE/subjects/${this.editingSubjectId}`
-                    : `/api/exam-types/ACSEE/subjects`;
+                    ? `/admin/api/exam-types/ACSEE/subjects/${this.editingSubjectId}`
+                    : `/admin/api/exam-types/ACSEE/subjects`;
                 const method = this.editingSubjectId ? 'PUT' : 'POST';
 
                 const payload = {
@@ -1304,7 +1463,7 @@ function acseeManager() {
             if (!confirm('Delete this subject?')) return;
 
             try {
-                const response = await fetch(`/api/exam-types/ACSEE/subjects/${id}`, {
+                const response = await fetch(`/admin/api/exam-types/ACSEE/subjects/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1331,21 +1490,41 @@ function acseeManager() {
             this.combinationModalOpen = true;
         },
 
+        normalizeCombinationSubjects(value) {
+            if (Array.isArray(value)) {
+                return value
+                    .map(item => {
+                        if (typeof item === 'string') return item.trim();
+                        if (item && typeof item === 'object') return String(item.code || item.subject_code || item.name || '').trim();
+                        return '';
+                    })
+                    .filter(Boolean);
+            }
+
+            return String(value || '')
+                .split(',')
+                .map(s => s.trim())
+                .filter(Boolean);
+        },
+
         openEditCombinationModal(combination) {
             this.editingCombinationId = combination.id;
             this.combinationForm = { 
                 ...combination, 
                 is_active: combination.is_active ?? true
             };
-            this.combinationSelectedSubjects = combination.subjects ? combination.subjects.split(',').map(s => s.trim()).filter(s => s) : [];
+            this.combinationSelectedSubjects = this.normalizeCombinationSubjects(
+                combination.subject_codes || combination.subjects || combination.combination_subjects || ''
+            );
+            this.combinationForm.subjects = this.combinationSelectedSubjects.join(',');
             this.combinationModalOpen = true;
         },
 
         async saveCombination() {
             try {
                 const url = this.editingCombinationId 
-                    ? `/api/exam-types/ACSEE/combinations/${this.editingCombinationId}`
-                    : `/api/exam-types/ACSEE/combinations`;
+                    ? `/admin/api/exam-types/ACSEE/combinations/${this.editingCombinationId}`
+                    : `/admin/api/exam-types/ACSEE/combinations`;
                 const method = this.editingCombinationId ? 'PUT' : 'POST';
 
                 // Convert selected subject codes to subject IDs for the backend
@@ -1393,7 +1572,7 @@ function acseeManager() {
             if (!confirm('Delete this combination?')) return;
 
             try {
-                const response = await fetch(`/api/exam-types/ACSEE/combinations/${id}`, {
+                const response = await fetch(`/admin/api/exam-types/ACSEE/combinations/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1433,8 +1612,8 @@ function acseeManager() {
         async saveCandidate() {
             try {
                 const url = this.editingCandidateId 
-                    ? `/api/candidates/${this.editingCandidateId}`
-                    : `/api/candidates`;
+                    ? `/admin/api/candidates/${this.editingCandidateId}`
+                    : `/admin/api/candidates`;
                 const method = this.editingCandidateId ? 'PUT' : 'POST';
 
                 const payload = {
@@ -1470,7 +1649,7 @@ function acseeManager() {
             if (!confirm('Delete this candidate?')) return;
 
             try {
-                const response = await fetch(`/api/candidates/${id}`, {
+                const response = await fetch(`/admin/api/candidates/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1512,7 +1691,7 @@ function acseeManager() {
 
             try {
                 const ids = Array.from(this.selectedItems);
-                const response = await fetch('/api/candidates/bulk-delete', {
+                const response = await fetch('/admin/api/candidates/bulk-delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1563,7 +1742,7 @@ function acseeManager() {
                 const newUrl = `${window.location.pathname}?${params.toString()}#candidates`;
                 window.history.replaceState({}, '', newUrl);
                 
-                const response = await fetch(`/api/exam-types/acsee/candidates?${params}`);
+                const response = await fetch(`/admin/api/exam-types/acsee/candidates?${params}`);
                 const data = await response.json();
                 
                 this.acseeCandicates = data.data || [];
@@ -1624,6 +1803,24 @@ function acseeManager() {
             this.showMessage('Exported to Excel successfully', 'success');
         },
 
+        openCandidateToolsModal() {
+            this.candidateToolsModalOpen = true;
+        },
+
+        closeCandidateToolsModal() {
+            this.candidateToolsModalOpen = false;
+        },
+
+        launchAcseeCandidateExport() {
+            this.closeCandidateToolsModal();
+            this.exportAcseeCandicates();
+        },
+
+        launchAcseeBulkImport() {
+            this.closeCandidateToolsModal();
+            this.openBulkImportModal();
+        },
+
         // ==================== ALLOCATION FUNCTIONS ====================
 
         async openAllocationModal(candidate) {
@@ -1661,7 +1858,7 @@ function acseeManager() {
             this.bulkLoadingContexts = true;
             try {
                 // Load exam years
-                const yearsResponse = await fetch('/api/exam-years', {
+                const yearsResponse = await fetch('/admin/api/exam-years', {
                     headers: { 'Accept': 'application/json' }
                 });
                 if (!yearsResponse.ok) {
@@ -1672,7 +1869,7 @@ function acseeManager() {
                 this.allocationExamYears = Array.isArray(yearsData) ? yearsData : (yearsData.exam_years || yearsData.data || []);
 
                 // Load combinations for ACSEE
-                const combosResponse = await fetch('/api/exam-types/ACSEE/combinations', {
+                const combosResponse = await fetch('/admin/api/exam-types/ACSEE/combinations', {
                     headers: { 'Accept': 'application/json' }
                 });
                 if (!combosResponse.ok) {
@@ -1682,7 +1879,7 @@ function acseeManager() {
                 this.allocationCombinations = Array.isArray(combosData) ? combosData : (combosData.data || []);
 
                 // Load all subjects for ACSEE
-                const subjectsResponse = await fetch('/api/exam-types/ACSEE/subjects', {
+                const subjectsResponse = await fetch('/admin/api/exam-types/ACSEE/subjects', {
                     headers: { 'Accept': 'application/json' }
                 });
                 if (!subjectsResponse.ok) {
@@ -1709,7 +1906,7 @@ function acseeManager() {
             }
 
             try {
-                const response = await fetch(`/api/combinations/${this.allocationCombinationId}/subjects`);
+                const response = await fetch(`/admin/api/combinations/${this.allocationCombinationId}/subjects`);
                 const data = await response.json();
                 this.allocationPreviewSubjects = data.data || [];
 
@@ -1773,15 +1970,15 @@ function acseeManager() {
             this.allocationProcessing = true;
 
             try {
-                // Prepare is_principal map (all except code 111 are principal)
+                // Prepare is_principal map (all except code 111 and 141 are principal)
                 const isPrincipalMap = {};
                 this.allocationAllSubjects.forEach(subject => {
                     if (subjectIds.includes(subject.id)) {
-                        isPrincipalMap[subject.id] = subject.code !== '111';
+                        isPrincipalMap[subject.id] = subject.code !== '111' && subject.code !== '141';
                     }
                 });
 
-                const response = await fetch('/api/exam-types/acsee/allocate-subjects', {
+                const response = await fetch('/admin/api/exam-types/acsee/allocate-subjects', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1838,8 +2035,8 @@ function acseeManager() {
                 : 'private_allocation.csv';
             
             const endpoint = type === 'SCHOOL'
-                ? '/api/exam-types/acsee/templates/school-allocation.csv'
-                : '/api/exam-types/acsee/templates/private-allocation.csv';
+                ? '/admin/api/exam-types/acsee/templates/school-allocation.csv'
+                : '/admin/api/exam-types/acsee/templates/private-allocation.csv';
             
             try {
                 fetch(endpoint)
@@ -1910,7 +2107,7 @@ function acseeManager() {
                 formData.append('candidate_type_filter', this.bulkImportMode === 'private' ? 'PRIVATE' : (this.bulkImportMode === 'school' ? 'SCHOOL' : 'ALL'));
                 formData.append('replace_allocations', this.bulkReplaceAllocations ? 'true' : 'false');
                 
-                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/validate', {
+                const response = await fetch('/admin/api/exam-types/acsee/allocate-from-csv/validate', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1972,7 +2169,7 @@ function acseeManager() {
                 formData.append('candidate_type_filter', this.bulkImportMode === 'private' ? 'PRIVATE' : (this.bulkImportMode === 'school' ? 'SCHOOL' : 'ALL'));
                 formData.append('replace_allocations_default', this.bulkReplaceAllocations ? '1' : '0');
                 
-                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/commit', {
+                const response = await fetch('/admin/api/exam-types/acsee/allocate-from-csv/commit', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -2017,7 +2214,7 @@ function acseeManager() {
             }
             
             try {
-                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/download-errors', {
+                const response = await fetch('/admin/api/exam-types/acsee/allocate-from-csv/download-errors', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2092,7 +2289,7 @@ function acseeManager() {
         },
 
     };
-}
+};
 </script>
     </div>
 </div>

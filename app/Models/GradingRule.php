@@ -14,12 +14,20 @@ class GradingRule extends Model
     protected $fillable = [
         'grading_profile_id',
         'grade',
-        'min_marks',
-        'max_marks',
-        'description',
+        'min_percentage',
+        'max_percentage',
+        'grade_name',
+        'points',
+        'is_principal',
+        'is_subsidiary',
+        'sort_order',
+        'is_disabled',
     ];
 
     protected $casts = [
+        'is_principal' => 'boolean',
+        'is_subsidiary' => 'boolean',
+        'is_disabled' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -37,8 +45,8 @@ class GradingRule extends Model
     public static function getGradeForMarks($profileId, $marks)
     {
         return self::where('grading_profile_id', $profileId)
-            ->where('min_marks', '<=', $marks)
-            ->where('max_marks', '>=', $marks)
+            ->where('min_percentage', '<=', $marks)
+            ->where('max_percentage', '>=', $marks)
             ->first();
     }
 }

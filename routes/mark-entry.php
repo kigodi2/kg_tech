@@ -8,8 +8,26 @@ use App\Http\Controllers\MarkEntry\Submission\MarkEntrySubmissionController;
 use App\Http\Controllers\MarkEntry\Reporting\MarkEntryReportController;
 use App\Http\Controllers\MarkEntry\Audit\MarkEntryMonitoringController;
 use App\Http\Controllers\MarkEntry\Admin\MarkEntryAdminController;
+use App\Http\Controllers\MarkEntry\Questions\QuestionMarkEntryController;
 
 Route::middleware(['auth'])->prefix('mark-entry')->group(function () {
+
+    foreach (['psle', 'sfna', 'ftna', 'csee', 'acsee'] as $questionExamCode) {
+        Route::get("{$questionExamCode}/questions", [QuestionMarkEntryController::class, 'show'])
+            ->defaults('examCode', strtoupper($questionExamCode))
+            ->name("mark-entry.{$questionExamCode}.questions.show")
+            ->middleware('can:mark-entry.questions');
+
+        Route::get("{$questionExamCode}/questions/load", [QuestionMarkEntryController::class, 'load'])
+            ->defaults('examCode', strtoupper($questionExamCode))
+            ->name("mark-entry.{$questionExamCode}.questions.load")
+            ->middleware('can:mark-entry.questions');
+
+        Route::post("{$questionExamCode}/questions", [QuestionMarkEntryController::class, 'store'])
+            ->defaults('examCode', strtoupper($questionExamCode))
+            ->name("mark-entry.{$questionExamCode}.questions.store")
+            ->middleware('can:mark-entry.questions');
+    }
 
     Route::prefix('acsee')->name('mark-entry.acsee.')->group(function () {
 
@@ -102,6 +120,7 @@ Route::middleware(['web', 'auth'])->prefix('api/mark-entry/acsee/moderation')->g
     $incCtrl = \App\Http\Controllers\MarkEntry\Api\IncResolutionApiController::class;
     Route::post('issues/{issueId}/accept-inc', [$incCtrl, 'acceptInc'])->middleware('can:mark-entry.moderate');
     Route::post('issues/{issueId}/reject',     [$incCtrl, 'reject'])->middleware('can:mark-entry.moderate');
+    Route::post('issues/accept-inc-bulk',      [$incCtrl, 'acceptIncBulk'])->middleware('can:mark-entry.moderate');
 });
 
 // ==================== LIFECYCLE API ENDPOINTS ====================
@@ -112,6 +131,7 @@ Route::middleware(['web', 'auth'])->prefix('api/mark-entry')->group(function () 
         Route::get('pending', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getPendingBatches']);
         Route::get('batch/{batch}', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getBatchModeration']);
         Route::get('batch/{batch}/raw-marks', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getBatchRawMarks']);
+        Route::patch('batch/{batch}/rows/{row}/marks', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'updateBatchRowMarks']);
         Route::get('search', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'searchPending']);
         Route::get('stats', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getModeratorStats']);
         Route::post('batch/{batch}/approve', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'approveBatchAction']);
@@ -124,6 +144,8 @@ Route::middleware(['web', 'auth'])->prefix('api/mark-entry')->group(function () 
         Route::get('submitted', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getSubmitted']);
         Route::get('batch/{batch}/history', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'getSubmissionHistory']);
         Route::post('lock/{batchId}', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'lockBatchAction']);
+        Route::post('lock-bulk', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'lockBulkAction']);
+        Route::post('lock-all', [\App\Http\Controllers\MarkEntry\Api\MarkLifecycleApiController::class, 'lockAllInScopeAction']);
         Route::post('unlock/{batchId}', [\App\Http\Controllers\MarkEntry\Api\UnlockBatchController::class, 'unlock']);
     });
 
@@ -149,6 +171,7 @@ Route::middleware(['web', 'auth'])->prefix('api/mark-entry')->group(function () 
 // ==================== SUBMISSION & LOCKING API (state machine) ====================
 Route::middleware(['web', 'auth'])->prefix('api/mark-entry/acsee')->group(function () {
     $ctrl = \App\Http\Controllers\MarkEntry\Api\MarkSubmissionLockingApiController::class;
+    $outliersCtrl = \App\Http\Controllers\MarkEntry\Api\EntryOutliersApiController::class;
 
     // Batch state transitions
     Route::post('batches/{batch}/submit',  [$ctrl, 'submit']);
@@ -163,6 +186,14 @@ Route::middleware(['web', 'auth'])->prefix('api/mark-entry/acsee')->group(functi
     Route::get('history',                   [$ctrl, 'history']);
     Route::get('batches/{batch}/history',   [$ctrl, 'batchHistory']);
     Route::get('admin/locked-batches',      [$ctrl, 'lockedBatchesForAdmin'])->middleware('can:mark-entry.admin');
+
+    // Entry Outliers QA (read-only)
+    Route::get('outliers/summary', [$outliersCtrl, 'summary'])->middleware('can:mark-entry.moderate');
+    Route::get('outliers/tab-stats', [$outliersCtrl, 'tabStats'])->middleware('can:mark-entry.moderate');
+    Route::get('outliers/list', [$outliersCtrl, 'list'])->middleware('can:mark-entry.moderate');
+    Route::get('outliers/candidate/{id}', [$outliersCtrl, 'candidate'])->middleware('can:mark-entry.moderate');
+    Route::get('outliers/batch/{id}', [$outliersCtrl, 'batch'])->middleware('can:mark-entry.moderate');
+    Route::post('outliers/export/pdf', [$outliersCtrl, 'exportPdf'])->middleware('can:mark-entry.moderate');
 });
 
 // ==================== ADMINISTRATION API ====================

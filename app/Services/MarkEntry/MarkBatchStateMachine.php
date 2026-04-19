@@ -175,21 +175,25 @@ class MarkBatchStateMachine
             ]);
 
             // Lock individual raw marks
-            $batch->rawMarks()->where('has_errors', false)->update([
+            $batch->rawMarks()->update([
                 'is_locked' => true,
                 'locked_at' => now(),
                 'locked_by' => $user->id,
             ]);
 
-            MarkBatchApproval::create([
-                'mark_import_batch_id' => $batch->id,
-                'approval_level' => 'submission',
-                'approved_by' => $user->id,
-                'approval_type' => 'lock',
-                'status' => 'locked',
-                'approved_at' => now(),
-                'approval_notes' => "Locked. Promoted {$promotionResult['promoted']} marks to subject_marks.",
-            ]);
+            MarkBatchApproval::updateOrCreate(
+                [
+                    'mark_import_batch_id' => $batch->id,
+                    'approval_level' => 'submission',
+                ],
+                [
+                    'approved_by' => $user->id,
+                    'approval_type' => 'lock',
+                    'status' => 'locked',
+                    'approved_at' => now(),
+                    'approval_notes' => "Locked. Promoted {$promotionResult['promoted']} marks to subject_marks.",
+                ]
+            );
 
             $this->logTransition($batch, $oldStatus, 'locked', $user,
                 "Locked and promoted {$promotionResult['promoted']} marks to subject_marks"
@@ -230,15 +234,19 @@ class MarkBatchStateMachine
                 'locked_by' => null,
             ]);
 
-            MarkBatchApproval::create([
-                'mark_import_batch_id' => $batch->id,
-                'approval_level' => 'submission',
-                'approved_by' => $user->id,
-                'approval_type' => 'unlock',
-                'status' => 'unlocked',
-                'approved_at' => now(),
-                'approval_notes' => "Unlocked by admin. Reason: {$reason}",
-            ]);
+            MarkBatchApproval::updateOrCreate(
+                [
+                    'mark_import_batch_id' => $batch->id,
+                    'approval_level' => 'submission',
+                ],
+                [
+                    'approved_by' => $user->id,
+                    'approval_type' => 'unlock',
+                    'status' => 'unlocked',
+                    'approved_at' => now(),
+                    'approval_notes' => "Unlocked by admin. Reason: {$reason}",
+                ]
+            );
 
             $this->logTransition($batch, $oldStatus, 'submitted', $user, "Admin unlock: {$reason}");
 
