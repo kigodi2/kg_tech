@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Region;
 use App\Models\District;
+use App\Models\MarkEntryActiveSession;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -66,9 +67,9 @@ class MarkEntrySingleDeviceTest extends TestCase
     }
 
     /**
-     * Test A: MEO can log in on a first device and session/device hash are registered.
+     * Test A: Mark Entry Officer first login is allowed.
      */
-    public function test_meo_can_log_in_on_first_device_and_registers_session(): void
+    public function test_meo_first_login_is_allowed(): void
     {
         $response = $this->post('/login', [
             'email' => 'meo@example.com',
@@ -77,16 +78,18 @@ class MarkEntrySingleDeviceTest extends TestCase
 
         $response->assertRedirect();
         
-        $this->meo->refresh();
-        $this->assertNotNull($this->meo->mark_entry_session_id);
-        $this->assertNotNull($this->meo->mark_entry_device_hash);
-        $this->assertNotNull($this->meo->mark_entry_last_seen_at);
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->first();
+        $this->assertNotNull($activeSession);
+        $this->assertNotNull($activeSession->session_id);
+        $this->assertNotNull($activeSession->device_hash);
+        $this->assertNotNull($activeSession->ip_address);
     }
 
     /**
-     * Test B: Same MEO logging in on a second device invalidates the first.
+     * Test B: Same Mark Entry Officer second login from another session is blocked.
+     * Test C: Blocked response includes active IP address.
      */
-    public function test_same_meo_logging_in_on_second_device_overwrites_active_session(): void
+    public function test_same_meo_second_login_from_another_session_is_blocked_and_shows_active_ip(): void
     {
         // 1. First Device Logs In
         $this->post('/login', [
@@ -94,14 +97,103 @@ class MarkEntrySingleDeviceTest extends TestCase
             'password' => 'password123',
         ]);
         
-        $this->meo->refresh();
-        $firstSessionId = $this->meo->mark_entry_session_id;
-        $firstDeviceHash = $this->meo->mark_entry_device_hash;
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->first();
+        $firstSessionId = $activeSession->session_id;
+        $firstIp = $activeSession->ip_address;
 
         Auth::logout();
         session()->invalidate();
 
-        // 2. Second Device Logs In
+        // 2. Second Device/Session attempts Login
+        $response = $this->post('/login', [
+            'email' => 'meo@example.com',
+            'password' => 'password123',
+        ], [
+            'REMOTE_ADDR' => '192.168.1.100' // Simulate different IP for second device
+        ]);
+
+        // Should NOT log in, should redirect back with error
+        $response->assertRedirect();
+        $response->assertSessionHasErrors(['email']);
+        
+        $errors = session('errors')->get('email');
+        $this->assertStringContainsString('already active on another device', $errors[0]);
+        $this->assertStringContainsString($firstIp, $errors[0]);
+
+        // Database record should NOT be overwritten (first session is preserved)
+        $activeSession->refresh();
+        $this->assertEquals($firstSessionId, $activeSession->session_id);
+    }
+
+    /**
+     * Test D: Active first session remains usable after second device is blocked.
+     */
+    public function test_active_first_session_remains_usable_after_second_device_blocked(): void
+    {
+        // 1. Device 1 logs in and accesses route
+        $this->actingAs($this->meo);
+        $response = $this->get('/mark-entry/psle?view=overview');
+        $response->assertOk();
+
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
+
+        // 2. Simulated Device 2 attempts access using a different session ID
+        // Let's change database to different session hash to simulate another active device
+        $activeSession->update(['session_id' => 'different_hash_device_2']);
+
+        // Second device gets blocked
+        $response2 = $this->get('/mark-entry/psle?view=overview');
+        $response2->assertRedirect(route('login'));
+
+        // Database record for Device 1/Device 2 is still preserved as 'different_hash_device_2'
+        // (meaning the second device attempt did NOT replace the active session, nor did it delete it)
+        $activeSession->refresh();
+        $this->assertEquals('different_hash_device_2', $activeSession->session_id);
+    }
+
+    /**
+     * Test E: Admin account can still log in from multiple sessions.
+     */
+    public function test_admin_account_can_still_log_in_from_multiple_sessions(): void
+    {
+        $this->actingAs($this->admin);
+
+        // Simulated admin is immune from active sessions tracking
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->admin->id)->first();
+        $this->assertNull($activeSession);
+
+        $response = $this->get('/dashboard');
+        $response->assertOk();
+    }
+
+    /**
+     * Test F: REO/DAO accounts are not affected unless also Mark Entry Officer.
+     */
+    public function test_reo_is_exempt_from_single_device_restriction(): void
+    {
+        $this->actingAs($this->reo);
+
+        $response = $this->get('/mark-entry/psle?view=overview');
+        $response->assertOk();
+    }
+
+    /**
+     * Test G: Stale Mark Entry Officer session can be replaced after timeout.
+     */
+    public function test_stale_meo_session_can_be_replaced_after_timeout(): void
+    {
+        // 1. Device 1 has stale session
+        $this->meo->update(['last_login_at' => now()]);
+        
+        $activeSession = MarkEntryActiveSession::create([
+            'user_id' => $this->meo->id,
+            'session_id' => 'stale_session_hash',
+            'device_hash' => 'stale_device_hash',
+            'ip_address' => '192.168.1.5',
+            'last_seen_at' => now()->subMinutes(40), // > 30 minutes config
+        ]);
+
+        // 2. Device 2 logs in
         $response = $this->post('/login', [
             'email' => 'meo@example.com',
             'password' => 'password123',
@@ -109,180 +201,102 @@ class MarkEntrySingleDeviceTest extends TestCase
 
         $response->assertRedirect();
         
-        $this->meo->refresh();
-        $secondSessionId = $this->meo->mark_entry_session_id;
-        $secondDeviceHash = $this->meo->mark_entry_device_hash;
-
-        $this->assertNotEquals($firstSessionId, $secondSessionId);
-        $this->assertNotNull($secondSessionId);
+        // Query the new session from the database
+        $newActiveSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
+        $this->assertNotEquals('stale_session_hash', $newActiveSession->session_id);
     }
 
     /**
-     * Test C: MEO request from Device 1 is blocked/logged out after Device 2 logs in.
+     * Test H: Logout clears only the current matching active session.
      */
-    public function test_meo_session_on_device_one_is_terminated_after_device_two_login(): void
+    public function test_logout_clears_only_current_matching_active_session(): void
+    {
+        // 1. Log in via standard login post request (this registers the session correctly in the database)
+        $response = $this->post('/login', [
+            'email' => 'meo@example.com',
+            'password' => 'password123',
+        ]);
+        $response->assertRedirect();
+
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->first();
+        $this->assertNotNull($activeSession);
+
+        // 2. Perform logout post request on the same client
+        $response2 = $this->post('/logout');
+        $response2->assertRedirect();
+
+        // 3. Active session record must be deleted
+        $this->assertNull(MarkEntryActiveSession::where('user_id', $this->meo->id)->first());
+    }
+
+    /**
+     * Test I: Blocked second session cannot clear active session on logout.
+     */
+    public function test_blocked_second_session_cannot_clear_active_session_on_logout(): void
+    {
+        // 1. Device 1 logs in and registers session
+        $this->actingAs($this->meo);
+        $response = $this->get('/mark-entry/psle?view=overview');
+        $response->assertOk();
+
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
+
+        // 2. Change session ID in database to a different hash to simulate that Device 2 is the current request context
+        // and Device 1 is the one stored in the database
+        $activeSession->update(['session_id' => 'hash_device_1_session_id']);
+
+        // 3. Device 2 (current request context) logs out
+        $this->post('/logout');
+
+        // Stored active session of Device 1 must STILL remain intact in the database!
+        $this->assertNotNull(MarkEntryActiveSession::where('user_id', $this->meo->id)->first());
+    }
+
+    /**
+     * Test J: Autosave endpoint returns JSON 423/409 with active IP.
+     */
+    public function test_autosave_endpoint_returns_json_423_with_active_ip(): void
     {
         // 1. Device 1 logs in
         $this->actingAs($this->meo);
-        $firstSessionId = session()->getId();
-        
-        // Populate tracking fields for Device 1
-        $this->meo->update([
-            'mark_entry_session_id' => $firstSessionId,
-            'mark_entry_device_hash' => 'hash_device_1',
-            'mark_entry_last_seen_at' => now(),
-        ]);
-
-        // 2. Simulate Device 2 logging in and overwriting tracking fields
-        $this->meo->update([
-            'mark_entry_session_id' => 'different_session_id_2',
-            'mark_entry_device_hash' => 'hash_device_2',
-            'mark_entry_last_seen_at' => now(),
-        ]);
-
-        // 3. Device 1 tries to access a protected mark entry route
         $response = $this->get('/mark-entry/psle?view=overview');
+        $response->assertOk();
 
-        // Should be logged out and redirected to login with flash warning
-        $response->assertRedirect(route('login'));
-        $this->assertFalse(Auth::check());
-        
-        // Assert the session redirect message is set
-        $response->assertSessionHasErrors(['email']);
-    }
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
 
-    /**
-     * Test D: Autosave AJAX endpoint returns JSON 423 when session is replaced.
-     */
-    public function test_autosave_endpoint_returns_json_423_when_session_replaced(): void
-    {
-        $this->actingAs($this->meo);
-        $firstSessionId = session()->getId();
-        
-        // Device 1
-        $this->meo->update([
-            'mark_entry_session_id' => $firstSessionId,
-            'mark_entry_device_hash' => 'hash_device_1',
-            'mark_entry_last_seen_at' => now(),
+        // 2. Change session ID in database to simulate that a different device (Device 1) is active
+        $activeSession->update([
+            'session_id' => 'different_active_session_hash',
+            'ip_address' => '192.168.1.99',
         ]);
 
-        // Device 2 takes over
-        $this->meo->update([
-            'mark_entry_session_id' => 'different_session_id_2',
-            'mark_entry_device_hash' => 'hash_device_2',
-            'mark_entry_last_seen_at' => now(),
-        ]);
-
-        // Device 1 attempts JSON autosave request
-        $response = $this->postJson('/api/mark-entry/psle/marks/save', [
+        // Device 2 attempts API autosave
+        $response2 = $this->postJson('/api/mark-entry/psle/marks/save', [
             'candidate_id' => 1,
             'subject_id' => 1,
             'mark' => 45,
         ]);
 
-        // Expect HTTP 423 (Locked)
-        $response->assertStatus(423);
-        $response->assertJson([
+        // Must return HTTP 423 (Locked)
+        $response2->assertStatus(423);
+        $response2->assertJson([
             'ok' => false,
-            'code' => 'MARK_ENTRY_SESSION_REPLACED',
+            'code' => 'MARK_ENTRY_ACCOUNT_ALREADY_ACTIVE',
+            'active_ip' => '192.168.1.99',
         ]);
-        $this->assertFalse(Auth::check());
     }
 
     /**
-     * Test E: Admins can use multiple sessions without device lockout.
-     */
-    public function test_admins_are_exempt_from_single_device_restriction(): void
-    {
-        $this->actingAs($this->admin);
-        $adminSessionId = session()->getId();
-
-        // Manually trigger MEO simulation tracking fields on admin user (should be ignored)
-        $this->admin->update([
-            'mark_entry_session_id' => 'different_session_id',
-            'mark_entry_device_hash' => 'different_hash',
-            'mark_entry_last_seen_at' => now(),
-        ]);
-
-        // Admin accesses main system route
-        $response = $this->get('/dashboard');
-        $response->assertOk();
-        $this->assertTrue(Auth::check()); // remains authenticated!
-    }
-
-    /**
-     * Test F: REO/DAO are not restricted unless acting as MEO.
-     */
-    public function test_reo_is_exempt_from_single_device_restriction(): void
-    {
-        $this->actingAs($this->reo);
-
-        $this->reo->update([
-            'mark_entry_session_id' => 'different_session_id',
-            'mark_entry_device_hash' => 'different_hash',
-            'mark_entry_last_seen_at' => now(),
-        ]);
-
-        $response = $this->get('/mark-entry/psle?view=overview');
-        $response->assertOk();
-        $this->assertTrue(Auth::check());
-    }
-
-    public function test_logout_clears_only_matching_meo_session(): void
-    {
-        // 1. Log in via standard login post request
-        $this->post('/login', [
-            'email' => 'meo@example.com',
-            'password' => 'password123',
-        ]);
-        
-        $this->meo->refresh();
-        $this->assertNotNull($this->meo->mark_entry_session_id);
-
-        // 2. Perform logout post request
-        $response = $this->post('/logout');
-        $response->assertRedirect();
-
-        $this->meo->refresh();
-        $this->assertNull($this->meo->mark_entry_session_id);
-        $this->assertNull($this->meo->mark_entry_device_hash);
-    }
-
-    /**
-     * Test H: Expired/stale MEO session can be replaced.
-     */
-    public function test_expired_meo_session_is_takeover_allowed(): void
-    {
-        $this->actingAs($this->meo);
-
-        // Make a request first to initialize the session in PHPUnit
-        $response = $this->get('/mark-entry/psle?view=overview');
-        $response->assertOk();
-
-        // Expired last seen (older than 30 mins, e.g. 40 mins ago)
-        $this->meo->update([
-            'mark_entry_session_id' => 'old_inactive_session',
-            'mark_entry_device_hash' => 'old_hash',
-            'mark_entry_last_seen_at' => now()->subMinutes(40),
-        ]);
-
-        // MEO accesses route; since the previous session was stale, it will takeover
-        $response = $this->get('/mark-entry/psle?view=overview');
-        $response->assertOk();
-
-        $this->meo->refresh();
-        $this->assertEquals(session()->getId(), $this->meo->mark_entry_session_id);
-    }
-
-    /**
-     * Test I: Admin Artisan command clears stuck MEO session.
+     * Test K: Artisan command clears stuck MEO session.
      */
     public function test_admin_command_clears_stuck_meo_session(): void
     {
-        $this->meo->update([
-            'mark_entry_session_id' => 'stuck_session',
-            'mark_entry_device_hash' => 'stuck_hash',
-            'mark_entry_last_seen_at' => now(),
+        $activeSession = MarkEntryActiveSession::create([
+            'user_id' => $this->meo->id,
+            'session_id' => 'stuck_session',
+            'device_hash' => 'stuck_hash',
+            'ip_address' => '10.0.0.1',
+            'last_seen_at' => now(),
         ]);
 
         // Clear via Artisan command by Email
@@ -291,9 +305,6 @@ class MarkEntrySingleDeviceTest extends TestCase
         ]);
 
         $this->assertEquals(0, $exitCode);
-        $this->meo->refresh();
-        $this->assertNull($this->meo->mark_entry_session_id);
-        $this->assertNull($this->meo->mark_entry_device_hash);
-        $this->assertNull($this->meo->mark_entry_last_seen_at);
+        $this->assertNull(MarkEntryActiveSession::where('user_id', $this->meo->id)->first());
     }
 }

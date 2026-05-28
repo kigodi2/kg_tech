@@ -34,10 +34,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'password_reset_required',
         'status',
         'last_login_at',
-        'mark_entry_session_id',
-        'mark_entry_device_hash',
-        'mark_entry_last_seen_at',
-        'mark_entry_device_locked_at',
         'created_at',
         'updated_at',
     ];
@@ -53,8 +49,6 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'is_admin' => 'boolean',
         'password_reset_required' => 'boolean',
         'last_login_at' => 'datetime',
-        'mark_entry_last_seen_at' => 'datetime',
-        'mark_entry_device_locked_at' => 'datetime',
     ];
 
     // Status constants
@@ -92,6 +86,11 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     public function markingCentre()
     {
         return $this->belongsTo(MarkingCentre::class, 'marking_centre_id');
+    }
+
+    public function markEntryActiveSession()
+    {
+        return $this->hasOne(MarkEntryActiveSession::class);
     }
 
     public function authenticationAuditLogs()

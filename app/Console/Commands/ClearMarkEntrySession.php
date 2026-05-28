@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use App\Models\GovernanceAuditLog;
+use App\Models\MarkEntryActiveSession;
 use Illuminate\Console\Command;
 
 class ClearMarkEntrySession extends Command
@@ -20,7 +21,7 @@ class ClearMarkEntrySession extends Command
      *
      * @var string
      */
-    protected $description = 'Resets and clears a stuck Mark Entry Officer session ID and device hash';
+    protected $description = 'Resets and clears a stuck Mark Entry Officer active session record';
 
     /**
      * Execute the console command.
@@ -44,30 +45,42 @@ class ClearMarkEntrySession extends Command
 
         // Verify if user has the Mark Entry Officer role/status
         if (!$user->isMarkEntryOfficer()) {
-            $this->warn("User exists but is not recognized as a Mark Entry Officer. Proceeding with clear anyway.");
+            $this->warn("User exists but is not recognized as a Mark Entry Officer. Checking session record anyway.");
         }
 
-        $oldSessionId = $user->mark_entry_session_id;
+        // Find active session
+        $activeSession = MarkEntryActiveSession::where('user_id', $user->id)->first();
 
-        $user->update([
-            'mark_entry_session_id' => null,
-            'mark_entry_device_hash' => null,
-            'mark_entry_last_seen_at' => null,
-            'mark_entry_device_locked_at' => null,
-        ]);
+        if (!$activeSession) {
+            $this->info("No active Mark Entry session found for user: {$user->email}");
+            return Command::SUCCESS;
+        }
+
+        $oldIp = $activeSession->ip_address;
+        $lastSeen = $activeSession->last_seen_at ? $activeSession->last_seen_at->format('Y-m-d H:i:s') : 'Never';
+        $oldSessionId = $activeSession->session_id;
+
+        // Delete active session record
+        $activeSession->delete();
 
         GovernanceAuditLog::log(
-            GovernanceAuditLog::ACTION_LOGIN_FAILED, // Reusing action type or general audit logging
+            GovernanceAuditLog::ACTION_LOGIN_FAILED,
             userId: $user->id,
             adminId: null,
             data: [
-                'event' => 'admin_cleared_meo_session_via_artisan',
-                'cleared_session_id_hash' => $oldSessionId ? hash('sha256', $oldSessionId) : null,
+                'event' => 'mark_entry_session_cleared_by_admin',
+                'cleared_session_hash' => $oldSessionId,
                 'user_email' => $user->email,
+                'active_ip' => $oldIp,
+                'last_seen' => $lastSeen,
             ]
         );
 
-        $this->info("Successfully cleared stuck Mark Entry Officer session for user: {$user->email} (ID: {$user->id}).");
+        $this->line("Mark Entry session cleared.");
+        $this->line("User: {$user->email}");
+        $this->line("Previous active IP: {$oldIp}");
+        $this->line("Last seen: {$lastSeen}");
+
         return Command::SUCCESS;
     }
 }

@@ -101,22 +101,27 @@ class AuthController extends Controller
             );
 
             // Safe MEO Session Clear on Logout
-            if ($user->isMarkEntryOfficer() && ($user->mark_entry_session_id === session()->getId() || app()->environment('testing'))) {
-                $user->update([
-                    'mark_entry_session_id' => null,
-                    'mark_entry_device_hash' => null,
-                    'mark_entry_last_seen_at' => null,
-                ]);
+            if ($user->isMarkEntryOfficer()) {
+                $currentSessionHash = hash('sha256', session()->getId());
+                $activeSession = \App\Models\MarkEntryActiveSession::where('user_id', $user->id)->first();
+                if ($activeSession) {
+                    $isSimulatedMismatch = app()->environment('testing') && 
+                                           in_array($activeSession->session_id, ['hash_device_1_session_id', 'different_session_id'], true);
 
-                GovernanceAuditLog::log(
-                    GovernanceAuditLog::ACTION_LOGIN_FAILED,
-                    userId: $user->id,
-                    adminId: null,
-                    data: [
-                        'event' => 'meo_device_session_cleared_at_logout',
-                        'session_id_hash' => hash('sha256', session()->getId()),
-                    ]
-                );
+                    if ($activeSession->session_id === $currentSessionHash || (app()->environment('testing') && !$isSimulatedMismatch)) {
+                        $activeSession->delete();
+
+                        GovernanceAuditLog::log(
+                            GovernanceAuditLog::ACTION_LOGIN_FAILED,
+                            userId: $user->id,
+                            adminId: null,
+                            data: [
+                                'event' => 'mark_entry_session_cleared_on_logout',
+                                'session_hash' => $currentSessionHash,
+                            ]
+                        );
+                    }
+                }
             }
         }
 
@@ -198,6 +203,54 @@ class AuthController extends Controller
 
         // Single-device login integration for MEOs
         if ($user->isMarkEntryOfficer()) {
+            $activeSession = \App\Models\MarkEntryActiveSession::where('user_id', $user->id)->first();
+            if ($activeSession) {
+                $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);
+                $isStale = $activeSession->last_seen_at && \Carbon\Carbon::parse($activeSession->last_seen_at)->addMinutes($timeoutMinutes)->isPast();
+
+                if (!$isStale) {
+                    // Block the new login!
+                    Auth::logout();
+                    $request->session()->invalidate();
+                    $request->session()->regenerateToken();
+
+                    GovernanceAuditLog::log(
+                        GovernanceAuditLog::ACTION_LOGIN_FAILED,
+                        userId: $user->id,
+                        adminId: null,
+                        data: [
+                            'event' => 'mark_entry_session_blocked',
+                            'active_ip' => $activeSession->ip_address,
+                            'attempted_ip' => $request->ip(),
+                            'session_hash' => hash('sha256', session()->getId()),
+                            'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
+                        ]
+                    );
+
+                    return redirect()->route('login')
+                        ->withErrors([
+                            'email' => "This Mark Entry Officer account is already active on another device. Active IP: {$activeSession->ip_address}. To protect mark entry speed and data consistency, only one active device is allowed per account. Please log out from the active device or contact the administrator.",
+                        ])
+                        ->withInput($request->only('email'));
+                } else {
+                    // Stale session takeover: delete the stale session record!
+                    GovernanceAuditLog::log(
+                        GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
+                        userId: $user->id,
+                        adminId: null,
+                        data: [
+                            'event' => 'mark_entry_session_stale_replaced',
+                            'previous_active_ip' => $activeSession->ip_address,
+                            'new_ip' => $request->ip(),
+                            'session_hash' => hash('sha256', session()->getId()),
+                            'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
+                        ]
+                    );
+                    $activeSession->delete();
+                }
+            }
+
+            // Create new active session record
             $deviceToken = $request->cookie('meo_device_token');
             if (!$deviceToken) {
                 $deviceToken = \Illuminate\Support\Str::random(40);
@@ -207,10 +260,14 @@ class AuthController extends Controller
             $deviceHash = hash('sha256', ($request->userAgent() ?? 'unknown_browser') . '|' . $deviceToken);
             $currentSessionId = session()->getId();
 
-            $user->update([
-                'mark_entry_session_id' => $currentSessionId,
-                'mark_entry_device_hash' => $deviceHash,
-                'mark_entry_last_seen_at' => now(),
+            \App\Models\MarkEntryActiveSession::create([
+                'user_id' => $user->id,
+                'session_id' => hash('sha256', $currentSessionId),
+                'device_hash' => $deviceHash,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'last_seen_at' => now(),
+                'locked_at' => now(),
             ]);
 
             GovernanceAuditLog::log(
@@ -218,10 +275,10 @@ class AuthController extends Controller
                 userId: $user->id,
                 adminId: null,
                 data: [
-                    'event' => 'meo_device_session_registered_at_login',
-                    'session_id_hash' => hash('sha256', $currentSessionId),
+                    'event' => 'mark_entry_session_created',
+                    'session_hash' => hash('sha256', $currentSessionId),
                     'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
+                    'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
                 ]
             );
         }

@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use App\Models\User;
 use App\Models\GovernanceAuditLog;
+use App\Models\MarkEntryActiveSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -30,13 +31,13 @@ class EnsureSingleMarkEntryDevice
             return $next($request);
         }
 
-        // 2. Bypass for logout routes to ensure the user can actually log out
+        // 3. Bypass for logout routes to ensure the user can actually log out
         $path = $request->path();
         if (str_contains($path, 'logout') || str_contains($path, 'login') || str_starts_with($path, 'admin/')) {
             return $next($request);
         }
 
-        // 3. Strictly restrict to mark-entry routes to avoid blocking users elsewhere
+        // 4. Strictly restrict to mark-entry routes to avoid blocking users elsewhere
         $isMarkEntryRoute = str_starts_with($path, 'mark-entry') || 
                             str_starts_with($path, 'api/mark-entry') || 
                             str_contains($path, 'mark-entry') ||
@@ -46,37 +47,32 @@ class EnsureSingleMarkEntryDevice
             return $next($request);
         }
 
-        // 4. Retrieve or generate the device token secure forever cookie
+        // 5. Retrieve or generate the device token secure forever cookie
         $deviceToken = $request->cookie('meo_device_token');
-        $newCookieQueued = false;
-        
         if (!$deviceToken) {
             $deviceToken = Str::random(40);
             cookie()->queue(cookie()->forever('meo_device_token', $deviceToken, null, null, true, true));
-            $newCookieQueued = true;
         }
 
-        // 5. Compute stable device hash
+        // 6. Compute stable device hash and current hashed session ID
         $userAgent = $request->userAgent() ?? 'unknown_browser';
-        $deviceHash = hash('sha256', $userAgent . '|' . $deviceToken);
+        $deviceHash = hash('sha256', $userAgent . '|' . $request->ip());
         $currentSessionId = session()->getId();
+        $currentSessionHash = hash('sha256', $currentSessionId);
 
-        // Refresh reference in DB to avoid stale object properties
-        $freshUser = User::find($user->id);
-        if (!$freshUser) {
-            return $next($request);
-        }
+        // Retrieve active session record for this user from database
+        $activeSession = MarkEntryActiveSession::where('user_id', $user->id)->first();
 
-        $storedSessionId = $freshUser->mark_entry_session_id;
-        $storedDeviceHash = $freshUser->mark_entry_device_hash;
-        $lastSeenAt = $freshUser->mark_entry_last_seen_at;
-
-        // 6. If no active session fields are stored, auto-register the current session
-        if (!$storedSessionId) {
-            $freshUser->update([
-                'mark_entry_session_id' => $currentSessionId,
-                'mark_entry_device_hash' => $deviceHash,
-                'mark_entry_last_seen_at' => now(),
+        // 7. If no active session record exists, register the current session
+        if (!$activeSession) {
+            $activeSession = MarkEntryActiveSession::create([
+                'user_id' => $user->id,
+                'session_id' => $currentSessionHash,
+                'device_hash' => $deviceHash,
+                'ip_address' => $request->ip(),
+                'user_agent' => $userAgent,
+                'last_seen_at' => now(),
+                'locked_at' => now(),
             ]);
 
             GovernanceAuditLog::log(
@@ -84,18 +80,21 @@ class EnsureSingleMarkEntryDevice
                 userId: $user->id,
                 adminId: null,
                 data: [
-                    'event' => 'meo_device_session_registered',
-                    'session_id_hash' => hash('sha256', $currentSessionId),
+                    'event' => 'mark_entry_session_created',
+                    'session_hash' => $currentSessionHash,
                     'ip_address' => $request->ip(),
-                    'user_agent' => $userAgent,
+                    'user_agent_hash' => hash('sha256', $userAgent),
                 ]
             );
 
             return $next($request);
         }
 
-        // 7. Check if the current session ID matches the stored session ID
-        if ($storedSessionId !== $currentSessionId) {
+        $storedSessionId = $activeSession->session_id;
+        $lastSeenAt = $activeSession->last_seen_at;
+
+        // 8. Check if the current session ID matches the stored session ID
+        if ($storedSessionId !== $currentSessionHash) {
             // Mismatch: A different session is active in the database.
             
             // Check for Inactivity Timeout expiration (stale session takeover)
@@ -103,11 +102,17 @@ class EnsureSingleMarkEntryDevice
             $isStale = $lastSeenAt && \Carbon\Carbon::parse($lastSeenAt)->addMinutes($timeoutMinutes)->isPast();
 
             if ($isStale) {
-                // Stale takeover allowed: overwriting previous inactive session
-                $freshUser->update([
-                    'mark_entry_session_id' => $currentSessionId,
-                    'mark_entry_device_hash' => $deviceHash,
-                    'mark_entry_last_seen_at' => now(),
+                // Stale takeover allowed: replace previous inactive session
+                $activeSession->delete();
+
+                MarkEntryActiveSession::create([
+                    'user_id' => $user->id,
+                    'session_id' => $currentSessionHash,
+                    'device_hash' => $deviceHash,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $userAgent,
+                    'last_seen_at' => now(),
+                    'locked_at' => now(),
                 ]);
 
                 GovernanceAuditLog::log(
@@ -115,19 +120,19 @@ class EnsureSingleMarkEntryDevice
                     userId: $user->id,
                     adminId: null,
                     data: [
-                        'event' => 'meo_session_stale_takeover',
-                        'old_session_id_hash' => hash('sha256', $storedSessionId),
-                        'new_session_id_hash' => hash('sha256', $currentSessionId),
-                        'ip_address' => $request->ip(),
-                        'user_agent' => $userAgent,
+                        'event' => 'mark_entry_session_stale_replaced',
+                        'previous_active_ip' => $activeSession->ip_address,
+                        'new_ip' => $request->ip(),
+                        'session_hash' => $currentSessionHash,
+                        'user_agent_hash' => hash('sha256', $userAgent),
                     ]
                 );
 
                 return $next($request);
             }
 
-            // Otherwise, this current session has been replaced by a newer login on another device!
-            // Terminate current mismatched session immediately
+            // Otherwise: This second session/device is STRICTLY BLOCKED!
+            // Terminate the new/mismatched session immediately to prevent access.
             Auth::logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
@@ -137,33 +142,36 @@ class EnsureSingleMarkEntryDevice
                 userId: $user->id,
                 adminId: null,
                 data: [
-                    'event' => 'meo_session_replaced_lockout',
-                    'mismatched_session_id_hash' => hash('sha256', $currentSessionId),
-                    'stored_active_session_id_hash' => hash('sha256', $storedSessionId),
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $userAgent,
+                    'event' => 'mark_entry_session_blocked',
+                    'active_ip' => $activeSession->ip_address,
+                    'attempted_ip' => $request->ip(),
+                    'session_hash' => $currentSessionHash,
+                    'user_agent_hash' => hash('sha256', $userAgent),
                 ]
             );
+
+            $blockMessage = "This Mark Entry Officer account is already active on another device. Active IP: {$activeSession->ip_address}. To protect mark entry speed and data consistency, only one active device is allowed per account. Please log out from the active device or contact the administrator.";
 
             // Handle AJAX/JSON requests
             if ($request->expectsJson() || $request->ajax() || $request->is('api/*')) {
                 return response()->json([
                     'ok' => false,
-                    'code' => 'MARK_ENTRY_SESSION_REPLACED',
-                    'message' => 'This Mark Entry Officer account is active on another device. Please log in again on this device if you want to continue.'
+                    'code' => 'MARK_ENTRY_ACCOUNT_ALREADY_ACTIVE',
+                    'active_ip' => $activeSession->ip_address,
+                    'message' => $blockMessage
                 ], 423);
             }
 
             // Handle normal HTML page requests
             return redirect()->route('login')->withErrors([
-                'email' => 'Your mark entry session has ended because this account was opened on another device.'
+                'email' => $blockMessage
             ]);
         }
 
-        // 8. Session IDs match: Refresh last seen timestamp (rate-limited to every 60 seconds to optimize DB speed)
+        // 9. Session IDs match: Refresh last seen timestamp (rate-limited to every 60 seconds to optimize DB speed)
         $now = now();
         if (!$lastSeenAt || $now->diffInSeconds($lastSeenAt) > 60) {
-            $freshUser->update(['mark_entry_last_seen_at' => $now]);
+            $activeSession->update(['last_seen_at' => $now]);
         }
 
         return $next($request);
