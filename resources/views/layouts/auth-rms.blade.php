@@ -10,6 +10,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="icon" href="/favicon.ico">
     <link rel="manifest" href="/site.webmanifest">
+    <link href="https://fonts.cdnfonts.com/css/maiandra-gd" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -887,6 +888,183 @@
             }
         }
     </style>
+    @if(request()->routeIs('public.home'))
+    <style>
+        :root {
+            --tz-green: #1EB53A;
+            --tz-yellow: #FCD116;
+            --tz-blue: #00A3DD;
+            --tz-text: #f0f4f7;
+            --tz-muted: rgba(255,255,255,.45);
+        }
+
+        /* Body & Font Override */
+        body {
+            background: #0b1014 !important;
+            font-family: 'Maiandra GD', sans-serif !important;
+            color: #f0f4f7 !important;
+        }
+
+        /* Page Header Override */
+        .page-header {
+            background: rgba(11, 16, 20, 0.95) !important;
+            border-bottom: 1px solid rgba(187, 164, 94, 0.15) !important;
+            box-shadow: none !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 50 !important;
+        }
+
+        /* Brand Style Override */
+        .page-brand {
+            color: #f0e6c8 !important;
+            font-family: 'Maiandra GD', sans-serif !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+        }
+        
+        .page-brand:hover {
+            opacity: 0.9;
+        }
+
+        .page-brand-text {
+            font-size: 1.05rem !important;
+            font-weight: 800 !important;
+            letter-spacing: 0.12em !important;
+            text-shadow: 0 0 10px rgba(240, 230, 200, 0.2) !important;
+            text-transform: uppercase !important;
+        }
+
+        /* Navigation Links Override */
+        .nav-link {
+            color: #d1d5db !important;
+            font-family: 'Maiandra GD', sans-serif !important;
+            font-weight: 700 !important;
+            background: transparent !important;
+            border: 1px solid transparent !important;
+            padding: 8px 16px !important;
+            border-radius: 8px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .nav-link:hover {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, #00A3DD, #006fa3) !important;
+            color: #ffffff !important;
+            border-color: rgba(0, 163, 221, 0.2) !important;
+            box-shadow: 0 4px 12px rgba(0, 163, 221, 0.2) !important;
+        }
+
+        .nav-link.active .nav-icon img,
+        .nav-link:hover .nav-icon img {
+            filter: brightness(0) invert(1) !important;
+        }
+
+        .nav-icon img {
+            filter: brightness(0) invert(0.85) !important;
+        }
+
+        .nav-divider {
+            background: rgba(255, 255, 255, 0.08) !important;
+            height: 20px !important;
+        }
+
+        .mobile-menu-toggle {
+            color: #d1d5db !important;
+        }
+        
+        .mobile-menu-toggle:hover {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+        }
+
+        /* Mobile Drawer Override */
+        .mobile-drawer-panel {
+            background: #0b1014 !important;
+            border-left: 1px solid rgba(255, 255, 255, 0.08) !important;
+            color: #f0f4f7 !important;
+        }
+
+        .mobile-drawer-header {
+            background: #080f15 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+
+        .mobile-drawer-title {
+            color: #f0e6c8 !important;
+            font-family: 'Maiandra GD', sans-serif !important;
+        }
+
+        .mobile-drawer-close {
+            color: #d1d5db !important;
+        }
+
+        .mobile-drawer-close:hover {
+            color: #ffffff !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            transform: rotate(90deg) !important;
+        }
+
+        .mobile-nav-link {
+            color: #d1d5db !important;
+            font-family: 'Maiandra GD', sans-serif !important;
+            font-weight: 700 !important;
+            background: transparent !important;
+            border-radius: 8px !important;
+        }
+
+        .mobile-nav-link:hover,
+        .mobile-nav-link.active {
+            background: linear-gradient(135deg, #00A3DD, #006fa3) !important;
+            color: #ffffff !important;
+        }
+
+        .mobile-nav-link:hover .nav-icon img,
+        .mobile-nav-link.active .nav-icon img {
+            filter: brightness(0) invert(1) !important;
+        }
+
+        .mobile-nav-divider {
+            border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        }
+
+        /* Footer Style Override */
+        .page-footer {
+            background: #080f15 !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: rgba(255, 255, 255, 0.4) !important;
+            font-family: 'Maiandra GD', sans-serif !important;
+        }
+        
+        .page-footer-body {
+            padding: 14px 24px !important;
+        }
+
+        .page-footer-stripes {
+            height: 4px !important;
+        }
+        
+        .page-footer-stripes span {
+            width: 25% !important;
+        }
+
+        .footer-brand {
+            background: linear-gradient(90deg, #f9d769 0%, #ffd35f 40%, #e8b822 100%) !important;
+            -webkit-background-clip: text !important;
+            color: transparent !important;
+            font-weight: 800 !important;
+            font-size: 0.85rem !important;
+            text-shadow: 0 0 6px rgba(255, 210, 80, 0.9), 0 0 16px rgba(255, 210, 80, 0.35) !important;
+            display: inline-block !important;
+        }
+    </style>
+    @endif
 </head>
 <body>
     @php($disableMockPortalHeaderNav = request()->routeIs('mock-portal.*'))

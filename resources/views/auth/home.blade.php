@@ -4,59 +4,59 @@
 
 @section('content')
 <style>
+    :root {
+        --tz-green: #1EB53A;
+        --tz-yellow: #FCD116;
+        --tz-blue: #00A3DD;
+        --tz-text: #f0f4f7;
+        --tz-muted: rgba(255, 255, 255, .45);
+    }
+
     .public-main {
-        flex: 1 0 auto;
-        padding: clamp(18px, 3vw, 30px);
+        background: #0b1014;
+        font-family: 'Maiandra GD', sans-serif;
+        color: var(--tz-text);
+        padding: clamp(24px, 4vw, 48px) clamp(16px, 3vw, 32px);
+        min-height: 100vh;
+        width: 100%;
     }
 
     .public-home-shell {
-        max-width: 1220px;
+        max-width: 900px;
         margin: 0 auto;
         display: grid;
-        gap: 24px;
+        gap: 36px;
     }
 
+    /* Hero Section */
     .hero-section {
+        background: linear-gradient(135deg, #050e15 0%, #0d1b2a 50%, #0a1520 100%);
+        border: 1px solid rgba(0, 163, 221, 0.15);
+        border-radius: 16px;
+        padding: clamp(24px, 4vw, 40px);
         position: relative;
         overflow: hidden;
-        border-radius: 28px;
-        background:
-            linear-gradient(135deg, rgba(14, 76, 140, 0.96) 0%, rgba(10, 61, 113, 0.94) 56%, rgba(22, 91, 56, 0.88) 100%);
-        color: #ffffff;
-        padding: clamp(28px, 4vw, 46px);
-        box-shadow: 0 24px 54px rgba(15, 23, 42, 0.18);
-    }
-
-    .hero-section::before,
-    .hero-section::after {
-        content: "";
-        position: absolute;
-        border-radius: 999px;
-        pointer-events: none;
     }
 
     .hero-section::before {
-        width: 360px;
-        height: 360px;
-        right: -120px;
-        top: -120px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 68%);
-    }
-
-    .hero-section::after {
-        width: 280px;
-        height: 280px;
-        left: -80px;
-        bottom: -120px;
-        background: radial-gradient(circle, rgba(252, 209, 22, 0.18) 0%, rgba(252, 209, 22, 0) 68%);
+        content: '';
+        position: absolute;
+        top: -100px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 600px;
+        height: 600px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(0, 163, 221, 0.07) 0%, transparent 70%);
+        pointer-events: none;
     }
 
     .hero-grid {
         position: relative;
         z-index: 1;
         display: grid;
-        grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.85fr);
-        gap: 24px;
+        grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.85fr);
+        gap: 28px;
         align-items: center;
     }
 
@@ -73,78 +73,92 @@
         display: block;
     }
 
-    .hero-copy h1 {
+    .hero-copy h1.hero-title {
+        font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+        font-weight: 900;
+        color: #f0e6c8;
         margin: 0 0 14px;
-        font-size: clamp(2rem, 4vw, 3.15rem);
-        line-height: 1.04;
-        letter-spacing: -0.03em;
-        color: #ffffff;
+        letter-spacing: -0.5px;
+        line-height: 1.15;
     }
 
-    .hero-copy p {
-        margin: 0;
-        max-width: 680px;
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 1rem;
-        line-height: 1.8;
+    .hero-copy p.hero-desc {
+        font-size: 0.92rem;
+        color: var(--tz-muted);
+        line-height: 1.65;
+        margin: 0 0 24px;
     }
 
     .hero-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
-        margin-top: 24px;
     }
 
     .hero-btn {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
-        min-height: 46px;
-        padding: 0 18px;
-        border-radius: 999px;
+        gap: 8px;
+        min-height: 42px;
+        padding: 0 20px;
+        border-radius: 8px;
         font-weight: 700;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         text-decoration: none;
-        transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        transition: all 0.2s ease;
     }
 
     .hero-btn:hover {
         text-decoration: none;
-        transform: translateY(-1px);
     }
 
     .hero-btn-primary {
-        background: #ffffff;
-        color: #0e4c8c;
-        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+        background: linear-gradient(135deg, #00A3DD, #006fa3);
+        color: #ffffff;
+        border: 1px solid rgba(0, 163, 221, 0.2);
+    }
+
+    .hero-btn-primary:hover {
+        background: linear-gradient(135deg, #00b4f0, #0081be);
+        box-shadow: 0 8px 24px rgba(0, 163, 221, 0.3);
+        transform: translateY(-1px);
     }
 
     .hero-btn-secondary {
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        color: #ffffff;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--tz-text);
     }
 
+    .hero-btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-1px);
+    }
+
+    /* Hero Sidebar Panel */
     .hero-aside {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 22px;
-        padding: 22px 22px 20px;
+        background: rgba(8, 15, 21, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        padding: 20px;
         backdrop-filter: blur(6px);
     }
 
     .hero-aside h2 {
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #f0e6c8;
         margin: 0 0 10px;
-        font-size: 1.05rem;
-        color: #ffffff;
     }
 
     .hero-aside p {
+        font-size: 0.8rem;
+        color: var(--tz-muted);
+        line-height: 1.55;
         margin: 0 0 16px;
-        color: rgba(255, 255, 255, 0.82);
-        font-size: 0.93rem;
-        line-height: 1.7;
     }
 
     .hero-stat-list {
@@ -153,170 +167,176 @@
     }
 
     .hero-stat {
-        display: grid;
-        grid-template-columns: 42px minmax(0, 1fr);
+        display: flex;
         gap: 12px;
-        align-items: center;
-        padding: 12px 14px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.08);
+        align-items: flex-start;
+        padding: 12px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.03);
     }
 
     .hero-stat-icon {
-        width: 42px;
-        height: 42px;
-        border-radius: 14px;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(255, 255, 255, 0.14);
-        font-size: 1rem;
-        color: #ffffff;
+        background: rgba(0, 163, 221, 0.1);
+        border: 1px solid rgba(0, 163, 221, 0.15);
+        font-size: 0.85rem;
+        color: var(--tz-blue);
+        flex-shrink: 0;
+    }
+
+    .hero-stat-info {
+        flex: 1;
     }
 
     .hero-stat strong {
         display: block;
-        color: #ffffff;
-        font-size: 0.95rem;
+        color: #f0e6c8;
+        font-size: 0.8rem;
+        margin-bottom: 2px;
     }
 
     .hero-stat span {
         display: block;
-        color: rgba(255, 255, 255, 0.78);
-        font-size: 0.82rem;
-        margin-top: 2px;
+        color: var(--tz-muted);
+        font-size: 0.75rem;
+        line-height: 1.45;
     }
 
-    .section-shell {
-        background: rgba(255, 255, 255, 0.88);
-        border: 1px solid rgba(203, 213, 225, 0.92);
-        border-radius: 24px;
-        padding: 24px;
-        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.05);
-    }
-
-    .section-heading {
+    /* Card System & Sections */
+    .section-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--tz-blue);
+        margin-bottom: 16px;
         display: flex;
-        align-items: flex-end;
-        justify-content: space-between;
-        gap: 16px;
-        margin-bottom: 18px;
-    }
-
-    .section-heading h2 {
-        margin: 0;
-        font-size: 1.5rem;
-        color: #1f2937;
-    }
-
-    .section-heading p {
-        margin: 6px 0 0;
-        max-width: 720px;
-        color: #64748b;
-        font-size: 0.95rem;
-        line-height: 1.7;
+        align-items: center;
+        gap: 8px;
     }
 
     .module-grid {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 18px;
+        gap: 16px;
     }
 
     .module-card {
-        padding: 20px 18px;
-        border-radius: 20px;
-        background: #ffffff;
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+        background: linear-gradient(135deg, #0d1b2a, #111e29);
+        border: 1px solid rgba(0, 163, 221, 0.15);
+        border-radius: 16px;
+        padding: 24px 20px;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .module-card:hover {
+        border-color: rgba(0, 163, 221, 0.45);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px rgba(0, 163, 221, 0.12);
     }
 
     .module-card-icon {
-        width: 56px;
-        height: 56px;
-        border-radius: 18px;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(0, 163, 221, 0.15), rgba(0, 163, 221, 0.03));
+        border: 1px solid rgba(0, 163, 221, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 14px;
-        color: #ffffff;
-        font-size: 1.15rem;
+        margin-bottom: 16px;
+        color: #67d8ff;
+        font-size: 1.1rem;
+        flex-shrink: 0;
     }
 
     .module-card h3 {
         margin: 0 0 8px;
-        font-size: 1.15rem;
-        color: #1f2937;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #f0e6c8;
     }
 
     .module-card p {
         margin: 0;
-        color: #64748b;
-        font-size: 0.92rem;
-        line-height: 1.7;
+        color: var(--tz-muted);
+        font-size: 0.8rem;
+        line-height: 1.55;
     }
 
+    /* Access Summary Section */
     .info-grid {
         display: grid;
         grid-template-columns: 1.1fr 0.9fr;
-        gap: 18px;
+        gap: 16px;
     }
 
     .info-card {
-        background: #ffffff;
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        border-radius: 20px;
-        padding: 20px;
+        background: linear-gradient(135deg, #0d1b2a, #111e29);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 16px;
+        padding: 24px;
     }
 
     .info-card h3 {
-        margin: 0 0 14px;
-        font-size: 1.15rem;
-        color: #1f2937;
+        margin: 0 0 16px;
+        font-size: 1rem;
+        font-weight: 700;
+        color: #f0e6c8;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 10px;
     }
 
     .info-list {
         display: grid;
-        gap: 12px;
+        gap: 14px;
     }
 
     .info-list-item {
-        display: grid;
-        grid-template-columns: 38px minmax(0, 1fr);
+        display: flex;
         gap: 12px;
-        align-items: start;
-        padding: 12px 0;
-        border-top: 1px solid rgba(226, 232, 240, 0.95);
-    }
-
-    .info-list-item:first-child {
-        border-top: 0;
-        padding-top: 0;
+        align-items: flex-start;
     }
 
     .info-list-icon {
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        background: rgba(14, 76, 140, 0.1);
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: rgba(30, 181, 58, 0.1);
+        border: 1px solid rgba(30, 181, 58, 0.15);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #0e4c8c;
+        color: #6ae086;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .info-list-info {
+        flex: 1;
     }
 
     .info-list-item strong {
         display: block;
-        color: #1f2937;
-        font-size: 0.95rem;
+        color: #f0e6c8;
+        font-size: 0.85rem;
+        margin-bottom: 2px;
     }
 
     .info-list-item span {
         display: block;
-        color: #64748b;
-        font-size: 0.88rem;
-        line-height: 1.65;
-        margin-top: 2px;
+        color: var(--tz-muted);
+        font-size: 0.78rem;
+        line-height: 1.5;
     }
 
     .faq-stack {
@@ -325,52 +345,70 @@
     }
 
     .faq-item {
-        background: #ffffff;
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        border-radius: 18px;
-        padding: 16px 18px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        border-radius: 12px;
+        padding: 14px 16px;
     }
 
     .faq-item h3 {
-        margin: 0 0 8px;
-        font-size: 1rem;
-        color: #1f2937;
+        margin: 0 0 6px;
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #f0e6c8;
     }
 
     .faq-item p {
         margin: 0;
-        color: #64748b;
-        font-size: 0.9rem;
-        line-height: 1.7;
+        color: var(--tz-muted);
+        font-size: 0.78rem;
+        line-height: 1.5;
     }
 
-    @media (max-width: 1100px) {
-        .hero-grid,
-        .info-grid,
+    /* Responsiveness */
+    @media (max-width: 768px) {
+        .hero-grid {
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        .module-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .hero-copy h1.hero-title {
+            font-size: 1.8rem;
+        }
+    }
+
+    @media (max-width: 480px) {
         .module-grid {
             grid-template-columns: 1fr;
         }
-    }
 
-    @media (max-width: 720px) {
-        .public-main {
-            padding: 16px;
+        .hero-copy h1.hero-title {
+            font-size: 1.5rem;
         }
 
-        .section-shell,
-        .hero-section {
-            border-radius: 22px;
-            padding: 20px;
+        .hero-actions {
+            flex-direction: column;
         }
 
-        .section-heading {
-            display: block;
+        .hero-btn {
+            width: 100%;
+            justify-content: center;
         }
     }
 </style>
 
 <main class="public-main">
     <div class="public-home-shell">
+        
+        {{-- Hero Section --}}
         <section class="hero-section">
             <div class="hero-grid">
                 <div class="hero-copy">
@@ -380,8 +418,9 @@
                         <span style="background:#000000;"></span>
                         <span style="background:#00A3DD;"></span>
                     </div>
-                    <h1>Integrated Results Management System</h1>
-                    <p>This is the official public entry page for IRMS. Authorized users may proceed to login and access protected examination workflows, including registration, mark entry, result processing, evaluations, and administrative operations.</p>
+                    <div class="hero-eyebrow">Official Entry Workspace</div>
+                    <h1 class="hero-title">Integrated Results Management System</h1>
+                    <p class="hero-desc">This is the official public entry page for IRMS. Authorized officers may proceed to login to access protected examination workflows, including registration, mark entry, result processing, evaluations, and administrative operations.</p>
                     <div class="hero-actions">
                         <a href="{{ route('login') }}" class="hero-btn hero-btn-primary">
                             <i class="fas fa-right-to-bracket" aria-hidden="true"></i>
@@ -396,20 +435,20 @@
 
                 <aside class="hero-aside">
                     <h2>Access Notice</h2>
-                    <p>This page is visible to guests for orientation only. Internal system functions remain protected and require a valid IRMS account.</p>
+                    <p>This workspace is visible to guests for orientation. Internal system functions are protected and require a secure authentication session.</p>
                     <div class="hero-stat-list">
                         <div class="hero-stat">
                             <div class="hero-stat-icon"><i class="fas fa-shield-halved" aria-hidden="true"></i></div>
-                            <div>
+                            <div class="hero-stat-info">
                                 <strong>Protected Internal Modules</strong>
-                                <span>Dashboard, registration, mark entry, results, evaluations, and settings are accessible only after authentication.</span>
+                                <span>Dashboards, candidate registrations, and mark entries are locked behind secure authentication.</span>
                             </div>
                         </div>
                         <div class="hero-stat">
                             <div class="hero-stat-icon"><i class="fas fa-route" aria-hidden="true"></i></div>
-                            <div>
+                            <div class="hero-stat-info">
                                 <strong>Public Navigation</strong>
-                                <span>`HOME` opens this public entry page and `LOGIN` opens the protected sign-in form, matching the RMS guest flow pattern.</span>
+                                <span>Home opens this entrance page, while logins redirect to role-specific administrative views.</span>
                             </div>
                         </div>
                     </div>
@@ -417,113 +456,111 @@
             </div>
         </section>
 
-        <section class="section-shell" id="modules">
-            <div class="section-heading">
-                <div>
-                    <h2>Core IRMS Modules</h2>
-                    <p>The sections below reflect the actual protected modules already implemented inside IRMS.</p>
-                </div>
-            </div>
+        {{-- Core IRMS Modules --}}
+        <section id="modules" style="scroll-margin-top: 80px;">
+            <div class="section-label"><i class="fas fa-cubes"></i> Core IRMS Modules</div>
             <div class="module-grid">
                 <article class="module-card">
-                    <div class="module-card-icon" style="background:linear-gradient(135deg,#355c9a,#4c74b4);">
+                    <div class="module-card-icon">
                         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
                     </div>
                     <h3>Exam Registration</h3>
-                    <p>Manage regions, districts, schools, and candidate registration data in a structured workflow.</p>
+                    <p>Manage regions, districts, schools, and Standard VII / Form VI candidate data in a structured mock environment.</p>
                 </article>
+                
                 <article class="module-card">
-                    <div class="module-card-icon" style="background:linear-gradient(135deg,#ef8c20,#dd6b20);">
+                    <div class="module-card-icon">
                         <i class="fas fa-pen-ruler" aria-hidden="true"></i>
                     </div>
                     <h3>Mark Entry</h3>
-                    <p>Support controlled mark capture, uploads, moderation, and validation for active exam years.</p>
+                    <p>Controlled capture, secure uploads, moderation, and automated validation for active exam years.</p>
                 </article>
+                
                 <article class="module-card">
-                    <div class="module-card-icon" style="background:linear-gradient(135deg,#d13f7a,#b83280);">
-                        <i class="fas fa-badge-check" aria-hidden="true"></i>
+                    <div class="module-card-icon">
+                        <i class="fas fa-shield-check" aria-hidden="true"></i>
                     </div>
                     <h3>Validation & Controls</h3>
-                    <p>Keep internal workflows traceable with audit, review, and verification steps across result processes.</p>
+                    <p>Multi-level audit reviews, outlier resolution, and verification steps to ensure complete data integrity.</p>
                 </article>
+                
                 <article class="module-card">
-                    <div class="module-card-icon" style="background:linear-gradient(135deg,#2f9e44,#1b7f33);">
+                    <div class="module-card-icon">
                         <i class="fas fa-lock" aria-hidden="true"></i>
                     </div>
-                    <h3>Security & Access</h3>
-                    <p>Authenticated route protection, session invalidation on logout, and guarded internal modules are enforced.</p>
+                    <h3>Results Processing</h3>
+                    <p>GPA computation, division allocation, and score snapshots generated via robust processing algorithms.</p>
                 </article>
+                
                 <article class="module-card">
-                    <div class="module-card-icon" style="background:linear-gradient(135deg,#d9485f,#c53030);">
+                    <div class="module-card-icon">
                         <i class="fas fa-file-chart-column" aria-hidden="true"></i>
                     </div>
-                    <h3>Results Publication</h3>
-                    <p>Handle result processing, publication workflows, and controlled portal access for approved result outputs.</p>
+                    <h3>Reports & Exports</h3>
+                    <p>Executive summaries, performance analytics, PDF exports, and regional council-wise rankings.</p>
                 </article>
+                
                 <article class="module-card">
-                    <div class="module-card-icon" style="background:linear-gradient(135deg,#6b46c1,#553c9a);">
-                        <i class="fas fa-headset" aria-hidden="true"></i>
+                    <div class="module-card-icon">
+                        <i class="fas fa-gears" aria-hidden="true"></i>
                     </div>
-                    <h3>Operational Support</h3>
-                    <p>Provide administrative tools, backup management, settings, and issue handling across the platform.</p>
+                    <h3>Administration</h3>
+                    <p>Comprehensive tools for user management, automated SQLite backup scheduling, and global system configuration.</p>
                 </article>
             </div>
         </section>
 
-        <section class="section-shell">
-            <div class="section-heading">
-                <div>
-                    <h2>Access Control Summary</h2>
-                    <p>This public page mirrors the RMS home/login pattern, while the actual IRMS backend continues to use Laravel-native middleware and session protection.</p>
-                </div>
-            </div>
+        {{-- Access Control Summary --}}
+        <section>
+            <div class="section-label"><i class="fas fa-shield-halved"></i> Access Control Summary</div>
             <div class="info-grid">
                 <div class="info-card">
-                    <h3>Guest Entry</h3>
+                    <h3>Guest Entry Summary</h3>
                     <div class="info-list">
                         <div class="info-list-item">
                             <div class="info-list-icon"><i class="fas fa-house" aria-hidden="true"></i></div>
-                            <div>
-                                <strong>Public Home</strong>
-                                <span>Guests can open this route for orientation and then continue to the login page.</span>
+                            <div class="info-list-info">
+                                <strong>Public Entrance</strong>
+                                <span>Guests can view this page to get oriented before proceeding to sign in.</span>
                             </div>
                         </div>
                         <div class="info-list-item">
                             <div class="info-list-icon"><i class="fas fa-user-lock" aria-hidden="true"></i></div>
-                            <div>
-                                <strong>Login-First Internal Access</strong>
-                                <span>Protected modules redirect unauthenticated requests to the IRMS login page.</span>
+                            <div class="info-list-info">
+                                <strong>Login Redirection</strong>
+                                <span>Unauthenticated requests targeting internal workspaces are routed to the login form.</span>
                             </div>
                         </div>
                         <div class="info-list-item">
-                            <div class="info-list-icon"><i class="fas fa-arrow-right-from-bracket" aria-hidden="true"></i></div>
-                            <div>
-                                <strong>Secure Logout</strong>
-                                <span>Logout invalidates the session and prevents continued use of protected routes.</span>
+                            <div class="info-list-icon"><i class="fas fa-right-from-bracket" aria-hidden="true"></i></div>
+                            <div class="info-list-info">
+                                <strong>Secure Session Invalidation</strong>
+                                <span>Logging out terminates session keys instantly and clears Mark Entry Officer cache.</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="info-card">
-                    <h3>Important Notes</h3>
+                    <h3>Important Notices</h3>
                     <div class="faq-stack">
                         <div class="faq-item">
                             <h3>Authorized access only</h3>
-                            <p>IRMS is intended for approved users operating within examination and results workflows.</p>
+                            <p>IRMS is intended for approved administrative officers operating within registered exam boundaries.</p>
                         </div>
                         <div class="faq-item">
-                            <h3>Public page purpose</h3>
-                            <p>This page provides a formal entry point and system overview before users proceed to login.</p>
+                            <h3>Entrance page purpose</h3>
+                            <p>This layout offers a polished dashboard overview to authenticate before doing officer work.</p>
                         </div>
                         <div class="faq-item">
-                            <h3>Security unchanged</h3>
-                            <p>Authentication logic, route guards, middleware, session invalidation, and internal module protection remain intact.</p>
+                            <h3>Uncompromised Security</h3>
+                            <p>Route guards, role constraint middleware, and database encryption remain fully intact.</p>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
+
     </div>
 </main>
 @endsection
