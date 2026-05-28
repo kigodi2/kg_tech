@@ -364,8 +364,8 @@
         height: 16px;
         object-fit: contain;
         display: block;
-        filter: brightness(0) invert(0.95) !important;
-        opacity: 0.65 !important;
+        filter: brightness(0) invert(0.15) !important;
+        opacity: 0.72 !important;
     }
 
     /* Glassmorphic Form Inputs - Sleek, solid background with inset shadows */
@@ -442,7 +442,7 @@
         transform: translateY(-50%);
         border: 0;
         background: transparent;
-        color: rgba(255, 255, 255, 0.35) !important;
+        color: #64748b !important;
         font-size: 15px;
         padding: 4px 6px;
         cursor: pointer;
