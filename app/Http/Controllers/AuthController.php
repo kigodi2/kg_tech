@@ -217,7 +217,8 @@ class AuthController extends Controller
             if ($activeSession) {
                 $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);
                 $isStale = $activeSession->last_seen_at && \Carbon\Carbon::parse($activeSession->last_seen_at)->addMinutes($timeoutMinutes)->isPast();
-                $isSameDevice = $activeSession->device_hash === $deviceHash;
+                $isSameDevice = ($activeSession->device_hash === $deviceHash) ||
+                                ($activeSession->ip_address === $request->ip() && $activeSession->user_agent === ($request->userAgent() ?? 'unknown_browser'));
 
                 if ($isSameDevice || $isStale) {
                     // Update/Replace the stale or same-device session record

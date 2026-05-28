@@ -98,7 +98,8 @@ class EnsureSingleMarkEntryDevice
             // Mismatch: A different session is active in the database.
             
             // Check if the request is coming from the SAME device
-            $isSameDevice = $activeSession->device_hash === $deviceHash;
+            $isSameDevice = ($activeSession->device_hash === $deviceHash) ||
+                            ($activeSession->ip_address === $request->ip() && $activeSession->user_agent === $userAgent);
 
             // Check for Inactivity Timeout expiration (stale session takeover)
             $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);

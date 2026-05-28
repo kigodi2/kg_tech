@@ -142,6 +142,7 @@ class MarkEntrySingleDeviceTest extends TestCase
         $activeSession->update([
             'session_id' => 'different_hash_device_2',
             'device_hash' => 'different_device_hash_2',
+            'ip_address' => '192.168.1.99', // Simulate different active device IP
         ]);
 
         // Second device gets blocked
@@ -312,5 +313,44 @@ class MarkEntrySingleDeviceTest extends TestCase
 
         $this->assertEquals(0, $exitCode);
         $this->assertNull(MarkEntryActiveSession::where('user_id', $this->meo->id)->first());
+    }
+
+    /**
+     * Test L: Same device can log back in with IP + User Agent match even when device token cookie is missing (e.g. cookie cleared).
+     */
+    public function test_same_device_can_log_in_via_ip_and_ua_fallback_when_cookie_is_missing(): void
+    {
+        // 1. Log in Device 1 once to create active session
+        $response = $this->post('/login', [
+            'email' => 'meo@example.com',
+            'password' => 'password123',
+        ], [
+            'REMOTE_ADDR' => '192.168.1.5',
+            'HTTP_USER_AGENT' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0.0.0',
+        ]);
+        $response->assertRedirect();
+
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
+        $firstSessionId = $activeSession->session_id;
+
+        // Invalidate current client session so we are guest again
+        Auth::logout();
+        session()->invalidate();
+
+        // 2. Log in again with the EXACT same IP and UA, but without cookie (simulates browser restart or cookie clearing)
+        $response2 = $this->post('/login', [
+            'email' => 'meo@example.com',
+            'password' => 'password123',
+        ], [
+            'REMOTE_ADDR' => '192.168.1.5',
+            'HTTP_USER_AGENT' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/125.0.0.0',
+        ]);
+
+        // This must be ALLOWED and NOT blocked because of the IP + UA fallback matching!
+        $response2->assertRedirect();
+        $this->assertFalse(session()->hasOldInput('email'));
+
+        $newActiveSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
+        $this->assertNotEquals($firstSessionId, $newActiveSession->session_id); // Session must be successfully recreated!
     }
 }
