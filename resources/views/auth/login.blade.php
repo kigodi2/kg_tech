@@ -4,9 +4,6 @@
 
 @section('content')
 <div class="login-shell">
-    {{-- Radial Backlight Glow Layer --}}
-    <div class="login-backlight" aria-hidden="true"></div>
-
     {{-- Login Card --}}
     <div class="login-card login-card--compact">
         <div class="login-card-header">
@@ -110,6 +107,9 @@
             </form>
         </div>
     </div>
+
+    {{-- Radial Backlight Glow Layer (placed after card for sibling selector styling) --}}
+    <div class="login-backlight" aria-hidden="true"></div>
 </div>
 
 <style>
@@ -133,12 +133,12 @@
         overflow: hidden;
     }
 
-    /* Backlight Radial Glow */
+    /* Backlight Radial Glow - inherits tone from Import Pupils card */
     .login-backlight {
         position: absolute;
         width: 460px;
         height: 460px;
-        background: radial-gradient(circle, rgba(0, 163, 221, 0.14) 0%, rgba(30, 181, 58, 0.04) 52%, transparent 70%);
+        background: radial-gradient(circle, rgba(219, 234, 254, 0.18) 0%, rgba(191, 219, 254, 0.06) 45%, transparent 70%) !important;
         filter: blur(50px);
         pointer-events: none;
         z-index: 0;
@@ -146,24 +146,45 @@
         top: 50%;
         transform: translate(-50%, -50%);
         border-radius: 50%;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    filter 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    /* Redesigned Card */
+    /* Redesigned Card - inherits transition/hover behavior from Import Pupils card */
     .login-card {
         position: relative;
         z-index: 1;
         width: 100%;
         max-width: 380px;
         background: linear-gradient(135deg, #0d1b2a, #111e29) !important;
-        border: 1px solid rgba(0, 163, 221, 0.2) !important;
-        box-shadow: 0 24px 64px rgba(5, 10, 15, 0.5) !important;
+        border: 1px solid rgba(191, 219, 254, 0.2) !important;
+        box-shadow: 0 24px 64px rgba(5, 10, 15, 0.5), 0 0 16px rgba(219, 234, 254, 0.08) !important;
         border-radius: 16px !important;
         color: #f0f4f7 !important;
         font-family: 'Maiandra GD', sans-serif !important;
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        transition: transform 0.24s ease, border-color 0.24s ease;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* Interactive growth, shadow expansion, and border highlight */
+    .login-card:hover,
+    .login-card:focus-within {
+        transform: translateY(-2px) !important;
+        border-color: rgba(191, 219, 254, 0.4) !important;
+        box-shadow: 0 28px 72px rgba(5, 10, 15, 0.6), 0 0 28px rgba(219, 234, 254, 0.24) !important;
+    }
+
+    /* Sibling backlight response on hover/focus-within */
+    .login-card:hover ~ .login-backlight,
+    .login-card:focus-within ~ .login-backlight {
+        opacity: 1.25 !important;
+        transform: translate(-50%, -50%) scale(1.06) !important;
+        filter: blur(42px) !important;
     }
 
     .login-card::before {
