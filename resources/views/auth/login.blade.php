@@ -5,7 +5,7 @@
 @section('content')
 <div class="login-shell">
     {{-- Login Card --}}
-    <div class="login-card login-card--compact">
+    <div class="login-card login-card--compact login-3d-card">
         <div class="login-card-header">
             <div class="login-emblem-wrap">
                 <img src="{{ asset('images/vian.png') }}" alt="System login illustration" class="login-emblem">
@@ -91,7 +91,7 @@
                     <span>Forgot Password? Contact Administrator</span>
                 </div>
 
-                <button type="submit" class="login-button">Login</button>
+                <button type="submit" class="login-button login-primary-button">Login</button>
 
                 @if (config('services.github.client_id') && config('services.github.client_secret'))
                     <a href="{{ route('auth.github.redirect') }}" id="github-login-btn" class="login-button login-button-secondary">
@@ -178,55 +178,93 @@
                     box-shadow 220ms cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    /* Secondary Backlight projected directly behind the card */
-    .login-card::before {
-        content: "" !important;
-        position: absolute !important;
-        inset: -18px !important;
-        z-index: -1 !important;
-        border-radius: inherit !important;
-        background:
-            radial-gradient(circle at 50% 20%, rgba(14, 165, 233, 0.35), transparent 55%),
-            radial-gradient(circle at 50% 100%, rgba(6, 182, 212, 0.18), transparent 60%) !important;
-        filter: blur(18px) !important;
-        opacity: 0.9 !important;
-        pointer-events: none !important;
-        transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+    /* Premium 3D illuminated panel overrides */
+    .login-3d-card {
+        position: relative !important;
+        isolation: isolate !important;
+        width: 100%;
+        max-width: 430px !important;
+        padding: 42px 44px !important;
+        border-radius: 22px !important;
+        border: 2px solid rgba(56, 189, 248, 0.58) !important;
+        background: linear-gradient(145deg, rgba(14, 37, 54, 0.98), rgba(6, 19, 30, 0.98)) !important;
+        box-shadow:
+            inset 0 2px 0 rgba(255, 255, 255, 0.09),
+            inset 0 -14px 28px rgba(0, 0, 0, 0.42),
+            0 10px 22px rgba(0, 0, 0, 0.58),
+            0 28px 70px rgba(0, 0, 0, 0.72),
+            0 0 48px rgba(14, 165, 233, 0.34),
+            0 0 110px rgba(14, 165, 233, 0.18) !important;
+        color: #f0f4f7 !important;
+        font-family: 'Maiandra GD', sans-serif !important;
+        overflow: visible !important;
+        display: flex;
+        flex-direction: column;
+        transform: perspective(1200px) translateZ(0);
+        transition:
+            transform 220ms ease,
+            box-shadow 220ms ease,
+            border-color 220ms ease !important;
     }
 
-    /* Subtle Under-Card Contact Bezel Shadow to represent thickness */
-    .login-card::after {
+    .login-3d-card .login-card-header {
+        padding: 0 0 16px 0 !important;
+    }
+
+    .login-3d-card .login-card-body {
+        padding: 0 !important;
+    }
+
+    /* Premium backlight glow behind the 3D card */
+    .login-3d-card::before {
         content: "" !important;
         position: absolute !important;
-        left: 18px !important;
-        right: 18px !important;
-        bottom: -16px !important;
-        height: 28px !important;
+        inset: -34px !important;
+        z-index: -1 !important;
+        border-radius: 32px !important;
+        background:
+            radial-gradient(circle at 50% 20%, rgba(14, 165, 233, 0.45), transparent 48%),
+            radial-gradient(circle at 50% 95%, rgba(6, 182, 212, 0.30), transparent 58%) !important;
+        filter: blur(24px) !important;
+        opacity: 0.92 !important;
+        pointer-events: none !important;
+        transition: all 220ms ease !important;
+    }
+
+    /* Soft physical 3D contact bottom thickness shadow */
+    .login-3d-card::after {
+        content: "" !important;
+        position: absolute !important;
+        left: 26px !important;
+        right: 26px !important;
+        bottom: -20px !important;
+        height: 34px !important;
         z-index: -2 !important;
         border-radius: 999px !important;
-        background: rgba(0, 0, 0, 0.65) !important;
-        filter: blur(14px) !important;
+        background: rgba(0, 0, 0, 0.72) !important;
+        filter: blur(18px) !important;
+        opacity: 0.85 !important;
         pointer-events: none !important;
-        transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transition: all 220ms ease !important;
     }
 
-    /* 3D Growth, Elevation, and Glow Expansion on hover/focus */
-    .login-card:hover,
-    .login-card:focus-within {
+    /* Premium hover and focus-within growth / glow intensification */
+    .login-3d-card:hover,
+    .login-3d-card:focus-within {
         transform: perspective(1200px) translateY(-4px) scale(1.015) !important;
-        border-color: rgba(56, 189, 248, 0.75) !important;
+        border-color: rgba(56, 189, 248, 0.82) !important;
         box-shadow:
-            0 2px 0 rgba(255, 255, 255, 0.10) inset,
-            0 -12px 26px rgba(0, 0, 0, 0.42) inset,
-            0 14px 24px rgba(0, 0, 0, 0.62),
-            0 32px 70px rgba(0, 0, 0, 0.72),
-            0 0 42px rgba(14, 165, 233, 0.32),
-            0 0 90px rgba(14, 165, 233, 0.18) !important;
+            inset 0 2px 0 rgba(255, 255, 255, 0.12),
+            inset 0 -16px 32px rgba(0, 0, 0, 0.48),
+            0 14px 26px rgba(0, 0, 0, 0.64),
+            0 36px 85px rgba(0, 0, 0, 0.78),
+            0 0 62px rgba(14, 165, 233, 0.45),
+            0 0 135px rgba(14, 165, 233, 0.25) !important;
     }
 
     /* Sibling backlight response on hover/focus-within */
-    .login-card:hover ~ .login-backlight,
-    .login-card:focus-within ~ .login-backlight {
+    .login-3d-card:hover ~ .login-backlight,
+    .login-3d-card:focus-within ~ .login-backlight {
         opacity: 1.35 !important;
         transform: translate(-50%, -50%) scale(1.08) !important;
         filter: blur(38px) !important;
@@ -356,6 +394,47 @@
         box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
     }
 
+    /* Recessed premium bright light inputs with slate-900 contrast text */
+    .login-3d-card .form-input {
+        border-radius: 10px !important;
+        background: #eaf4ff !important;
+        box-shadow:
+            inset 0 2px 4px rgba(0, 0, 0, 0.16),
+            0 1px 0 rgba(255, 255, 255, 0.18) !important;
+        border: 1px solid rgba(186, 230, 253, 0.7) !important;
+        color: #0f172a !important; /* Deep slate for legibility */
+    }
+
+    .login-3d-card .form-input:focus {
+        outline: none !important;
+        border-color: rgba(56, 189, 248, 0.95) !important;
+        box-shadow:
+            0 0 0 3px rgba(14, 165, 233, 0.22),
+            inset 0 2px 4px rgba(0, 0, 0, 0.16) !important;
+    }
+
+    .login-3d-card .form-input.is-invalid {
+        border-color: rgba(239, 68, 68, 0.75) !important;
+        box-shadow:
+            0 0 0 3px rgba(239, 68, 68, 0.22),
+            inset 0 2px 4px rgba(0, 0, 0, 0.16) !important;
+    }
+
+    /* Placeholder and icon visibility overrides */
+    .login-3d-card .form-input::placeholder {
+        color: #64748b !important;
+        opacity: 0.8 !important;
+    }
+
+    .login-3d-card .field-icon img {
+        filter: brightness(0) invert(0.15) !important;
+        opacity: 0.72 !important;
+    }
+
+    .login-3d-card .password-toggle svg {
+        color: #64748b !important;
+    }
+
     .password-toggle {
         position: absolute;
         right: 10px;
@@ -440,6 +519,37 @@
             0 1px 0 rgba(255, 255, 255, 0.05) inset,
             0 -1px 0 rgba(0, 0, 0, 0.15) inset,
             0 2px 6px rgba(0, 163, 221, 0.15) !important;
+    }
+
+    /* Tactile 3D Action button */
+    .login-primary-button {
+        background: linear-gradient(180deg, #16b7e8 0%, #0787bd 100%) !important;
+        border-radius: 10px !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.22),
+            0 7px 0 rgba(3, 105, 161, 0.45),
+            0 16px 30px rgba(14, 165, 233, 0.24) !important;
+        transition:
+            transform 180ms ease,
+            box-shadow 180ms ease,
+            filter 180ms ease !important;
+    }
+
+    .login-primary-button:hover {
+        transform: translateY(-2px) !important;
+        filter: brightness(1.06) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.28),
+            0 9px 0 rgba(3, 105, 161, 0.48),
+            0 22px 38px rgba(14, 165, 233, 0.32) !important;
+    }
+
+    .login-primary-button:active {
+        transform: translateY(3px) !important;
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.18),
+            0 3px 0 rgba(3, 105, 161, 0.45),
+            0 10px 22px rgba(14, 165, 233, 0.20) !important;
     }
 
     .login-button-secondary {
@@ -527,6 +637,44 @@
 
         .login-card-body {
             padding: 12px 20px 20px;
+        }
+    }
+
+    /* Mobile safety query */
+    @media (max-width: 640px) {
+        .login-3d-card {
+            max-width: calc(100vw - 32px) !important;
+            padding: 34px 24px !important;
+            border-radius: 20px !important;
+        }
+
+        .login-3d-card .login-card-header {
+            padding: 0 0 12px 0 !important;
+        }
+
+        .login-3d-card::before {
+            inset: -20px !important;
+            filter: blur(18px) !important;
+        }
+
+        .login-3d-card:hover,
+        .login-3d-card:focus-within {
+            transform: none !important;
+        }
+    }
+
+    /* Reduced motion safety */
+    @media (prefers-reduced-motion: reduce) {
+        .login-3d-card,
+        .login-primary-button {
+            transition: none !important;
+        }
+
+        .login-3d-card:hover,
+        .login-3d-card:focus-within,
+        .login-primary-button:hover,
+        .login-primary-button:active {
+            transform: none !important;
         }
     }
 </style>

@@ -900,7 +900,10 @@
 
         /* Body & Font Override */
         body {
-            background: #0b1014 !important;
+            background:
+                radial-gradient(circle at 50% 45%, rgba(14, 165, 233, 0.13), transparent 30%),
+                radial-gradient(circle at 50% 60%, rgba(6, 182, 212, 0.08), transparent 36%),
+                linear-gradient(180deg, #071014 0%, #050b0f 100%) !important;
             font-family: 'Maiandra GD', sans-serif !important;
             color: #f0f4f7 !important;
         }
@@ -1047,7 +1050,7 @@
         }
 
         .page-footer-stripes {
-            height: 4px !important;
+            height: 3px !important;
         }
         
         .page-footer-stripes span {
