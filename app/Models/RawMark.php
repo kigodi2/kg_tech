@@ -13,8 +13,13 @@ class RawMark extends Model
 
     protected $fillable = [
         'mark_import_batch_id',
+        'exam_year_id',
+        'school_id',
         'candidate_id',
         'subject_id',
+        'assignment_id',
+        'entered_by',
+        'updated_by',
         'row_number',
         'candidate_index_number',
         'full_name',
@@ -54,6 +59,11 @@ class RawMark extends Model
         return $this->belongsTo(MarkImportBatch::class, 'mark_import_batch_id');
     }
 
+    public function school()
+    {
+        return $this->belongsTo(School::class);
+    }
+
     public function candidate()
     {
         return $this->belongsTo(Candidate::class);
@@ -72,6 +82,16 @@ class RawMark extends Model
     public function changes()
     {
         return $this->hasMany(MarkEntryChange::class, 'raw_mark_id');
+    }
+
+    public function assignment()
+    {
+        return $this->belongsTo(MarkEntryAssignment::class, 'assignment_id');
+    }
+
+    public function verification()
+    {
+        return $this->hasOne(MarkVerification::class, 'raw_mark_id');
     }
 
     // ==================== SCOPES ====================
@@ -205,5 +225,17 @@ class RawMark extends Model
         }
 
         return $this;
+    }
+
+    /**
+     * Get the total score for this record.
+     */
+    public function getTotalScoreAttribute(): float
+    {
+        return (float) ($this->paper_1_marks ?? 0) + 
+               (float) ($this->paper_2_marks ?? 0) + 
+               (float) ($this->paper_3_marks ?? 0) + 
+               (float) ($this->practical_marks ?? 0) + 
+               (float) ($this->project_marks ?? 0);
     }
 }

@@ -76,7 +76,7 @@ class GradingController extends Controller
         $profiles = GradingProfile::where('exam_type_id', $examType->id)
             ->with('examYear')
             ->latest()
-            ->paginate(10);
+            ->paginate(20);
 
         $examYears = ExamYear::where('is_active', true)->get();
 

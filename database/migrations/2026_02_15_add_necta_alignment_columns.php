@@ -49,7 +49,7 @@ return new class extends Migration
         // 4. Add source tracking to candidate_subject_selections
         // Tracks how the subject allocation occurred (manual selection, import, or template auto-attach)
         Schema::table('candidate_subject_selections', function (Blueprint $table) {
-            $table->enum('source', ['manual', 'import', 'template'])
+            $table->string('source', 50)
                 ->default('template')
                 ->after('is_principal')
                 ->comment('How this subject was allocated: manual=user selected, import=CSV import, template=auto from combination');

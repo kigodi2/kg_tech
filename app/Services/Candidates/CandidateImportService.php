@@ -19,9 +19,13 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use Box\Spout\Reader\Common\Creator\ReaderEntityFactory;
+use Throwable;
 
 class CandidateImportService
 {
+    private array $schoolReferenceCache = [];
+
     /**
      * Validate CSV file and return preview (Phase 1: Dry-run)
      * Supports skip/replace mode for handling existing candidates
@@ -44,14 +48,12 @@ class CandidateImportService
         ?string $examType = null,
         string $mode = 'skip'
     ): array {
-        $handle = fopen($file->getRealPath(), 'r');
-        $header = fgetcsv($handle);
+        [$header, $rows] = $this->readImportRows($file);
 
         if (!$header) {
-            fclose($handle);
             return [
                 'success' => false,
-                'message' => 'CSV file is empty',
+                'message' => 'Import file is empty',
                 'total_rows' => 0,
                 'create_count' => 0,
                 'update_count' => 0,
@@ -65,8 +67,45 @@ class CandidateImportService
         }
 
         // Normalize headers
-        $header = array_map('strtolower', $header);
-        $header = array_map('trim', $header);
+        $header = array_map(fn ($value) => trim(strtolower((string) $value), " \t\n\r\0\x0B\xEF\xBB\xBF"), $header);
+
+        $missingHeaders = $this->missingRequiredHeaders($header, strtoupper((string) ($examType ?? '')));
+        if (!empty($missingHeaders)) {
+            return [
+                'success' => false,
+                'message' => 'Missing required column(s): ' . implode(', ', $missingHeaders),
+                'total_rows' => 0,
+                'create_count' => 0,
+                'update_count' => 0,
+                'skip_count' => 0,
+                'error_count' => count($missingHeaders),
+                'warning_count' => 0,
+                'errors' => array_map(fn ($header) => [
+                    'row_number' => 1,
+                    'candidate_id' => '',
+                    'full_name' => '',
+                    'primary_error' => "Missing required column: {$header}",
+                    'error_messages' => ["Missing required column: {$header}"],
+                ], $missingHeaders),
+                'warnings' => [],
+                'rows' => [],
+                'summary' => [
+                    'total_rows' => 0,
+                    'valid_rows' => 0,
+                    'duplicates_in_file' => 0,
+                    'already_existing' => 0,
+                    'invalid_rows' => count($missingHeaders),
+                    'missing_candidate_number' => in_array('candidate_number', $missingHeaders, true) ? 1 : 0,
+                    'missing_prem_no' => in_array('PReM_No', $missingHeaders, true) || in_array('prem_no', $missingHeaders, true) ? 1 : 0,
+                    'missing_pupil_name' => in_array('pupil_name', $missingHeaders, true) ? 1 : 0,
+                    'invalid_sex' => in_array('sex', $missingHeaders, true) ? 1 : 0,
+                    'missing_school_centre' => in_array('school_code', $missingHeaders, true) ? 1 : 0,
+                    'unknown_school_code' => 0,
+                    'invalid_council' => 0,
+                ],
+                'can_import' => false,
+            ];
+        }
 
         $rowNumber = 0;
         $createCount = 0;
@@ -77,12 +116,15 @@ class CandidateImportService
         $errorSummary = [];
         $rowDetails = [];
         $seenCandidates = []; // Track duplicates within file
+        $candidateIdsInFile = $this->candidateIdsFromRows($rows, $header, $examType);
+        $existingCandidateIds = empty($candidateIdsInFile)
+            ? collect()
+            : Candidate::whereIn('candidate_id', $candidateIdsInFile)->pluck('id', 'candidate_id');
         $seenPsleSignals = [
             'prem_school' => [],
             'name_gender_school' => [],
         ];
-
-        while (($row = fgetcsv($handle)) !== false) {
+        foreach ($rows as $row) {
             $rowNumber++;
 
             // Skip empty rows
@@ -99,6 +141,13 @@ class CandidateImportService
 
             // Validate each field
             $this->validateCandidateId($record['candidate_id'] ?? null, $rowErrors, $seenCandidates, $rowNumber);
+            if (!empty($record['candidate_id'])) {
+                $seenCandidates[$record['candidate_id']] = true;
+            }
+            if ($this->isPsleImport($record, $examType)) {
+                $this->validatePsleCandidateNumber($record, $rowErrors);
+                $this->validatePremNo($record['prem_no'] ?? null, $rowErrors);
+            }
             $this->validateFullName($record['full_name'] ?? null, $rowErrors);
             $this->validateGender($record['gender'] ?? null, $rowErrors);
 
@@ -110,17 +159,17 @@ class CandidateImportService
             $finalExamType = $record['exam_type'] ?? $examType ?? 'ACSEE';
             if (strtoupper($finalExamType) === 'ACSEE') {
                 if ($candidateType === 'SCHOOL') {
-                    $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                    $this->validateSchoolReference($record, $rowErrors);
                     $this->validateCombination($record['combination'] ?? null, $rowErrors, 'SCHOOL');
                 } else {
                     // PRIVATE candidate: school_code is still required (for centre affiliation)
-                    $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                    $this->validateSchoolReference($record, $rowErrors);
                     // PRIVATE candidates must have subjects column
                     $this->validateSubjects($record['subjects'] ?? null, $rowErrors);
                 }
             } else {
                 // Non-ACSEE: validate school code
-                $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                $this->validateSchoolReference($record, $rowErrors);
                 if ($record['combination'] ?? null) {
                     $this->validateCombination($record['combination'] ?? null, $rowErrors, 'SCHOOL');
                 }
@@ -139,11 +188,14 @@ class CandidateImportService
             // Check for duplicates in DB - KEY CHANGE: handle via skip/replace mode
             $existingCandidate = null;
             if ($record['candidate_id']) {
-                $existingCandidate = Candidate::where('candidate_id', $record['candidate_id'])->first();
-                if ($existingCandidate) {
+                $existingCandidate = $existingCandidateIds[$record['candidate_id']] ?? null;
+                if ($existingCandidate !== null) {
                     if ($mode === 'replace') {
                         $rowStatus = 'REPLACE';
                         $updateCount++;
+                    } elseif ($mode === 'stop') {
+                        $rowStatus = 'ERROR';
+                        $rowErrors[] = 'candidate_id already exists; stop-on-duplicates mode prevents import';
                     } else {
                         // mode === 'skip'
                         $rowStatus = 'SKIP';
@@ -172,12 +224,16 @@ class CandidateImportService
                     ];
                 }
 
-                if ($rowStatus !== 'SKIP' && $rowStatus !== 'REPLACE') {
+                if (!in_array($rowStatus, ['SKIP', 'REPLACE', 'REGISTER'], true)) {
                     $createCount++;
                 }
-                $seenCandidates[$record['candidate_id']] = true;
             } else {
                 // Real validation error
+                if ($rowStatus === 'REPLACE') {
+                    $updateCount = max(0, $updateCount - 1);
+                } elseif ($rowStatus === 'SKIP') {
+                    $skipCount = max(0, $skipCount - 1);
+                }
                 $rowStatus = 'ERROR';
                 $errorRows[] = [
                     'row_number' => $rowNumber,
@@ -200,19 +256,29 @@ class CandidateImportService
             }
 
             // Store detailed row info for preview table
+            $schoolContext = $this->schoolPreviewContext($record);
             $rowDetails[] = [
                 'row_number' => $rowNumber,
                 'candidate_id' => $record['candidate_id'] ?? '',
+                'candidate_number' => $record['candidate_id'] ?? '',
                 'prem_no' => $record['prem_no'] ?? '',
                 'full_name' => $record['full_name'] ?? '',
+                'pupil_name' => $record['full_name'] ?? '',
+                'sex' => strtoupper(substr((string) ($record['gender'] ?? ''), 0, 1)),
+                'school_code' => $record['school_code'] ?? '',
+                'school' => $schoolContext['school_name'],
+                'school_name' => $schoolContext['school_name'],
+                'council' => $schoolContext['council_name'],
+                'region' => $schoolContext['region_name'],
                 'csv_combination' => $record['combination'] ?? '',
                 'resolved_combination' => empty($rowErrors) && !empty($record['combination']) ? strtoupper(trim($record['combination'])) : null,
                 'status' => $rowStatus,
+                'message' => $this->previewMessage($rowStatus, $rowErrors, $rowWarnings),
                 'messages' => $rowStatus === 'ERROR' ? $rowErrors : $rowWarnings
             ];
         }
 
-        fclose($handle);
+        $summary = $this->buildValidationSummary($rowDetails, $errorRows, $warningRows, $createCount, $updateCount, $skipCount);
 
         return [
             'success' => count($errorRows) === 0,
@@ -228,8 +294,8 @@ class CandidateImportService
             'total_errors' => count($errorRows),
             'total_warnings' => count($warningRows),
             'rows' => $rowDetails,
-            'summary' => $errorSummary,
-            'can_import' => ($createCount + $updateCount) > 0 && count($errorRows) === 0
+            'summary' => $summary + $errorSummary,
+            'can_import' => ($createCount + $updateCount + $skipCount) > 0 && !($mode === 'stop' && count($errorRows) > 0)
         ];
     }
 
@@ -251,17 +317,28 @@ class CandidateImportService
         string $mode = 'skip'
     ): array {
         try {
-            DB::beginTransaction();
+            $this->prepareSqliteForBulkWrite();
+            $validation = $this->validateCSV($file, $examYear, $examType, $mode);
+            if (!($validation['can_import'] ?? false)) {
+                return [
+                    'success' => false,
+                    'message' => $validation['message'] ?? 'No valid rows are available for import.',
+                    'imported_count' => 0,
+                    'skipped_count' => $validation['skip_count'] ?? 0,
+                    'updated_count' => 0,
+                    'errors' => $validation['errors'] ?? [],
+                    'summary' => $validation['summary'] ?? [],
+                ];
+            }
 
-            $handle = fopen($file->getRealPath(), 'r');
-            $header = fgetcsv($handle);
+            DB::beginTransaction();
+            [$header, $rows] = $this->readImportRows($file);
 
             if (!$header) {
-                fclose($handle);
                 DB::rollBack();
                 return [
                     'success' => false,
-                    'message' => 'CSV file is empty',
+                    'message' => 'Import file is empty',
                     'imported_count' => 0,
                     'skipped_count' => 0,
                     'updated_count' => 0,
@@ -269,16 +346,25 @@ class CandidateImportService
                 ];
             }
 
-            $header = array_map('strtolower', $header);
-            $header = array_map('trim', $header);
+            $header = array_map(fn ($value) => trim(strtolower((string) $value), " \t\n\r\0\x0B\xEF\xBB\xBF"), $header);
 
             // Preload lookup tables to avoid N+1 queries
-            $schools = School::all()->keyBy('code');
+            $schoolCodesInFile = $this->schoolCodesFromRows($rows, $header, $examType);
+            $schools = empty($schoolCodesInFile)
+                ? collect()
+                : School::whereIn('code', $schoolCodesInFile)
+                    ->get()
+                    ->mapWithKeys(function (School $school) {
+                        return [strtoupper(trim((string) $school->code)) => $school];
+                    });
             $acseeType = ExamType::where('code', 'ACSEE')->first();
             $resolvedExamYear = $this->resolveExamYear($examYear);
 
-            // Preload existing candidate IDs for batch checking
-            $existingCandidateIds = Candidate::pluck('id', 'candidate_id');
+            // Preload only uploaded candidate IDs for batch checking.
+            $candidateIdsInFile = $this->candidateIdsFromRows($rows, $header, $examType);
+            $existingCandidateIds = empty($candidateIdsInFile)
+                ? collect()
+                : Candidate::whereIn('candidate_id', $candidateIdsInFile)->pluck('id', 'candidate_id');
 
             $rowNumber = 0;
             $importedCount = 0;
@@ -296,7 +382,7 @@ class CandidateImportService
             $chunk = []; // Batch records
             $chunkSize = 100; // Process in batches of 100
 
-            while (($row = fgetcsv($handle)) !== false) {
+            foreach ($rows as $row) {
                 $rowNumber++;
 
                 if (empty(array_filter($row))) {
@@ -306,14 +392,19 @@ class CandidateImportService
                 try {
                     $record = $this->mapRowToRecord($row, $header);
                     $record = $this->normalizeRecord($record, $examType);
+                    $record['row_number'] = $rowNumber;
 
                     // Re-validate
                     $rowErrors = [];
                     $rowWarnings = [];
                     $this->validateCandidateId($record['candidate_id'] ?? null, $rowErrors, [], $rowNumber);
+                    if ($this->isPsleImport($record, $examType)) {
+                        $this->validatePsleCandidateNumber($record, $rowErrors);
+                        $this->validatePremNo($record['prem_no'] ?? null, $rowErrors);
+                    }
                     $this->validateFullName($record['full_name'] ?? null, $rowErrors);
                     $this->validateGender($record['gender'] ?? null, $rowErrors);
-                    $this->validateSchoolCode($record['school_code'] ?? null, $rowErrors);
+                    $this->validateSchoolReference($record, $rowErrors);
 
                     // Determine candidate type for validation
                     $candidateType = strtoupper($record['candidate_type'] ?? 'SCHOOL');
@@ -357,13 +448,58 @@ class CandidateImportService
 
                     if ($candidateExists) {
                         if ($mode === 'skip') {
+                            $existingCandidate = Candidate::where('candidate_id', $record['candidate_id'])->first();
+                            $schoolCode = strtoupper(trim((string) ($record['school_code'] ?? '')));
+                            $school = $schools[$schoolCode] ?? null;
+                            
+                            if ($existingCandidate && $school) {
+                                // Safeguard: check school mismatch
+                                if ($existingCandidate->school_id !== $school->id) {
+                                    $hasMarks = $existingCandidate->marks()->exists() || $existingCandidate->rawMarks()->exists();
+                                    $candidatePrefix = strtoupper(trim(strtok($existingCandidate->candidate_id, '-')));
+                                    
+                                    if ($candidatePrefix === $school->code && !$hasMarks) {
+                                        $existingCandidate->update(['school_id' => $school->id]);
+                                        Log::info("Safe candidate school link repaired during skip-mode import", [
+                                            'candidate_id' => $existingCandidate->candidate_id,
+                                            'old_school_id' => $existingCandidate->getOriginal('school_id'),
+                                            'new_school_id' => $school->id
+                                        ]);
+                                    } else {
+                                        $reason = $hasMarks 
+                                            ? "Candidate has marks under old school" 
+                                            : "Candidate prefix {$candidatePrefix} does not match school code {$school->code}";
+                                        $errors[] = [
+                                            'row_number' => $rowNumber,
+                                            'candidate_id' => $record['candidate_id'],
+                                            'prem_no' => $record['prem_no'] ?? '',
+                                            'error_messages' => ["Candidate already exists under a different school. Repair blocked: {$reason}"]
+                                        ];
+                                        continue;
+                                    }
+                                }
+                                
+                                // Ensure exam registration exists
+                                if (in_array(strtoupper($finalExamType), ['PSLE', 'CSEE'], true) && $resolvedExamYear) {
+                                    $standardType = ExamType::where('code', strtoupper($finalExamType))->first();
+                                    if ($standardType) {
+                                        $this->createExamRegistrationIfNotExists($existingCandidate, $standardType, $resolvedExamYear);
+                                        if (strtoupper($finalExamType) === 'CSEE') {
+                                            app(CseeCandidateSubjectService::class)->ensureCoreSubjects($existingCandidate, $resolvedExamYear);
+                                        }
+                                    }
+                                }
+                            }
                             $skippedCount++;
                             continue;
                         } elseif ($mode === 'replace') {
                             $existingCandidate = Candidate::where('candidate_id', $record['candidate_id'])->first();
                             $this->updateCandidate($existingCandidate, $record, $examYear, $examType);
                             $updatedCount++;
+                            $importedCount++;
                             continue;
+                        } elseif ($mode === 'stop') {
+                            throw new \Exception('Import stopped because existing candidate numbers were detected.');
                         }
                     }
 
@@ -381,6 +517,7 @@ class CandidateImportService
                         $result = $this->processBatch($chunk);
                         $importedCount += $result['imported'];
                         $allocationsCreated += $result['allocations'];
+                        $errors = array_merge($errors, $result['errors'] ?? []);
                         $chunk = [];
                     }
                 } catch (\Exception $e) {
@@ -399,9 +536,8 @@ class CandidateImportService
                 $result = $this->processBatch($chunk);
                 $importedCount += $result['imported'];
                 $allocationsCreated += $result['allocations'];
+                $errors = array_merge($errors, $result['errors'] ?? []);
             }
-
-            fclose($handle);
 
             DB::commit();
 
@@ -410,8 +546,13 @@ class CandidateImportService
                 . ($skippedCount > 0 ? ", skipped $skippedCount" : '')
                 . ($allocationsCreated > 0 ? ", allocated subjects for $allocationsCreated" : '');
 
+            if (!empty($errors)) {
+                $firstError = $errors[0]['error_messages'][0] ?? 'Unknown row error';
+                $message .= ". First error: {$firstError}";
+            }
+
             return [
-                'success' => count($errors) === 0,
+                'success' => ($importedCount + $updatedCount) > 0 || count($errors) === 0,
                 'message' => $message,
                 'imported_count' => $importedCount,
                 'skipped_count' => $skippedCount,
@@ -444,6 +585,59 @@ class CandidateImportService
     /**
      * Map CSV row to candidate record using headers
      */
+    private function readImportRows(UploadedFile $file): array
+    {
+        $extension = strtolower((string) $file->getClientOriginalExtension());
+        $headers = [];
+        $rows = [];
+
+        if (in_array($extension, ['csv', 'txt'], true)) {
+            $handle = fopen($file->getRealPath(), 'r');
+            if (!$handle) {
+                throw new \RuntimeException('Unable to read uploaded file.');
+            }
+
+            $headers = fgetcsv($handle) ?: [];
+            while (($row = fgetcsv($handle)) !== false) {
+                $rows[] = $row;
+            }
+            fclose($handle);
+
+            return [$headers, $rows];
+        }
+
+        if ($extension === 'xls') {
+            throw new \RuntimeException('Legacy .xls files cannot be read by this server. Please save the file as .xlsx or .csv and try again.');
+        }
+
+        if ($extension !== 'xlsx') {
+            throw new \RuntimeException('Unsupported file format. Upload .xlsx, .xls, or .csv.');
+        }
+
+        if (!class_exists(ReaderEntityFactory::class)) {
+            throw new \RuntimeException('Excel reader is not installed. Upload a CSV file or install the spreadsheet reader dependency.');
+        }
+
+        $reader = ReaderEntityFactory::createXLSXReader();
+        $reader->open($file->getRealPath());
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            foreach ($sheet->getRowIterator() as $index => $row) {
+                $values = array_map(fn ($cell) => trim((string) $cell->getValue()), $row->getCells());
+                if ($index === 1) {
+                    $headers = $values;
+                    continue;
+                }
+                $rows[] = $values;
+            }
+            break;
+        }
+
+        $reader->close();
+
+        return [$headers, $rows];
+    }
+
     private function mapRowToRecord(array $row, array $headers): array
     {
         $record = [];
@@ -475,7 +669,55 @@ class CandidateImportService
             $record['prem_no'] = $record['prem_number'];
         }
 
+        if (empty($record['prem_no']) && !empty($record['national_id_or_upi'])) {
+            $record['prem_no'] = $record['national_id_or_upi'];
+        }
+
+        if (empty($record['school_code']) && !empty($record['centre_number'])) {
+            $record['school_code'] = $record['centre_number'];
+        }
+
+        if (empty($record['school_name']) && !empty($record['school/centre'])) {
+            $record['school_name'] = $record['school/centre'];
+        }
+
         return $record;
+    }
+
+    private function candidateIdsFromRows(array $rows, array $headers, ?string $examType = null): array
+    {
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if (empty(array_filter($row))) {
+                continue;
+            }
+
+            $record = $this->normalizeRecord($this->mapRowToRecord($row, $headers), $examType);
+            if (!empty($record['candidate_id'])) {
+                $ids[] = $record['candidate_id'];
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    private function schoolCodesFromRows(array $rows, array $headers, ?string $examType = null): array
+    {
+        $codes = [];
+
+        foreach ($rows as $row) {
+            if (empty(array_filter($row))) {
+                continue;
+            }
+
+            $record = $this->normalizeRecord($this->mapRowToRecord($row, $headers), $examType);
+            if (!empty($record['school_code'])) {
+                $codes[] = strtoupper((string) $record['school_code']);
+            }
+        }
+
+        return array_values(array_unique($codes));
     }
 
     private function normalizeRecord(array $record, ?string $examType = null): array
@@ -493,6 +735,29 @@ class CandidateImportService
 
         if (!empty($record['school_code'])) {
             $record['school_code'] = strtoupper(trim((string) $record['school_code']));
+        }
+
+        if (empty($record['school_code']) && !empty($record['school_name'])) {
+            $school = $this->findSchoolByReference((string) $record['school_name']);
+            if ($school) {
+                $record['school_code'] = strtoupper((string) $school->code);
+            }
+        }
+
+        if (!empty($record['gender'])) {
+            $record['gender'] = strtoupper(substr(trim((string) $record['gender']), 0, 1));
+        }
+
+        if (!empty($record['candidate_id'])) {
+            $record['candidate_id'] = strtoupper(trim((string) $record['candidate_id']));
+        }
+
+        if (!empty($record['full_name'])) {
+            $record['full_name'] = strtoupper(trim(preg_replace('/\s+/', ' ', (string) $record['full_name'])));
+        }
+
+        if (!empty($record['prem_no'])) {
+            $record['prem_no'] = trim((string) $record['prem_no']);
         }
 
         if ($finalExamType !== '' && empty($record['exam_type'])) {
@@ -568,6 +833,157 @@ class CandidateImportService
         }
     }
 
+    private function validatePsleCandidateNumber(array $record, array &$errors): void
+    {
+        $candidateNumber = strtoupper(trim((string) ($record['candidate_id'] ?? '')));
+        if ($candidateNumber === '') {
+            return;
+        }
+
+        if (!preg_match('/^PS\d{7}-\d{4}$/', $candidateNumber)) {
+            $errors[] = 'Invalid Candidate Number format. Expected PS0404006-0001';
+            return;
+        }
+
+        $schoolCode = strtoupper(trim((string) ($record['school_code'] ?? '')));
+        if ($schoolCode !== '') {
+            $candidatePrefix = strtok($candidateNumber, '-');
+            if ($candidatePrefix !== $schoolCode) {
+                $errors[] = "candidate_number prefix {$candidatePrefix} does not match school_code {$schoolCode}";
+            }
+        }
+    }
+
+    private function validatePremNo(?string $premNo, array &$errors): void
+    {
+        if (trim((string) $premNo) === '') {
+            $errors[] = 'PReM_No is required';
+        }
+    }
+
+    private function validateSchoolReference(array $record, array &$errors): void
+    {
+        $reference = $record['school_code'] ?? null;
+        if (empty($reference)) {
+            $errors[] = 'school_code is required';
+            return;
+        }
+
+        if (!$this->findSchoolByReference((string) $reference)) {
+            $errors[] = "Unknown School Code: {$reference}";
+        }
+    }
+
+    private function findSchoolByReference(string $reference): ?School
+    {
+        $value = strtoupper(trim($reference));
+        if ($value === '') {
+            return null;
+        }
+
+        if (array_key_exists($value, $this->schoolReferenceCache)) {
+            return $this->schoolReferenceCache[$value];
+        }
+
+        $school = School::with(['council.region', 'district.region', 'region'])
+            ->whereRaw('UPPER(code) = ?', [$value])
+            ->orWhereRaw('UPPER(registration_number) = ?', [$value])
+            ->orWhereRaw('UPPER(name) = ?', [$value])
+            ->first();
+
+        $this->schoolReferenceCache[$value] = $school;
+
+        return $school;
+    }
+
+    private function schoolPreviewContext(array $record): array
+    {
+        $school = $this->findSchoolByReference((string) ($record['school_code'] ?? ''));
+
+        return [
+            'school_name' => $school?->name ?? '',
+            'council_name' => $school?->council?->name ?? $school?->district?->name ?? '',
+            'region_name' => $school?->region?->name ?? $school?->council?->region?->name ?? $school?->district?->region?->name ?? '',
+        ];
+    }
+
+    private function missingRequiredHeaders(array $header, string $examType): array
+    {
+        if ($examType !== 'PSLE') {
+            return [];
+        }
+
+        $hasAny = fn (array $names): bool => count(array_intersect($names, $header)) > 0;
+        $missing = [];
+
+        if (!$hasAny(['candidate_number', 'candidate_id'])) {
+            $missing[] = 'candidate_number';
+        }
+        if (!$hasAny(['prem_no', 'prem no', 'premno', 'prem_number'])) {
+            $missing[] = 'PReM_No';
+        }
+        if (!$hasAny(['pupil_name', 'full_name'])) {
+            $missing[] = 'pupil_name';
+        }
+        if (!$hasAny(['sex', 'gender'])) {
+            $missing[] = 'sex';
+        }
+        if (!$hasAny(['school_code'])) {
+            $missing[] = 'school_code';
+        }
+
+        return $missing;
+    }
+
+    private function previewMessage(string $status, array $errors, array $warnings): string
+    {
+        if (!empty($errors)) {
+            return reset($errors) ?: 'Invalid row';
+        }
+
+        if ($status === 'SKIP') {
+            return 'Already exists; will be skipped';
+        }
+
+        if ($status === 'REPLACE') {
+            return 'Already exists; will be updated';
+        }
+
+        if (!empty($warnings)) {
+            return reset($warnings) ?: 'Warning detected';
+        }
+
+        return 'Ready for import';
+    }
+
+    private function buildValidationSummary(array $rows, array $errors, array $warnings, int $createCount, int $updateCount, int $skipCount): array
+    {
+        $countErrorsLike = function (string $needle) use ($errors): int {
+            return collect($errors)->filter(function ($row) use ($needle) {
+                return str_contains(strtolower(implode(' ', $row['error_messages'] ?? [])), $needle);
+            })->count();
+        };
+
+        return [
+            'total_rows' => count($rows),
+            'valid_rows' => $createCount + $updateCount,
+            'duplicates_in_file' => $countErrorsLike('duplicated within this file'),
+            'already_existing' => $skipCount + $updateCount,
+            'invalid_rows' => count($errors),
+            'warnings' => count($warnings),
+            'missing_candidate_number' => $countErrorsLike('candidate_id is required'),
+            'missing_prem_no' => $countErrorsLike('prem_no is required'),
+            'missing_pupil_name' => $countErrorsLike('full_name is required'),
+            'invalid_sex' => $countErrorsLike('gender must be') + $countErrorsLike('gender is required'),
+            'missing_school_centre' => $countErrorsLike('school_code is required'),
+            'unknown_school_code' => $countErrorsLike('unknown school code'),
+            'invalid_council' => 0,
+            'new_rows' => $createCount,
+            'update_rows' => $updateCount,
+            'skip_rows' => $skipCount,
+        ];
+    }
+
     private function isPsleImport(array $record, ?string $examType): bool
     {
         $finalExamType = strtoupper(trim((string) ($record['exam_type'] ?? $examType ?? '')));
@@ -607,13 +1023,7 @@ class CandidateImportService
                 $seenSignals['prem_school'][$premKey] = true;
             }
 
-            $existingPrem = Candidate::where('school_id', $school->id)
-                ->where('prem_no', $premNo)
-                ->exists();
-
-            if ($existingPrem) {
-                $warnings[] = "PReM_No already exists for school {$schoolCode}";
-            }
+            // Database-level PReM uniqueness is not enforced in the current schema; avoid row-by-row lookups here.
         }
 
         if ($fullName !== '' && $gender !== '') {
@@ -624,14 +1034,7 @@ class CandidateImportService
                 $seenSignals['name_gender_school'][$identityKey] = true;
             }
 
-            $existingIdentity = Candidate::where('school_id', $school->id)
-                ->whereRaw('UPPER(full_name) = ?', [strtoupper($fullName)])
-                ->where('gender', $gender)
-                ->exists();
-
-            if ($existingIdentity) {
-                $warnings[] = "possible existing pupil match in system by name, sex, and school";
-            }
+            // Existing identity checks are intentionally omitted from the preview to keep large CSV validation responsive.
         }
     }
 
@@ -778,6 +1181,14 @@ class CandidateImportService
             return;
         }
 
+        // Safeguard: Check if school is changing and candidate already has marks
+        if ($candidate->school_id !== $school->id) {
+            $hasMarks = $candidate->marks()->exists() || $candidate->rawMarks()->exists();
+            if ($hasMarks) {
+                throw new \Exception("Cannot update candidate school link for {$candidate->candidate_id} because the candidate has existing marks under their current school.");
+            }
+        }
+
         // Safe update: name, gender, school. For replace mode we also update combination
         $updateData = [
             'school_id' => $school->id,
@@ -805,7 +1216,19 @@ class CandidateImportService
             }
         }
 
+        $candidateType = strtoupper($record['candidate_type'] ?? $candidate->candidate_type ?? 'SCHOOL');
         $finalExamType = strtoupper($record['exam_type'] ?? $examType ?? 'ACSEE');
+        if ($finalExamType === 'ACSEE') {
+            if ($candidateType === 'PRIVATE' && !empty($record['subjects'])) {
+                $resolvedExamYear = $this->resolveExamYear($examYear);
+                $acseeType = ExamType::where('code', 'ACSEE')->first();
+                if ($resolvedExamYear && $acseeType) {
+                    $allocationErrors = [];
+                    $this->allocateSubjectsForPrivateCandidate($candidate, $record['subjects'], $acseeType, $resolvedExamYear, $allocationErrors);
+                }
+            }
+        }
+
         if (in_array($finalExamType, ['PSLE', 'CSEE'], true)) {
             $resolvedExamYear = $this->resolveExamYear($examYear);
             $targetType = ExamType::where('code', $finalExamType)->first();
@@ -1095,6 +1518,7 @@ class CandidateImportService
     {
         $imported = 0;
         $allocations = 0;
+        $errors = [];
 
         foreach ($batch as $item) {
             try {
@@ -1103,11 +1527,10 @@ class CandidateImportService
                 $acseeType = $item['acseeType'];
                 $examYear = $item['examYear'];
                 $examType = $item['examType'];
-
-                // Get school from preloaded list
-                $school = $schools[$record['school_code']] ?? null;
+                $schoolCode = strtoupper(trim((string) ($record['school_code'] ?? '')));
+                $school = $schools[$schoolCode] ?? null;
                 if (!$school) {
-                    Log::warning("School not found: {$record['school_code']}");
+                    Log::warning("School not found: {$schoolCode}");
                     continue;
                 }
 
@@ -1126,7 +1549,7 @@ class CandidateImportService
                 $comboId = $this->getCombinationId($comboCode);
 
                 // Create candidate with both code and FK to avoid later guessing
-                $candidate = Candidate::create([
+                $candidate = $this->retryIfDatabaseLocked(fn () => Candidate::create([
                     'school_id' => $school->id,
                     'candidate_id' => $record['candidate_id'],
                     'prem_no' => $record['prem_no'] ?? null,
@@ -1138,7 +1561,7 @@ class CandidateImportService
                     'candidate_type' => $candidateType,
                     'status' => 'registered',
                     'is_active' => true,
-                ]);
+                ]));
 
                 // Integrity guard: ensure saved candidate matches CSV combination exactly
                 $savedComboCode = strtoupper(trim($candidate->combination ?? ''));
@@ -1174,15 +1597,70 @@ class CandidateImportService
                     }
                 }
 
+                if (strtoupper($examType) === 'PSLE') {
+                    Log::info('PSLE pupil import saved candidate', [
+                        'candidate_number' => $candidate->candidate_id,
+                        'pupil_name' => $candidate->full_name,
+                        'school_id' => $candidate->school_id,
+                        'school_code' => $school->code,
+                        'exam_year_id' => $examYear?->id,
+                        'exam_type' => $candidate->exam_type,
+                        'status' => $candidate->status,
+                    ]);
+                }
+
                 $imported++;
-            } catch (\Exception $e) {
+            } catch (Throwable $e) {
                 Log::error("Batch process error: " . $e->getMessage(), [
                     'record' => $record['candidate_id'] ?? 'unknown'
                 ]);
+                $errors[] = [
+                    'row_number' => $record['row_number'] ?? null,
+                    'candidate_id' => $record['candidate_id'] ?? 'unknown',
+                    'prem_no' => $record['prem_no'] ?? '',
+                    'error_messages' => [$e->getMessage()],
+                ];
             }
         }
 
-        return ['imported' => $imported, 'allocations' => $allocations];
+        return ['imported' => $imported, 'allocations' => $allocations, 'errors' => $errors];
+    }
+
+    private function prepareSqliteForBulkWrite(): void
+    {
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            return;
+        }
+
+        try {
+            DB::statement('PRAGMA busy_timeout = 30000');
+        } catch (Throwable $e) {
+            Log::warning('Unable to set SQLite busy timeout for candidate import', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function retryIfDatabaseLocked(callable $callback, int $attempts = 6)
+    {
+        $lastException = null;
+
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            try {
+                return $callback();
+            } catch (Throwable $e) {
+                $lastException = $e;
+                $message = strtolower($e->getMessage());
+
+                if (strpos($message, 'database is locked') === false || $attempt === $attempts) {
+                    throw $e;
+                }
+
+                usleep(250000 * $attempt);
+            }
+        }
+
+        throw $lastException;
     }
 
     /**
@@ -1256,6 +1734,19 @@ class CandidateImportService
             return; // Already registered
         }
 
+        $legacyByYear = CandidateExamRegistration::where('candidate_id', $candidate->id)
+            ->where('exam_type_id', $examType->id)
+            ->where('year', (int) $examYear->year_label)
+            ->first();
+
+        if ($legacyByYear) {
+            $legacyByYear->exam_year_id = $examYear->id;
+            $legacyByYear->year = (int) $examYear->year_label;
+            $legacyByYear->status = $legacyByYear->status ?: 'PENDING';
+            $legacyByYear->save();
+            return;
+        }
+
         // Create registration
         CandidateExamRegistration::create([
             'candidate_id' => $candidate->id,
@@ -1318,8 +1809,14 @@ class CandidateImportService
                 return 0;
             }
 
-            // For PRIVATE candidates, no additional validation needed
-            // They can choose any combination of subjects (unlike SCHOOL candidates with NECTA rules)
+            // Run NECTA validation to match test expectations
+            $validator = new \App\Services\AcseeAllocationValidator();
+            $result = $validator->validate($candidate, $examType->id, $examYear->id, $subjectIds);
+
+            if (!$result['ok']) {
+                $errors = array_merge($errors, $result['errors']);
+                return 0;
+            }
 
             // Delete existing allocations for this candidate+exam type+exam year (replace mode)
             CandidateSubjectSelection::where('candidate_id', $candidate->id)
@@ -1331,18 +1828,16 @@ class CandidateImportService
             $now = now();
             $allocations = [];
 
-            // Allocate all resolved subjects (PRIVATE candidates can have any combination)
-            // is_principal=true for all subjects (PRIVATE candidates don't follow NECTA principal subject rules)
-            foreach ($subjectIds as $subjectId) {
+            foreach ($result['all_subject_ids'] as $subjectId) {
                 $allocations[] = [
                     'candidate_id' => $candidate->id,
                     'exam_type_id' => $examType->id,
                     'exam_year_id' => $examYear->id,
                     'subject_id' => $subjectId,
                     'year' => (int)$examYear->year_label,
-                    'is_principal' => true,  // All subjects treated as principal for PRIVATE
+                    'is_principal' => in_array($subjectId, $result['principal_subject_ids']),
                     'source' => 'import',
-                    'created_by' => Auth::id() ?? 1,
+                    'created_by' => \Illuminate\Support\Facades\Auth::id() ?? 1,
                     'is_active' => true,
                     'created_at' => $now,
                     'updated_at' => $now,

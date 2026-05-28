@@ -294,7 +294,7 @@
                                 <a href="{{ $officialLinks['results_2025'] ?? '#' }}" target="_blank" rel="noopener noreferrer" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700">
                                     <i class="fas fa-arrow-up-right-from-square mr-2"></i>Open 2025 Centre Index
                                 </a>
-                                <a href="/admin/api/exam-types/csee/schools/import-particulars/template" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700">
+                                <a href="/api/exam-types/csee/schools/import-particulars/template" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700">
                                     <i class="fas fa-file-csv mr-2"></i>Download CSV Template
                                 </a>
                                 <input x-ref="schoolParticularsCsvInput" type="file" accept=".csv,.txt" class="hidden" @change="handleSchoolParticularsFileChange($event)">
@@ -2118,7 +2118,7 @@
 
             async loadSubjects() {
                 try {
-                    const response = await fetch('/admin/api/exam-types/CSEE/subjects');
+                    const response = await fetch('/api/exam-types/CSEE/subjects');
                     const data = await response.json();
                     this.subjects = Array.isArray(data.data) ? data.data : [];
                     this.mergeSubjects();
@@ -2160,7 +2160,7 @@
                             page: String(page),
                             page_size: String(pageSize),
                         });
-                        const response = await fetch(`/admin/api/exam-types/csee/schools?${params.toString()}`);
+                        const response = await fetch(`/api/exam-types/csee/schools?${params.toString()}`);
                         const data = await this.parseApiResponse(response);
                         allSchools.push(...(Array.isArray(data.data) ? data.data : []));
                         lastPage = Number(data.meta?.last_page || 1);
@@ -2177,7 +2177,7 @@
                 this.syncingSubjects = true;
 
                 try {
-                    const response = await fetch('/admin/api/exam-types/csee/subjects/sync-official', {
+                    const response = await fetch('/api/exam-types/csee/subjects/sync-official', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2214,7 +2214,7 @@
                         school_id: this.candidateFilterSchool || '',
                     });
 
-                    const response = await fetch(`/admin/api/exam-types/CSEE/candidates?${params.toString()}`);
+                    const response = await fetch(`/api/exam-types/CSEE/candidates?${params.toString()}`);
                     const data = await this.parseApiResponse(response);
 
                     this.candidates = (Array.isArray(data.data) ? data.data : []).map(candidate => {
@@ -2464,7 +2464,7 @@
                         ])),
                     };
 
-                    const response = await fetch(`/admin/api/exam-types/csee/candidates/${this.subjectEditingCandidate.id}/subjects`, {
+                    const response = await fetch(`/api/exam-types/csee/candidates/${this.subjectEditingCandidate.id}/subjects`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2608,7 +2608,7 @@
             },
 
             downloadCandidateTemplate() {
-                window.location.href = '/admin/api/candidates/import/template?exam_type=CSEE';
+                window.location.href = '/api/candidates/import/template?exam_type=CSEE';
             },
 
             async validateCandidateImportFile() {
@@ -2627,7 +2627,7 @@
                     formData.append('exam_type', 'CSEE');
                     formData.append('on_exists_mode', this.candidateImportExistsMode);
 
-                    const response = await fetch('/admin/api/candidates/import/validate', {
+                    const response = await fetch('/api/candidates/import/validate', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -2665,7 +2665,7 @@
                     formData.append('exam_type', 'CSEE');
                     formData.append('on_exists_mode', this.candidateImportExistsMode);
 
-                    const response = await fetch('/admin/api/candidates/import/commit', {
+                    const response = await fetch('/api/candidates/import/commit', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -2698,7 +2698,7 @@
                 }
 
                 try {
-                    const response = await fetch('/admin/api/candidates/import/download-errors', {
+                    const response = await fetch('/api/candidates/import/download-errors', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2740,7 +2740,7 @@
                     const formData = new FormData();
                     this.candidateRegistrationPdfFiles.forEach(file => formData.append('files[]', file));
 
-                    const response = await fetch('/admin/api/candidates/import/csee-registration-pdf/validate', {
+                    const response = await fetch('/api/candidates/import/csee-registration-pdf/validate', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -2793,7 +2793,7 @@
                 this.candidateRegistrationPdfProcessingMessage = 'Importing registration subjects from PDF...';
 
                 try {
-                    const response = await fetch('/admin/api/candidates/import/csee-registration-pdf/commit', {
+                    const response = await fetch('/api/candidates/import/csee-registration-pdf/commit', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -2840,7 +2840,7 @@
                 }
 
                 try {
-                    const response = await fetch('/admin/api/candidates/import/download-errors', {
+                    const response = await fetch('/api/candidates/import/download-errors', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -2920,7 +2920,7 @@
                         candidate_type: 'SCHOOL',
                     };
 
-                    const url = this.editingCandidateId ? `/admin/api/candidates/${this.editingCandidateId}` : '/admin/api/candidates';
+                    const url = this.editingCandidateId ? `/api/candidates/${this.editingCandidateId}` : '/admin/api/candidates';
                     const method = this.editingCandidateId ? 'PUT' : 'POST';
 
                     const response = await fetch(url, {
@@ -2987,7 +2987,7 @@
                 }
 
                 try {
-                    const response = await fetch('/admin/api/candidates/bulk-delete', {
+                    const response = await fetch('/api/candidates/bulk-delete', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -3023,7 +3023,7 @@
                         district_id: this.schoolFilterDistrict || '',
                     });
 
-                    const response = await fetch(`/admin/api/exam-types/csee/schools?${params.toString()}`);
+                    const response = await fetch(`/api/exam-types/csee/schools?${params.toString()}`);
                     const data = await this.parseApiResponse(response);
                     this.schools = Array.isArray(data.data) ? data.data : [];
                     this.selectedSchoolIds = this.selectedSchoolIds.filter(id =>
@@ -3070,7 +3070,7 @@
                 this.syncingSchools = true;
 
                 try {
-                    const response = await fetch('/admin/api/exam-types/csee/schools/sync-necta-2025', {
+                    const response = await fetch('/api/exam-types/csee/schools/sync-necta-2025', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -3124,7 +3124,7 @@
                         formData.append('file', file);
                     }
 
-                    const response = await fetch('/admin/api/exam-types/csee/schools/import-particulars', {
+                    const response = await fetch('/api/exam-types/csee/schools/import-particulars', {
                         method: 'POST',
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,

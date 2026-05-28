@@ -2760,10 +2760,17 @@ class MarkEntryController extends Controller
 
             $priorFile = null;
             if ($trackingEnabled) {
-                $priorFile = DB::table('bulk_upload_files')
-                    ->where('file_hash', $fileHash)
-                    ->whereRaw("json_extract(derived_scope, '$.scope_signature') = ?", [$scopeSignature])
-                    ->first();
+                $priorFileQuery = DB::table('bulk_upload_files')
+                    ->where('file_hash', $fileHash);
+
+                $driver = DB::connection()->getDriverName();
+                if ($driver === 'mysql' || $driver === 'mariadb') {
+                    $priorFileQuery->where('derived_scope->scope_signature', $scopeSignature);
+                } else {
+                    $priorFileQuery->whereRaw("json_extract(derived_scope, '$.scope_signature') = ?", [$scopeSignature]);
+                }
+
+                $priorFile = $priorFileQuery->first();
             }
 
             $entry = [

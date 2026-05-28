@@ -7,6 +7,7 @@ use App\Http\Controllers\Results\ResultsManagementController;
 use App\Http\Controllers\Results\LinkingController;
 use App\Http\Controllers\Results\ReportsController;
 use App\Http\Controllers\Results\AuditController;
+use App\Http\Controllers\Api\Results\AcseeLifecycleApiController;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -75,11 +76,61 @@ Route::group(['prefix' => 'results', 'middleware' => ['auth']], function () {
     };
 
     $registerResultsModule('acsee', 'results.acsee');
-    $registerResultsModule('psle', 'results.psle');
 
-    // CSEE Results Module (Future)
-    // Route::group(['prefix' => 'csee'], function () { ... });
-    
-    // FTNA Results Module (Future)
-    // Route::group(['prefix' => 'ftna'], function () { ... });
+    // Decoupled PSLE Results Portal Route Group pointing to a dedicated Admin controller.
+    // Preserves the existing reports routes exactly bound to ReportsController as required.
+    Route::group(['prefix' => 'psle'], function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'index'])->name('results.psle.dashboard');
+
+        Route::group(['prefix' => 'reports', 'middleware' => ['admin']], function () {
+            Route::get('/', [ReportsController::class, 'index'])->name("results.psle.reports.index");
+            Route::get('/district-options', [ReportsController::class, 'districtOptions'])->name("results.psle.reports.district-options");
+            Route::post('/district-school-results/export', [ReportsController::class, 'exportDistrictSchoolResults'])->name("results.psle.reports.district-school-results-export");
+            Route::get('/school/{school}/export', [ReportsController::class, 'exportSchoolPdf'])->name("results.psle.reports.school-export");
+        });
+
+        // Define route aliases/placeholders for the side menu in PSLE reports to prevent RouteNotFound exceptions
+        Route::get('/grading', function () {
+            return redirect()->route('results.psle.dashboard', ['view' => 'overview']);
+        })->name('results.psle.grading.index');
+
+        Route::get('/processing', function () {
+            return redirect()->route('results.psle.dashboard', ['view' => 'processing']);
+        })->name('results.psle.processing.index');
+
+        Route::get('/results', function () {
+            return redirect()->route('results.psle.dashboard', ['view' => 'candidate-results']);
+        })->name('results.psle.results.index');
+
+        Route::get('/linking', function () {
+            return redirect()->route('results.psle.dashboard', ['view' => 'overview']);
+        })->name('results.psle.linking.index');
+
+        Route::get('/audit', function () {
+            return redirect()->route('results.psle.dashboard', ['view' => 'audit']);
+        })->name('results.psle.audit.index');
+
+        // Safe results processing actions managed by Admin
+        Route::post('/processing/validate', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'validateData'])->name('results.psle.processing.validate');
+        Route::post('/processing/draft-run', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'draftRun'])->name('results.psle.processing.draft-run');
+        Route::post('/processing/final-run', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'finalRun'])->name('results.psle.processing.final-run');
+        Route::post('/processing/rollback', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'rollback'])->name('results.psle.processing.rollback');
+    });
+});
+
+Route::group(['prefix' => 'api/results/acsee', 'middleware' => ['auth']], function () {
+    Route::get('/summary', [AcseeLifecycleApiController::class, 'summary']);
+    Route::get('/review-dashboard', [AcseeLifecycleApiController::class, 'reviewDashboard']);
+    Route::get('/exports/history', [AcseeLifecycleApiController::class, 'exportsHistory']);
+    Route::get('/exports/readiness', [AcseeLifecycleApiController::class, 'exportsReadiness']);
+    Route::post('/exports/download', [AcseeLifecycleApiController::class, 'exportDownload']);
+    Route::post('/compute-validate/readiness', [AcseeLifecycleApiController::class, 'computeValidateReadiness']);
+    Route::post('/compute-validate/run', [AcseeLifecycleApiController::class, 'computeValidateRun']);
+    Route::get('/compute/processes', [AcseeLifecycleApiController::class, 'computeProcesses']);
+    Route::get('/compute/processes/{id}', [AcseeLifecycleApiController::class, 'computeProcessShow']);
+    Route::get('/snapshots', [AcseeLifecycleApiController::class, 'snapshots']);
+    Route::post('/publish', [AcseeLifecycleApiController::class, 'publishSnapshot']);
+    Route::post('/lock', [AcseeLifecycleApiController::class, 'lockSnapshot']);
+    Route::post('/unlock', [AcseeLifecycleApiController::class, 'adminUnlock']);
+    Route::post('/admin-unlock', [AcseeLifecycleApiController::class, 'adminUnlock']);
 });

@@ -60,7 +60,7 @@ class AuditController extends Controller
         $history = ResultProcess::where('exam_year_id', $examYear->id)
             ->with('user')
             ->latest('processed_at')
-            ->paginate(15);
+            ->paginate(20);
 
         return view('results.acsee.audit.processing-history', compact('history', 'examYear'));
     }

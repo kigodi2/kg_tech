@@ -48,9 +48,8 @@
 
             <!-- Storage Used -->
             @php
-                use App\Services\BackupStatisticsService;
-                $totalSize = BackupStatisticsService::getTotalBackupSize();
-                $formattedSize = BackupStatisticsService::formatBytes($totalSize);
+                $totalSize = \App\Services\BackupStatisticsService::getTotalBackupSize();
+                $formattedSize = \App\Services\BackupStatisticsService::formatBytes($totalSize);
             @endphp
             <div class="bg-white rounded-lg shadow p-6">
                 <h3 class="text-sm font-semibold text-gray-600 uppercase">Storage Used</h3>

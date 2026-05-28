@@ -128,7 +128,9 @@ class AcseeAllocationValidatorTest extends TestCase
 
         $this->assertFalse($result['ok']);
         $this->assertNotEmpty($result['errors']);
-        $this->assertStringContainsString('Minimum 3 principal subjects', $result['errors'][1]);
+        $this->assertTrue(collect($result['errors'])->contains(
+            fn (string $error): bool => str_contains($error, 'Minimum 3 principal subjects')
+        ));
     }
 
     /**
@@ -163,7 +165,11 @@ class AcseeAllocationValidatorTest extends TestCase
      */
     public function test_validation_passes_with_four_principals_and_general_studies()
     {
-        $subject4 = Subject::factory()->create(['code' => '104', 'name' => 'Mathematics']);
+        $subject4 = Subject::create([
+            'code' => '104',
+            'name' => 'Mathematics',
+            'exam_type_id' => $this->examType->id,
+        ]);
         $subjectIds = [
             $this->subject1->id,
             $this->subject2->id,

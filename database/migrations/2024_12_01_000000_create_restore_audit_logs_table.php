@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('restore_audit_logs')) {
+            return;
+        }
+
         Schema::create('restore_audit_logs', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('restrict');
@@ -23,8 +27,10 @@ return new class extends Migration
             
             // Scope information (RBAC)
             $table->enum('scope_type', ['full', 'region', 'district']);
-            $table->foreignId('region_id')->nullable()->constrained('regions')->onDelete('restrict');
-            $table->foreignId('district_id')->nullable()->constrained('districts')->onDelete('restrict');
+            // regions/districts are created later in this migration set, so their
+            // foreign keys are added by a follow-up compatibility migration.
+            $table->unsignedBigInteger('region_id')->nullable();
+            $table->unsignedBigInteger('district_id')->nullable();
             
             // Legal and operational details
             $table->longText('restore_reason');

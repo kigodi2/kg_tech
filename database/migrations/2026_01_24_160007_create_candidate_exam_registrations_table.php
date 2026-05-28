@@ -14,11 +14,11 @@ return new class extends Migration
             $table->foreignId('exam_type_id')->constrained()->onDelete('cascade');
             $table->integer('year');
             $table->string('registration_number')->unique();
-            $table->enum('status', ['PENDING', 'APPROVED', 'REJECTED'])->default('PENDING');
+            $table->string('status', 30)->default('PENDING');
             $table->timestamp('registered_at')->useCurrent();
             $table->timestamps();
-            $table->unique(['candidate_id', 'exam_type_id', 'year']);
-            $table->index(['exam_type_id', 'year']);
+            $table->unique(['candidate_id', 'exam_type_id', 'year'], 'cer_candidate_exam_year_unique');
+            $table->index(['exam_type_id', 'year'], 'cer_exam_year_idx');
         });
     }
 

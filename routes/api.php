@@ -86,17 +86,32 @@ Route::get('/candidates', function (Request $request) {
 
     // Filter by district (through school relationship)
     if ($districtId) {
-        $query->whereHas('school', function ($q) use ($districtId) {
-            $q->where('district_id', $districtId)
-                ->whereNotNull('district_id');
+        $district = \App\Models\District::find($districtId);
+        $query->whereHas('school', function ($q) use ($districtId, $district) {
+            $q->where(function($sub) use ($districtId, $district) {
+                $sub->where('district_id', $districtId);
+                if ($district) {
+                    $councilIds = \App\Models\DistrictCouncil::where('region_id', $district->region_id)
+                        ->where('name', 'like', '%' . $district->name . '%')
+                        ->pluck('id');
+                    if ($councilIds->isNotEmpty()) {
+                        $sub->orWhereIn('council_id', $councilIds);
+                    }
+                }
+            });
         });
     }
 
     // Filter by region (through school -> district relationship)
     if ($regionId) {
-        $query->whereHas('school.district', function ($q) use ($regionId) {
+        $query->whereHas('school', function ($q) use ($regionId) {
             $q->where('region_id', $regionId)
-                ->whereNotNull('region_id');
+              ->orWhereHas('district', function($q2) use ($regionId) {
+                  $q2->where('region_id', $regionId);
+              })
+              ->orWhereHas('council', function($q2) use ($regionId) {
+                  $q2->where('region_id', $regionId);
+              });
         });
     }
 
@@ -515,7 +530,8 @@ Route::get('/dashboard/candidates/filter-data', [DashboardController::class, 'ge
 
 Route::prefix('exam-types/{code}')->group(function () {
     // ACSEE Candidates (read-only from registration)
-    Route::get('candidates', [ExamTypeController::class, 'getAcseeCandicates']);
+    // DISABLED duplicate route that shadows web.php with unauthenticated API middleware:
+    // Route::get('candidates', [ExamTypeController::class, 'getAcseeCandicates']);
 
     Route::prefix('combinations')->group(function () {
         // List combinations with pagination, search, and filtering

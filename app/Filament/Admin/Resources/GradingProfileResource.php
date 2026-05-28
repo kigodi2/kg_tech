@@ -45,7 +45,7 @@ class GradingProfileResource extends Resource
                             ->searchable()
                             ->preload(),
                         Forms\Components\Select::make('exam_year_id')
-                            ->relationship('examYear', 'year')
+                            ->relationship('examYear', 'year_label')
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -75,7 +75,7 @@ class GradingProfileResource extends Resource
                 Tables\Columns\TextColumn::make('examType.code')
                     ->label('Exam Type')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('examYear.year')
+                Tables\Columns\TextColumn::make('examYear.year_label')
                     ->label('Year')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('grading_rules_count')

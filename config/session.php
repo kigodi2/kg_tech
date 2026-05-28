@@ -2,6 +2,9 @@
 
 use Illuminate\Support\Str;
 
+$appUrlHost = parse_url((string) env('APP_URL', ''), PHP_URL_HOST);
+$useHostOnlyLocalCookie = in_array($appUrlHost, ['127.0.0.1', 'localhost'], true);
+
 return [
 
     /*
@@ -156,7 +159,7 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    'domain' => $useHostOnlyLocalCookie ? null : env('SESSION_DOMAIN'),
 
     /*
     |--------------------------------------------------------------------------
@@ -169,7 +172,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => $useHostOnlyLocalCookie ? false : env('SESSION_SECURE_COOKIE'),
 
     /*
     |--------------------------------------------------------------------------

@@ -69,7 +69,7 @@ return new class extends Migration
             $table->string('outlier_type')->comment('high, low');
             $table->timestamps();
             
-            $table->index(['candidate_extremity_id', 'subject_id']);
+            $table->index(['candidate_extremity_id', 'subject_id'], 'cso_extremity_subject_idx');
         });
 
         // Analysis log

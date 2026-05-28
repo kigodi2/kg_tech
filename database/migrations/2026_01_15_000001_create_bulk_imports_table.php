@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('bulk_imports')) {
+            return;
+        }
+
         Schema::create('bulk_imports', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('school_id');
@@ -31,7 +35,7 @@ return new class extends Migration
             $table->index(['school_id', 'exam_year_id']);
             $table->index('status');
             $table->index('created_by');
-            $table->foreign('school_id')->references('id')->on('schools')->onDelete('cascade');
+            // schools is created later in this migration set; FK is added later.
             $table->foreign('exam_year_id')->references('id')->on('exam_years')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
         });

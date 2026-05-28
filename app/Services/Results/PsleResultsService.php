@@ -688,7 +688,7 @@ class PsleResultsService
                 'subject_code' => $row->subject_code,
                 'subject_name' => $row->subject_name,
                 'mark' => $row->mark !== null ? (float) $row->mark : null,
-                'grade' => $row->mark !== null ? $this->computeGrade((float) $row->mark) : ($row->subject_status ?? 'INC'),
+                'grade' => $row->mark !== null ? $this->computeGrade(((float) $row->mark / 50.0) * 100.0) : ($row->subject_status ?? 'INC'),
                 'status' => $row->subject_status,
             ])
             ->all();

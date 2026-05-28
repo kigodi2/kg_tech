@@ -44,7 +44,9 @@ class RegionController extends Controller
             $pageSize = min($request->get('page_size', 25), 100);
             $search = $request->get('search', '');
 
-            $query = Region::query();
+            $query = Region::query()
+                ->where('code', '!=', 'CSEE-UNK')
+                ->where('name', 'NOT LIKE', '%UNASSIGNED%');
 
             if ($search) {
                 $query->where('name', 'like', "%$search%")

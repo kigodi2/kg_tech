@@ -54,7 +54,7 @@ class ResultsManagementController extends Controller
             $query->where('result_status', $request->status);
         }
 
-        $results = $query->paginate(15);
+        $results = $query->paginate(20);
         $schools = School::query()
             ->whereHas('candidates.examRegistrations', function ($q) use ($examType, $examYear) {
                 $q->where('exam_type_id', $examType->id)

@@ -9,6 +9,7 @@ use App\Models\District;
 use App\Models\Region;
 use App\Models\School;
 use Database\Seeders\RoleSeeder;
+use Filament\Panel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -158,7 +159,7 @@ class UserAuthorizationTest extends TestCase
    */
   public function test_canAccessPanel_requires_admin_and_active(): void
   {
-    $panel = \Filament\Filament::getPanel('admin');
+    $panel = (new Panel())->id('admin');
 
     // Active admin should access
     $activeAdmin = User::factory()->create([

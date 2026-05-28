@@ -604,7 +604,7 @@ class PsleMarkEntryService
     {
         $header = $this->normalizeHeaderRow($rows[0] ?? []);
         $expectedHeaders = $this->expectedHeaders();
-        $legacyHeaders = $this->legacyExpectedHeaders();
+        $bulkHeaders = $this->bulkImportHeaders();
         $errors = [];
         $warnings = [];
         $preview = [];
@@ -614,20 +614,34 @@ class PsleMarkEntryService
         $dataRows = array_slice($rows, 1);
         $invalidRowCount = 0;
 
-        if ($header !== $expectedHeaders && $header !== $legacyHeaders) {
+        $mode = 'standard';
+        if ($header === $expectedHeaders) {
+            $mode = 'standard';
+        } elseif ($header === $bulkHeaders) {
+            $mode = 'bulk';
+        } else {
+            $hasRemovedBulkColumns = count(array_intersect($header, ['status', 'remarks'])) > 0;
+
             return [
                 'success' => false,
                 'status' => 'failed',
                 'can_commit' => false,
-                'totals' => ['total_rows' => 0, 'valid_rows' => 0, 'invalid_rows' => 1, 'warnings' => 0],
+                'totals' => ['total_rows' => 0, 'valid_rows' => 0, 'invalid_rows' => 1, 'warnings' => 0, 'duplicate_rows' => 0, 'not_found_rows' => 0, 'locked_rows' => 0, 'existing_rows' => 0],
                 'preview' => [],
-                'errors' => [['message' => "{$sourceName}: expected headers " . implode(', ', $expectedHeaders)]],
+                'errors' => [[
+                    'message' => $hasRemovedBulkColumns
+                        ? 'This file has invalid columns. Please download a fresh template and try again. The required columns are CNO, PReM, Name, Sex, Mark.'
+                        : "{$sourceName}: expected headers " . implode(', ', ['CNO', 'PReM', 'Name', 'Sex', 'Mark']) . '.'
+                ]],
                 'warnings' => [],
                 'validated_rows' => [],
             ];
         }
 
-        $usesLegacyHeaders = $header === $legacyHeaders;
+        $duplicateRows = 0;
+        $notFoundRows = 0;
+        $lockedRows = 0;
+        $existingRows = 0;
 
         foreach ($dataRows as $index => $row) {
             if (empty(array_filter($row, fn ($value) => trim((string) $value) !== ''))) {
@@ -635,24 +649,37 @@ class PsleMarkEntryService
             }
 
             $line = $index + 2;
-            $candidateNumber = strtoupper(trim((string) ($row[0] ?? '')));
-            $premNo = trim((string) ($row[1] ?? ''));
-            $pupilName = $usesLegacyHeaders ? trim((string) ($row[2] ?? '')) : '';
-            $sex = strtoupper(trim((string) ($row[$usesLegacyHeaders ? 3 : 2] ?? '')));
-            $schoolCode = strtoupper(trim((string) ($row[$usesLegacyHeaders ? 4 : 3] ?? '')));
-            $subjectCode = strtoupper(trim((string) ($row[$usesLegacyHeaders ? 5 : 4] ?? '')));
-            $markValue = trim((string) ($row[$usesLegacyHeaders ? 6 : 5] ?? ''));
+            
+            if ($mode === 'bulk') {
+                $candidateNumber = strtoupper(trim((string) ($row[0] ?? '')));
+                $premNo = trim((string) ($row[1] ?? ''));
+                $pupilName = trim((string) ($row[2] ?? ''));
+                $sex = strtoupper(trim((string) ($row[3] ?? '')));
+                $schoolCode = strtoupper((string) ($school->code ?? ''));
+                $subjectCode = strtoupper((string) ($subject->code ?? ''));
+                $markValue = trim((string) ($row[4] ?? ''));
+            } else { // standard
+                $candidateNumber = strtoupper(trim((string) ($row[0] ?? '')));
+                $premNo = trim((string) ($row[1] ?? ''));
+                $pupilName = '';
+                $sex = strtoupper(trim((string) ($row[2] ?? '')));
+                $schoolCode = strtoupper(trim((string) ($row[3] ?? '')));
+                $subjectCode = strtoupper(trim((string) ($row[4] ?? '')));
+                $markValue = trim((string) ($row[5] ?? ''));
+            }
 
             $rowErrors = [];
             $rowWarnings = [];
+            $existingMark = null;
 
             if ($candidateNumber === '') $rowErrors[] = "Line {$line}: candidate_number is required.";
-            if ($sex === '') $rowErrors[] = "Line {$line}: sex is required.";
-            if ($schoolCode === '') $rowErrors[] = "Line {$line}: school_code is required.";
-            if ($subjectCode === '') $rowErrors[] = "Line {$line}: subject_code is required.";
+            if ($mode !== 'bulk' && $sex === '') $rowErrors[] = "Line {$line}: sex is required.";
+            if ($mode !== 'bulk' && $schoolCode === '') $rowErrors[] = "Line {$line}: school_code is required.";
+            if ($mode !== 'bulk' && $subjectCode === '') $rowErrors[] = "Line {$line}: subject_code is required.";
 
             if ($candidateNumber !== '' && isset($seenCandidates[$candidateNumber])) {
                 $rowErrors[] = "Line {$line}: duplicate candidate_number {$candidateNumber} in file.";
+                $duplicateRows++;
             }
             $seenCandidates[$candidateNumber] = true;
 
@@ -664,9 +691,12 @@ class PsleMarkEntryService
                 $rowErrors[] = "Line {$line}: subject_code {$subjectCode} does not match selected subject {$subject->code}.";
             }
 
-            $candidate = Candidate::where('candidate_id', $candidateNumber)->first();
+            $candidate = Candidate::where('candidate_id', $candidateNumber)
+                ->where('school_id', $school->id)
+                ->first();
             if (!$candidate) {
                 $rowErrors[] = "Line {$line}: candidate {$candidateNumber} was not found.";
+                $notFoundRows++;
             } else {
                 if ((int) $candidate->school_id !== (int) $school->id) {
                     $rowErrors[] = "Line {$line}: candidate {$candidateNumber} does not belong to school {$school->code}.";
@@ -684,25 +714,28 @@ class PsleMarkEntryService
                     $rowErrors[] = "Line {$line}: candidate {$candidateNumber} is not registered for PSLE {$examYear->year_label}.";
                 }
 
-                $hasSelections = $candidate->subjectSelections()
-                    ->where('exam_type_id', $psle->id)
-                    ->where(function ($query) use ($examYear) {
-                        $query->where('exam_year_id', $examYear->id)
-                            ->orWhere('year', (int) $examYear->year_label);
-                    })
-                    ->count();
+                // PSLE candidates are registered for all subjects, no CandidateSubjectSelection check required.
+                if ($psle->code !== 'PSLE') {
+                    $hasSelections = $candidate->subjectSelections()
+                        ->where('exam_type_id', $psle->id)
+                        ->where(function ($query) use ($examYear) {
+                            $query->where('exam_year_id', $examYear->id)
+                                ->orWhere('year', (int) $examYear->year_label);
+                        })
+                        ->count();
 
-                $subjectAllocated = $candidate->subjectSelections()
-                    ->where('exam_type_id', $psle->id)
-                    ->where('subject_id', $subject->id)
-                    ->where(function ($query) use ($examYear) {
-                        $query->where('exam_year_id', $examYear->id)
-                            ->orWhere('year', (int) $examYear->year_label);
-                    })
-                    ->exists();
+                    $subjectAllocated = $candidate->subjectSelections()
+                        ->where('exam_type_id', $psle->id)
+                        ->where('subject_id', $subject->id)
+                        ->where(function ($query) use ($examYear) {
+                            $query->where('exam_year_id', $examYear->id)
+                                ->orWhere('year', (int) $examYear->year_label);
+                        })
+                        ->exists();
 
-                if ($hasSelections > 0 && !$subjectAllocated) {
-                    $rowErrors[] = "Line {$line}: subject {$subject->code} is not allocated to candidate {$candidateNumber}.";
+                    if ($hasSelections > 0 && !$subjectAllocated) {
+                        $rowErrors[] = "Line {$line}: subject {$subject->code} is not allocated to candidate {$candidateNumber}.";
+                    }
                 }
 
                 if ($premNo !== '' && strtoupper((string) ($candidate->prem_no ?? '')) !== strtoupper($premNo)) {
@@ -716,10 +749,25 @@ class PsleMarkEntryService
                 if ($sex !== '' && strtoupper((string) $candidate->gender) !== strtoupper($sex)) {
                     $rowWarnings[] = "Line {$line}: sex differs from registered pupil record.";
                 }
+
+                $existingMark = RawMark::where('candidate_id', $candidate->id)
+                    ->where('subject_id', $subject->id)
+                    ->where('exam_year_id', $examYear->id)
+                    ->first();
+                if ($existingMark) {
+                    $existingRows++;
+                    if ($existingMark->is_locked) {
+                        $rowErrors[] = "Line {$line}: candidate {$candidateNumber} has a locked mark record that cannot be overwritten.";
+                        $lockedRows++;
+                    } elseif ($existingMark->batch && $existingMark->batch->status !== 'draft') {
+                        $rowErrors[] = "Line {$line}: candidate {$candidateNumber} has a mark record in a committed/approved batch ({$existingMark->batch->batch_code}) that cannot be overwritten.";
+                        $lockedRows++;
+                    }
+                }
             }
 
             if ($markValue === '') {
-                $rowWarnings[] = "Line {$line}: mark is blank and will be staged as INC.";
+                $rowWarnings[] = "Line {$line}: mark is blank. Start Entry treats this as a cleared mark.";
             } elseif (!is_numeric($markValue)) {
                 $rowErrors[] = "Line {$line}: mark must be numeric.";
             } elseif ((float) $markValue < 0 || (float) $markValue > 50) {
@@ -728,10 +776,20 @@ class PsleMarkEntryService
 
             $preview[] = [
                 'line' => $line,
+                'row' => $line,
                 'candidate_number' => $candidateNumber,
+                'cno' => $candidateNumber,
                 'prem_no' => $premNo,
+                'prem' => $premNo,
+                'name' => $candidate ? $candidate->full_name : $pupilName,
+                'full_name' => $candidate ? $candidate->full_name : $pupilName,
                 'sex' => $sex,
                 'mark' => $markValue,
+                'valid' => empty($rowErrors),
+                'errors' => $rowErrors,
+                'warnings' => $rowWarnings,
+                'message' => empty($rowErrors) ? (empty($rowWarnings) ? 'Ready to import.' : implode(' ', $rowWarnings)) : implode(' ', $rowErrors),
+                'will_update' => isset($existingMark) && $existingMark,
             ];
 
             if (empty($rowErrors) && $candidate) {
@@ -779,14 +837,22 @@ class PsleMarkEntryService
         return [
             'success' => $status !== 'failed',
             'status' => $status,
-            'can_commit' => $validRows > 0 && $invalidRows === 0,
+            'can_commit' => $validRows > 0 && ($mode === 'bulk' || $invalidRows === 0),
             'totals' => [
                 'total_rows' => $totalRows,
                 'valid_rows' => $validRows,
                 'invalid_rows' => $invalidRows,
                 'warnings' => count($warnings),
+                'duplicate_rows' => $duplicateRows,
+                'not_found_rows' => $notFoundRows,
+                'locked_rows' => $lockedRows,
+                'existing_rows' => $existingRows,
             ],
+            'total_count' => $totalRows,
+            'valid_count' => $validRows,
+            'invalid_count' => $invalidRows,
             'preview' => array_slice($preview, 0, 20),
+            'records' => array_slice($preview, 0, 100),
             'errors' => $errors,
             'warnings' => $warnings,
             'validated_rows' => $validatedRows,
@@ -806,31 +872,58 @@ class PsleMarkEntryService
     private function persistValidatedRows(MarkImportBatch $batch, array $validatedRows, int $userId): void
     {
         $timestamp = now();
-        $rowsToInsert = [];
+        $candidateIds = collect($validatedRows)->pluck('candidate_id')->toArray();
+        $existingMarks = DB::table('raw_marks')
+            ->whereIn('candidate_id', $candidateIds)
+            ->where('subject_id', $batch->subject_id)
+            ->where('exam_year_id', $batch->exam_year_id)
+            ->get()
+            ->keyBy('candidate_id');
 
         foreach ($validatedRows as $row) {
-            $rowsToInsert[] = [
-                'mark_import_batch_id' => $batch->id,
-                'candidate_id' => $row['candidate_id'],
-                'subject_id' => $batch->subject_id,
-                'row_number' => $row['row_number'],
-                'candidate_index_number' => $row['candidate_index_number'],
-                'full_name' => $row['full_name'],
-                'paper_1_marks' => $row['paper_1_marks'],
-                'subject_status' => $row['subject_status'],
-                'status_reason' => $row['status_reason'],
-                'has_errors' => false,
-                'has_warnings' => $row['has_warnings'],
-                'warning_messages' => json_encode($row['warning_messages'] ?? []),
-                'error_messages' => json_encode([]),
-                'raw_data' => json_encode($row['raw_data'] ?? []),
-                'created_at' => $timestamp,
-                'updated_at' => $timestamp,
-            ];
-        }
-
-        if (!empty($rowsToInsert)) {
-            DB::table('raw_marks')->insert($rowsToInsert);
+            $existing = $existingMarks->get($row['candidate_id']);
+            
+            if ($existing) {
+                if ($existing->is_locked) {
+                    continue;
+                }
+                
+                DB::table('raw_marks')
+                    ->where('id', $existing->id)
+                    ->update([
+                        'mark_import_batch_id' => $batch->id,
+                        'row_number' => $row['row_number'],
+                        'paper_1_marks' => $row['paper_1_marks'],
+                        'subject_status' => $row['subject_status'],
+                        'status_reason' => $row['status_reason'],
+                        'has_errors' => false,
+                        'has_warnings' => $row['has_warnings'],
+                        'warning_messages' => json_encode($row['warning_messages'] ?? []),
+                        'error_messages' => json_encode([]),
+                        'raw_data' => json_encode($row['raw_data'] ?? []),
+                        'updated_at' => $timestamp,
+                    ]);
+            } else {
+                DB::table('raw_marks')->insert([
+                    'mark_import_batch_id' => $batch->id,
+                    'candidate_id' => $row['candidate_id'],
+                    'subject_id' => $batch->subject_id,
+                    'exam_year_id' => $batch->exam_year_id,
+                    'row_number' => $row['row_number'],
+                    'candidate_index_number' => $row['candidate_index_number'],
+                    'full_name' => $row['full_name'],
+                    'paper_1_marks' => $row['paper_1_marks'],
+                    'subject_status' => $row['subject_status'],
+                    'status_reason' => $row['status_reason'],
+                    'has_errors' => false,
+                    'has_warnings' => $row['has_warnings'],
+                    'warning_messages' => json_encode($row['warning_messages'] ?? []),
+                    'error_messages' => json_encode([]),
+                    'raw_data' => json_encode($row['raw_data'] ?? []),
+                    'created_at' => $timestamp,
+                    'updated_at' => $timestamp,
+                ]);
+            }
         }
 
         $batch->update([
@@ -854,6 +947,8 @@ class PsleMarkEntryService
         return [
             'id' => $batch->id,
             'batch_code' => $batch->batch_code,
+            'school_id' => $batch->school_id,
+            'subject_id' => $batch->subject_id,
             'mode' => str_contains($notes, 'DISTRICT_ZIP') ? 'district_zip' : (str_contains($notes, 'SCHOOL_ZIP') ? 'school_zip' : 'single_csv'),
             'modeLabel' => str_contains($notes, 'DISTRICT_ZIP') ? 'District Bulk ZIP' : (str_contains($notes, 'SCHOOL_ZIP') ? 'School Bulk ZIP' : 'Single Subject CSV'),
             'fileName' => trim((string) preg_replace('/^PSLE\s+[A-Z_]+\s+IMPORT:\s*/i', '', (string) ($batch->notes ?? ''))),
@@ -863,7 +958,9 @@ class PsleMarkEntryService
                 $batch->school?->name,
                 $batch->subject?->code,
             ])->filter()->implode(' · '),
-            'rows' => (int) ($batch->total_records ?? 0),
+            'total_records' => (int) ($batch->total_records ?? 0),
+            'valid_records' => (int) ($batch->valid_records ?? 0),
+            'error_records' => (int) ($batch->error_records ?? 0),
             'status' => $batch->status,
             'lifecycle_state' => $batch->lifecycle_state ?: $batch->status,
             'time' => optional($batch->imported_at ?? $batch->created_at)?->format('Y-m-d H:i:s'),
@@ -936,7 +1033,7 @@ class PsleMarkEntryService
 
     private function normalizeHeaderRow(array $row): array
     {
-        return array_map(fn ($value) => strtolower(trim((string) $value)), $row);
+        return array_map(fn ($value) => strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', (string) $value))), $row);
     }
 
     private function expectedHeaders(): array
@@ -947,6 +1044,11 @@ class PsleMarkEntryService
     private function legacyExpectedHeaders(): array
     {
         return ['candidate_number', 'prem_no', 'pupil_name', 'sex', 'school_code', 'subject_code', 'mark'];
+    }
+
+    private function bulkImportHeaders(): array
+    {
+        return ['cno', 'prem', 'name', 'sex', 'mark'];
     }
 
     private function resolvePsleExamType(): ExamType

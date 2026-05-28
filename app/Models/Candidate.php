@@ -69,6 +69,11 @@ class Candidate extends Model
         return $this->hasMany(SubjectMarks::class);
     }
 
+    public function rawMarks()
+    {
+        return $this->hasMany(RawMark::class);
+    }
+
     public function results()
     {
         return $this->hasMany(CandidateResult::class);
@@ -108,6 +113,17 @@ class Candidate extends Model
             ->where('exam_type_id', $examTypeId)
             ->where('year', $year)
             ->get();
+    }
+
+    /**
+     * Protect the combination attribute for PSLE candidates
+     */
+    public function getCombinationAttribute($value)
+    {
+        if ($this->exam_type === 'PSLE') {
+            return null;
+        }
+        return $value;
     }
 
     /**

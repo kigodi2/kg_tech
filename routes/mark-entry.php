@@ -86,6 +86,13 @@ Route::middleware(['auth'])->prefix('mark-entry')->group(function () {
             Route::get('diagnostics/marks-visibility', [\App\Http\Controllers\MarkEntry\Reporting\ReportsController::class, 'diagnostics'])->name('diagnostics.marks-visibility')->middleware('can:mark-entry.admin');
         });
 
+        // ADMIN & REO TASKS
+        Route::prefix('admin')->name('admin.')->group(function () {
+            Route::resource('marking-centres', \App\Http\Controllers\MarkEntry\Admin\MarkingCentreController::class);
+            Route::resource('assignments', \App\Http\Controllers\MarkEntry\Admin\MarkEntryAssignmentController::class);
+            Route::resource('reopen-requests', \App\Http\Controllers\MarkEntry\Admin\ReopenRequestController::class);
+        });
+
         // MONITORING & AUDIT PHASE
         Route::prefix('monitoring')->name('monitoring.')
             ->middleware('can:mark-entry.audit')->group(function () {

@@ -10,6 +10,12 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 class Kernel extends ConsoleKernel
 {
+    protected $commands = [
+        \App\Console\Commands\PsleRankingCheck::class,
+        \App\Console\Commands\ComparePslePupilSource::class,
+        \App\Console\Commands\PsleDiagnoseDuplicates::class,
+    ];
+
     /**
      * Define the application's command schedule.
      */

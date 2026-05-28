@@ -41,7 +41,12 @@ class Region extends Model
 
     public function candidates()
     {
-        return $this->hasManyThrough(Candidate::class, School::class);
+        return $this->hasManyThrough(Candidate::class, School::class, 'region_id', 'school_id');
+    }
+
+    public function markingCentres()
+    {
+        return $this->hasMany(MarkingCentre::class);
     }
 
     public function scopeActive($query)

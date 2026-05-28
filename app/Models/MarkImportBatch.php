@@ -14,16 +14,21 @@ class MarkImportBatch extends Model
 
     protected $fillable = [
         'batch_code',
+        'batch_name',
+        'batch_type',
         'exam_year',
+        'exam_year_id',
         'region_id',
         'district_id',
         'school_id',
         'subject_id',
         'exam_type_id',
+        'assignment_id',
         'status',
         'total_records',
         'valid_records',
         'error_records',
+        'created_by',
         'imported_by',
         'imported_at',
         'validated_by',
@@ -102,6 +107,16 @@ class MarkImportBatch extends Model
         return $this->belongsTo(ExamType::class);
     }
 
+    public function assignment()
+    {
+        return $this->belongsTo(MarkEntryAssignment::class, 'assignment_id');
+    }
+
+    public function markingCentre()
+    {
+        return $this->belongsTo(MarkingCentre::class, 'marking_centre_id');
+    }
+
     public function rawMarks(): HasMany
     {
         return $this->hasMany(RawMark::class);
@@ -120,6 +135,16 @@ class MarkImportBatch extends Model
     public function rejections(): HasMany
     {
         return $this->hasMany(MarkRejection::class, 'mark_import_batch_id');
+    }
+
+    public function importedByUser()
+    {
+        return $this->belongsTo(User::class, 'imported_by');
+    }
+
+    public function createdByUser()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function checksum()
@@ -147,9 +172,9 @@ class MarkImportBatch extends Model
         return $this->hasMany(MarkEntryLifecycleState::class, 'mark_import_batch_id');
     }
 
-    public function importedByUser()
+    public function user()
     {
-        return $this->belongsTo(User::class, 'imported_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function submittedByUser()
@@ -204,6 +229,13 @@ class MarkImportBatch extends Model
     {
         if ($user->isAdmin()) {
             return $query;
+        }
+
+        if ($user->isRegionalOfficer() || $user->getScopeType() === 'region') {
+            $regionId = $user->region_id ?? $user->getRegionId();
+            if ($regionId) {
+                return $query->where('region_id', $regionId);
+            }
         }
 
         if ($user->district_id) {

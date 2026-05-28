@@ -39,7 +39,7 @@ return new class extends Migration
                 $table->foreignId('result_snapshot_id')->nullable()->constrained('result_snapshots')->nullOnDelete();
                 $table->foreignId('psle_result_id')->nullable()->constrained('candidate_results')->nullOnDelete();
                 $table->foreignId('school_id')->nullable()->constrained('schools')->nullOnDelete();
-                $table->string('council_id')->nullable();
+                $table->unsignedBigInteger('council_id')->nullable();
                 $table->foreign('council_id')->references('id')->on('district_councils')->nullOnDelete();
                 $table->foreignId('region_id')->nullable()->constrained('regions')->nullOnDelete();
                 $table->string('stage', 50);
@@ -62,7 +62,7 @@ return new class extends Migration
                 $table->foreignId('exam_year_id')->nullable()->constrained('exam_years')->nullOnDelete();
                 $table->foreignId('snapshot_id')->nullable()->constrained('result_snapshots')->nullOnDelete();
                 $table->foreignId('region_id')->nullable()->constrained('regions')->nullOnDelete();
-                $table->string('council_id')->nullable();
+                $table->unsignedBigInteger('council_id')->nullable();
                 $table->foreign('council_id')->references('id')->on('district_councils')->nullOnDelete();
                 $table->foreignId('school_id')->nullable()->constrained('schools')->nullOnDelete();
                 $table->string('publication_scope', 20)->default('national');

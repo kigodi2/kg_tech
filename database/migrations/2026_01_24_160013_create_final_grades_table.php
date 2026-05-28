@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('grade_name', 50);
             $table->decimal('final_percentage', 5, 2);
             $table->timestamps();
-            $table->unique(['candidate_id', 'exam_type_id', 'year']);
-            $table->index(['exam_type_id', 'year']);
+            $table->unique(['candidate_id', 'exam_type_id', 'year'], 'final_grades_candidate_exam_year_unique');
+            $table->index(['exam_type_id', 'year'], 'final_grades_exam_year_idx');
         });
     }
 

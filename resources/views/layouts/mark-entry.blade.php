@@ -16,8 +16,9 @@
             @apply bg-blue-600 text-white border-l-4 border-blue-700;
         }
     </style>
+    @include('mark-entry.partials.admin-theme')
 </head>
-<body class="bg-gray-100" x-data="{ sidebarOpen: true }">
+<body class="bg-gray-100 mark-entry-shell" x-data="{ sidebarOpen: true }">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <div class="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 text-white transform" :class="{ 'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen }" @click.away="sidebarOpen = true" x-cloak>
@@ -57,6 +58,13 @@
                                    :class="request()->routeIs('mark-entry.acsee.moderation.*') ? 'sidebar-item-active' : ''">
                                     <i class="fas fa-eye w-4"></i>
                                     <span>Review Dashboard</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" 
+                                   class="px-6 py-2 flex items-center gap-3 text-sm hover:bg-gray-800 transition-colors">
+                                    <i class="fas fa-question-circle w-4 text-orange-400"></i>
+                                    <span>Missing Marks</span>
                                 </a>
                             </li>
                         </ul>
@@ -99,6 +107,39 @@
                         </ul>
                     </div>
 
+                    <!-- GROUP: ASSIGNMENTS & CENTRES -->
+                    @if(auth()->user()->isAdmin() || auth()->user()->isRegionalOfficer())
+                    <div>
+                        <p class="px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">🏢 Region Management</p>
+                        <ul class="space-y-2">
+                            <li>
+                                <a href="{{ route('mark-entry.acsee.admin.marking-centres.index') }}" 
+                                   class="px-6 py-2 flex items-center gap-3 text-sm hover:bg-gray-800 transition-colors"
+                                   :class="request()->routeIs('mark-entry.acsee.admin.marking-centres.*') ? 'sidebar-item-active' : ''">
+                                    <i class="fas fa-building w-4"></i>
+                                    <span>Marking Centres</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('mark-entry.acsee.admin.assignments.index') }}" 
+                                   class="px-6 py-2 flex items-center gap-3 text-sm hover:bg-gray-800 transition-colors"
+                                   :class="request()->routeIs('mark-entry.acsee.admin.assignments.*') ? 'sidebar-item-active' : ''">
+                                    <i class="fas fa-tasks w-4"></i>
+                                    <span>Officer Assignments</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="{{ route('mark-entry.acsee.admin.reopen-requests.index') }}" 
+                                   class="px-6 py-2 flex items-center gap-3 text-sm hover:bg-gray-800 transition-colors"
+                                   :class="request()->routeIs('mark-entry.acsee.admin.reopen-requests.*') ? 'sidebar-item-active' : ''">
+                                    <i class="fas fa-unlock w-4"></i>
+                                    <span>Reopen Requests</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    @endif
+
                     <!-- GROUP 5: MONITORING & AUDIT -->
                     @can('mark-entry.audit')
                     <div>
@@ -129,9 +170,9 @@
                         <p class="px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">⚙️ Admin</p>
                         <ul class="space-y-2">
                             <li>
-                                <a href="{{ route('mark-entry.acsee.admin.configuration') }}" 
+                                <a href="#" 
                                    class="px-6 py-2 flex items-center gap-3 text-sm hover:bg-gray-800 transition-colors"
-                                   :class="request()->routeIs('mark-entry.acsee.admin.*') ? 'sidebar-item-active' : ''">
+                                   :class="request()->routeIs('mark-entry.acsee.admin.configuration') ? 'sidebar-item-active' : ''">
                                     <i class="fas fa-cog w-4"></i>
                                     <span>Configuration</span>
                                 </a>
@@ -176,5 +217,19 @@
     </div>
 
     @stack('scripts')
+
+    <script>
+        // Disable Developer Tools for non-admins
+        (function() {
+            @if(!(auth()->check() && auth()->user()->isAdmin()))
+                document.addEventListener('contextmenu', event => event.preventDefault());
+                document.onkeydown = function(e) {
+                    if (e.keyCode == 123) return false;
+                    if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0))) return false;
+                    if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+                };
+            @endif
+        })();
+    </script>
 </body>
 </html>

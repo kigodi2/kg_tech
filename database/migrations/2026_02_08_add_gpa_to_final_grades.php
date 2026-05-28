@@ -14,13 +14,13 @@ return new class extends Migration
         Schema::table('final_grades', function (Blueprint $table) {
             // Add if columns don't exist
             if (!Schema::hasColumn('final_grades', 'gpa')) {
-                $table->float('gpa')->nullable()->after('grade_points');
+                $table->float('gpa')->nullable();
             }
             if (!Schema::hasColumn('final_grades', 'division')) {
-                $table->string('division')->nullable()->after('gpa');
+                $table->string('division')->nullable();
             }
             if (!Schema::hasColumn('final_grades', 'grading_breakdown')) {
-                $table->longText('grading_breakdown')->nullable()->after('division');
+                $table->longText('grading_breakdown')->nullable();
             }
         });
     }

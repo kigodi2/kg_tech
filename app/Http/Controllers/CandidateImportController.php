@@ -8,11 +8,13 @@ use App\Models\ExamYear;
 use App\Models\ExamType;
 use App\Services\Candidates\CandidateImportService;
 use App\Services\Candidates\CseeRegistrationPdfImportService;
+use App\Support\PsleUserScope;
 use App\Jobs\ProcessCandidateBulkImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class CandidateImportController extends Controller
 {
@@ -121,11 +123,13 @@ class CandidateImportController extends Controller
     public function validateImport(Request $request)
     {
         try {
+            set_time_limit(300);
+
             $request->validate([
-                'file' => 'required|file|mimes:csv,txt',
+                'file' => 'required|file|mimes:csv,txt,xlsx,xls|max:51200',
                 'exam_year' => 'nullable|string|regex:/^\d{4}$/',
                 'exam_type' => 'nullable|in:PSLE,CSEE,ACSEE',
-                'on_exists_mode' => 'nullable|in:skip,replace'
+                'on_exists_mode' => 'nullable|in:skip,replace,stop'
             ]);
 
             $file = $request->file('file');
@@ -133,18 +137,37 @@ class CandidateImportController extends Controller
             $examType = $request->input('exam_type');
             $mode = $request->input('on_exists_mode', 'skip');
 
+            Log::info('PSLE pupil import started', [
+                'user_id' => auth()->id(),
+                'exam_year' => $examYear,
+                'file_name' => $file->getClientOriginalName(),
+                'phase' => 'validation',
+            ]);
+
             // Parse and validate CSV
             $result = $this->importService->validateCSV($file, $examYear, $examType, $mode);
+            if (strtoupper((string) $examType) === 'PSLE') {
+                $result = $this->applyPsleImportScope($request, $result);
+            }
+
+            if (strtoupper((string) $examType) === 'PSLE') {
+                Log::info('PSLE pupil import validation summary', [
+                    'total_rows' => $result['summary']['total_rows'] ?? $result['total_rows'] ?? 0,
+                    'valid_rows' => $result['summary']['valid_rows'] ?? 0,
+                    'duplicates' => $result['summary']['duplicates_in_file'] ?? 0,
+                    'invalid_rows' => $result['summary']['invalid_rows'] ?? $result['error_count'] ?? 0,
+                ]);
+            }
 
             return response()->json($result, 200);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'File validation failed',
                 'errors' => $e->errors()
             ], 422);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Candidate import validation error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -171,10 +194,10 @@ class CandidateImportController extends Controller
             set_time_limit(300); // 5 minutes for large batches
             
             $request->validate([
-                'file' => 'required|file|mimes:csv,txt',
+                'file' => 'required|file|mimes:csv,txt,xlsx,xls|max:51200',
                 'exam_year' => 'nullable|string|regex:/^\d{4}$/',
                 'exam_type' => 'nullable|in:PSLE,CSEE,ACSEE',
-                'on_exists_mode' => 'nullable|in:skip,replace'
+                'on_exists_mode' => 'nullable|in:skip,replace,stop'
             ]);
 
             $file = $request->file('file');
@@ -182,18 +205,42 @@ class CandidateImportController extends Controller
             $examType = $request->input('exam_type');
             $mode = $request->input('on_exists_mode', 'skip');
 
+            if (strtoupper((string) $examType) === 'PSLE') {
+                $validation = $this->applyPsleImportScope(
+                    $request,
+                    $this->importService->validateCSV($file, $examYear, $examType, $mode)
+                );
+
+                if (!($validation['can_import'] ?? false)) {
+                    return response()->json($validation, 422);
+                }
+            }
+
             // Re-validate and commit
             $result = $this->importService->commitImport($file, $examYear, $examType, $mode);
 
+            if ($result['success'] ?? false) {
+                \App\Services\PsleCacheService::incrementVersion();
+            }
+
+            if (strtoupper((string) $examType) === 'PSLE') {
+                Log::info('PSLE pupil import committed', [
+                    'imported' => $result['imported_count'] ?? 0,
+                    'skipped' => $result['skipped_count'] ?? 0,
+                    'failed' => count($result['errors'] ?? []),
+                    'updated' => $result['updated_count'] ?? 0,
+                ]);
+            }
+
             return response()->json($result, $result['success'] ? 200 : 400);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'File validation failed',
                 'errors' => $e->errors()
             ], 422);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('Candidate import commit error', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -235,6 +282,23 @@ class CandidateImportController extends Controller
                     'F',
                     'CSEE',
                     '2026',
+                ]);
+            } elseif ($examType === 'PSLE') {
+                $filename = 'psle-pupil-import-template-' . date('Y-m-d') . '.csv';
+                fputcsv($csv, [
+                    'candidate_number',
+                    'PReM_No',
+                    'pupil_name',
+                    'sex',
+                    'school_code',
+                ]);
+
+                fputcsv($csv, [
+                    'PS0404006-0001',
+                    '20201520092',
+                    'ASHERI JOSHUA CHAULA',
+                    'M',
+                    'PS0404006',
                 ]);
             } else {
                 fputcsv($csv, [
@@ -294,6 +358,91 @@ class CandidateImportController extends Controller
                 'message' => 'Failed to generate template'
             ], 500);
         }
+    }
+
+    private function applyPsleImportScope(Request $request, array $result): array
+    {
+        $user = $request->user();
+        if (!$user) {
+            return [
+                'success' => false,
+                'message' => 'You are not authorized to import PSLE pupils.',
+                'rows' => $result['rows'] ?? [],
+                'summary' => $result['summary'] ?? [],
+                'can_import' => false,
+            ];
+        }
+
+        if (PsleUserScope::hasGlobalAccess($user)) {
+            return $result;
+        }
+
+        $schoolsQuery = School::query();
+        PsleUserScope::applyToSchools($schoolsQuery, $user);
+        $allowedSchoolCodes = $schoolsQuery
+            ->pluck('code')
+            ->map(fn ($code) => strtoupper(trim((string) $code)))
+            ->filter()
+            ->values()
+            ->all();
+
+        if (empty($allowedSchoolCodes)) {
+            return [
+                'success' => false,
+                'message' => 'You do not have an assigned PSLE school scope for this import.',
+                'rows' => $result['rows'] ?? [],
+                'summary' => $result['summary'] ?? [],
+                'can_import' => false,
+            ];
+        }
+
+        $allowed = array_flip($allowedSchoolCodes);
+        $rows = $result['rows'] ?? [];
+        $errors = $result['errors'] ?? [];
+        $outOfScope = 0;
+
+        foreach ($rows as &$row) {
+            $schoolCode = strtoupper(trim((string) ($row['school_code'] ?? '')));
+            if ($schoolCode !== '' && isset($allowed[$schoolCode])) {
+                continue;
+            }
+
+            $outOfScope++;
+            $row['status'] = 'ERROR';
+            $row['message'] = 'School is outside your assigned PSLE scope.';
+            $row['messages'] = ['School is outside your assigned PSLE scope.'];
+            $errors[] = [
+                'row_number' => $row['row_number'] ?? null,
+                'candidate_id' => $row['candidate_id'] ?? $row['candidate_number'] ?? '',
+                'prem_no' => $row['prem_no'] ?? '',
+                'full_name' => $row['full_name'] ?? $row['pupil_name'] ?? '',
+                'gender' => $row['sex'] ?? '',
+                'school_code' => $row['school_code'] ?? '',
+                'error_messages' => ['School is outside your assigned PSLE scope.'],
+                'primary_error' => 'School is outside your assigned PSLE scope.',
+            ];
+        }
+        unset($row);
+
+        if ($outOfScope === 0) {
+            return $result;
+        }
+
+        $summary = $result['summary'] ?? [];
+        $summary['invalid_rows'] = ($summary['invalid_rows'] ?? 0) + $outOfScope;
+        $summary['valid_rows'] = max(0, ($summary['valid_rows'] ?? 0) - $outOfScope);
+        $summary['out_of_scope_rows'] = $outOfScope;
+
+        $result['rows'] = $rows;
+        $result['errors'] = array_slice($errors, 0, 100);
+        $result['summary'] = $summary;
+        $result['success'] = false;
+        $result['can_import'] = false;
+        $result['error_count'] = ($result['error_count'] ?? 0) + $outOfScope;
+        $result['total_errors'] = ($result['total_errors'] ?? 0) + $outOfScope;
+        $result['message'] = $outOfScope . ' row(s) are outside your assigned PSLE school scope.';
+
+        return $result;
     }
 
     /**

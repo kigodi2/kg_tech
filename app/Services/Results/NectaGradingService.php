@@ -1142,7 +1142,7 @@ class NectaGradingService
      */
     public function processBatchGrading(int $examTypeId, int $year, ?int $schoolId = null): array
     {
-        $query = CandidateExamRegistration::with(['candidate.marks', 'candidate.subject'])
+        $query = CandidateExamRegistration::with(['candidate.marks.subject', 'candidate.subjectSelections.subject'])
             ->where('exam_type_id', $examTypeId)
             ->where('year', $year);
 

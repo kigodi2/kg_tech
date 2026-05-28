@@ -8,6 +8,7 @@ use App\Models\Subject;
 use App\Models\Combination;
 use App\Models\ExamYear;
 use App\Models\ExamType;
+use App\Models\School;
 use App\Models\CandidateExamRegistration;
 use App\Models\CandidateSubjectSelection;
 use App\Services\AcseeAllocationCSVImporter;
@@ -21,6 +22,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     protected ExamType $examType;
     protected Subject $generalStudies;
     protected Combination $combination;
+    protected School $school;
     protected AcseeAllocationCSVImporter $importer;
     protected AcseeAllocationTemplateService $templateService;
 
@@ -40,6 +42,17 @@ class AcseeAllocationCSVImportTest extends TestCase
             'year' => 2026,
             'year_label' => '2026',
             'is_active' => true,
+        ]);
+
+        $region = \App\Models\Region::create([
+            'code' => 'TR',
+            'name' => 'Test Region',
+        ]);
+
+        $this->school = School::create([
+            'code' => 'TEST001',
+            'name' => 'Test School',
+            'region_id' => $region->id,
         ]);
 
         // Create General Studies subject
@@ -83,6 +96,11 @@ class AcseeAllocationCSVImportTest extends TestCase
         $this->templateService = app(AcseeAllocationTemplateService::class);
     }
 
+    private function makeCsvUpload(string $name, string $contents): UploadedFile
+    {
+        return UploadedFile::fake()->createWithContent($name, $contents);
+    }
+
     /**
      * Test: SCHOOL candidate allocation with valid combination
      */
@@ -90,6 +108,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     {
         // Create SCHOOL candidate
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'S0445-0001',
             'full_name' => 'Test Student',
             'gender' => 'M',
@@ -102,13 +121,15 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         // Create CSV file
         $csv = "exam_year,index_number,combination_code,replace_allocations\n";
         $csv .= "2026,S0445-0001,PCB,NO\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
 
         // Validate
         $result = $this->importer->validateCSV($file, $this->examYear->id, 'ALL');
@@ -126,6 +147,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     {
         // Create SCHOOL candidate
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'S0445-0002',
             'full_name' => 'Test Student 2',
             'gender' => 'F',
@@ -137,12 +159,14 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         $csv = "exam_year,index_number,combination_code,replace_allocations\n";
         $csv .= "2026,S0445-0002,INVALID,NO\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
         $result = $this->importer->validateCSV($file, $this->examYear->id, 'ALL');
         
         $this->assertFalse($result['success']);
@@ -157,6 +181,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     {
         // Create PRIVATE candidate
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'P0652-0001',
             'full_name' => 'Private Student',
             'gender' => 'M',
@@ -168,12 +193,14 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         $csv = "exam_year,index_number,subject_codes,replace_allocations\n";
         $csv .= "2026,P0652-0001,111|001|002|003,NO\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
         $result = $this->importer->validateCSV($file, $this->examYear->id, 'ALL');
         
         $this->assertTrue($result['success']);
@@ -186,6 +213,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     public function test_private_allocation_fails_without_general_studies()
     {
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'P0652-0002',
             'full_name' => 'Private Student 2',
             'gender' => 'F',
@@ -197,12 +225,14 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         $csv = "exam_year,index_number,subject_codes,replace_allocations\n";
         $csv .= "2026,P0652-0002,001|002|003,NO\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
         $result = $this->importer->validateCSV($file, $this->examYear->id, 'ALL');
         
         $this->assertFalse($result['success']);
@@ -215,6 +245,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     public function test_private_allocation_fails_with_less_than_3_principals()
     {
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'P0652-0003',
             'full_name' => 'Private Student 3',
             'gender' => 'M',
@@ -226,12 +257,14 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         $csv = "exam_year,index_number,subject_codes,replace_allocations\n";
         $csv .= "2026,P0652-0003,111|001|002,NO\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
         $result = $this->importer->validateCSV($file, $this->examYear->id, 'ALL');
         
         $this->assertFalse($result['success']);
@@ -245,6 +278,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     {
         // Create SCHOOL candidate
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'S0445-0003',
             'full_name' => 'School Student',
             'gender' => 'M',
@@ -256,13 +290,15 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         // Try to import as PRIVATE (subject codes format)
         $csv = "exam_year,index_number,subject_codes,replace_allocations\n";
         $csv .= "2026,S0445-0003,111|001|002|003,NO\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
         
         // Should fail when filtering by SCHOOL only (CSV is PRIVATE format)
         $result = $this->importer->validateCSV($file, $this->examYear->id, 'SCHOOL');
@@ -276,6 +312,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     public function test_duplicate_candidate_prevention()
     {
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'S0445-0004',
             'full_name' => 'Duplicate Test',
             'gender' => 'M',
@@ -287,6 +324,8 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         // Same candidate listed twice
@@ -294,7 +333,7 @@ class AcseeAllocationCSVImportTest extends TestCase
         $csv .= "2026,S0445-0004,PCB,NO\n";
         $csv .= "2026,S0445-0004,PCB,NO\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
         $result = $this->importer->validateCSV($file, $this->examYear->id, 'ALL');
         
         $this->assertFalse($result['success']);
@@ -307,6 +346,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     public function test_replace_allocations_mode()
     {
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'S0445-0005',
             'full_name' => 'Replace Test',
             'gender' => 'M',
@@ -318,6 +358,8 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         // Insert initial allocation
@@ -338,7 +380,7 @@ class AcseeAllocationCSVImportTest extends TestCase
         $csv = "exam_year,index_number,combination_code,replace_allocations\n";
         $csv .= "2026,S0445-0005,PCB,YES\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
         $result = $this->importer->commitImport($file, $this->examYear->id, 'ALL', false);
 
         $this->assertTrue($result['success']);
@@ -354,6 +396,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     public function test_idempotency_of_allocations()
     {
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'S0445-0006',
             'full_name' => 'Idempotency Test',
             'gender' => 'M',
@@ -365,20 +408,22 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         $csv = "exam_year,index_number,combination_code,replace_allocations\n";
         $csv .= "2026,S0445-0006,PCB,NO\n";
 
         // Import first time
-        $file1 = UploadedFile::fromString($csv, 'test1.csv');
+        $file1 = $this->makeCsvUpload('test1.csv', $csv);
         $result1 = $this->importer->commitImport($file1, $this->examYear->id, 'ALL', false);
         $this->assertTrue($result1['success']);
 
         $countAfterFirst = $candidate->subjectSelections()->count();
 
         // Import same file again
-        $file2 = UploadedFile::fromString($csv, 'test2.csv');
+        $file2 = $this->makeCsvUpload('test2.csv', $csv);
         $result2 = $this->importer->commitImport($file2, $this->examYear->id, 'ALL', false);
         $this->assertTrue($result2['success']);
 
@@ -424,6 +469,7 @@ class AcseeAllocationCSVImportTest extends TestCase
     public function test_error_report_generation()
     {
         $candidate = Candidate::create([
+            'school_id' => $this->school->id,
             'candidate_id' => 'S0445-0007',
             'full_name' => 'Error Test',
             'gender' => 'M',
@@ -435,13 +481,15 @@ class AcseeAllocationCSVImportTest extends TestCase
             'candidate_id' => $candidate->id,
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
+            'registration_number' => 'REG-' . uniqid(),
         ]);
 
         // Invalid combination code
         $csv = "exam_year,index_number,combination_code,replace_allocations\n";
         $csv .= "2026,S0445-0007,INVALID,NO\n";
 
-        $file = UploadedFile::fromString($csv, 'test.csv');
+        $file = $this->makeCsvUpload('test.csv', $csv);
         $result = $this->importer->validateCSV($file, $this->examYear->id, 'ALL');
         
         $this->assertFalse($result['success']);

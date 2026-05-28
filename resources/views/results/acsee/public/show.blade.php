@@ -224,7 +224,7 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse ($candidatesData as $data)
+                @forelse ($paginatedCandidates as $data)
                     <tr>
                         <td>{{ $data['candidate_number'] }}</td>
                         <td>{{ $data['sex'] }}</td>
@@ -249,11 +249,52 @@
             </tbody>
         </table>
 
+        <!-- Pagination -->
+        @if($paginatedCandidates->lastPage() > 1)
+            <div style="margin: 20px 0; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: Arial, sans-serif;">
+                <div style="font-size: 13px; color: #666; margin-right: 15px;">
+                    Page <strong>{{ $paginatedCandidates->currentPage() }}</strong> of <strong>{{ $paginatedCandidates->lastPage() }}</strong>
+                </div>
+                
+                <div style="display: flex; gap: 5px;">
+                    @if(!$paginatedCandidates->onFirstPage())
+                        <a href="{{ $paginatedCandidates->previousPageUrl() }}" style="padding: 5px 10px; border: 1px solid #ddd; background: #f9f9f9; color: #003366; text-decoration: none; border-radius: 3px; font-size: 12px; font-weight: bold;">« Previous</a>
+                    @endif
+
+                    @php
+                        $start = max(1, $paginatedCandidates->currentPage() - 2);
+                        $end = min($paginatedCandidates->lastPage(), $paginatedCandidates->currentPage() + 2);
+                    @endphp
+
+                    @for($i = $start; $i <= $end; $i++)
+                        <a href="{{ $paginatedCandidates->url($i) }}" style="padding: 5px 10px; border: 1px solid {{ $i == $paginatedCandidates->currentPage() ? '#003366' : '#ddd' }}; background: {{ $i == $paginatedCandidates->currentPage() ? '#003366' : '#f9f9f9' }}; color: {{ $i == $paginatedCandidates->currentPage() ? '#fff' : '#003366' }}; text-decoration: none; border-radius: 3px; font-size: 12px; font-weight: bold;">{{ $i }}</a>
+                    @endfor
+
+                    @if($paginatedCandidates->hasMorePages())
+                        <a href="{{ $paginatedCandidates->nextPageUrl() }}" style="padding: 5px 10px; border: 1px solid #ddd; background: #f9f9f9; color: #003366; text-decoration: none; border-radius: 3px; font-size: 12px; font-weight: bold;">Next »</a>
+                    @endif
+                </div>
+            </div>
+        @endif
+
         <!-- Footer -->
         <div class="footer">
             <p>National Examinations Council of Tanzania</p>
             <p>ACSEE {{ $yearNumeric }} Examination Results</p>
         </div>
     </div>
+    <script>
+        // Disable Developer Tools for non-admins
+        (function() {
+            @if(!(auth()->check() && auth()->user()->isAdmin()))
+                document.addEventListener('contextmenu', event => event.preventDefault());
+                document.onkeydown = function(e) {
+                    if (e.keyCode == 123) return false;
+                    if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0))) return false;
+                    if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+                };
+            @endif
+        })();
+    </script>
 </body>
 </html>

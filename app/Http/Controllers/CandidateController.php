@@ -60,6 +60,19 @@ class CandidateController extends Controller
 
         // Authorization: Check if user can register candidates at this school
         $school = School::findOrFail($validated['school_id']);
+        
+        if (!empty($validated['prem_no'])) {
+            $duplicatePrem = \App\Models\Candidate::where('prem_no', $validated['prem_no'])->first();
+            if ($duplicatePrem) {
+                if ($request->expectsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "PReM number is already taken by another student.",
+                    ], 422);
+                }
+                return redirect()->back()->withInput()->with('error', "PReM number is already taken by another student.");
+            }
+        }
         try {
             $this->authorize('registerForSchool', [\App\Models\Candidate::class, $school->id]);
         } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
@@ -144,7 +157,7 @@ class CandidateController extends Controller
             $candidateData = [
                 'school_id' => $validated['school_id'],
                 'candidate_id' => $validated['candidate_id'],
-                'prem_no' => $validated['prem_no'] ?? null,
+                'prem_no' => !empty($validated['prem_no']) ? $validated['prem_no'] : null,
                 'gender' => $validated['gender'],
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
                 'candidate_type' => $validated['candidate_type'] ?? 'SCHOOL',  // Set from index number or default
@@ -290,13 +303,27 @@ class CandidateController extends Controller
                 }
             }
 
+            // Custom check: if prem_no is changing, verify it is unique
+            if (!empty($validated['prem_no']) && $validated['prem_no'] !== $candidate->prem_no) {
+                $duplicatePrem = \App\Models\Candidate::where('prem_no', $validated['prem_no'])->where('id', '!=', $candidate->id)->first();
+                if ($duplicatePrem) {
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "PReM number is already taken by another student.",
+                        ], 422);
+                    }
+                    return redirect()->back()->withInput()->with('error', "PReM number is already taken by another student.");
+                }
+            }
+
             DB::beginTransaction();
 
             // Prepare update data
             $updateData = [
                 'school_id' => $validated['school_id'],
                 'candidate_id' => $validated['candidate_id'],
-                'prem_no' => $validated['prem_no'] ?? null,
+                'prem_no' => !empty($validated['prem_no']) ? $validated['prem_no'] : null,
                 'gender' => $validated['gender'],
                 'date_of_birth' => $validated['date_of_birth'] ?? null,
                 'candidate_type' => $validated['candidate_type'] ?? $candidate->candidate_type,

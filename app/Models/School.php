@@ -33,6 +33,24 @@ class School extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected static function booted()
+    {
+        static::saving(function ($school) {
+            if ($school->council_id && $school->region_id) {
+                $council = \App\Models\DistrictCouncil::find($school->council_id);
+                if ($council && (string) $council->region_id !== (string) $school->region_id) {
+                    throw new \InvalidArgumentException('The selected council does not belong to the selected region.');
+                }
+            }
+            if ($school->district_id && $school->region_id) {
+                $district = \App\Models\District::find($school->district_id);
+                if ($district && (string) $district->region_id !== (string) $school->region_id) {
+                    throw new \InvalidArgumentException('The selected district does not belong to the selected region.');
+                }
+            }
+        });
+    }
+
     const TYPE_PRIMARY = 'PRIMARY';
     const TYPE_SECONDARY = 'SECONDARY';
     const TYPE_BOTH = 'BOTH';

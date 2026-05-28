@@ -17,7 +17,10 @@ use App\Observers\CandidateExamRegistrationObserver;
 use App\Observers\CandidateResultObserver;
 use App\Models\CandidateExamRegistration;
 use App\Models\CandidateResult;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -51,6 +54,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\Route::pattern('record', '[0-9a-fA-F\-]+');
+
+        // Force HTTPS on the production server (irms.ac.tz)
+        if ($this->app->environment('production')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+            // $this->preventUnsupportedProductionDatabase();
+            $this->registerSlowQueryMonitoring();
+        }
+
         // Register policies
         \Illuminate\Support\Facades\Gate::policy(ExamYear::class, ExamYearPolicy::class);
         \Illuminate\Support\Facades\Gate::policy(BulkImport::class, BulkImportPolicy::class);
@@ -67,6 +79,62 @@ class AppServiceProvider extends ServiceProvider
                 'resultsRoutePrefix' => $isPsle ? 'results.psle' : 'results.acsee',
                 'resultsModuleLabel' => $isPsle ? 'PSLE' : 'ACSEE',
                 'resultsModuleTitle' => $isPsle ? 'PSLE Results' : 'ACSEE Results',
+            ]);
+        });
+    }
+
+    private function preventUnsupportedProductionDatabase(): void
+    {
+        $connection = (string) config('database.default');
+        $driver = (string) config("database.connections.{$connection}.driver");
+
+        if (! in_array($driver, ['mysql', 'mariadb'], true)) {
+            $envVal = env('DB_CONNECTION');
+            throw new RuntimeException("Production database must be MySQL/MariaDB. Refusing to run with driver [{$driver}] on connection [{$connection}]. env('DB_CONNECTION') is [{$envVal}].");
+        }
+
+        if (config('cache.default') !== 'redis') {
+            Log::warning('Production cache store is not Redis. Redis is recommended for concurrent mark entry.', [
+                'cache_store' => config('cache.default'),
+            ]);
+        }
+
+        if (config('session.driver') !== 'redis') {
+            Log::warning('Production session driver is not Redis. Redis is recommended for concurrent mark entry.', [
+                'session_driver' => config('session.driver'),
+            ]);
+        }
+
+        if (config('queue.default') !== 'redis') {
+            Log::warning('Production queue connection is not Redis. Redis is recommended for concurrent mark entry.', [
+                'queue_connection' => config('queue.default'),
+            ]);
+        }
+    }
+
+    private function registerSlowQueryMonitoring(): void
+    {
+        if (! filter_var(env('LOG_SLOW_QUERIES', false), FILTER_VALIDATE_BOOLEAN)) {
+            return;
+        }
+
+        $thresholdMs = max(1, (int) env('SLOW_QUERY_THRESHOLD_MS', 500));
+
+        DB::listen(function ($query) use ($thresholdMs): void {
+            if ($query->time < $thresholdMs) {
+                return;
+            }
+
+            $request = request();
+            $route = $request?->route();
+
+            Log::warning('[slow-query]', [
+                'duration_ms' => (float) $query->time,
+                'connection' => $query->connectionName,
+                'route' => $route?->getName(),
+                'url' => $request?->fullUrl(),
+                'user_id' => auth()->id(),
+                'sql' => $query->sql,
             ]);
         });
     }

@@ -556,6 +556,8 @@ class PsleScoresheetFpdfService
 
         $candidates = $candidateQuery->get();
 
+        $candidates = \App\Services\PsleCandidateRosterService::deduplicate($candidates, $school->code);
+
         if ($candidates->isEmpty()) {
             throw new \RuntimeException("No registered PSLE candidates were found for {$school->name} / {$subject->name} in {$examYear->year_label}.");
         }
@@ -790,6 +792,7 @@ class PsleScoresheetFpdfService
         $this->renderSummaryBlock($pdf, $data, $summary);
 
         if (($data['mode'] ?? 'approved') === 'all') {
+            $currentY = $pdf->GetY();
             $pdf->SetFillColor(254, 226, 226);
             $pdf->SetDrawColor(248, 113, 113);
             $pdf->Rect($pageWidth - 56, 21, 48, 9, 'DF');
@@ -797,6 +800,7 @@ class PsleScoresheetFpdfService
             $pdf->SetFont('Helvetica', 'B', 8);
             $pdf->SetTextColor(153, 27, 27);
             $pdf->Cell(48, 3, $this->text('PREVIEW / DRAFT'), 0, 0, 'C');
+            $pdf->SetY($currentY);
         }
 
         $this->renderTableHeader($pdf, $data);
@@ -1054,8 +1058,6 @@ class PsleScoresheetFpdfService
                     ['value' => (string) $row['mark_display'], 'align' => 'C'],
                     ['value' => (string) ($row['batch_code'] ?? ''), 'align' => 'L'],
                     ['value' => (string) ($row['status'] ?? ''), 'align' => 'C'],
-                    ['value' => (string) ($row['initials'] ?? ''), 'align' => 'C'],
-                    ['value' => (string) ($row['verification_date'] ?? ''), 'align' => 'C'],
                     ['value' => (string) $row['remarks'], 'align' => 'L'],
                 ]
                 : [
@@ -1070,6 +1072,16 @@ class PsleScoresheetFpdfService
 
             foreach ($columns as $index => $column) {
                 $pdf->SetFillColor($baseFill[0], $baseFill[1], $baseFill[2]);
+                
+                // Highlight the entered mark to draw verify officer's focus
+                if ($variant === 'entered' && $index === 4) {
+                    $pdf->SetFont('Helvetica', 'B', 8.5);
+                    $pdf->SetTextColor(30, 64, 175); // Premium royal blue
+                } else {
+                    $pdf->SetFont('Helvetica', '', 8);
+                    $pdf->SetTextColor(30, 41, 59);
+                }
+
                 $text = $this->truncateToWidth($pdf, $values[$index]['value'], $column['width'] - 2);
                 $pdf->Cell($column['width'], $lineHeight, $text, 1, 0, $values[$index]['align'], true);
             }
@@ -1083,15 +1095,13 @@ class PsleScoresheetFpdfService
         if ($variant === 'entered') {
             return [
                 ['label' => '#', 'width' => 8, 'header_align' => 'C'],
-                ['label' => 'Candidate No', 'width' => 30, 'header_align' => 'L'],
-                ['label' => 'PReM No', 'width' => 22, 'header_align' => 'L'],
+                ['label' => 'Candidate No', 'width' => 35, 'header_align' => 'L'],
+                ['label' => 'PReM No', 'width' => 25, 'header_align' => 'L'],
                 ['label' => 'Sex', 'width' => 10, 'header_align' => 'C'],
-                ['label' => 'Entered Mark', 'width' => 18, 'header_align' => 'C'],
-                ['label' => 'Batch Code', 'width' => 24, 'header_align' => 'L'],
-                ['label' => 'Status', 'width' => 16, 'header_align' => 'C'],
-                ['label' => 'Verifier', 'width' => 18, 'header_align' => 'C'],
-                ['label' => 'Date', 'width' => 18, 'header_align' => 'C'],
-                ['label' => 'Remarks', 'width' => 30, 'header_align' => 'L'],
+                ['label' => 'Entered Mark', 'width' => 24, 'header_align' => 'C'],
+                ['label' => 'Batch Code', 'width' => 32, 'header_align' => 'L'],
+                ['label' => 'Status', 'width' => 20, 'header_align' => 'C'],
+                ['label' => 'Remarks', 'width' => 40, 'header_align' => 'L'],
             ];
         }
 

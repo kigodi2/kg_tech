@@ -32,7 +32,9 @@ class AdminUserController extends Controller
         if ($request->status) {
             $query->where('status', $request->status);
         }
-        $users = $query->orderBy('created_at', 'desc')->get()->map(function ($u) {
+        $paginator = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        $users = collect($paginator->items())->map(function ($u) {
             return [
                 'id' => $u->id,
                 'name' => $u->name,
@@ -46,7 +48,14 @@ class AdminUserController extends Controller
                 'created_at' => $u->created_at?->format('d M Y'),
             ];
         });
-        return response()->json(['data' => $users]);
+
+        return response()->json([
+            'data'         => $users,
+            'current_page' => $paginator->currentPage(),
+            'last_page'    => $paginator->lastPage(),
+            'total'        => $paginator->total(),
+            'per_page'     => $paginator->perPage(),
+        ]);
     }
 
     public function apiStore(Request $request)
@@ -56,7 +65,7 @@ class AdminUserController extends Controller
             'email'        => 'required|email|unique:users,email',
             'password'     => ['required', Password::min(8)],
             'role_id'      => 'nullable|exists:roles,id',
-            'portal_role'  => 'required|in:admin,user',
+            'portal_role'  => 'required|in:admin,user,mock_dao,mock_headteacher,mock_rao,subject_panel_leader',
             'status'       => 'required|in:active,suspended',
         ]);
 
@@ -82,7 +91,7 @@ class AdminUserController extends Controller
             'name'        => 'required|string|max:255',
             'email'       => 'required|email|unique:users,email,' . $id,
             'role_id'     => 'nullable|exists:roles,id',
-            'portal_role' => 'required|in:admin,user',
+            'portal_role' => 'required|in:admin,user,mock_dao,mock_headteacher,mock_rao,subject_panel_leader',
             'status'      => 'required|in:active,suspended',
             'password'    => ['nullable', Password::min(8)],
         ]);

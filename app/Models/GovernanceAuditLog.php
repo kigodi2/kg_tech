@@ -46,6 +46,7 @@ class GovernanceAuditLog extends Model
     const ACTION_RESTORE_INITIATED = 'restore_initiated';
     const ACTION_RESTORE_COMPLETED = 'restore_completed';
     const ACTION_RESTORE_FAILED = 'restore_failed';
+    const ACTION_CANDIDATE_RECLAIMED = 'candidate_reclaimed';
 
     /**
      * Relationships

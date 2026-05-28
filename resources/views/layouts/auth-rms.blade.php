@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'IRMS Login')</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="manifest" href="/site.webmanifest">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -210,6 +215,27 @@
             text-decoration: none;
         }
 
+        .nav-link.is-disabled,
+        .mobile-nav-link.is-disabled,
+        .disabled-nav-link {
+            cursor: not-allowed !important;
+            opacity: 0.72;
+            filter: grayscale(1);
+        }
+
+        .nav-link.is-disabled:hover,
+        .mobile-nav-link.is-disabled:hover,
+        .disabled-nav-link:hover {
+            background: transparent;
+            color: #1f2937;
+            text-decoration: none;
+            transform: none;
+        }
+
+        .disabled-nav-link .nav-icon {
+            opacity: 0.55;
+        }
+
         .mobile-nav-link:hover {
             transform: scale(1.02);
         }
@@ -344,6 +370,7 @@
             position: relative;
             width: 100%;
             max-width: 380px;
+            min-height: min(75vh, 760px);
             border: 1px solid rgba(255, 255, 255, 0.74);
             border-radius: 24px;
             background:
@@ -359,6 +386,8 @@
             transform-origin: center top;
             overflow: hidden;
             backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
         }
 
         .login-card::before {
@@ -453,6 +482,38 @@
             position: relative;
             padding: 14px 22px 22px;
             z-index: 1;
+            flex: 1 1 auto;
+        }
+
+        .login-card-body form {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .register-card {
+            min-height: 0;
+            max-height: calc(100vh - 170px);
+        }
+
+        .register-card .login-card-body {
+            overflow-y: auto;
+            scrollbar-gutter: stable;
+        }
+
+        .register-card .login-card-body form {
+            min-height: auto;
+            justify-content: flex-start;
+        }
+
+        .login-card--compact {
+            min-height: auto;
+        }
+
+        .login-card--compact .login-card-body form {
+            min-height: auto;
+            justify-content: flex-start;
         }
 
         .login-error {
@@ -617,20 +678,20 @@
 
         .page-footer-body {
             width: 100%;
-            padding: 8px 20px 9px;
+            padding: 6px 16px 8px;
         }
 
         .page-footer-row {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
             position: relative;
         }
 
         .page-footer-meta,
         .page-footer-copy {
-            font-size: 11px;
+            font-size: 10px;
             line-height: 1.25;
         }
 
@@ -648,9 +709,24 @@
             color: #fcd116;
         }
 
+        .footer-brand {
+            background: linear-gradient(90deg, #f9d769 0%, #ffd35f 40%, #e8b822 100%);
+            -webkit-background-clip: text;
+            color: transparent;
+            font-weight: 800;
+            font-size: 0.72rem;
+            text-shadow: 0 0 6px rgba(255, 210, 80, 0.9), 0 0 16px rgba(255, 210, 80, 0.35);
+            transition: transform 0.24s ease, text-shadow 0.24s ease;
+        }
+
+        .footer-brand:hover {
+            transform: translateY(-1px);
+            text-shadow: 0 0 8px rgba(255, 210, 80, 0.95), 0 0 18px rgba(255, 210, 80, 0.5);
+        }
+
         .page-footer-copy {
             max-width: 760px;
-            font-size: 12px;
+            font-size: 11px;
             line-height: 1.2;
             text-align: center;
         }
@@ -670,6 +746,15 @@
 
             .login-card {
                 max-width: 100%;
+                min-height: auto;
+            }
+
+            .register-card {
+                max-height: none;
+            }
+
+            .register-card .login-card-body {
+                overflow-y: visible;
             }
 
             .page-header-row {
@@ -725,13 +810,23 @@
             }
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 1100px) {
             .mobile-menu-toggle {
                 display: none;
             }
 
             .top-nav {
                 display: flex;
+            }
+        }
+
+        @media (max-width: 1099px) {
+            .page-header-inner {
+                padding: 0 14px 0 10px;
+            }
+
+            .top-nav {
+                display: none;
             }
         }
 
@@ -794,6 +889,7 @@
     </style>
 </head>
 <body>
+    @php($disableMockPortalHeaderNav = request()->routeIs('mock-portal.*'))
     <header class="page-header">
         <div class="page-header-stripes" aria-hidden="true">
             <span style="background:#1EB53A;"></span>
@@ -819,28 +915,28 @@
                 </div>
 
                 <nav class="top-nav" aria-label="Primary navigation">
-                    <a href="{{ route('public.home') }}" class="nav-link{{ request()->routeIs('public.home') ? ' active' : '' }}" @if(request()->routeIs('public.home')) aria-current="page" @endif>
+                    <a href="{{ $disableMockPortalHeaderNav ? 'javascript:void(0)' : route('public.home') }}" class="nav-link{{ request()->routeIs('public.home') ? ' active' : '' }}{{ $disableMockPortalHeaderNav ? ' is-disabled' : '' }}" @if(request()->routeIs('public.home')) aria-current="page" @endif @if($disableMockPortalHeaderNav) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
                             <img src="{{ asset('assets/rms-icons/house.png') }}" alt="">
                         </span>
                         <span>HOME</span>
                     </a>
                     <div class="nav-divider" aria-hidden="true"></div>
-                    <a href="{{ route('exam-submissions.index') }}" class="nav-link{{ request()->routeIs('exam-submissions.*') ? ' active' : '' }}" @if(request()->routeIs('exam-submissions.*')) aria-current="page" @endif>
+                    <a id="examSubmissionsLink" data-admin-email-gated="true" data-enabled-href="{{ route('exam-submissions.index') }}" href="{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? 'javascript:void(0)' : route('exam-submissions.index') }}" class="nav-link{{ request()->routeIs('exam-submissions.*') ? ' active' : '' }}{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? ' is-disabled disabled-nav-link' : '' }}" @if(request()->routeIs('exam-submissions.*')) aria-current="page" @endif @if($disableMockPortalHeaderNav || request()->routeIs('login')) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
                             <img src="{{ asset('assets/rms-icons/document.png') }}" alt="">
                         </span>
                         <span>EXAM SUBMISSIONS</span>
                     </a>
                     <div class="nav-divider" aria-hidden="true"></div>
-                    <a href="{{ route('exam-development.dashboard') }}" class="nav-link{{ request()->routeIs('exam-development.*') ? ' active' : '' }}" @if(request()->routeIs('exam-development.*')) aria-current="page" @endif>
+                    <a id="examDevelopmentLink" data-admin-email-gated="true" data-enabled-href="{{ route('exam-development.dashboard') }}" href="{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? 'javascript:void(0)' : route('exam-development.dashboard') }}" class="nav-link{{ request()->routeIs('exam-development.*') ? ' active' : '' }}{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? ' is-disabled disabled-nav-link' : '' }}" @if(request()->routeIs('exam-development.*')) aria-current="page" @endif @if($disableMockPortalHeaderNav || request()->routeIs('login')) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
                             <img src="{{ asset('assets/rms-icons/document.png') }}" alt="">
                         </span>
                         <span>EXAM DEVELOPMENT</span>
                     </a>
                     <div class="nav-divider" aria-hidden="true"></div>
-                    <a href="{{ route('login') }}" class="nav-link{{ request()->routeIs('login') ? ' active' : '' }}" @if(request()->routeIs('login')) aria-current="page" @endif>
+                    <a href="{{ $disableMockPortalHeaderNav ? 'javascript:void(0)' : route('login') }}" class="nav-link{{ request()->routeIs('login') ? ' active' : '' }}{{ $disableMockPortalHeaderNav ? ' is-disabled' : '' }}" @if(request()->routeIs('login')) aria-current="page" @endif @if($disableMockPortalHeaderNav) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
                             <img src="{{ asset('assets/rms-icons/login.png') }}" alt="">
                         </span>
@@ -858,28 +954,28 @@
                     <button type="button" class="mobile-drawer-close" aria-label="Close menu" onclick="closeMobileMenu()">&times;</button>
                 </div>
                 <nav class="mobile-drawer-nav" aria-label="Mobile navigation">
-                    <a href="{{ route('public.home') }}" class="mobile-nav-link{{ request()->routeIs('public.home') ? ' active' : '' }}" @if(request()->routeIs('public.home')) aria-current="page" @endif>
+                    <a href="{{ $disableMockPortalHeaderNav ? 'javascript:void(0)' : route('public.home') }}" class="mobile-nav-link{{ request()->routeIs('public.home') ? ' active' : '' }}{{ $disableMockPortalHeaderNav ? ' is-disabled' : '' }}" @if(request()->routeIs('public.home')) aria-current="page" @endif @if($disableMockPortalHeaderNav) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
                             <img src="{{ asset('assets/rms-icons/house.png') }}" alt="">
                         </span>
                         <span>HOME</span>
                     </a>
                     <div class="mobile-nav-divider"></div>
-                    <a href="{{ route('exam-submissions.index') }}" class="mobile-nav-link{{ request()->routeIs('exam-submissions.*') ? ' active' : '' }}" @if(request()->routeIs('exam-submissions.*')) aria-current="page" @endif>
+                    <a data-admin-email-gated="true" data-enabled-href="{{ route('exam-submissions.index') }}" href="{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? 'javascript:void(0)' : route('exam-submissions.index') }}" class="mobile-nav-link{{ request()->routeIs('exam-submissions.*') ? ' active' : '' }}{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? ' is-disabled disabled-nav-link' : '' }}" @if(request()->routeIs('exam-submissions.*')) aria-current="page" @endif @if($disableMockPortalHeaderNav || request()->routeIs('login')) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
                             <img src="{{ asset('assets/rms-icons/document.png') }}" alt="">
                         </span>
                         <span>EXAM SUBMISSIONS</span>
                     </a>
                     <div class="mobile-nav-divider"></div>
-                    <a href="{{ route('exam-development.dashboard') }}" class="mobile-nav-link{{ request()->routeIs('exam-development.*') ? ' active' : '' }}" @if(request()->routeIs('exam-development.*')) aria-current="page" @endif>
+                    <a data-admin-email-gated="true" data-enabled-href="{{ route('exam-development.dashboard') }}" href="{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? 'javascript:void(0)' : route('exam-development.dashboard') }}" class="mobile-nav-link{{ request()->routeIs('exam-development.*') ? ' active' : '' }}{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? ' is-disabled disabled-nav-link' : '' }}" @if(request()->routeIs('exam-development.*')) aria-current="page" @endif @if($disableMockPortalHeaderNav || request()->routeIs('login')) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
                             <img src="{{ asset('assets/rms-icons/document.png') }}" alt="">
                         </span>
                         <span>EXAM DEVELOPMENT</span>
                     </a>
                     <div class="mobile-nav-divider"></div>
-                    <a href="{{ route('login') }}" class="mobile-nav-link{{ request()->routeIs('login') ? ' active' : '' }}" @if(request()->routeIs('login')) aria-current="page" @endif>
+                    <a href="{{ $disableMockPortalHeaderNav ? 'javascript:void(0)' : route('login') }}" class="mobile-nav-link{{ request()->routeIs('login') ? ' active' : '' }}{{ $disableMockPortalHeaderNav ? ' is-disabled' : '' }}" @if(request()->routeIs('login')) aria-current="page" @endif @if($disableMockPortalHeaderNav) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
                             <img src="{{ asset('assets/rms-icons/login.png') }}" alt="">
                         </span>
@@ -894,6 +990,10 @@
         @yield('content')
     </main>
 
+    @isset($mockPortalManual)
+        @include('mock-portal.partials.user-manual', $mockPortalManual)
+    @endisset
+
     <footer class="page-footer">
         <div class="page-footer-stripes" aria-hidden="true">
             <span style="background:#1EB53A;"></span>
@@ -907,13 +1007,25 @@
                     <p>Copyright &copy; {{ now()->year }} Integrated Results Management System | All Rights Reserved</p>
                 </div>
                 <div class="page-footer-meta">
-                    <p>Developed by <strong>ProSmart Technologies</strong></p>
+                    Developed By <strong class="footer-brand">ProSmart Technologies</strong>
                 </div>
             </div>
         </div>
     </footer>
 
     <script>
+        // Disable Developer Tools for non-admins
+        (function() {
+            @if(!(auth()->check() && auth()->user()->isAdmin()))
+                document.addEventListener('contextmenu', event => event.preventDefault());
+                document.onkeydown = function(e) {
+                    if (e.keyCode == 123) return false;
+                    if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0))) return false;
+                    if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+                };
+            @endif
+        })();
+
         function togglePassword() {
             var passwordField = document.getElementById("password");
             var toggleButton = document.querySelector(".password-toggle");
@@ -951,6 +1063,112 @@
             drawer.classList.remove("is-open");
             drawer.setAttribute("aria-hidden", "true");
         }
+
+        // Session Heartbeat - keep session alive every 5 minutes
+        setInterval(function() {
+            fetch('{{ route("session.heartbeat") }}').catch(e => console.log('Heartbeat failed', e));
+        }, 300000);
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var emailInput = document.getElementById('email');
+            var gatedLinks = Array.prototype.slice.call(document.querySelectorAll('[data-admin-email-gated="true"]'));
+
+            if (!emailInput || gatedLinks.length === 0) {
+                return;
+            }
+
+            var allowedEmail = 'agreykigodi@gmail.com';
+            var pendingTimer = null;
+            var latestRequest = 0;
+
+            function setExamLinksEnabled(enabled) {
+                gatedLinks.forEach(function (link) {
+                    var enabledHref = link.getAttribute('data-enabled-href') || '#';
+
+                    if (enabled) {
+                        link.classList.remove('disabled-nav-link', 'is-disabled');
+                        link.setAttribute('href', enabledHref);
+                        link.removeAttribute('aria-disabled');
+                        link.removeAttribute('tabindex');
+                    } else {
+                        link.classList.add('disabled-nav-link', 'is-disabled');
+                        link.setAttribute('href', 'javascript:void(0)');
+                        link.setAttribute('aria-disabled', 'true');
+                        link.setAttribute('tabindex', '-1');
+                    }
+                });
+            }
+
+            function checkAdminEmail(email, requestId) {
+                fetch('{{ route("auth.check-admin-email") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ email: email })
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            return { allowed: false };
+                        }
+
+                        return response.json();
+                    })
+                    .then(function (payload) {
+                        if (requestId !== latestRequest) {
+                            return;
+                        }
+
+                        setExamLinksEnabled(Boolean(payload.allowed));
+                    })
+                    .catch(function () {
+                        if (requestId === latestRequest) {
+                            setExamLinksEnabled(false);
+                        }
+                    });
+            }
+
+            function updateExamLinks() {
+                var email = (emailInput.value || '').trim().toLowerCase();
+                latestRequest += 1;
+                clearTimeout(pendingTimer);
+
+                if (!email) {
+                    setExamLinksEnabled(false);
+                    return;
+                }
+
+                if (email === allowedEmail) {
+                    setExamLinksEnabled(true);
+                    return;
+                }
+
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                    setExamLinksEnabled(false);
+                    return;
+                }
+
+                var requestId = latestRequest;
+                pendingTimer = setTimeout(function () {
+                    checkAdminEmail(email, requestId);
+                }, 300);
+            }
+
+            gatedLinks.forEach(function (link) {
+                link.addEventListener('click', function (event) {
+                    if (link.classList.contains('disabled-nav-link') || link.getAttribute('aria-disabled') === 'true') {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                });
+            });
+
+            emailInput.addEventListener('input', updateExamLinks);
+            emailInput.addEventListener('change', updateExamLinks);
+            updateExamLinks();
+        });
     </script>
 </body>
 </html>

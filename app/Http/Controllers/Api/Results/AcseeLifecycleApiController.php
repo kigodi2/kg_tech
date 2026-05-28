@@ -613,17 +613,19 @@ class AcseeLifecycleApiController extends Controller
                     ->unique()
                     ->values()
                     ->all();
-                $readinessIssues = $this->districtExportReadinessIssues(
-                    (int) $validated['district_id'],
-                    $examTypeId,
-                    $yearValue,
-                    $exportSchoolIds
-                );
-                if (!empty($readinessIssues)) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $this->formatDistrictExportReadinessMessage($readinessIssues),
-                    ], 422);
+                if ($mode !== 'draft') {
+                    $readinessIssues = $this->districtExportReadinessIssues(
+                        (int) $validated['district_id'],
+                        $examTypeId,
+                        $yearValue,
+                        $exportSchoolIds
+                    );
+                    if (!empty($readinessIssues)) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $this->formatDistrictExportReadinessMessage($readinessIssues),
+                        ], 422);
+                    }
                 }
                 $schools = $rows
                     ->groupBy(fn ($r) => $this->exportCentreKey($r))

@@ -28,6 +28,9 @@ class MarkEntrySingleDeviceTest extends TestCase
     {
         parent::setUp();
 
+        // Explicitly enable single-device restriction for testing this feature specifically
+        config(['mark_entry.enable_single_device_restriction' => true]);
+
         // Seed roles
         $this->meoRole = Role::firstOrCreate(['code' => 'mark_entry_officer'], ['name' => 'Mark Entry Officer']);
         $this->adminRole = Role::firstOrCreate(['code' => 'admin'], ['name' => 'Administrator']);

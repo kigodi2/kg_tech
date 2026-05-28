@@ -240,6 +240,10 @@ class SQLiteBackupService
     protected function ensureWALMode(): void
     {
         try {
+            if (DB::transactionLevel() > 0) {
+                // Cannot change journal mode inside a transaction, but it's likely already WAL
+                return;
+            }
             DB::statement('PRAGMA journal_mode = WAL;');
             Log::info('SQLite WAL mode enabled for safe backups');
         } catch (Exception $e) {
@@ -247,15 +251,22 @@ class SQLiteBackupService
         }
     }
 
-    /**
-     * Wait for database to reach quiescence (no active transactions)
-     */
     protected function waitForDatabaseQuiescence(int $maxWaitSeconds = 30): void
     {
+        // If we're already in a transaction, we cannot start a new one to test quiescence
+        if (DB::transactionLevel() > 0) {
+            Log::warning('Database is currently in a transaction; skipping quiescence wait to avoid deadlocks.');
+            return;
+        }
+
         $startTime = time();
         $waitInterval = 100000; // 0.1 seconds in microseconds
+        
+        // Prevent hitting PHP's max execution time by stopping early
+        $phpMax = (int) ini_get('max_execution_time');
+        $effectiveTimeout = ($phpMax > 0 && $phpMax <= $maxWaitSeconds) ? max(1, $phpMax - 5) : $maxWaitSeconds;
 
-        while (time() - $startTime < $maxWaitSeconds) {
+        while (time() - $startTime < $effectiveTimeout) {
             try {
                 // Try to acquire exclusive lock (indicates database is idle)
                 DB::statement('BEGIN IMMEDIATE;');
@@ -266,7 +277,7 @@ class SQLiteBackupService
             }
         }
 
-        // Log warning but continue (backup will still work, might just have concurrent activity)
+        // Log warning but continue
         Log::warning('Database did not reach quiescence within timeout; proceeding with backup anyway');
     }
 

@@ -1,36 +1,40 @@
 @extends('layout')
 
 @section('content')
-<div class="flex min-h-screen bg-gray-50">
+<div class="flex min-h-screen {{ isset($noSidebar) && $noSidebar ? 'bg-[#0f1117]' : 'bg-gray-50' }}" style="{{ isset($noSidebar) && $noSidebar ? 'background: linear-gradient(180deg,#0d1b2a,#11202e); color: #f0f4f7;' : '' }}">
     <!-- Side Menu Bar -->
-    @include('results.acsee.components.side-menu')
-    <div id="sidebarOverlay" class="fixed inset-0 z-40 hidden bg-gray-900/40 lg:hidden"></div>
+    @if(!isset($noSidebar) || !$noSidebar)
+        @include('results.acsee.components.side-menu')
+        <div id="sidebarOverlay" class="fixed inset-0 z-40 hidden bg-gray-900/40 lg:hidden"></div>
+    @endif
     
     <!-- Main Content Area -->
     <div class="flex-1 flex flex-col overflow-hidden">
         <!-- Top Navigation Bar -->
-        <div class="bg-white border-b border-gray-200 shadow-sm px-4 py-4 sm:px-6 lg:px-8">
+        <div class="{{ isset($noSidebar) && $noSidebar ? 'bg-[#101518]/80 backdrop-blur-md border-b border-[rgba(187,164,94,0.15)] shadow-[0_4px_30px_rgba(0,0,0,0.1)]' : 'bg-white border-b border-gray-200 shadow-sm' }} px-4 py-4 sm:px-6 lg:px-8">
             <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div class="flex items-start gap-3 sm:items-center">
-                    <button id="toggleSidebar" class="text-gray-600 hover:text-gray-900 transition-colors">
-                        <i class="fas fa-bars text-lg"></i>
-                    </button>
+                    @if(!isset($noSidebar) || !$noSidebar)
+                        <button id="toggleSidebar" class="text-gray-600 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-bars text-lg"></i>
+                        </button>
+                    @endif
                     <div>
-                        <h2 class="text-xl font-bold text-gray-800">@yield('page-title', $resultsModuleTitle)</h2>
-                        <p class="text-sm text-gray-600">@yield('page-subtitle')</p>
+                        <h2 class="text-xl font-bold {{ isset($noSidebar) && $noSidebar ? 'text-white' : 'text-gray-800' }}">@yield('page-title', $resultsModuleTitle)</h2>
+                        <p class="text-sm {{ isset($noSidebar) && $noSidebar ? 'text-slate-400' : 'text-gray-600' }}">@yield('page-subtitle')</p>
                     </div>
                 </div>
                 
                 <!-- Breadcrumbs -->
-                <nav class="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-                    <a href="{{ route($resultsRoutePrefix . '.dashboard') }}" class="hover:text-blue-600 transition-colors">
+                <nav class="flex flex-wrap items-center gap-2 text-sm {{ isset($noSidebar) && $noSidebar ? 'text-slate-400' : 'text-gray-600' }}">
+                    <a href="{{ route($resultsRoutePrefix . '.dashboard') }}" class="hover:text-blue-600 transition-colors {{ isset($noSidebar) && $noSidebar ? 'text-slate-300 hover:text-[#bba45e]!' : '' }}">
                         <i class="fas fa-home"></i> Results
                     </a>
-                    <span class="text-gray-400">/</span>
-                    <span class="text-gray-700">{{ $resultsModuleLabel }}</span>
+                    <span class="{{ isset($noSidebar) && $noSidebar ? 'text-slate-600' : 'text-gray-400' }}">/</span>
+                    <span class="{{ isset($noSidebar) && $noSidebar ? 'text-slate-300' : 'text-gray-700' }}">{{ $resultsModuleLabel }}</span>
                     @if(Route::currentRouteName() !== $resultsRoutePrefix . '.dashboard')
-                        <span class="text-gray-400">/</span>
-                        <span class="text-gray-700 font-medium">@yield('breadcrumb-active')</span>
+                        <span class="{{ isset($noSidebar) && $noSidebar ? 'text-slate-600' : 'text-gray-400' }}">/</span>
+                        <span class="{{ isset($noSidebar) && $noSidebar ? 'text-white font-medium' : 'text-gray-700 font-medium' }}">@yield('breadcrumb-active')</span>
                     @endif
                 </nav>
             </div>

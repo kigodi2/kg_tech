@@ -7,6 +7,7 @@ use App\Models\ExamYear;
 use App\Models\Subject;
 use App\Models\Combination;
 use App\Services\ExamTypeService;
+use App\Support\PsleUserScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -14,11 +15,11 @@ class ExamTypeController extends Controller
 {
     public function index()
     {
+        $activeCodes = config('irms.active_exam_types', ['PSLE']);
         if (request()->expectsJson()) {
-            return response()->json(['data' => ExamType::all()]);
+            return response()->json(['data' => ExamType::whereIn('code', $activeCodes)->get()]);
         }
-        $examTypes = ExamType::paginate(15);
-        return view('exam-types.index', compact('examTypes'));
+        return redirect()->route('admin.exam-types.psle');
     }
 
     public function show(ExamType $examType)
@@ -467,6 +468,7 @@ class ExamTypeController extends Controller
     public function getAcseeCandicates(Request $request, $code)
     {
         try {
+            $startedAt = microtime(true);
             $page = $request->get('page', 1);
             $perPage = $request->get('per_page', 15);
             $search = $request->get('q', '');
@@ -475,6 +477,7 @@ class ExamTypeController extends Controller
             $districtId = $request->get('district_id', '');
             $regionId = $request->get('region_id', '');
             $examYearLabel = $request->get('exam_year', '');
+            $user = $request->user();
 
             // Validate perPage to prevent abuse
             $perPage = min(max((int)$perPage, 15), 100);
@@ -489,22 +492,101 @@ class ExamTypeController extends Controller
                 $examYear = ExamYear::where('is_active', true)->first();
             }
 
-            $query = \App\Models\Candidate::query()
-                ->whereHas('examRegistrations', function ($q) use ($examType, $examYear) {
-                    $q->where('exam_type_id', $examType->id);
-                    if ($examYear) {
-                        $q->where('exam_year_id', $examYear->id);
+            // Return 401 if unauthenticated and trying to load PSLE candidates
+            if ($examType->code === 'PSLE' && !$user) {
+                return response()->json([
+                    'message' => 'Authentication required to view PSLE candidates.',
+                    'data' => [],
+                    'meta' => [
+                        'current_page' => 1,
+                        'per_page' => $perPage,
+                        'total' => 0,
+                        'last_page' => 1,
+                        'from' => 0,
+                        'to' => 0,
+                    ],
+                ], 401);
+            }
+
+            $totalBeforeFilters = 0;
+
+            // Define the primary query based on exam type
+            if ($examType->code === 'PSLE') {
+                $query = \App\Services\PsleCandidateRosterService::rosterQuery($examYear->id)
+                    ->select([
+                        'id',
+                        'candidate_id',
+                        'prem_no',
+                        'full_name',
+                        'gender',
+                        'school_id',
+                        'exam_type',
+                        'status',
+                    ])
+                    ->with([
+                        'school:id,name,code,council_id,region_id',
+                        'school.council:id,name,region_id',
+                        'school.region:id,name',
+                        'examRegistrations:id,candidate_id,exam_type_id,exam_year_id,status',
+                    ])
+                    ->orderBy('candidate_id');
+            } else {
+                // Calculate total ACSEE candidates before filters if needed (original behavior preserved)
+                if ($examYear) {
+                    $totalBeforeFiltersQuery = \App\Models\Candidate::query()
+                        ->where('exam_type', strtoupper($code))
+                        ->whereHas('examRegistrations', function ($q) use ($examType, $examYear) {
+                            $q->where('exam_type_id', $examType->id)
+                              ->where('exam_year_id', $examYear->id);
+                        });
+
+                    if ($user) {
+                        PsleUserScope::applyToCandidateSchools($totalBeforeFiltersQuery, $user);
                     }
-                })
-                ->with('school', 'school.district', 'school.district.region')
-                ->with(['subjectSelections' => function ($q) use ($examType, $examYear) {
-                    $q->where('exam_type_id', $examType->id);
-                    if ($examYear) {
-                        $q->where('exam_year_id', $examYear->id);
-                    }
-                    $q->with('subject');
-                }])
-                ->orderBy('candidate_id');
+
+                    $totalBeforeFilters = $totalBeforeFiltersQuery->count();
+                }
+
+                $query = \App\Models\Candidate::query()
+                    ->with('school', 'school.region', 'school.council', 'school.council.region', 'school.district', 'school.district.region')
+                    ->with(['subjectSelections' => function ($q) use ($examType, $examYear) {
+                        $q->where('exam_type_id', $examType->id);
+                        if ($examYear) {
+                            $q->where('exam_year_id', $examYear->id);
+                        }
+                        $q->with('subject');
+                    }])
+                    ->orderBy('candidate_id');
+            }
+
+            if ($examType->code === 'PSLE' && $user) {
+                PsleUserScope::applyToCandidateSchools($query, $user);
+            }
+
+            if ($examType->code === 'PSLE') {
+                // Scoped already via rosterQuery
+            } else {
+                $query->where(function ($candidateQuery) use ($examType) {
+                    $candidateQuery->where('exam_type', strtoupper($examType->code))
+                        ->orWhereHas('examRegistrations', fn ($q) => $q->where('exam_type_id', $examType->id));
+                });
+            }
+
+            if ($examYear) {
+                if ($examType->code !== 'PSLE') {
+                    $query->whereHas('examRegistrations', function ($q) use ($examType, $examYear) {
+                        $q->where('exam_type_id', $examType->id);
+                        $q->where(function ($yearQuery) use ($examYear) {
+                            $yearQuery->where('exam_year_id', $examYear->id)
+                                ->orWhere('year', (int) $examYear->year_label);
+                        });
+                    });
+                }
+            } else {
+                if ($examType->code !== 'PSLE') {
+                    $query->whereHas('examRegistrations', fn ($q) => $q->where('exam_type_id', $examType->id));
+                }
+            }
 
             // Filter by candidate type
             if ($candidateType && $candidateType !== 'ALL') {
@@ -516,37 +598,100 @@ class ExamTypeController extends Controller
                 $query->where('school_id', $schoolId);
             }
 
-            // Filter by district (through school relationship)
+            // Filter by council (kept as district_id request parameter for compatibility)
             if ($districtId) {
                 $query->whereHas('school', function($q) use ($districtId) {
-                    $q->where('district_id', $districtId)
-                      ->whereNotNull('district_id');
+                    $q->where('council_id', $districtId);
                 });
             }
 
             // Filter by region (through school -> district relationship)
             if ($regionId) {
-                $query->whereHas('school.district', function($q) use ($regionId) {
+                $query->whereHas('school', function($q) use ($regionId) {
                     $q->where('region_id', $regionId)
-                      ->whereNotNull('region_id');
-                });
-            }
-
-            // Search by candidate_id, full_name, or linked school
-            if ($search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('candidate_id', 'like', "%{$search}%")
-                      ->orWhere('full_name', 'like', "%{$search}%")
-                      ->orWhereHas('school', function ($schoolQuery) use ($search) {
-                          $schoolQuery->where('name', 'like', "%{$search}%")
-                              ->orWhere('code', 'like', "%{$search}%");
+                      ->orWhereHas('council', function($q2) use ($regionId) {
+                          $q2->where('region_id', $regionId);
+                      })
+                      ->orWhereHas('district', function($q2) use ($regionId) {
+                          $q2->where('region_id', $regionId);
                       });
                 });
             }
+
+            // Search by candidate_id, prem_no, full_name, or linked school
+            if ($search) {
+                if ($examType->code === 'PSLE') {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('candidate_id', 'like', "{$search}%")
+                          ->orWhere('prem_no', 'like', "{$search}%");
+
+                        if (mb_strlen($search) >= 3) {
+                            $q->orWhere('full_name', 'like', "%{$search}%");
+                        }
+                    });
+                } else {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('candidate_id', 'like', "%{$search}%")
+                          ->orWhere('full_name', 'like', "%{$search}%")
+                          ->orWhereHas('school', function ($schoolQuery) use ($search) {
+                              $schoolQuery->where('name', 'like', "%{$search}%")
+                                  ->orWhere('code', 'like', "%{$search}%");
+                          });
+                    });
+                }
+            }
             
             $candidates = $query->paginate($perPage);
+            
+            $durationMs = round((microtime(true) - $startedAt) * 1000, 2);
+
+            if (app()->environment('local') && $examType->code === 'PSLE') {
+                Log::info('PSLE candidate table loaded', [
+                    'duration_ms' => $durationMs,
+                    'user_id' => $user?->id,
+                    'exam_year_id' => $examYear?->id,
+                    'region_id' => $regionId,
+                    'district_id' => $districtId,
+                    'school_id' => $schoolId,
+                    'search' => $search,
+                    'page' => $page,
+                    'per_page' => $perPage,
+                    'rows_returned' => $candidates->count(),
+                ]);
+            }
+
+            $diagnostics = null;
 
             $data = $candidates->map(function ($candidate) use ($examType) {
+                if ($examType->code === 'PSLE') {
+                    $allocated = [];
+                    $councilName = $candidate->school?->council?->name ?? $candidate->school?->district?->name;
+                    return [
+                        'id' => $candidate->id,
+                        'candidate_id' => $candidate->candidate_id,
+                        'candidate_number' => $candidate->candidate_id, // Alias for compatibility
+                        'pupil_name' => $candidate->full_name, // Alias for compatibility
+                        'sex' => $candidate->gender, // Alias for compatibility
+                        'prem_no' => $candidate->prem_no,
+                        'full_name' => $candidate->full_name,
+                        'gender' => $candidate->gender,
+                        'combination' => null,
+                        'school_id' => $candidate->school_id,
+                        'school_code' => $candidate->school?->code,
+                        'school_name' => $candidate->school?->name ?? '-',
+                        'district_id' => $candidate->school?->council_id ?? $candidate->school?->district_id,
+                        'district_name' => $councilName ?? '-',
+                        'council' => $councilName ?? '-',
+                        'council_name' => $councilName ?? '-',
+                        'region_id' => $candidate->school?->region_id ?: ($candidate->school?->council?->region_id ?? $candidate->school?->district?->region_id),
+                        'region_name' => $candidate->school?->region?->name ?? $candidate->school?->council?->region?->name ?? $candidate->school?->district?->region?->name,
+                        'allocated_subjects' => $allocated,
+                        'allocated_subject_count' => count($allocated),
+                        'exam_type' => $candidate->exam_type,
+                        'status' => $candidate->status ?? 'registered',
+                    ];
+                }
+
                 if ($examType->code === 'CSEE' && $candidate->subjectSelections->count() > 0) {
                     $allocated = $candidate->subjectSelections->map(function ($selection) {
                         return [
@@ -579,16 +724,30 @@ class ExamTypeController extends Controller
                     'school_id' => $candidate->school_id,
                     'school_code' => $candidate->school?->code,
                     'school_name' => $candidate->school?->name ?? '-',
-                    'district_id' => $candidate->school?->district_id,
-                    'district_name' => $candidate->school?->district?->name,
-                    'region_id' => $candidate->school?->region_id ?: $candidate->school?->district?->region_id,
-                    'region_name' => $candidate->school?->region?->name ?? $candidate->school?->district?->region?->name,
+                    'district_id' => $candidate->school?->council_id ?? $candidate->school?->district_id,
+                    'district_name' => $candidate->school?->council?->name ?? $candidate->school?->district?->name,
+                    'region_id' => $candidate->school?->region_id ?: ($candidate->school?->council?->region_id ?? $candidate->school?->district?->region_id),
+                    'region_name' => $candidate->school?->region?->name ?? $candidate->school?->council?->region?->name ?? $candidate->school?->district?->region?->name,
                     'allocated_subjects' => $allocated,
                     'allocated_subject_count' => count($allocated),
                     'exam_type' => $candidate->exam_type,
                     'status' => $candidate->status ?? 'registered',
                 ];
             })->toArray();
+
+            if (app()->environment('local') && $examType->code === 'PSLE') {
+                $diagnostics = [
+                    'active_exam_year' => $examYear?->year_label,
+                    'selected_region_id' => $regionId ?: 'None',
+                    'selected_council_id' => $districtId ?: 'None',
+                    'selected_school_id' => $schoolId ?: 'None',
+                    'total_pupils_after_filters' => $candidates->total(),
+                    'authenticated_user_id' => $user?->id ?? 'Guest',
+                    'authenticated_user_email' => $user?->email ?? 'Guest',
+                    'route_source' => 'web.php',
+                    'middleware' => 'web, auth, main-system',
+                ];
+            }
 
             return response()->json([
                 'data' => $data,
@@ -599,11 +758,122 @@ class ExamTypeController extends Controller
                     'last_page' => $candidates->lastPage(),
                     'from' => $candidates->firstItem(),
                     'to' => $candidates->lastItem(),
-                ]
+                ],
+                'debug' => $diagnostics,
             ]);
         } catch (\Exception $e) {
             Log::error('Error loading candidates: ' . $e->getMessage(), [
                 'code' => $code,
+                'exception' => $e
+            ]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get PSLE summary statistics (cached)
+     */
+    public function getPsleSummary(Request $request)
+    {
+        try {
+            $user = $request->user();
+            
+            // Return 401 if unauthenticated
+            if (!$user) {
+                return response()->json([
+                    'message' => 'Authentication required.',
+                    'subjects' => 0,
+                    'synced_councils' => 0,
+                    'synced_primary_schools' => 0,
+                    'registered_pupils' => 0,
+                ], 401);
+            }
+
+            $examType = ExamType::where('code', 'PSLE')->firstOrFail();
+            $examYear = ExamYear::where('is_active', true)->first();
+            $examYearId = $examYear ? $examYear->id : 0;
+
+            $regionId = $request->query('region_id');
+            $districtId = $request->query('district_id');
+
+            $scopeHash = \App\Services\PsleCacheService::scopeHash($user);
+            $cacheKey = \App\Services\PsleCacheService::summaryKey($examYearId, $user->id, $scopeHash) . '_' . ($regionId ?: 'all') . '_' . ($districtId ?: 'all');
+
+            $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user, $examType, $examYear, $regionId, $districtId) {
+                // 1. Subjects count
+                $subjects = \App\Models\Subject::where('exam_type_id', $examType->id)->count();
+
+                // 2. Synced primary schools query
+                $schoolsQuery = \App\Models\School::query()
+                    ->where(function ($q) {
+                        $q->where('source_system', \App\Services\Schools\NectaPsle2025SchoolSyncService::SOURCE_SYSTEM)
+                          ->orWhereIn('school_type', ['PRIMARY', 'BOTH']);
+                    });
+
+                PsleUserScope::applyToSchools($schoolsQuery, $user);
+
+                if ($regionId) {
+                    $schoolsQuery->where(function ($q) use ($regionId) {
+                        $q->where('region_id', $regionId)
+                          ->orWhereHas('council', fn ($councilQuery) => $councilQuery->where('region_id', $regionId));
+                    });
+                }
+
+                if ($districtId) {
+                    $schoolsQuery->where('council_id', $districtId);
+                }
+
+                // Clone schoolsQuery to get unique councils count
+                $councilsCount = $schoolsQuery->clone()
+                    ->whereNotNull('council_id')
+                    ->distinct()
+                    ->count('council_id');
+
+                $schoolsCount = $schoolsQuery->count();
+
+                // 3. Registered pupils query
+                $candidatesQuery = \App\Models\Candidate::query()
+                    ->where('exam_type', 'PSLE');
+
+                if ($examYear) {
+                    $candidatesQuery->whereHas('examRegistrations', function ($q) use ($examType, $examYear) {
+                        $q->where('exam_type_id', $examType->id)
+                          ->where('exam_year_id', $examYear->id);
+                    });
+                } else {
+                    $candidatesQuery->whereHas('examRegistrations', function ($q) use ($examType) {
+                        $q->where('exam_type_id', $examType->id);
+                    });
+                }
+
+                PsleUserScope::applyToCandidateSchools($candidatesQuery, $user);
+
+                if ($regionId) {
+                    $candidatesQuery->whereHas('school', function ($q) use ($regionId) {
+                        $q->where('region_id', $regionId)
+                          ->orWhereHas('council', fn ($councilQuery) => $councilQuery->where('region_id', $regionId));
+                    });
+                }
+
+                if ($districtId) {
+                    $candidatesQuery->whereHas('school', function ($q) use ($districtId) {
+                        $q->where('council_id', $districtId);
+                    });
+                }
+
+                $candidatesCount = $candidatesQuery->count();
+
+                return [
+                    'subjects' => $subjects,
+                    'synced_councils' => $councilsCount,
+                    'synced_primary_schools' => $schoolsCount,
+                    'registered_pupils' => $candidatesCount,
+                ];
+            });
+
+            return response()->json($data);
+        } catch (\Exception $e) {
+            \Log::error('Error loading PSLE summary: ' . $e->getMessage(), [
                 'exception' => $e
             ]);
             return response()->json(['error' => $e->getMessage()], 500);

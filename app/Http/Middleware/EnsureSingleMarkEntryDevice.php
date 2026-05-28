@@ -20,7 +20,12 @@ class EnsureSingleMarkEntryDevice
     {
         $user = $request->user();
 
-        // 1. Bypass if guest or not a Mark Entry Officer
+        // 1. Bypass if single-device restriction is disabled in config
+        if (!config('mark_entry.enable_single_device_restriction', true)) {
+            return $next($request);
+        }
+
+        // 2. Bypass if guest or not a Mark Entry Officer
         if (!$user || !$user->isMarkEntryOfficer()) {
             return $next($request);
         }

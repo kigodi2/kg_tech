@@ -200,8 +200,6 @@ class ManageBackups extends Page implements HasForms, HasTable
                     ->body('Backup ' . $result['backup_id'] . ' created successfully.')
                     ->success()
                     ->send();
-
-                $this->table()->resetPage();
             } else {
                 Notification::make()
                     ->title('Backup Failed')

@@ -302,16 +302,20 @@ class MarkModerationServiceTest extends TestCase
     }
 
     /**
-     * Test approveBatch throws exception if no review exists
+     * Test approveBatch auto-creates a review if none exists
      */
-    public function test_approve_batch_requires_existing_review(): void
+    public function test_approve_batch_auto_creates_review_when_missing(): void
     {
         $this->actingAs($this->approver);
 
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('No active moderation review found');
+        $review = $this->service->approveBatch($this->batch, $this->approver);
 
-        $this->service->approveBatch($this->batch, $this->approver);
+        $this->assertNotNull($review);
+        $this->assertSame($this->batch->id, $review->mark_import_batch_id);
+        $this->assertSame($this->approver->id, $review->reviewer_id);
+        $this->assertSame('approval', $review->review_type);
+        $this->assertSame('approved', $review->status);
+        $this->assertNotNull($review->reviewed_at);
     }
 
     // ============ Batch Rejection Tests ============
@@ -388,16 +392,22 @@ class MarkModerationServiceTest extends TestCase
     }
 
     /**
-     * Test rejectBatch throws exception if no review exists
+     * Test rejectBatch auto-creates a review if none exists
      */
-    public function test_reject_batch_requires_existing_review(): void
+    public function test_reject_batch_auto_creates_review_when_missing(): void
     {
         $this->actingAs($this->reviewer);
 
-        $this->expectException(\Exception::class);
-        $this->expectExceptionMessage('No active moderation review found');
+        $reason = 'Invalid data';
+        $review = $this->service->rejectBatch($this->batch, $this->reviewer, $reason);
 
-        $this->service->rejectBatch($this->batch, $this->reviewer, 'Invalid data');
+        $this->assertNotNull($review);
+        $this->assertSame($this->batch->id, $review->mark_import_batch_id);
+        $this->assertSame($this->reviewer->id, $review->reviewer_id);
+        $this->assertSame('rejection', $review->review_type);
+        $this->assertSame('rejected', $review->status);
+        $this->assertSame($reason, $review->feedback);
+        $this->assertNotNull($review->reviewed_at);
     }
 
     /**

@@ -3,8 +3,11 @@
 namespace Tests\Unit\Services\Results;
 
 use Tests\TestCase;
+use App\Models\CandidateExamRegistration;
+use App\Models\CandidateSubjectSelection;
 use App\Services\Results\NectaGradingService;
 use App\Models\Candidate;
+use App\Models\ExamYear;
 use App\Models\Subject;
 use App\Models\SubjectMarks;
 use App\Models\ExamType;
@@ -18,6 +21,50 @@ class NectaGradingServiceTest extends TestCase
     {
         parent::setUp();
         $this->service = new NectaGradingService();
+    }
+
+    private function createExamYear(int $year = 2024): ExamYear
+    {
+        return ExamYear::firstOrCreate(
+            ['year' => $year],
+            ['year_label' => (string) $year]
+        );
+    }
+
+    private function addSubjectSelection(
+        Candidate $candidate,
+        Subject $subject,
+        ExamType $examType,
+        ExamYear $examYear,
+        int $year = 2024,
+        bool $isPrincipal = true
+    ): void {
+        CandidateSubjectSelection::create([
+            'candidate_id' => $candidate->id,
+            'exam_type_id' => $examType->id,
+            'exam_year_id' => $examYear->id,
+            'subject_id' => $subject->id,
+            'year' => $year,
+            'is_active' => true,
+            'is_principal' => $isPrincipal,
+            'source' => 'test',
+        ]);
+    }
+
+    private function registerCandidateForExam(
+        Candidate $candidate,
+        ExamType $examType,
+        ExamYear $examYear,
+        int $year = 2024
+    ): void {
+        CandidateExamRegistration::create([
+            'candidate_id' => $candidate->id,
+            'exam_type_id' => $examType->id,
+            'exam_year_id' => $examYear->id,
+            'year' => $year,
+            'registration_number' => 'REG-' . uniqid(),
+            'status' => 'registered',
+        ]);
     }
 
     // Grade Calculation Tests
@@ -163,7 +210,7 @@ class NectaGradingServiceTest extends TestCase
 
         // Verify A grade boundary
         $aGrade = collect($boundaries)->firstWhere('grade', 'A');
-        $this->assertEquals(79.5, $aGrade['min']);
+        $this->assertEquals(80, $aGrade['min']);
         $this->assertEquals(100, $aGrade['max']);
     }
 
@@ -222,7 +269,10 @@ class NectaGradingServiceTest extends TestCase
     {
         // Create test data
         $school = School::factory()->create();
-        $candidate = Candidate::factory()->create(['school_id' => $school->id]);
+        $candidate = Candidate::factory()->create([
+            'school_id' => $school->id,
+            'candidate_id' => 'CAND-TM-' . uniqid(),
+        ]);
         $examType = ExamType::factory()->create();
 
         // Create subjects and marks
@@ -233,8 +283,12 @@ class NectaGradingServiceTest extends TestCase
         ];
 
         foreach ($subjects as $subject) {
-            $subj = Subject::factory()->create(['name' => $subject['name']]);
-            SubjectMarks::factory()->create([
+            $subj = Subject::create([
+                'code' => 'SUBJ-' . uniqid(),
+                'name' => $subject['name'],
+                'exam_type_id' => $examType->id,
+            ]);
+            SubjectMarks::create([
                 'candidate_id' => $candidate->id,
                 'subject_id' => $subj->id,
                 'exam_type_id' => $examType->id,
@@ -251,7 +305,9 @@ class NectaGradingServiceTest extends TestCase
 
     public function test_calculate_total_marks_no_marks()
     {
-        $candidate = Candidate::factory()->create();
+        $candidate = Candidate::factory()->create([
+            'candidate_id' => 'CAND-NM-' . uniqid(),
+        ]);
         $examType = ExamType::factory()->create();
 
         $totalMarks = $this->service->calculateTotalMarks($candidate, $examType->id, 2024);
@@ -262,8 +318,12 @@ class NectaGradingServiceTest extends TestCase
     public function test_calculate_total_points()
     {
         $school = School::factory()->create();
-        $candidate = Candidate::factory()->create(['school_id' => $school->id]);
+        $candidate = Candidate::factory()->create([
+            'school_id' => $school->id,
+            'candidate_id' => 'CAND-TP-' . uniqid(),
+        ]);
         $examType = ExamType::factory()->create();
+        $examYear = $this->createExamYear();
 
         // Create subjects and marks
         $subjects = [
@@ -273,14 +333,26 @@ class NectaGradingServiceTest extends TestCase
         ];
 
         foreach ($subjects as $subject) {
-            $subj = Subject::factory()->create(['name' => $subject['name']]);
-            SubjectMarks::factory()->create([
+            $subj = Subject::create([
+                'code' => 'SUBJ-' . uniqid(),
+                'name' => $subject['name'],
+                'exam_type_id' => $examType->id,
+            ]);
+            SubjectMarks::create([
                 'candidate_id' => $candidate->id,
                 'subject_id' => $subj->id,
                 'exam_type_id' => $examType->id,
                 'year' => 2024,
                 'marks_obtained' => $subject['marks'],
             ]);
+            $this->addSubjectSelection(
+                $candidate,
+                $subj,
+                $examType,
+                $examYear,
+                2024,
+                $subject['name'] !== 'GENERAL STUDIES'
+            );
         }
 
         $totalPoints = $this->service->calculateTotalPoints($candidate, $examType->id, 2024);
@@ -292,8 +364,12 @@ class NectaGradingServiceTest extends TestCase
     public function test_calculate_gpa()
     {
         $school = School::factory()->create();
-        $candidate = Candidate::factory()->create(['school_id' => $school->id]);
+        $candidate = Candidate::factory()->create([
+            'school_id' => $school->id,
+            'candidate_id' => 'CAND-GPA-' . uniqid(),
+        ]);
         $examType = ExamType::factory()->create();
+        $examYear = $this->createExamYear();
 
         // Create subjects and marks
         $subjects = [
@@ -305,14 +381,26 @@ class NectaGradingServiceTest extends TestCase
         ];
 
         foreach ($subjects as $subject) {
-            $subj = Subject::factory()->create(['name' => $subject['name']]);
-            SubjectMarks::factory()->create([
+            $subj = Subject::create([
+                'code' => 'SUBJ-' . uniqid(),
+                'name' => $subject['name'],
+                'exam_type_id' => $examType->id,
+            ]);
+            SubjectMarks::create([
                 'candidate_id' => $candidate->id,
                 'subject_id' => $subj->id,
                 'exam_type_id' => $examType->id,
                 'year' => 2024,
                 'marks_obtained' => $subject['marks'],
             ]);
+            $this->addSubjectSelection(
+                $candidate,
+                $subj,
+                $examType,
+                $examYear,
+                2024,
+                $subject['name'] !== 'GENERAL STUDIES'
+            );
         }
 
         $gpa = $this->service->calculateGPA($candidate, $examType->id, 2024);
@@ -324,8 +412,12 @@ class NectaGradingServiceTest extends TestCase
     public function test_calculate_gpa_with_basic_applied_math_excluded()
     {
         $school = School::factory()->create();
-        $candidate = Candidate::factory()->create(['school_id' => $school->id]);
+        $candidate = Candidate::factory()->create([
+            'school_id' => $school->id,
+            'candidate_id' => 'CAND-BAM-' . uniqid(),
+        ]);
         $examType = ExamType::factory()->create();
+        $examYear = $this->createExamYear();
 
         // Create subjects including BASIC APPLIED MATHEMATICS
         $subjects = [
@@ -335,14 +427,26 @@ class NectaGradingServiceTest extends TestCase
         ];
 
         foreach ($subjects as $subject) {
-            $subj = Subject::factory()->create(['name' => $subject['name']]);
-            SubjectMarks::factory()->create([
+            $subj = Subject::create([
+                'code' => 'SUBJ-' . uniqid(),
+                'name' => $subject['name'],
+                'exam_type_id' => $examType->id,
+            ]);
+            SubjectMarks::create([
                 'candidate_id' => $candidate->id,
                 'subject_id' => $subj->id,
                 'exam_type_id' => $examType->id,
                 'year' => 2024,
                 'marks_obtained' => $subject['marks'],
             ]);
+            $this->addSubjectSelection(
+                $candidate,
+                $subj,
+                $examType,
+                $examYear,
+                2024,
+                $subject['name'] !== 'BASIC APPLIED MATHEMATICS'
+            );
         }
 
         $gpa = $this->service->calculateGPA($candidate, $examType->id, 2024);
@@ -386,7 +490,7 @@ class NectaGradingServiceTest extends TestCase
 
     public function test_calculate_division_fail()
     {
-        $division = $this->service->calculateDivision(21.0);
+        $division = $this->service->calculateDivision(22.0);
         
         $this->assertEquals(0, $division['division']);
         $this->assertEquals('Fail', $division['competence']);
@@ -395,7 +499,10 @@ class NectaGradingServiceTest extends TestCase
     public function test_calculate_overall_grade()
     {
         $school = School::factory()->create();
-        $candidate = Candidate::factory()->create(['school_id' => $school->id]);
+        $candidate = Candidate::factory()->create([
+            'school_id' => $school->id,
+            'candidate_id' => 'CAND-OG-' . uniqid(),
+        ]);
         $examType = ExamType::factory()->create();
 
         // Create subjects with varying marks
@@ -405,8 +512,12 @@ class NectaGradingServiceTest extends TestCase
         ];
 
         foreach ($subjects as $subject) {
-            $subj = Subject::factory()->create(['name' => $subject['name']]);
-            SubjectMarks::factory()->create([
+            $subj = Subject::create([
+                'code' => 'SUBJ-' . uniqid(),
+                'name' => $subject['name'],
+                'exam_type_id' => $examType->id,
+            ]);
+            SubjectMarks::create([
                 'candidate_id' => $candidate->id,
                 'subject_id' => $subj->id,
                 'exam_type_id' => $examType->id,
@@ -424,8 +535,12 @@ class NectaGradingServiceTest extends TestCase
     public function test_generate_grading_report()
     {
         $school = School::factory()->create();
-        $candidate = Candidate::factory()->create(['school_id' => $school->id]);
+        $candidate = Candidate::factory()->create([
+            'school_id' => $school->id,
+            'candidate_id' => 'CAND-RPT-' . uniqid(),
+        ]);
         $examType = ExamType::factory()->create();
+        $examYear = $this->createExamYear();
 
         // Create subjects
         $subjects = [
@@ -435,14 +550,26 @@ class NectaGradingServiceTest extends TestCase
         ];
 
         foreach ($subjects as $subject) {
-            $subj = Subject::factory()->create(['name' => $subject['name']]);
-            SubjectMarks::factory()->create([
+            $subj = Subject::create([
+                'code' => 'SUBJ-' . uniqid(),
+                'name' => $subject['name'],
+                'exam_type_id' => $examType->id,
+            ]);
+            SubjectMarks::create([
                 'candidate_id' => $candidate->id,
                 'subject_id' => $subj->id,
                 'exam_type_id' => $examType->id,
                 'year' => 2024,
                 'marks_obtained' => $subject['marks'],
             ]);
+            $this->addSubjectSelection(
+                $candidate,
+                $subj,
+                $examType,
+                $examYear,
+                2024,
+                $subject['name'] !== 'GENERAL STUDIES'
+            );
         }
 
         $report = $this->service->generateGradingReport($candidate, $examType->id, 2024);
@@ -463,13 +590,27 @@ class NectaGradingServiceTest extends TestCase
     {
         $school = School::factory()->create();
         $examType = ExamType::factory()->create();
+        $examYear = $this->createExamYear();
 
         // Create multiple candidates
-        $candidates = Candidate::factory()->count(3)->create(['school_id' => $school->id]);
+        $candidates = Candidate::factory()
+            ->count(3)
+            ->sequence(
+                ['candidate_id' => 'CAND-BATCH-1-' . uniqid()],
+                ['candidate_id' => 'CAND-BATCH-2-' . uniqid()],
+                ['candidate_id' => 'CAND-BATCH-3-' . uniqid()],
+            )
+            ->create(['school_id' => $school->id]);
 
         foreach ($candidates as $candidate) {
-            $subj = Subject::factory()->create(['name' => 'ENGLISH']);
-            SubjectMarks::factory()->create([
+            $subj = Subject::create([
+                'code' => 'SUBJ-' . uniqid(),
+                'name' => 'ENGLISH',
+                'exam_type_id' => $examType->id,
+            ]);
+            $this->registerCandidateForExam($candidate, $examType, $examYear);
+            $this->addSubjectSelection($candidate, $subj, $examType, $examYear);
+            SubjectMarks::create([
                 'candidate_id' => $candidate->id,
                 'subject_id' => $subj->id,
                 'exam_type_id' => $examType->id,

@@ -114,7 +114,7 @@ class NectaCsee2025CentreSyncService
         return Region::query()->firstOrCreate(
             ['code' => 'CSEE-UNK'],
             [
-                'name' => 'UNASSIGNED CSEE CENTRES',
+                'name' => 'CSEE CENTRES PENDING REGION',
                 'description' => 'Fallback region used for CSEE centre sync records pending region enrichment.',
                 'is_active' => true,
             ]

@@ -74,6 +74,12 @@ class CandidateSubjectSelection extends Model
             ->where('exam_type_id', $this->exam_type_id);
     }
 
+    public function rawMarks()
+    {
+        return $this->hasMany(RawMark::class, 'candidate_id', 'candidate_id')
+            ->whereColumn('subject_id', 'candidate_subject_selections.subject_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

@@ -9,6 +9,7 @@ use App\Models\ExamType;
 use App\Models\ExamYear;
 use App\Models\School;
 use App\Models\Subject;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -23,6 +24,7 @@ class AcseeRegistrationTest extends TestCase
     protected $subject1;
     protected $subject2;
     protected $subject3;
+    protected $user;
 
     protected function setUp(): void
     {
@@ -62,6 +64,9 @@ class AcseeRegistrationTest extends TestCase
             $this->subject3->id,
             $this->generalStudies->id,
         ]);
+
+        $this->user = User::factory()->create();
+        $this->actingAs($this->user);
     }
 
     /**
@@ -187,6 +192,7 @@ class AcseeRegistrationTest extends TestCase
         $candidate->subjectSelections()->create([
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
             'subject_id' => $this->subject1->id,
             'is_principal' => true,
             'source' => 'manual',
@@ -198,6 +204,7 @@ class AcseeRegistrationTest extends TestCase
                 'candidate_id' => $candidate->id,
                 'exam_type_id' => $this->examType->id,
                 'exam_year_id' => $this->examYear->id,
+                'year' => 2026,
                 'subject_id' => $this->subject1->id,
                 'is_principal' => true,
                 'source' => 'manual',
@@ -227,6 +234,7 @@ class AcseeRegistrationTest extends TestCase
         $selection = $candidate->subjectSelections()->create([
             'exam_type_id' => $this->examType->id,
             'exam_year_id' => $this->examYear->id,
+            'year' => 2026,
             'subject_id' => $this->subject1->id,
             'is_principal' => true,
             'source' => 'manual',

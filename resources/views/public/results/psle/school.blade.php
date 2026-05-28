@@ -23,10 +23,33 @@
 <div style="background-color: #B0E0E6; min-height: 100vh; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: 'Maiandra GD', sans-serif; font-weight: 700; white-space: nowrap;">
     <div class="container mx-auto px-4">
 
-        <div style="margin-bottom: 1rem;">
+        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
             <a href="{{ route('public.results.psle.schools', ['examYear' => $examYear, 'region' => $region->id, 'district' => $district->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
                 ← Back to Schools
             </a>
+            
+            @if($resultsAvailable)
+                @if(auth()->check() && (auth()->user()->is_admin || (auth()->user()->role ?? '') === 'admin'))
+                    <a href="{{ route('results.psle.reports.school-export', ['school' => $school->id, 'exam_year_id' => $examYear->id, 'mode' => 'draft']) }}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background-color: #003366; color: #FFFFFF; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#002244'" onmouseout="this.style.backgroundColor='#003366'">
+                        <i class="fa-solid fa-file-pdf"></i> Download Official School PDF
+                    </a>
+                @else
+                    <div style="position: relative; display: inline-block;" class="pdf-tooltip-container">
+                        <span style="display: inline-flex; align-items: center; gap: 8px; background-color: rgba(0,51,102,0.4); color: rgba(255,255,255,0.85); padding: 6px 14px; border-radius: 4px; font-weight: bold; font-size: 0.9rem; cursor: help;">
+                            <i class="fa-solid fa-lock"></i> PDF Statement Sheet
+                        </span>
+                        <div class="pdf-tooltip-text" style="visibility: hidden; width: 260px; background-color: #333; color: #fff; text-align: center; border-radius: 6px; padding: 8px 12px; position: absolute; z-index: 100; right: 0; top: 125%; opacity: 0; transition: opacity 0.3s; font-size: 0.75rem; font-family: sans-serif; font-weight: normal; line-height: 1.4; box-shadow: 0 4px 10px rgba(0,0,0,0.25); white-space: normal;">
+                            Official Statement Sheets are compiled in the **Admin Results Portal**. Please log in as an administrator to download the print-ready PDF.
+                        </div>
+                    </div>
+                    <style>
+                        .pdf-tooltip-container:hover .pdf-tooltip-text {
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                        }
+                    </style>
+                @endif
+            @endif
         </div>
 
         <div style="background-color: #B0E0E6; padding-top: 1.5rem; padding-bottom: 0.35rem; padding-left: 1rem; padding-right: 1rem; margin-bottom: 0.2rem;">
@@ -201,6 +224,35 @@
                             @endforeach
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Pagination -->
+                @if($candidates->lastPage() > 1)
+                    <div style="margin: 20px 0; display: flex; justify-content: center; align-items: center; gap: 10px; font-family: 'Maiandra GD', sans-serif;">
+                        <div style="font-size: 13px; color: #003366; margin-right: 15px;">
+                            Page <strong>{{ $candidates->currentPage() }}</strong> of <strong>{{ $candidates->lastPage() }}</strong>
+                        </div>
+                        
+                        <div style="display: flex; gap: 5px;">
+                            @if(!$candidates->onFirstPage())
+                                <a href="{{ $candidates->previousPageUrl() }}" style="padding: 5px 10px; border: 1px solid #003366; background: LIGHTYELLOW; color: #003366; text-decoration: none; border-radius: 3px; font-size: 12px; font-weight: bold;">« Previous</a>
+                            @endif
+
+                            @php
+                                $start = max(1, $candidates->currentPage() - 2);
+                                $end = min($candidates->lastPage(), $candidates->currentPage() + 2);
+                            @endphp
+
+                            @for($i = $start; $i <= $end; $i++)
+                                <a href="{{ $candidates->url($i) }}" style="padding: 5px 10px; border: 1px solid #003366; background: {{ $i == $candidates->currentPage() ? '#003366' : 'LIGHTYELLOW' }}; color: {{ $i == $candidates->currentPage() ? '#fff' : '#003366' }}; text-decoration: none; border-radius: 3px; font-size: 12px; font-weight: bold;">{{ $i }}</a>
+                            @endfor
+
+                            @if($candidates->hasMorePages())
+                                <a href="{{ $candidates->nextPageUrl() }}" style="padding: 5px 10px; border: 1px solid #003366; background: LIGHTYELLOW; color: #003366; text-decoration: none; border-radius: 3px; font-size: 12px; font-weight: bold;">Next »</a>
+                            @endif
+                        </div>
+                    </div>
+                @endif
                 </div>
             </div>
 

@@ -355,7 +355,11 @@ return new class extends Migration
 
         Schema::create('practical_confidential_instructions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('exam_project_paper_id')->constrained('exam_project_papers')->cascadeOnDelete();
+            $table->foreignId('exam_project_paper_id');
+            $table->foreign('exam_project_paper_id', 'pci_project_paper_fk')
+                ->references('id')
+                ->on('exam_project_papers')
+                ->cascadeOnDelete();
             $table->unsignedInteger('release_hours_before')->nullable();
             $table->longText('instruction_text');
             $table->boolean('is_confidential')->default(true);

@@ -19,8 +19,8 @@ return new class extends Migration
             $table->decimal('percentage', 5, 2)->nullable();
             $table->string('grade')->nullable();
             $table->timestamps();
-            $table->unique(['candidate_id', 'exam_type_id', 'subject_id', 'year']);
-            $table->index(['exam_type_id', 'year']);
+            $table->unique(['candidate_id', 'exam_type_id', 'subject_id', 'year'], 'subject_marks_candidate_exam_subject_year_unique');
+            $table->index(['exam_type_id', 'year'], 'subject_marks_exam_year_idx');
         });
     }
 

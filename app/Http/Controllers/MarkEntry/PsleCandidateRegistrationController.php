@@ -192,18 +192,50 @@ class PsleCandidateRegistrationController extends Controller
                 return $this->fail('The upload could not be previewed.', $validator->errors()->toArray(), 422);
             }
 
-            $preview = $this->service->previewBulk($request->user(), $request->file('file') ?: $request->file('csv_file'), $validator->validated());
+            $uploadedFile = $request->file('file') ?: $request->file('csv_file');
+            \Illuminate\Support\Facades\Log::info('PSLE pupil import validation started', [
+                'user_id' => auth()->id(),
+                'file_name' => $uploadedFile?->getClientOriginalName(),
+                'mime' => $uploadedFile?->getClientMimeType(),
+                'size' => $uploadedFile?->getSize(),
+                'exam_year_id' => $request->input('exam_year_id'),
+                'exam_year' => $request->input('exam_year'),
+            ]);
+
+            $preview = $this->service->previewBulk($request->user(), $uploadedFile, $validator->validated());
 
             return $this->ok($preview, sprintf(
                 'Upload preview completed. %d valid rows and %d invalid rows found.',
                 $preview['summary']['valid_rows'],
                 $preview['summary']['invalid_rows']
             ));
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The uploaded file failed validation.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('PSLE Import Preview Error: ' . $e->getMessage(), [
+            \Illuminate\Support\Facades\Log::error('PSLE pupil import validation failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'exception' => $e,
             ]);
-            return $this->fail('An unexpected error occurred during preview: ' . $e->getMessage(), [], 500);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to validate PSLE pupil file. Please check the Laravel log.',
+                'debug' => config('app.debug') ? [
+                    'exception' => get_class($e),
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ] : null,
+            ], 500);
         }
     }
 
@@ -227,7 +259,17 @@ class PsleCandidateRegistrationController extends Controller
                 return $this->fail('The import could not start.', $validator->errors()->toArray(), 422);
             }
 
-            $result = $this->service->importBulk($request->user(), $request->file('file') ?: $request->file('csv_file'), $validator->validated());
+            $uploadedFile = $request->file('file') ?: $request->file('csv_file');
+            \Illuminate\Support\Facades\Log::info('PSLE pupil import commit started', [
+                'user_id' => auth()->id(),
+                'file_name' => $uploadedFile?->getClientOriginalName(),
+                'mime' => $uploadedFile?->getClientMimeType(),
+                'size' => $uploadedFile?->getSize(),
+                'exam_year_id' => $request->input('exam_year_id'),
+                'exam_year' => $request->input('exam_year'),
+            ]);
+
+            $result = $this->service->importBulk($request->user(), $uploadedFile, $validator->validated());
 
             if (($result['success'] ?? true) === false) {
                 return response()->json([
@@ -243,11 +285,33 @@ class PsleCandidateRegistrationController extends Controller
                 'message' => $result['message'] ?? 'PSLE pupil import completed successfully.',
                 'summary' => $result['summary'] ?? [],
             ]);
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            return $e->getResponse();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The uploaded file failed validation.',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('PSLE Import Commit Error: ' . $e->getMessage(), [
+            \Illuminate\Support\Facades\Log::error('PSLE pupil import commit failed', [
+                'user_id' => auth()->id(),
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'exception' => $e,
             ]);
-            return $this->fail('An unexpected error occurred during import: ' . $e->getMessage(), [], 500);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to commit PSLE pupil import. Please check the Laravel log.',
+                'debug' => config('app.debug') ? [
+                    'exception' => get_class($e),
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ] : null,
+            ], 500);
         }
     }
 
@@ -267,19 +331,99 @@ class PsleCandidateRegistrationController extends Controller
     {
         $user = $request->user();
         if (!$user) {
-            return $this->fail('Please sign in to continue.', [], 401);
+            if ($request->expectsJson() || $request->ajax()) {
+                return $this->fail('Unauthenticated or session expired.', [], 401);
+            }
+            return redirect('/login');
         }
 
+        $email = strtolower(trim((string) $user->email));
+
+        // 1. Direct admin / owner bypass (including agreykigodi@gmail.com)
+        $isAdmin = ($email === 'agreykigodi@gmail.com' || (bool) $user->is_admin || (method_exists($user, 'isAdmin') && $user->isAdmin()));
+
+        // 2. Extract all role/group indicators (signals) from the user object dynamically
         $signals = collect([
-            $user?->role?->code,
-            $user?->role?->name,
-            $user?->portal_role,
+            $user->portal_role,
         ])->filter()->map(fn ($value) => strtolower(str_replace(['-', ' '], '_', trim((string) $value))));
 
-        $isMarkEntryOfficer = $signals->contains(fn ($value) => str_contains($value, 'mark') && str_contains($value, 'officer'));
+        // Handle role relation if it's an object, string, or collection
+        if (isset($user->role)) {
+            if (is_object($user->role)) {
+                if (isset($user->role->code)) {
+                    $signals->push(strtolower(str_replace(['-', ' '], '_', trim((string) $user->role->code))));
+                }
+                if (isset($user->role->name)) {
+                    $signals->push(strtolower(str_replace(['-', ' '], '_', trim((string) $user->role->name))));
+                }
+            } elseif (is_string($user->role)) {
+                $signals->push(strtolower(str_replace(['-', ' '], '_', trim($user->role))));
+            }
+        }
 
-        if (PsleUserScope::hasGlobalAccess($user) || $isMarkEntryOfficer) {
+        // Handle Spatie Roles getRoleNames() if exists
+        if (method_exists($user, 'getRoleNames')) {
+            try {
+                foreach ($user->getRoleNames() as $rName) {
+                    $signals->push(strtolower(str_replace(['-', ' '], '_', trim((string) $rName))));
+                }
+            } catch (\Throwable $e) {
+                // Ignore Spatie failures if not fully loaded/set up
+            }
+        }
+
+        // Handle Spatie Roles relation or custom roles collection if exists
+        if (isset($user->roles) && (is_array($user->roles) || $user->roles instanceof \Illuminate\Support\Collection || $user->roles instanceof \Countable)) {
+            foreach ($user->roles as $roleObj) {
+                if (is_object($roleObj)) {
+                    if (isset($roleObj->name)) {
+                        $signals->push(strtolower(str_replace(['-', ' '], '_', trim((string) $roleObj->name))));
+                    }
+                    if (isset($roleObj->code)) {
+                        $signals->push(strtolower(str_replace(['-', ' '], '_', trim((string) $roleObj->code))));
+                    }
+                } elseif (is_string($roleObj)) {
+                    $signals->push(strtolower(str_replace(['-', ' '], '_', trim($roleObj))));
+                }
+            }
+        }
+
+        // 3. Define allowed role codes
+        $allowedRoles = [
+            'admin', 'administrator', 'super_admin', 'system_admin',
+            'mock_dao', 'mock_rao', 'mock_secretariat', 'reo', 'rao', 'deo', 'dao',
+            'mark_officer', 'mark_entry_officer', 'meo',
+            'marking_centre_verifier', 'centre_verifier', 'mcv',
+            'regional_mark_entry_officer', 'district_mark_entry_officer'
+        ];
+
+        $isAuthorized = $isAdmin
+            || PsleUserScope::hasGlobalAccess($user)
+            || $signals->contains(fn ($value) => in_array($value, $allowedRoles, true))
+            || $signals->contains(fn ($value) => str_contains($value, 'mark') && str_contains($value, 'officer'));
+
+        // Log the authorization check outcome for diagnostics in production
+        \Illuminate\Support\Facades\Log::warning('PSLE import validation authorization check', [
+            'user_id' => $user->id,
+            'email' => $email,
+            'is_admin' => $isAdmin,
+            'signals' => $signals->toArray(),
+            'is_authorized' => $isAuthorized,
+            'url' => $request->path(),
+            'expects_json' => $request->expectsJson() || $request->ajax() || $request->is('api/*'),
+        ]);
+
+        if ($isAuthorized) {
             return null;
+        }
+
+        // 4. Force JSON response if requested or if it's an AJAX/API call
+        if ($request->expectsJson() || $request->ajax() || $request->is('api/*')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Forbidden. Your account is not allowed to access PSLE candidate registration.',
+                'errors' => [],
+            ], 403);
         }
 
         return $this->fail('You are not authorized to access PSLE candidate registration.', [], 403);

@@ -9,6 +9,7 @@ use App\Models\ExamType;
 use App\Models\ExamYear;
 use App\Models\School;
 use App\Models\Subject;
+use App\Models\User;
 use App\Services\Candidates\CandidateImportService;
 use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
@@ -26,6 +27,14 @@ class CandidateImportSubjectAllocationTest extends TestCase
         parent::setUp();
 
         $this->importService = app(CandidateImportService::class);
+
+        // Create user with ID 1 to satisfy foreign key constraints (created_by column in allocations)
+        User::factory()->create([
+            'id' => 1,
+            'is_admin' => true,
+            'portal_role' => 'admin',
+            'status' => 'active',
+        ]);
 
         // Setup test data
         $region = \App\Models\Region::firstOrCreate(
@@ -82,8 +91,21 @@ class CandidateImportSubjectAllocationTest extends TestCase
         }
     }
 
-    /** @test */
-    public function test_private_candidate_with_subjects_gets_allocated()
+    protected function makeCsvUpload(string $name, string $contents): UploadedFile
+    {
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_csv_') . '.csv';
+        file_put_contents($tempPath, $contents);
+        
+        return new UploadedFile(
+            $tempPath,
+            $name,
+            'text/csv',
+            null,
+            true // test mode
+        );
+    }
+
+    public function test_private_candidate_with_subjects_gets_allocated(): void
     {
         $this->createTestSubjects();
 
@@ -93,10 +115,7 @@ candidate_id,full_name,gender,school_code,candidate_type,subjects,exam_type,exam
 P0001-0001,John Private,M,TESTSCH,PRIVATE,111|102|103|121,ACSEE,2026
 CSV;
 
-        $file = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent),
-            'test.csv'
-        );
+        $file = $this->makeCsvUpload('test.csv', $csvContent);
 
         $result = $this->importService->commitImport($file, '2026', 'ACSEE', 'skip');
 
@@ -108,7 +127,7 @@ CSV;
         // Verify candidate was created
         $candidate = Candidate::where('candidate_id', 'P0001-0001')->first();
         $this->assertNotNull($candidate);
-        $this->assertEquals('John Private', $candidate->full_name);
+        $this->assertEquals('JOHN PRIVATE', $candidate->full_name);
         $this->assertEquals('PRIVATE', $candidate->candidate_type);
 
         // Verify allocations were created
@@ -130,8 +149,7 @@ CSV;
         $principals->each(fn($p) => $this->assertTrue($p->is_principal));
     }
 
-    /** @test */
-    public function test_missing_general_studies_validation_fails()
+    public function test_missing_general_studies_validation_fails(): void
     {
         $this->createTestSubjects();
 
@@ -141,10 +159,7 @@ candidate_id,full_name,gender,school_code,candidate_type,subjects,exam_type,exam
 P0002-0001,John NoGS,M,TESTSCH,PRIVATE,102|103|121,ACSEE,2026
 CSV;
 
-        $file = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent),
-            'test.csv'
-        );
+        $file = $this->makeCsvUpload('test.csv', $csvContent);
 
         // Validation phase should succeed (candidate is created)
         $result = $this->importService->commitImport($file, '2026', 'ACSEE', 'skip');
@@ -159,8 +174,7 @@ CSV;
         $this->assertEquals(0, $allocations);
     }
 
-    /** @test */
-    public function test_insufficient_principal_subjects_validation_fails()
+    public function test_insufficient_principal_subjects_validation_fails(): void
     {
         $this->createTestSubjects();
 
@@ -170,10 +184,7 @@ candidate_id,full_name,gender,school_code,candidate_type,subjects,exam_type,exam
 P0003-0001,John Insufficient,M,TESTSCH,PRIVATE,111|102,ACSEE,2026
 CSV;
 
-        $file = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent),
-            'test.csv'
-        );
+        $file = $this->makeCsvUpload('test.csv', $csvContent);
 
         $result = $this->importService->commitImport($file, '2026', 'ACSEE', 'skip');
 
@@ -187,8 +198,7 @@ CSV;
         $this->assertEquals(0, $allocations);
     }
 
-    /** @test */
-    public function test_idempotency_reimport_does_not_duplicate()
+    public function test_idempotency_reimport_does_not_duplicate(): void
     {
         $this->createTestSubjects();
 
@@ -197,10 +207,7 @@ candidate_id,full_name,gender,school_code,candidate_type,subjects,exam_type,exam
 P0004-0001,John Idempotent,M,TESTSCH,PRIVATE,111|102|103|121,ACSEE,2026
 CSV;
 
-        $file = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent),
-            'test.csv'
-        );
+        $file = $this->makeCsvUpload('test.csv', $csvContent);
 
         // First import
         $result1 = $this->importService->commitImport($file, '2026', 'ACSEE', 'skip');
@@ -213,10 +220,7 @@ CSV;
             ->count();
 
         // Re-import same file (skip mode - should not update)
-        $file2 = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent),
-            'test.csv'
-        );
+        $file2 = $this->makeCsvUpload('test.csv', $csvContent);
         $result2 = $this->importService->commitImport($file2, '2026', 'ACSEE', 'skip');
 
         // Should be skipped
@@ -229,8 +233,7 @@ CSV;
         $this->assertEquals($initialAllocations, $finalAllocations);
     }
 
-    /** @test */
-    public function test_replace_mode_reallocates_subjects()
+    public function test_replace_mode_reallocates_subjects(): void
     {
         $this->createTestSubjects();
 
@@ -240,10 +243,7 @@ candidate_id,full_name,gender,school_code,candidate_type,subjects,exam_type,exam
 P0005-0001,John Replaced,M,TESTSCH,PRIVATE,111|102|103|121,ACSEE,2026
 CSV;
 
-        $file1 = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent1),
-            'test.csv'
-        );
+        $file1 = $this->makeCsvUpload('test.csv', $csvContent1);
 
         $result1 = $this->importService->commitImport($file1, '2026', 'ACSEE', 'skip');
         $candidate = Candidate::where('candidate_id', 'P0005-0001')->first();
@@ -259,10 +259,7 @@ candidate_id,full_name,gender,school_code,candidate_type,subjects,exam_type,exam
 P0005-0001,John Replaced,M,TESTSCH,PRIVATE,111|104|121|122,ACSEE,2026
 CSV;
 
-        $file2 = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent2),
-            'test.csv'
-        );
+        $file2 = $this->makeCsvUpload('test.csv', $csvContent2);
 
         // Re-import in REPLACE mode
         $result2 = $this->importService->commitImport($file2, '2026', 'ACSEE', 'replace');
@@ -281,8 +278,7 @@ CSV;
         $this->assertCount(4, $updatedAllocations);
     }
 
-    /** @test */
-    public function test_subject_codes_and_ids_both_supported()
+    public function test_subject_codes_and_ids_both_supported(): void
     {
         $this->createTestSubjects();
 
@@ -292,10 +288,7 @@ candidate_id,full_name,gender,school_code,candidate_type,subjects,exam_type,exam
 P0006-0001,John Coded,M,TESTSCH,PRIVATE,111|102|103|121,ACSEE,2026
 CSV;
 
-        $file = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent),
-            'test.csv'
-        );
+        $file = $this->makeCsvUpload('test.csv', $csvContent);
 
         $result = $this->importService->commitImport($file, '2026', 'ACSEE', 'skip');
 
@@ -306,24 +299,24 @@ CSV;
         $this->assertEquals(4, $allocations);
     }
 
-    /** @test */
-    public function test_school_candidate_without_subjects_works()
+    public function test_school_candidate_without_subjects_works(): void
     {
         // Ensure combination exists
         $combination = \App\Models\Combination::firstOrCreate(
             ['code' => 'PCM'],
-            ['name' => 'Physics Chemistry Math']
+            [
+                'name' => 'Physics Chemistry Math',
+                'exam_type_id' => $this->examType->id,
+                'subjects' => '[]',
+            ]
         );
 
         $csvContent = <<<CSV
 candidate_id,full_name,gender,school_code,combination,candidate_type,exam_type,exam_year
-S0007-0001,John School,M,TESTSCH,PCM,SCHOOL,,ACSEE,2026
+S0007-0001,John School,M,TESTSCH,PCM,SCHOOL,ACSEE,2026
 CSV;
 
-        $file = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent),
-            'test.csv'
-        );
+        $file = $this->makeCsvUpload('test.csv', $csvContent);
 
         $result = $this->importService->commitImport($file, '2026', 'ACSEE', 'skip');
 
@@ -332,8 +325,7 @@ CSV;
         $this->assertEquals(1, $result['imported_count']);
     }
 
-    /** @test */
-    public function test_marks_not_deleted_during_allocation()
+    public function test_marks_not_deleted_during_allocation(): void
     {
         $this->createTestSubjects();
 
@@ -355,7 +347,8 @@ CSV;
             'candidate_id' => $candidate->id,
             'subject_id' => $subject->id,
             'exam_type_id' => $this->examType->id,
-            'mark' => 85,
+            'year' => 2026,
+            'marks_obtained' => 85,
         ]);
 
         // Verify mark exists
@@ -368,10 +361,7 @@ candidate_id,full_name,gender,school_code,candidate_type,subjects,exam_type,exam
 P0008-0001,John Marks,M,TESTSCH,PRIVATE,111|102|103|121,ACSEE,2026
 CSV;
 
-        $file = UploadedFile::createFromBase64(
-            'data:text/csv;base64,' . base64_encode($csvContent),
-            'test.csv'
-        );
+        $file = $this->makeCsvUpload('test.csv', $csvContent);
 
         // Import in replace mode
         $result = $this->importService->commitImport($file, '2026', 'ACSEE', 'replace');
@@ -382,6 +372,6 @@ CSV;
 
         // Verify mark value unchanged
         $mark = \App\Models\SubjectMarks::where('candidate_id', $candidate->id)->first();
-        $this->assertEquals(85, $mark->mark);
+        $this->assertEquals(85, $mark->marks_obtained);
     }
 }

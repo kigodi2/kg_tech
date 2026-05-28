@@ -291,7 +291,7 @@ class DistrictImportService
 
                     // Generate district code
                     $lastDistrict = District::where('region_id', $regionId)
-                        ->orderByRaw("CAST(SUBSTR(code, -2) AS UNSIGNED) DESC")
+                        ->orderByDesc('code')
                         ->first();
 
                     $nextNumber = 1;

@@ -1,27 +1,119 @@
-@extends('layout')
-@section('content')
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRMS - Manage Users</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.cdnfonts.com/css/maiandra-gd" rel="stylesheet">
+    <!-- Alpine plugins -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine core -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body>
 <style>
-.um-shell{display:flex;min-height:100vh;background:#0f1117;font-family:'Maiandra GD',sans-serif;}
-.um-sidebar{width:260px;min-height:100vh;background:linear-gradient(180deg,#0d1b2a,#11202e);border-right:1px solid rgba(187,164,94,.18);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;flex-shrink:0;}
+* { box-sizing: border-box; }
+input, select, textarea, button { font-family: inherit; }
+body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: hidden; background: #0f1117; font-family: 'Maiandra GD', sans-serif; }
+:root{--tz-green:#1EB53A;--tz-yellow:#FCD116;--tz-blue:#00A3DD;--tz-dark:#0b1014;--tz-card:#101518;--tz-text:#f0f4f7;--tz-muted:rgba(255,255,255,.45);}
+.um-shell{display:flex;flex-direction:column;min-height:100vh;background:#0f1117;font-family:'Maiandra GD',sans-serif;width:100%;max-width:100%;}
+.um-body-row{display:flex;flex:1;width:100%;max-width:100%;background:linear-gradient(180deg,#0d1b2a,#11202e);}
+.um-sidebar{width:260px;display:flex;flex-direction:column;position:sticky;top:0;max-height:100vh;overflow-y:auto;flex-shrink:0;}
 .um-profile{padding:28px 20px 22px;border-bottom:1px solid rgba(187,164,94,.15);background:linear-gradient(135deg,rgba(187,164,94,.08),transparent);}
 .um-avatar{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#BBA45E,#8a7340);display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:700;color:#0d1b2a;margin-bottom:12px;box-shadow:0 0 0 3px rgba(187,164,94,.25);}
 .um-name{font-size:.97rem;font-weight:700;color:#f0e6c8;}
 .um-role-badge{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(187,164,94,.15);color:#BBA45E;padding:3px 10px;border-radius:20px;border:1px solid rgba(187,164,94,.3);}
 .um-nav{padding:14px 12px;flex:1;}
 .um-nav-label{font-size:.65rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(187,164,94,.55);padding:6px 8px 4px;margin-top:10px;}
-.um-nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;color:rgba(255,255,255,.65);font-size:.875rem;font-weight:500;text-decoration:none;transition:all .18s;margin-bottom:2px;}
-.um-nav a:hover,.um-nav a.active{background:rgba(187,164,94,.12);color:#f0e6c8;}
-.um-nav a.active{background:rgba(187,164,94,.18);}
+.um-nav a, .um-nav button{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;color:rgba(255,255,255,.65);font-size:.875rem;font-weight:500;text-decoration:none;transition:all .18s;margin-bottom:2px; width: 100%; border: none; background: transparent; cursor: pointer; font-family: inherit; text-align: left;}
+.um-nav a:hover, .um-nav button:hover, .um-nav a.active, .um-nav button.active{background:rgba(187,164,94,.12);color:#f0e6c8;}
+.um-nav a.active, .um-nav button.active{background:rgba(187,164,94,.18);}
 .nav-ico{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.8rem;background:rgba(255,255,255,.06);flex-shrink:0;}
-.um-nav a:hover .nav-ico,.um-nav a.active .nav-ico{background:rgba(187,164,94,.2);color:#BBA45E;}
+.um-nav a:hover .nav-ico, .um-nav button:hover .nav-ico, .um-nav a.active .nav-ico, .um-nav button.active .nav-ico{background:rgba(187,164,94,.2);color:#BBA45E;}
+.nav-caret { margin-left: auto; font-size: 0.75rem; transition: transform 0.2s; color: rgba(255,255,255,0.3); }
+.um-nav button:hover .nav-caret { color: #BBA45E; }
+
+/* PSLE Sidebar Submenu Styles */
+.psle-submenu {
+    padding: 6px 8px !important;
+    margin-left: 14px !important;
+    margin-bottom: 4px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.psle-sub-link {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-radius: 12px !important;
+    border: 1px solid transparent !important;
+    padding: 6px 12px 6px 10px !important;
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+    width: 100% !important;
+}
+.psle-sub-link::before {
+    display: none !important; /* Overrides standard list bullet dots if inherited */
+}
+.psle-sub-ico {
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 50% !important; /* Circular background */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.75rem !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    transition: all 0.2s ease !important;
+    margin-right: 8px !important;
+}
+.psle-sub-link:hover {
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+}
+.psle-sub-link:hover .psle-sub-ico {
+    background: rgba(187, 164, 94, 0.1) !important;
+    color: #fde047 !important;
+}
+.psle-sub-link.active {
+    background: rgba(187, 164, 94, 0.12) !important;
+    border-color: rgba(187, 164, 94, 0.3) !important;
+    color: #fde047 !important;
+}
+.psle-sub-link.active .psle-sub-ico {
+    background: rgba(187, 164, 94, 0.2) !important;
+    color: #fcd116 !important;
+    box-shadow: 0 0 0 1px rgba(187, 164, 94, 0.2) !important;
+}
+.psle-sub-dot {
+    width: 6px !important;
+    height: 6px !important;
+    border-radius: 50% !important;
+    background: #fcd116 !important;
+    box-shadow: 0 0 0 3px rgba(253, 224, 71, 0.2) !important;
+}
 .um-footer{padding:16px;border-top:1px solid rgba(187,164,94,.15);}
 .um-logout{display:flex;align-items:center;gap:8px;width:100%;padding:9px 14px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:10px;color:#fca5a5;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .18s;text-decoration:none;}
 .um-logout:hover{background:rgba(239,68,68,.2);color:#fff;}
-.um-main{flex:1;display:flex;flex-direction:column;min-width:0;}
-.um-topbar{background:rgba(15,17,23,.95);border-bottom:1px solid rgba(187,164,94,.15);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+.um-main{flex:1;display:flex;flex-direction:column;min-width:0;max-width:100%;background:#0f1117;border-left:1px solid rgba(187,164,94,.18);}
+.um-topbar{background:rgba(15,17,23,.95);border-bottom:1px solid rgba(187,164,94,.15);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;flex-wrap:wrap;gap:12px;max-width:100%;}
 .um-topbar-title{font-size:1.25rem;font-weight:700;color:#f0e6c8;}
 .um-topbar-sub{font-size:.8rem;color:rgba(255,255,255,.4);margin-top:1px;}
-.um-badge{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#BBA45E,#8a7340);display:flex;align-items:center;justify-content:center;color:#0d1b2a;font-weight:700;font-size:.9rem;}
+.um-date-pill{font-size:.85rem;color:rgba(255,255,255,.4);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);padding:8px 18px;border-radius:20px;}
+.um-clock{font-size:.85rem;font-weight:700;color:#BBA45E;background:rgba(187,164,94,.08);border:1px solid rgba(187,164,94,.18);padding:7px 16px;border-radius:18px;}
 .um-content{padding:28px;flex:1;}
 /* Toolbar */
 .um-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap;}
@@ -40,8 +132,8 @@
 .um-stat-val{font-size:1.6rem;font-weight:800;color:#f0e6c8;line-height:1;}
 .um-stat-lbl{font-size:.75rem;color:rgba(255,255,255,.4);margin-top:3px;}
 /* Table */
-.um-table-wrap{background:#161c26;border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow:hidden;}
-.um-table{width:100%;border-collapse:collapse;}
+.um-table-wrap{background:#161c26;border:1px solid rgba(255,255,255,.07);border-radius:16px;overflow-x:auto;overflow-y:hidden;width:100%;}
+.um-table{width:100%;border-collapse:collapse;min-width:800px;}
 .um-table thead tr{background:rgba(187,164,94,.08);border-bottom:1px solid rgba(187,164,94,.15);}
 .um-table th{padding:12px 16px;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(187,164,94,.8);text-align:left;}
 .um-table tbody tr{border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s;}
@@ -82,9 +174,59 @@
 .toast-ok{background:#065f46;color:#6ee7b7;border:1px solid rgba(52,211,153,.3);}
 .toast-err{background:#7f1d1d;color:#fca5a5;border:1px solid rgba(239,68,68,.3);}
 .um-empty{padding:40px;text-align:center;color:rgba(255,255,255,.3);font-size:.9rem;}
+
+/* Footer */
+.page-footer { background: #0f1117; color: #ffffff; border-top: 1px solid rgba(187,164,94,.15); margin-top: auto; width: 100%; }
+.page-footer-stripes { display: flex; width: 100%; height: 3px; }
+.page-footer-stripes span { display: block; width: 25%; }
+..page-footer-body { width: 100%; padding: 12px 24px; }
+.page-footer-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; width: 100%; }
+.page-footer-copy, .page-footer-meta { font-size: 0.75rem; line-height: 1.45; }
+.page-footer-copy { text-align: center; color: rgba(255,255,255,.6); flex: 1; display: flex; justify-content: center; }
+.page-footer-meta { text-align: right; color: rgba(255, 255, 255, 0.7); flex-shrink: 0; }
+.page-footer-meta strong { color: #BBA45E; font-weight: 700; }
+.footer-brand {
+    background: linear-gradient(90deg, #f9d769 0%, #ffd35f 40%, #e8b822 100%);
+    -webkit-background-clip: text;
+    color: transparent;
+    font-weight: 800;
+    font-size: 0.85rem;
+    text-shadow: 0 0 6px rgba(255, 210, 80, 0.9), 0 0 16px rgba(255, 210, 80, 0.35);
+    transition: transform 0.24s ease, text-shadow 0.24s ease;
+}
+.footer-brand:hover {
+    transform: translateY(-1px);
+    text-shadow: 0 0 8px rgba(255, 210, 80, 0.95), 0 0 18px rgba(255, 210, 80, 0.5);
+}
+.page-footer-copy p, .page-footer-meta p { margin: 0; }
+@media(max-width:900px) {
+    .page-footer-row { flex-direction: column; justify-content: center; text-align: center; }
+    .page-footer-copy { flex: auto; order: 2; margin-top: 4px; }
+    .page-footer-meta { text-align: center; order: 1; }
+}
+@media(max-width:1024px) {
+    .um-body-row { flex-direction: column; background: #0f1117; }
+    .um-sidebar { width: 100%; height: auto; max-height: none; position: static; background: linear-gradient(180deg,#0d1b2a,#11202e); border-bottom: 1px solid rgba(187,164,94,0.18); }
+    .um-main { border-left: none; }
+    .um-stats { grid-template-columns: repeat(2, 1fr); }
+}
+@media(max-width:600px) {
+    .um-stats { grid-template-columns: 1fr; }
+    .um-topbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+.um-pagination { margin-top: 24px; display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: rgba(22, 28, 38, 0.6); border: 1px solid rgba(187, 164, 94, 0.15); border-radius: 16px; backdrop-filter: blur(10px); width: 100%; box-sizing: border-box; }
+.pg-info { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: rgba(255,255,255,0.5); }
+.pg-badge { background: rgba(187, 164, 94, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(187, 164, 94, 0.2); }
+.pg-btns { display: flex; gap: 10px; margin-left: auto; }
+.pg-btn { padding: 8px 18px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; color: rgba(255, 255, 255, 0.7); font-size: 0.8rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+.pg-btn:hover:not(:disabled) { background: rgba(187, 164, 94, 0.1); border-color: rgba(187, 164, 94, 0.3); color: #BBA45E; transform: translateY(-1px); }
+.pg-btn.active { background: rgba(187, 164, 94, 0.15); border-color: rgba(187, 164, 94, 0.4); color: #BBA45E; }
+.pg-btn:active:not(:disabled) { transform: translateY(0); }
 </style>
 
 <div class="um-shell" x-data="userManager()" x-init="init()">
+
+<div class="um-body-row">
 
 {{-- SIDEBAR --}}
 <aside class="um-sidebar">
@@ -102,8 +244,10 @@
         <a href="/admin/registration/schools"><span class="nav-ico"><i class="fas fa-school-flag"></i></span> Schools</a>
         <a href="/admin/registration/candidates"><span class="nav-ico"><i class="fas fa-user-graduate"></i></span> Candidates</a>
         <div class="um-nav-label">Examinations</div>
-        <a href="/admin/exam-types"><span class="nav-ico"><i class="fas fa-tags"></i></span> Exam Types</a>
+        <a href="/admin/exam-types/psle"><span class="nav-ico"><i class="fas fa-graduation-cap"></i></span> PSLE</a>
         <a href="/admin/exam-years"><span class="nav-ico"><i class="fas fa-calendar-check"></i></span> Academic Years</a>
+
+
         <div class="um-nav-label">Governance</div>
         <a href="/admin/manage-users" class="active"><span class="nav-ico"><i class="fas fa-user-gear"></i></span> Users & Roles</a>
         <a href="/admin/audit-logs"><span class="nav-ico"><i class="fas fa-shield-halved"></i></span> Audit Logs</a>
@@ -123,7 +267,10 @@
             <div class="um-topbar-title">Users & Role Management</div>
             <div class="um-topbar-sub">Add, edit and assign roles to system users</div>
         </div>
-        <div class="um-badge">{{ strtoupper(substr(auth()->user()->name,0,1)) }}</div>
+        <div style="display:flex; align-items:center; gap: 12px;">
+            <div class="um-date-pill" id="um-date">—</div>
+            <div class="um-clock" id="um-clock">--:--</div>
+        </div>
     </header>
 
     <div class="um-content">
@@ -152,15 +299,15 @@
         <div class="um-toolbar">
             <div class="um-search-wrap">
                 <i class="fas fa-magnifying-glass"></i>
-                <input class="um-search" type="text" placeholder="Search by name or email…" x-model="search" @input="filterUsers()">
+                <input class="um-search" type="text" placeholder="Search by name or email…" x-model="search" @input.debounce.500ms="loadUsers(1)">
             </div>
-            <select class="um-filter" x-model="filterRole" @change="filterUsers()">
+            <select class="um-filter" x-model="filterRole" @change="loadUsers(1)">
                 <option value="">All Roles</option>
                 <template x-for="r in roles" :key="r.id">
                     <option :value="r.id" x-text="r.name"></option>
                 </template>
             </select>
-            <select class="um-filter" x-model="filterStatus" @change="filterUsers()">
+            <select class="um-filter" x-model="filterStatus" @change="loadUsers(1)">
                 <option value="">All Status</option>
                 <option value="active">Active</option>
                 <option value="suspended">Suspended</option>
@@ -180,11 +327,12 @@
                 <tbody>
                     <template x-for="(u, i) in filtered" :key="u.id">
                         <tr>
-                            <td x-text="i+1" style="color:rgba(255,255,255,.3);"></td>
+                            <td x-text="((currentPage - 1) * 20) + i + 1" style="color:rgba(255,255,255,.3);"></td>
                             <td class="name" x-text="u.name"></td>
                             <td x-text="u.email"></td>
                             <td>
-                                <span :class="u.portal_role==='admin'?'role-chip chip-admin':'role-chip chip-user'" x-text="u.portal_role==='admin'?'Admin':'User'"></span>
+                                <span :class="['admin', 'mock_dao', 'mock_headteacher', 'mock_rao', 'subject_panel_leader'].includes(u.portal_role) ? 'role-chip chip-admin' : 'role-chip chip-user'" 
+                                      x-text="u.portal_role==='admin' ? 'Admin' : (u.portal_role==='mock_dao' ? 'Mock DAO' : (u.portal_role==='mock_headteacher' ? 'Mock Headteacher' : (u.portal_role==='mock_rao' ? 'Mock RAO' : (u.portal_role==='subject_panel_leader' ? 'Subject Panel Leader' : 'User'))))"></span>
                             </td>
                             <td>
                                 <span class="role-chip chip-role" x-text="u.role_name || '—'"></span>
@@ -211,8 +359,52 @@
             </table>
         </div>
 
+        {{-- Pagination --}}
+        <div class="um-pagination" x-show="lastPage > 1">
+            <div class="pg-info">
+                <div class="pg-badge">
+                    Page <span x-text="currentPage" style="color: #BBA45E; font-weight: 800;"></span> 
+                    <span style="opacity: 0.5; margin: 0 4px;">/</span> 
+                    <span x-text="lastPage" style="color: #f0e6c8; font-weight: 600;"></span>
+                </div>
+                <div style="color: rgba(255,255,255,0.35);">
+                    <i class="fas fa-users" style="font-size: 0.75rem; margin-right: 4px;"></i>
+                    <span x-text="totalUsers" style="font-weight: 600; color: rgba(255,255,255,0.6);"></span> users total
+                </div>
+            </div>
+
+            <div class="pg-btns">
+                <button @click="loadUsers(currentPage - 1)" :disabled="currentPage <= 1" class="pg-btn" :style="currentPage <= 1 ? 'opacity: 0.3; cursor: not-allowed; pointer-events: none;' : ''">
+                    <i class="fas fa-arrow-left"></i> Previous
+                </button>
+                <button @click="loadUsers(currentPage + 1)" :disabled="currentPage >= lastPage" class="pg-btn active" :style="currentPage >= lastPage ? 'opacity: 0.3; cursor: not-allowed; pointer-events: none;' : ''">
+                    Next <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
     </div>{{-- end content --}}
 </div>{{-- end main --}}
+</div>{{-- end body-row --}}
+
+    <footer class="page-footer">
+        <div class="page-footer-stripes" aria-hidden="true">
+            <span style="background:#1EB53A;"></span>
+            <span style="background:#FCD116;"></span>
+            <span style="background:#000000;"></span>
+            <span style="background:#00A3DD;"></span>
+        </div>
+        <div class="page-footer-body">
+            <div class="page-footer-row">
+                <div class="page-footer-copy">
+                    <p>Copyright &copy; {{ now()->year }} Integrated Results Management System | All Rights Reserved</p>
+                </div>
+                <div class="page-footer-meta">
+                    Developed By <strong class="footer-brand">ProSmart Technologies</strong>
+                </div>
+            </div>
+        </div>
+    </footer>
 
 {{-- MODAL --}}
 <div class="um-overlay" x-show="modalOpen" style="display:none" @click.self="closeModal()" x-transition>
@@ -242,6 +434,10 @@
                     <select x-model="form.portal_role">
                         <option value="user">User</option>
                         <option value="admin">Administrator</option>
+                        <option value="mock_headteacher">Mock Headteacher</option>
+                        <option value="mock_dao">Mock DAO</option>
+                        <option value="mock_rao">Mock RAO</option>
+                        <option value="subject_panel_leader">Subject Panel Leader</option>
                     </select>
                 </div>
             </div>
@@ -281,12 +477,32 @@
 </div>{{-- end shell --}}
 
 <script>
+    // Disable Developer Tools for non-admins
+    (function() {
+        @if(!(auth()->check() && auth()->user()->isAdmin()))
+            document.addEventListener('contextmenu', event => event.preventDefault());
+            document.onkeydown = function(e) {
+                if (e.keyCode == 123) return false;
+                if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0))) return false;
+                if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+            };
+        @endif
+    })();
+
+    function tick(){
+    const n=new Date();
+    document.getElementById('um-clock').textContent=n.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('um-date').textContent=n.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+tick(); setInterval(tick,1000);
+
 function userManager() {
     return {
         users: [], filtered: [], roles: [],
         search: '', filterRole: '', filterStatus: '',
         loading: true, saving: false,
         modalOpen: false, editId: null, formError: '',
+        currentPage: 1, lastPage: 1, totalUsers: 0,
         stats: { total: 0, admins: 0, active: 0, suspended: 0 },
         form: { name: '', email: '', password: '', portal_role: 'user', role_id: '', status: 'active' },
 
@@ -294,33 +510,54 @@ function userManager() {
             await Promise.all([this.loadUsers(), this.loadRoles()]);
         },
 
-        async loadUsers() {
+        async loadUsers(page = 1) {
+            if (page < 1 || (this.lastPage && page > this.lastPage)) return;
             this.loading = true;
+            this.currentPage = page;
             try {
-                const r = await fetch('/admin/api/users');
+                const params = new URLSearchParams({
+                    page: page,
+                    search: this.search,
+                    role_id: this.filterRole,
+                    status: this.filterStatus
+                });
+                const r = await fetch('/admin/api/users?' + params.toString(), {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
                 const d = await r.json();
                 this.users = d.data || [];
-                this.filterUsers();
+                this.filtered = this.users;
+                this.lastPage = d.last_page || 1;
+                this.totalUsers = d.total || 0;
                 this.calcStats();
             } finally { this.loading = false; }
         },
 
         async loadRoles() {
-            const r = await fetch('/admin/api/roles');
+            const r = await fetch('/admin/api/roles', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
             const d = await r.json();
             this.roles = d.data || [];
         },
 
         filterUsers() {
-            let list = this.users;
-            if (this.search) list = list.filter(u => u.name.toLowerCase().includes(this.search.toLowerCase()) || u.email.toLowerCase().includes(this.search.toLowerCase()));
-            if (this.filterRole) list = list.filter(u => String(u.role_id) === String(this.filterRole));
-            if (this.filterStatus) list = list.filter(u => u.status === this.filterStatus);
-            this.filtered = list;
+            // Handled server-side now
         },
 
         calcStats() {
-            this.stats.total = this.users.length;
+            // For total we use the server total
+            this.stats.total = this.totalUsers;
+            // For other stats, if we want them accurate for the WHOLE system, 
+            // we'd need another API call or return them in the pagination response.
+            // For now, let's just keep them updated based on the current page's data 
+            // OR we can just show the total.
             this.stats.admins = this.users.filter(u => u.portal_role === 'admin').length;
             this.stats.active = this.users.filter(u => u.status === 'active').length;
             this.stats.suspended = this.users.filter(u => u.status === 'suspended').length;
@@ -352,14 +589,19 @@ function userManager() {
                 const method = this.editId ? 'PUT' : 'POST';
                 const r = await fetch(url, {
                     method,
-                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content },
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content 
+                    },
                     body: JSON.stringify(this.form)
                 });
                 const d = await r.json();
                 if (!r.ok) { this.formError = d.message || Object.values(d.errors || {}).flat().join(' '); return; }
                 this.closeModal();
                 this.toast(d.message || 'Saved!', true);
-                await this.loadUsers();
+                await this.loadUsers(this.editId ? this.currentPage : 1);
             } catch(e) { this.formError = 'Network error. Please try again.'; }
             finally { this.saving = false; }
         },
@@ -368,7 +610,11 @@ function userManager() {
             if (!confirm(`Delete user "${u.name}"? This cannot be undone.`)) return;
             const r = await fetch(`/admin/api/users/${u.id}`, {
                 method: 'DELETE',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+                headers: { 
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content 
+                }
             });
             const d = await r.json();
             if (r.ok) { this.toast(d.message, true); await this.loadUsers(); }
@@ -385,4 +631,5 @@ function userManager() {
     };
 }
 </script>
-@endsection
+</body>
+</html>

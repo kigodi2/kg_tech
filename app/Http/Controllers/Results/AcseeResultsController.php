@@ -115,7 +115,7 @@ class AcseeResultsController extends Controller
                 ]);
 
                 // Paginate
-                $perPage = min($request->input('per_page', 50), 500);
+                $perPage = min($request->input('per_page', 20), 500);
                 $results = $query->paginate($perPage)->withQueryString();
 
                 // Get subject list for this year/exam type

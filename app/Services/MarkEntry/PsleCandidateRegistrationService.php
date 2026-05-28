@@ -178,6 +178,79 @@ class PsleCandidateRegistrationService
         }
     }
 
+    /**
+     * Find an existing candidate based on 3-tier matching priority:
+     * A. candidate_id + exam_year_id + exam_type_id
+     * B. prem_no + exam_year_id + exam_type_id (where prem_no is not empty)
+     * C. school_id + normalized candidate name + sex + exam_year_id + exam_type_id
+     * 
+     * If not registered yet, also fall back to global matches to prevent duplicates.
+     */
+    public function findExistingCandidate(array $payload, int $examYearId, int $examTypeId): ?Candidate
+    {
+        // A. candidate_id + exam_year_id + exam_type_id (via registrations)
+        if (!empty($payload['candidate_id'])) {
+            $cand = Candidate::where('candidate_id', $payload['candidate_id'])
+                ->whereHas('examRegistrations', function ($q) use ($examYearId, $examTypeId) {
+                    $q->where('exam_year_id', $examYearId)
+                      ->where('exam_type_id', $examTypeId);
+                })->first();
+            if ($cand) return $cand;
+            
+            // Global unique candidate_id check
+            $candGlobal = Candidate::where('candidate_id', $payload['candidate_id'])->first();
+            if ($candGlobal) return $candGlobal;
+        }
+
+        // B. prem_no + exam_year_id + exam_type_id where prem_no is not empty
+        if (!empty($payload['prem_no'])) {
+            $cand = Candidate::where('prem_no', $payload['prem_no'])
+                ->whereHas('examRegistrations', function ($q) use ($examYearId, $examTypeId) {
+                    $q->where('exam_year_id', $examYearId)
+                      ->where('exam_type_id', $examTypeId);
+                })->first();
+            if ($cand) return $cand;
+            
+            // Global unique prem_no check
+            $candGlobal = Candidate::where('prem_no', $payload['prem_no'])->first();
+            if ($candGlobal) return $candGlobal;
+        }
+
+        // C. school_id + normalized candidate name + sex + exam_year_id + exam_type_id as fallback
+        $schoolId = $payload['school_id'] ?? null;
+        if (!$schoolId && !empty($payload['school_code'])) {
+            $schoolId = School::where('code', $payload['school_code'])->value('id');
+        }
+
+        if ($schoolId && !empty($payload['full_name']) && !empty($payload['gender'])) {
+            $normalizedName = strtolower(preg_replace('/\s+/', ' ', trim($payload['full_name'])));
+            
+            $candidates = Candidate::where('school_id', $schoolId)
+                ->where('gender', $payload['gender'])
+                ->whereHas('examRegistrations', function ($q) use ($examYearId, $examTypeId) {
+                    $q->where('exam_year_id', $examYearId)
+                      ->where('exam_type_id', $examTypeId);
+                })->get();
+            foreach ($candidates as $c) {
+                if (strtolower(preg_replace('/\s+/', ' ', trim($c->full_name))) === $normalizedName) {
+                    return $c;
+                }
+            }
+
+            // Global check for same school & name & gender
+            $candidatesGlobal = Candidate::where('school_id', $schoolId)
+                ->where('gender', $payload['gender'])
+                ->get();
+            foreach ($candidatesGlobal as $c) {
+                if (strtolower(preg_replace('/\s+/', ' ', trim($c->full_name))) === $normalizedName) {
+                    return $c;
+                }
+            }
+        }
+
+        return null;
+    }
+
     public function createOrUpdateCandidate(User $user, array $data, ?Candidate $candidate = null, bool $replaceExisting = false): array
     {
         $examYear = $this->examYear((int) ($data['exam_year_id'] ?? 0));
@@ -196,19 +269,25 @@ class PsleCandidateRegistrationService
         }
 
         $result = DB::transaction(function () use ($candidate, $payload, $school, $examType, $examYear, $replaceExisting) {
-            $existingByIndex = Candidate::where('candidate_id', $payload['candidate_id'])->first();
-            $target = $candidate ?: ($replaceExisting ? $existingByIndex : null);
-            $mode = $target ? 'updated' : 'inserted';
-            $old = $target ? $target->only(['candidate_id', 'prem_no', 'full_name', 'gender', 'school_id', 'status']) : null;
-
-            if (!$target) {
-                $target = new Candidate();
-            }
-
-            $target->fill([
-                'school_id' => $school->id,
+            $existing = $candidate ?: $this->findExistingCandidate([
                 'candidate_id' => $payload['candidate_id'],
                 'prem_no' => $payload['prem_no'],
+                'school_id' => $school->id,
+                'full_name' => $payload['full_name'],
+                'gender' => $payload['gender'],
+            ], $examYear->id, $examType->id);
+
+            $mode = $existing ? 'updated' : 'inserted';
+            $old = $existing ? $existing->only(['candidate_id', 'prem_no', 'full_name', 'gender', 'school_id', 'status']) : null;
+
+            if (!$existing) {
+                $existing = new Candidate();
+            }
+
+            $existing->fill([
+                'school_id' => $school->id,
+                'candidate_id' => $payload['candidate_id'],
+                'prem_no' => $payload['prem_no'] ?: null, // Cast empty to NULL
                 'full_name' => $payload['full_name'],
                 'gender' => $payload['gender'],
                 'candidate_type' => 'SCHOOL',
@@ -216,10 +295,10 @@ class PsleCandidateRegistrationService
                 'status' => 'registered',
                 'is_active' => true,
             ]);
-            $target->save();
-            $this->registerForPsle($target, $examType, $examYear);
+            $existing->save();
+            $this->registerForPsle($existing, $examType, $examYear);
 
-            return ['candidate' => $target, 'mode' => $mode, 'old' => $old];
+            return ['candidate' => $existing, 'mode' => $mode, 'old' => $old];
         });
 
         $this->audit('psle_candidate_' . $result['mode'], $user, $school, $examYear, [
@@ -332,14 +411,21 @@ class PsleCandidateRegistrationService
                     continue;
                 }
 
-                $existing = Candidate::where('candidate_id', $row['candidate_id'])->first();
+                $existing = $this->findExistingCandidate([
+                    'candidate_id' => $row['candidate_id'],
+                    'prem_no' => $row['prem_no'],
+                    'school_code' => $row['school_code'],
+                    'full_name' => $row['full_name'],
+                    'gender' => $row['gender'],
+                ], $examYear->id, $examType->id);
+                
                 $candidate = $existing ?: new Candidate();
                 $school = School::where('code', $row['school_code'])->firstOrFail();
                 $auditSchool = $auditSchool ?: $school;
                 $candidate->fill([
                     'school_id' => $school->id,
                     'candidate_id' => $row['candidate_id'],
-                    'prem_no' => $row['prem_no'],
+                    'prem_no' => $row['prem_no'] ?: null, // Cast empty to NULL
                     'full_name' => $row['full_name'],
                     'gender' => $row['gender'],
                     'candidate_type' => 'SCHOOL',
@@ -451,13 +537,55 @@ class PsleCandidateRegistrationService
         }
 
         $header = array_map(fn ($value) => trim((string) $value), array_shift($rows));
-        $normalizedHeader = array_map(fn ($value) => strtolower($value), $header);
-        $requiredHeader = array_map(fn ($value) => strtolower($value), self::TEMPLATE_COLUMNS);
-        if ($normalizedHeader !== $requiredHeader) {
+        
+        $mappedIndices = [
+            'candidate_number' => null,
+            'PReM_No' => null,
+            'pupil_name' => null,
+            'sex' => null,
+            'school_code' => null,
+        ];
+
+        foreach ($header as $index => $rawColName) {
+            $colName = strtolower(str_replace(['_', ' '], '', trim($rawColName)));
+            
+            // Match candidate_number
+            if (in_array($colName, ['candidatenumber', 'candidateno', 'indexnumber', 'indexno'], true)) {
+                $mappedIndices['candidate_number'] = $index;
+            }
+            // Match PReM_No
+            elseif (in_array($colName, ['premno', 'premnumber'], true)) {
+                $mappedIndices['PReM_No'] = $index;
+            }
+            // Match pupil_name
+            elseif (in_array($colName, ['pupilname', 'fullname', 'candidatename'], true)) {
+                $mappedIndices['pupil_name'] = $index;
+            }
+            // Match sex
+            elseif (in_array($colName, ['sex', 'gender'], true)) {
+                $mappedIndices['sex'] = $index;
+            }
+            // Match school_code
+            elseif (in_array($colName, ['schoolcode', 'schoolid', 'centrenumber', 'centreno'], true)) {
+                $mappedIndices['school_code'] = $index;
+            }
+        }
+
+        $missing = [];
+        foreach ($mappedIndices as $key => $index) {
+            if ($index === null) {
+                $missing[] = $key;
+            }
+        }
+
+        if (!empty($missing)) {
             abort(response()->json([
                 'success' => false,
-                'message' => 'This file has invalid columns. Please download a fresh template and try again.',
-                'errors' => ['columns' => self::TEMPLATE_COLUMNS],
+                'message' => 'This file has invalid columns or is missing required columns. Please download a fresh template and try again.',
+                'errors' => [
+                    'columns' => self::TEMPLATE_COLUMNS,
+                    'missing' => $missing,
+                ],
             ], 422));
         }
 
@@ -472,7 +600,12 @@ class PsleCandidateRegistrationService
                 continue;
             }
 
-            [$candidateNumber, $premNo, $pupilName, $sex, $schoolCode] = array_pad($row, 5, null);
+            $candidateNumber = isset($row[$mappedIndices['candidate_number']]) ? trim((string) $row[$mappedIndices['candidate_number']]) : '';
+            $premNo = isset($row[$mappedIndices['PReM_No']]) ? trim((string) $row[$mappedIndices['PReM_No']]) : '';
+            $pupilName = isset($row[$mappedIndices['pupil_name']]) ? trim((string) $row[$mappedIndices['pupil_name']]) : '';
+            $sex = isset($row[$mappedIndices['sex']]) ? trim((string) $row[$mappedIndices['sex']]) : '';
+            $schoolCode = isset($row[$mappedIndices['school_code']]) ? trim((string) $row[$mappedIndices['school_code']]) : '';
+
             $schoolCode = strtoupper(trim((string) $schoolCode));
             $school = $schoolCode !== '' ? School::where('code', $schoolCode)->with('council')->first() : null;
             $payload = $this->normalizeCandidatePayload([
@@ -512,7 +645,14 @@ class PsleCandidateRegistrationService
                 $seenPremNumbers[$payload['prem_no']] = $rowNumber;
             }
 
-            $existing = Candidate::where('candidate_id', $payload['candidate_id'])->first();
+            $existing = $this->findExistingCandidate([
+                'candidate_id' => $payload['candidate_id'],
+                'prem_no' => $payload['prem_no'],
+                'school_id' => $school?->id,
+                'full_name' => $payload['full_name'],
+                'gender' => $payload['gender'],
+            ], $examYear->id, $this->psleExamType()->id);
+            
             $action = 'insert';
             if ($existing) {
                 $action = match ($mode) {

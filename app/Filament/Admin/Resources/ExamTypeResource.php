@@ -129,7 +129,7 @@ class ExamTypeResource extends Resource
         return [
             'index' => Pages\ListExamTypes::route('/'),
             'create' => Pages\CreateExamType::route('/create'),
-            'view' => Pages\ViewExamType::route('/{record}'),
+            'view' => Pages\ViewExamType::route('/view/{record}'),
             'edit' => Pages\EditExamType::route('/{record}/edit'),
         ];
     }

@@ -3,6 +3,7 @@
 @section('content')
 @include('mark-entry.partials.import-modal')
 @include('registration.partials.theme')
+@include('mark-entry.partials.admin-theme')
 <div class="registration-shell mark-entry-shell">
 <div class="w-full flex flex-col lg:flex-row gap-0 lg:gap-4" x-data="markEntryManager()" x-init="init()">
     <!-- SIDEBAR MENU -->

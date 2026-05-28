@@ -9,6 +9,7 @@ use App\Models\Region;
 use App\Models\School;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Services\Schools\NectaPsle2025SchoolSyncService;
 
 class PublicPsleResultsController extends Controller
@@ -277,6 +278,17 @@ class PublicPsleResultsController extends Controller
         if ($resultsAvailable) {
             [$candidates, $subjectSummary] = $this->buildSchoolResultsPayload($rows);
 
+            // Paginate candidates
+            $perPage = 20;
+            $page = request()->input('page', 1);
+            $paginatedCandidates = new LengthAwarePaginator(
+                collect($candidates)->forPage($page, $perPage),
+                count($candidates),
+                $perPage,
+                $page,
+                ['path' => request()->url(), 'query' => request()->query()]
+            );
+
             foreach ($candidates as $candidate) {
                 $gender = strtoupper((string) ($candidate['gender'] ?? ''));
                 if (!isset($sexSummary[$gender])) {
@@ -326,7 +338,7 @@ class PublicPsleResultsController extends Controller
             'district' => $district,
             'school' => $school,
             'resultsAvailable' => $resultsAvailable,
-            'candidates' => $candidates,
+            'candidates' => $paginatedCandidates ?? collect([]),
             'subjectSummary' => $subjectSummary,
             'sexSummary' => $sexSummary,
             'totals' => $totals,

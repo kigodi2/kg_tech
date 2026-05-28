@@ -25,9 +25,6 @@ class DistrictCouncil extends Model
         'updated_at' => 'datetime',
     ];
 
-    protected $keyType = 'string';
-    public $incrementing = false;
-
     public function region()
     {
         return $this->belongsTo(Region::class);
@@ -40,7 +37,7 @@ class DistrictCouncil extends Model
 
     public function candidates()
     {
-        return $this->hasManyThrough(Candidate::class, School::class, 'council_id');
+        return $this->hasManyThrough(Candidate::class, School::class, 'council_id', 'school_id');
     }
 
     public function users()

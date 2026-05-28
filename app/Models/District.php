@@ -9,6 +9,10 @@ class District extends Model
 {
     use HasFactory;
 
+    protected $appends = [
+        'display_code',
+    ];
+
     protected $fillable = [
         'code',
         'name',
@@ -41,5 +45,25 @@ class District extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+
+    public static function normalizeCodeForDisplay(?string $code): ?string
+    {
+        $code = strtoupper(trim((string) $code));
+
+        if ($code === '') {
+            return null;
+        }
+
+        if (preg_match('/^PSLE\d{2}[-\s]?(\d{4})$/', $code, $matches)) {
+            return 'PS' . $matches[1];
+        }
+
+        return $code;
+    }
+
+    public function getDisplayCodeAttribute(): ?string
+    {
+        return self::normalizeCodeForDisplay($this->code);
     }
 }

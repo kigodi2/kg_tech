@@ -15,8 +15,11 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (auth()->check() && auth()->user()->portal_role === 'admin') {
-            return $next($request);
+        if (auth()->check()) {
+            $user = auth()->user();
+            if ($user->isAdmin()) {
+                return $next($request);
+            }
         }
 
         abort(403, 'Unauthorized access.');

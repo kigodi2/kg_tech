@@ -41,16 +41,11 @@ class AcseeAllocationValidator
         $this->errors = [];
         $this->warnings = [];
         $this->principalSubjectIds = [];
-        $this->allSubjectIds = array_unique($subjectIds);
+        $this->allSubjectIds = $subjectIds;
 
-        // Determine candidate type from index number prefix
-        $isPrivate = str_starts_with(strtoupper($candidate->candidate_id ?? ''), 'P');
-
-        // Rule 1 & 2: Only apply to SCHOOL candidates
-        if (!$isPrivate) {
-            $this->validateGeneralStudies();
-            $this->validatePrincipalSubjectCount();
-        }
+        // Rule 1 & 2: apply to all ACSEE allocations, including private candidates
+        $this->validateGeneralStudies();
+        $this->validatePrincipalSubjectCount();
 
         // Rule 3: No duplicates (checked)
         $this->validateNoDuplicates();

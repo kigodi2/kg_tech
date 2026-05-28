@@ -38,6 +38,151 @@ class ReportsController extends Controller
 
     public function index(Request $request)
     {
+        if ($request->routeIs('results.psle.*')) {
+            // Active exam year context
+            $activeYear = ExamYear::where('is_active', true)->first() 
+                ?: ExamYear::orderByDesc('year_label')->first();
+            $examYearId = (int) $request->input('exam_year_id', $activeYear->id ?? 0);
+            $examYear = ExamYear::find($examYearId) ?: $activeYear;
+            $yearLabel = (int) ($examYear->year_label ?? 2026);
+
+            // Fetch TASIDO regions
+            $tasidoRegions = Region::whereIn(\DB::raw('upper(name)'), ['TABORA', 'SINGIDA', 'IRINGA', 'DODOMA'])
+                ->orderBy('name')
+                ->get();
+            $tasidoRegionIds = $tasidoRegions->pluck('id')->toArray();
+
+            // Filters
+            $regionId = $request->filled('region_id') ? (int) $request->input('region_id') : null;
+            $districtId = $request->filled('district_id') ? (int) $request->input('district_id') : null;
+
+            // Load dropdowns based on selections
+            $districts = collect();
+            if ($regionId) {
+                $districts = District::where('region_id', $regionId)->orderBy('name')->get();
+            } elseif (!empty($tasidoRegionIds)) {
+                $districts = District::whereIn('region_id', $tasidoRegionIds)->orderBy('name')->get();
+            }
+
+            // Overview metrics calculation directly from raw subject marks
+            $schoolsQuery = School::whereIn('region_id', $tasidoRegionIds)->where('education_level', 'PRIMARY');
+            $schoolsCount = $schoolsQuery->count();
+            $schoolIds = $schoolsQuery->pluck('id')->toArray();
+
+            $registeredCount = Candidate::whereIn('school_id', $schoolIds)->where('exam_type', 'PSLE')->count();
+
+            // Candidates with all 6 subject marks entered
+            $completeCount = \DB::table('subject_marks as sm')
+                ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
+                ->whereIn('c.school_id', $schoolIds)
+                ->where('sm.year', $yearLabel)
+                ->where('c.exam_type', 'PSLE')
+                ->groupBy('c.id')
+                ->having(\DB::raw('count(distinct sm.subject_id)'), '>=', 6)
+                ->select('c.id')
+                ->get()
+                ->count();
+
+            $missingCount = max(0, $registeredCount - $completeCount);
+
+            $metrics = [
+                'regions' => count($tasidoRegionIds),
+                'schools' => $schoolsCount,
+                'registered' => $registeredCount,
+                'complete' => $completeCount,
+                'missing' => $missingCount,
+                'processed' => $completeCount,
+                'published' => 'Active',
+                'available_reports' => $schoolsCount
+            ];
+
+            // 1. Fetch primary schools
+            $schoolQuery = School::whereIn('region_id', $tasidoRegionIds)
+                ->where('education_level', 'PRIMARY')
+                ->with(['region', 'district']);
+
+            if ($regionId) {
+                $schoolQuery->where('region_id', $regionId);
+            }
+            if ($districtId) {
+                $schoolQuery->where('district_id', $districtId);
+            }
+
+            if ($request->filled('search')) {
+                $search = trim((string) $request->input('search'));
+                $schoolQuery->where(function ($q) use ($search) {
+                    $q->where('code', 'like', "%{$search}%")
+                      ->orWhere('name', 'like', "%{$search}%");
+                });
+            }
+
+            $schools = $schoolQuery->orderBy('name')->paginate(15)->appends($request->query());
+
+            // 2. Fetch stats for each school in the current page
+            $psleExamTypeId = (int) ExamType::query()->where('code', 'PSLE')->value('id');
+            $currentPageSchoolIds = collect($schools->items())->pluck('id')->toArray();
+
+            $registeredCounts = [];
+            $completeCounts = [];
+
+            if (!empty($currentPageSchoolIds)) {
+                $registeredCounts = \DB::table('candidates')
+                    ->whereIn('school_id', $currentPageSchoolIds)
+                    ->where('exam_type', 'PSLE')
+                    ->groupBy('school_id')
+                    ->selectRaw('school_id, count(*) as count')
+                    ->pluck('count', 'school_id')
+                    ->toArray();
+
+                $completeCounts = \DB::table('candidate_results as cr')
+                    ->join('candidates as c', 'c.id', '=', 'cr.candidate_id')
+                    ->whereIn('c.school_id', $currentPageSchoolIds)
+                    ->where('cr.exam_type_id', $psleExamTypeId)
+                    ->where('cr.year', $yearLabel)
+                    ->groupBy('c.school_id')
+                    ->selectRaw('c.school_id, count(*) as count')
+                    ->pluck('count', 'school_id')
+                    ->toArray();
+            }
+
+            $schoolStats = [];
+            foreach ($schools->items() as $school) {
+                $schoolRegistered = $registeredCounts[$school->id] ?? 0;
+                $schoolComplete = $completeCounts[$school->id] ?? 0;
+                $schoolMissing = max(0, $schoolRegistered - $schoolComplete);
+
+                $status = 'No Marks';
+                if ($schoolRegistered > 0) {
+                    if ($schoolComplete === $schoolRegistered) {
+                        $status = 'Ready';
+                    } elseif ($schoolComplete > 0) {
+                        $status = 'In Progress';
+                    }
+                }
+
+                $schoolStats[$school->id] = [
+                    'registered' => $schoolRegistered,
+                    'complete' => $schoolComplete,
+                    'missing' => $schoolMissing,
+                    'status' => $status
+                ];
+            }
+
+            $viewData = [
+                'districts' => $districts,
+                'schools' => $schools,
+                'schoolStats' => $schoolStats
+            ];
+
+            $examYears = ExamYear::orderByDesc('year_label')->get();
+
+            return view('results.psle.reports.standalone', compact(
+                'metrics', 'viewData', 'tasidoRegions', 
+                'districts', 'examYears', 'examYear', 
+                'regionId', 'districtId'
+            ));
+        }
+
         $defaultExamYearId = old('exam_year_id', ExamYear::query()->where('is_active', true)->value('id'));
         $examYears = ExamYear::query()
             ->orderByDesc('year_label')
@@ -56,6 +201,7 @@ class ReportsController extends Controller
             'examYears' => $examYears,
             'regions' => $regions,
             'districts' => $districts,
+            'noSidebar' => true,
             'defaults' => [
                 'exam_year_id' => $defaultExamYearId,
                 'region_id' => old('region_id'),
@@ -236,6 +382,90 @@ class ReportsController extends Controller
         return response()->download($zipPath, $zipFilename, [
             'Content-Type' => 'application/zip',
         ])->deleteFileAfterSend(true);
+    }
+
+    public function exportSchoolPdf(Request $request, School $school)
+    {
+        $validated = $request->validate([
+            'exam_year_id' => ['required', 'integer', 'exists:exam_years,id'],
+            'mode' => ['nullable', 'in:published,draft'],
+        ]);
+
+        $examYear = ExamYear::query()->findOrFail((int) $validated['exam_year_id']);
+        $psleExamTypeId = (int) ExamType::query()->where('code', 'PSLE')->value('id');
+        $yearValue = (int) $examYear->year_label;
+        
+        $region = $school->region;
+        $district = $school->district;
+
+        $results = CandidateResult::query()
+            ->where('exam_type_id', $psleExamTypeId)
+            ->where('year', $yearValue)
+            ->whereHas('candidate', fn ($query) => $query->where('school_id', $school->id))
+            ->with([
+                'candidate:id,school_id,candidate_id,prem_no,full_name,gender',
+                'candidate.school:id,code,name,district_id,region_id',
+                'candidate.school.district:id,name,region_id',
+                'candidate.school.region:id,name',
+            ])
+            ->orderByDesc('total_marks')
+            ->get();
+
+        if ($results->isEmpty()) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'export' => 'No PSLE result rows found for the selected school and year.',
+                ]);
+        }
+
+        $candidateIds = $results->pluck('candidate_id')->filter()->unique()->values();
+        $subjectMarks = SubjectMarks::query()
+            ->where('exam_type_id', $psleExamTypeId)
+            ->where('year', $yearValue)
+            ->whereIn('candidate_id', $candidateIds)
+            ->with('subject:id,code,name')
+            ->orderBy('subject_id')
+            ->get()
+            ->groupBy('candidate_id');
+
+        $results->each(function ($result) use ($subjectMarks) {
+            $result->setRelation('subjectMarks', $subjectMarks->get($result->candidate_id, collect())->values());
+        });
+
+        $tempDir = storage_path('app/tmp/psle-school-exports-' . uniqid());
+        if (!is_dir($tempDir)) {
+            @mkdir($tempDir, 0755, true);
+        }
+
+        $safeSchoolName = preg_replace('/[^A-Za-z0-9_-]+/', '_', strtoupper((string) $school->name));
+        $pdfFilename = sprintf(
+            '%s_%s_PSLE_RESULTS.pdf',
+            strtoupper((string) $school->code),
+            trim((string) $safeSchoolName, '_')
+        );
+        $pdfPath = $tempDir . DIRECTORY_SEPARATOR . $pdfFilename;
+
+        $this->psleDistrictSchoolFpdfService->generateSchoolPdf(
+            $results->values(),
+            $pdfPath,
+            (string) $examYear->year_label,
+            $region,
+            $district,
+            (string) (auth()->user()->name ?? 'System')
+        );
+
+        register_shutdown_function(function () use ($tempDir) {
+            if (!is_dir($tempDir)) {
+                return;
+            }
+            foreach (glob($tempDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
+                @unlink($file);
+            }
+            @rmdir($tempDir);
+        });
+
+        return response()->download($pdfPath, $pdfFilename)->deleteFileAfterSend(true);
     }
 
     private function buildDistrictOptions(int $examYearId, $regionId = null)

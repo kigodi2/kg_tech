@@ -19,6 +19,14 @@ class ScheduleServiceProvider extends ServiceProvider
         $this->app->booted(function () {
             $schedule = $this->app->make(Schedule::class);
 
+            if (config('database.default') !== 'sqlite') {
+                \Log::info('SQLite scheduled backups are disabled because the active database is not SQLite.', [
+                    'database_connection' => config('database.default'),
+                ]);
+
+                return;
+            }
+
             // Daily backup at 1:00 AM
             $schedule->job(new ScheduledDailyBackup)
                 ->dailyAt('01:00')

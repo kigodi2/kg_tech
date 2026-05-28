@@ -11,8 +11,13 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\ColorPicker;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Notifications\Notification;
-use App\Models\SystemSetting;
+use App\Helpers\SystemSettingsHelper;
+use App\Models\GovernanceAuditLog;
 
 class SystemSettings extends Page implements HasForms
 {
@@ -28,6 +33,18 @@ class SystemSettings extends Page implements HasForms
 
     protected static ?string $title = 'System Settings';
 
+    public $applicationName = 'IRMS';
+    public $systemTagline = 'Integrated Results Management System';
+    public $dashboardIdentity = 'IRMS Admin Panel';
+    public $systemLogo = null;
+    public $primaryColor = '#00A3DD';
+    public $sidebarBg = '#050a0d';
+    public $topbarBg = '#0b1014';
+    public $fontFamily = 'Ubuntu';
+    public $timezone = 'Africa/Dar_es_Salaam';
+    public $dateFormat = 'Y-m-d';
+    public $currency = 'TZS';
+    public $enabledModules = [];
     public $importChunkSize = 1000;
     public $maxZipSize = 104857600; // 100MB
     public $cacheTtl = 3600;
@@ -36,14 +53,41 @@ class SystemSettings extends Page implements HasForms
 
     public function mount(): void
     {
-        // Load from database, fallback to config
-        $this->importChunkSize = SystemSetting::getSetting('import_chunk_size', config('irms.import_chunk_size', 1000));
-        $this->maxZipSize = SystemSetting::getSetting('max_zip_size', config('irms.max_zip_size', 104857600));
-        $this->cacheTtl = SystemSetting::getSetting('cache_ttl', config('irms.cache_ttl', 3600));
-        $this->maintenanceMode = SystemSetting::getSetting('maintenance_mode', config('app.maintenance_mode', false));
-        $this->systemNotes = SystemSetting::getSetting('system_notes', config('irms.system_notes', ''));
+        $this->applicationName = SystemSettingsHelper::getSetting('application_name', 'IRMS');
+        $this->systemTagline = SystemSettingsHelper::getSetting('system_tagline', 'Integrated Results Management System');
+        $this->dashboardIdentity = SystemSettingsHelper::getSetting('dashboard_identity', 'IRMS Admin Panel');
+        $this->systemLogo = SystemSettingsHelper::getSetting('system_logo', null);
+        $this->primaryColor = SystemSettingsHelper::getSetting('primary_color', '#00A3DD');
+        $this->sidebarBg = SystemSettingsHelper::getSetting('sidebar_bg', '#050a0d');
+        $this->topbarBg = SystemSettingsHelper::getSetting('topbar_bg', '#0b1014');
+        $this->fontFamily = SystemSettingsHelper::getSetting('font_family', 'Ubuntu');
+        $this->timezone = SystemSettingsHelper::getSetting('timezone', config('app.timezone', 'Africa/Dar_es_Salaam'));
+        $this->dateFormat = SystemSettingsHelper::getSetting('date_format', 'Y-m-d');
+        $this->currency = SystemSettingsHelper::getSetting('currency', 'TZS');
+        $this->enabledModules = collect(SystemSettingsHelper::moduleOptions())
+            ->keys()
+            ->filter(fn (string $key) => SystemSettingsHelper::isModuleEnabled($key, true))
+            ->values()
+            ->all();
+        $this->importChunkSize = SystemSettingsHelper::getSetting('import_chunk_size', config('irms.import_chunk_size', 1000));
+        $this->maxZipSize = SystemSettingsHelper::getSetting('max_zip_size', config('irms.max_zip_size', 104857600));
+        $this->cacheTtl = SystemSettingsHelper::getSetting('cache_ttl', config('irms.cache_ttl', 3600));
+        $this->maintenanceMode = SystemSettingsHelper::getSetting('maintenance_mode', config('app.maintenance_mode', false));
+        $this->systemNotes = SystemSettingsHelper::getSetting('system_notes', config('irms.system_notes', ''));
 
         $this->form->fill([
+            'applicationName' => $this->applicationName,
+            'systemTagline' => $this->systemTagline,
+            'dashboardIdentity' => $this->dashboardIdentity,
+            'systemLogo' => $this->systemLogo,
+            'primaryColor' => $this->primaryColor,
+            'sidebarBg' => $this->sidebarBg,
+            'topbarBg' => $this->topbarBg,
+            'fontFamily' => $this->fontFamily,
+            'timezone' => $this->timezone,
+            'dateFormat' => $this->dateFormat,
+            'currency' => $this->currency,
+            'enabledModules' => $this->enabledModules,
             'importChunkSize' => $this->importChunkSize,
             'maxZipSize' => $this->maxZipSize,
             'cacheTtl' => $this->cacheTtl,
@@ -56,6 +100,88 @@ class SystemSettings extends Page implements HasForms
     {
         return $form
             ->schema([
+                Section::make('Branding')
+                    ->description('Core IRMS identity used by admin screens and reports where supported.')
+                    ->schema([
+                        TextInput::make('applicationName')
+                            ->label('Application Name')
+                            ->required()
+                            ->maxLength(80),
+
+                        TextInput::make('systemTagline')
+                            ->label('System Tagline')
+                            ->maxLength(160),
+
+                        TextInput::make('dashboardIdentity')
+                            ->label('Dashboard Identity')
+                            ->required()
+                            ->maxLength(120),
+
+                        FileUpload::make('systemLogo')
+                            ->label('System Logo')
+                            ->image()
+                            ->disk('public')
+                            ->directory('system-branding')
+                            ->visibility('public')
+                            ->maxSize(2048)
+                            ->helperText('PNG, JPG, or SVG-style image upload supported by the server. Maximum 2MB.'),
+                    ])->columns(2),
+
+                Section::make('Appearance and Typography')
+                    ->description('Preserves the IRMS dark/gold style while allowing controlled theme adjustments.')
+                    ->schema([
+                        ColorPicker::make('primaryColor')
+                            ->label('Primary Color')
+                            ->required()
+                            ->regex('/^#[0-9A-Fa-f]{6}$/'),
+
+                        ColorPicker::make('sidebarBg')
+                            ->label('Sidebar Background')
+                            ->required()
+                            ->regex('/^#[0-9A-Fa-f]{6}$/'),
+
+                        ColorPicker::make('topbarBg')
+                            ->label('Topbar Background')
+                            ->required()
+                            ->regex('/^#[0-9A-Fa-f]{6}$/'),
+
+                        Select::make('fontFamily')
+                            ->label('Global Font')
+                            ->options(SystemSettingsHelper::allowedFonts())
+                            ->required(),
+                    ])->columns(4),
+
+                Section::make('Module Control')
+                    ->description('Controls module visibility hints. Existing route permissions remain the final security layer.')
+                    ->schema([
+                        CheckboxList::make('enabledModules')
+                            ->label('Enabled IRMS Modules')
+                            ->options(SystemSettingsHelper::moduleOptions())
+                            ->columns(3)
+                            ->bulkToggleable()
+                            ->helperText('Only existing IRMS modules are listed. Disabling a module should be paired with backend permission checks where routes exist.'),
+                    ]),
+
+                Section::make('Localization and Defaults')
+                    ->description('Shared display defaults for supported IRMS pages.')
+                    ->schema([
+                        Select::make('timezone')
+                            ->label('Timezone')
+                            ->options(collect(\DateTimeZone::listIdentifiers())->mapWithKeys(fn ($timezone) => [$timezone => $timezone])->all())
+                            ->searchable()
+                            ->required(),
+
+                        Select::make('dateFormat')
+                            ->label('Date Format')
+                            ->options(SystemSettingsHelper::allowedDateFormats())
+                            ->required(),
+
+                        Select::make('currency')
+                            ->label('Currency')
+                            ->options(SystemSettingsHelper::allowedCurrencies())
+                            ->required(),
+                    ])->columns(3),
+
                 Section::make('Import Settings')
                     ->description('Configure bulk import behavior')
                     ->schema([
@@ -109,11 +235,36 @@ class SystemSettings extends Page implements HasForms
         ];
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('refreshSettingsCache')
+                ->label('Refresh Settings Cache')
+                ->icon('heroicon-o-arrow-path')
+                ->action('refreshSettingsCache'),
+        ];
+    }
+
     public function saveSettings(): void
     {
         try {
-            // Get form state from component properties
+            $data = $this->form->getState();
+
+            $enabledModules = array_values($data['enabledModules'] ?? []);
+
             $data = [
+                'applicationName' => trim((string) ($data['applicationName'] ?? '')),
+                'systemTagline' => trim((string) ($data['systemTagline'] ?? '')),
+                'dashboardIdentity' => trim((string) ($data['dashboardIdentity'] ?? '')),
+                'systemLogo' => $data['systemLogo'] ?? null,
+                'primaryColor' => (string) ($data['primaryColor'] ?? ''),
+                'sidebarBg' => (string) ($data['sidebarBg'] ?? ''),
+                'topbarBg' => (string) ($data['topbarBg'] ?? ''),
+                'fontFamily' => (string) ($data['fontFamily'] ?? ''),
+                'timezone' => (string) ($data['timezone'] ?? ''),
+                'dateFormat' => (string) ($data['dateFormat'] ?? ''),
+                'currency' => (string) ($data['currency'] ?? ''),
+                'enabledModules' => $enabledModules,
                 'importChunkSize' => $this->importChunkSize,
                 'maxZipSize' => $this->maxZipSize,
                 'cacheTtl' => $this->cacheTtl,
@@ -121,7 +272,37 @@ class SystemSettings extends Page implements HasForms
                 'systemNotes' => $this->systemNotes,
             ];
 
-            // Validate
+            if ($data['applicationName'] === '') {
+                throw new \Exception('Application name is required.');
+            }
+
+            foreach (['primaryColor', 'sidebarBg', 'topbarBg'] as $colorKey) {
+                if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $data[$colorKey])) {
+                    throw new \Exception('Theme colors must be valid HEX colors.');
+                }
+            }
+
+            if (! array_key_exists($data['fontFamily'], SystemSettingsHelper::allowedFonts())) {
+                throw new \Exception('Selected font is not allowed.');
+            }
+
+            if (! in_array($data['timezone'], \DateTimeZone::listIdentifiers(), true)) {
+                throw new \Exception('Selected timezone is invalid.');
+            }
+
+            if (! array_key_exists($data['dateFormat'], SystemSettingsHelper::allowedDateFormats())) {
+                throw new \Exception('Selected date format is invalid.');
+            }
+
+            if (! array_key_exists($data['currency'], SystemSettingsHelper::allowedCurrencies())) {
+                throw new \Exception('Selected currency is invalid.');
+            }
+
+            $unknownModules = array_diff($data['enabledModules'], array_keys(SystemSettingsHelper::moduleOptions()));
+            if ($unknownModules !== []) {
+                throw new \Exception('One or more selected modules are not registered IRMS modules.');
+            }
+
             if (empty($data['importChunkSize']) || $data['importChunkSize'] < 100 || $data['importChunkSize'] > 10000) {
                 throw new \Exception('Import chunk size must be between 100 and 10,000');
             }
@@ -134,12 +315,38 @@ class SystemSettings extends Page implements HasForms
                 throw new \Exception('Cache TTL must be at least 60 seconds');
             }
 
-            // Save to database
-            SystemSetting::setSetting('import_chunk_size', (int)$data['importChunkSize'], 'integer', 'Number of records to process per batch');
-            SystemSetting::setSetting('max_zip_size', (int)$data['maxZipSize'], 'integer', 'Maximum allowed ZIP file size in bytes');
-            SystemSetting::setSetting('cache_ttl', (int)$data['cacheTtl'], 'integer', 'How long to cache queries (in seconds)');
-            SystemSetting::setSetting('maintenance_mode', (bool)$data['maintenanceMode'], 'boolean', 'Put system in maintenance mode');
-            SystemSetting::setSetting('system_notes', (string)$data['systemNotes'], 'string', 'Internal notes for administrators');
+            $settingsToSave = [
+                'application_name' => [$data['applicationName'], 'string', 'IRMS application display name'],
+                'system_tagline' => [$data['systemTagline'], 'string', 'IRMS system tagline'],
+                'dashboard_identity' => [$data['dashboardIdentity'], 'string', 'Admin dashboard identity label'],
+                'system_logo' => [$data['systemLogo'], 'string', 'System logo path on public storage'],
+                'primary_color' => [$data['primaryColor'], 'string', 'Primary IRMS theme color'],
+                'sidebar_bg' => [$data['sidebarBg'], 'string', 'Sidebar background color'],
+                'topbar_bg' => [$data['topbarBg'], 'string', 'Topbar background color'],
+                'font_family' => [$data['fontFamily'], 'string', 'Global font family'],
+                'timezone' => [$data['timezone'], 'string', 'Default system timezone'],
+                'date_format' => [$data['dateFormat'], 'string', 'Default date display format'],
+                'currency' => [$data['currency'], 'string', 'Default currency code'],
+                'import_chunk_size' => [(int) $data['importChunkSize'], 'integer', 'Number of records to process per batch'],
+                'max_zip_size' => [(int) $data['maxZipSize'], 'integer', 'Maximum allowed ZIP file size in bytes'],
+                'cache_ttl' => [(int) $data['cacheTtl'], 'integer', 'How long to cache queries (in seconds)'],
+                'maintenance_mode' => [(bool) $data['maintenanceMode'], 'boolean', 'Put system in maintenance mode'],
+                'system_notes' => [(string) $data['systemNotes'], 'string', 'Internal notes for administrators'],
+            ];
+
+            foreach (SystemSettingsHelper::moduleOptions() as $moduleKey => $moduleLabel) {
+                $settingsToSave["module_{$moduleKey}_enabled"] = [
+                    in_array($moduleKey, $data['enabledModules'], true),
+                    'boolean',
+                    "Enable {$moduleLabel} module visibility",
+                ];
+            }
+
+            foreach ($settingsToSave as $key => [$value, $type, $description]) {
+                $this->saveSettingWithAudit($key, $value, $type, $description);
+            }
+
+            SystemSettingsHelper::refreshSettingsCache();
 
             Notification::make()
                 ->title('Settings Updated')
@@ -153,5 +360,58 @@ class SystemSettings extends Page implements HasForms
                 ->danger()
                 ->send();
         }
+    }
+
+    protected function saveSettingWithAudit(string $key, mixed $value, string $type, string $description): void
+    {
+        $oldValue = SystemSettingsHelper::getSetting($key);
+
+        SystemSettingsHelper::setSetting($key, $value, $type, $description);
+
+        if ($oldValue === $value) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        GovernanceAuditLog::log(
+            'system_setting_updated',
+            userId: $user?->id,
+            adminId: $user?->id,
+            data: [
+                'setting_key' => $key,
+                'old_value' => $oldValue,
+                'new_value' => $value,
+                'source' => 'app/Filament/Admin/Pages/SystemSettings.php',
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'updated_at' => now()->toDateTimeString(),
+            ]
+        );
+    }
+
+    public function refreshSettingsCache(): void
+    {
+        SystemSettingsHelper::refreshSettingsCache();
+
+        $user = auth()->user();
+
+        GovernanceAuditLog::log(
+            'system_settings_cache_refreshed',
+            userId: $user?->id,
+            adminId: $user?->id,
+            data: [
+                'source' => 'app/Filament/Admin/Pages/SystemSettings.php',
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'refreshed_at' => now()->toDateTimeString(),
+            ]
+        );
+
+        Notification::make()
+            ->title('Settings Cache Refreshed')
+            ->body('The settings cache has been cleared and reloaded.')
+            ->success()
+            ->send();
     }
 }

@@ -43,7 +43,7 @@ class ProcessingController extends Controller
             ->where('exam_year_id', $examYear->id)
             ->with('user')
             ->latest()
-            ->paginate(10);
+            ->paginate(20);
 
         return view('results.acsee.processing.index', compact('processes', 'examYear'));
     }

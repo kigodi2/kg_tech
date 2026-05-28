@@ -1243,7 +1243,7 @@ window.acseeManager = function () {
         async loadSubjects() {
             this.loadingSubjects = true;
             try {
-                const response = await fetch('/admin/api/exam-types/ACSEE/subjects');
+                const response = await fetch('/api/exam-types/ACSEE/subjects');
                 const data = await response.json();
                 this.subjects = data.data || [];
                 this.filteredSubjects = this.subjects;
@@ -1258,7 +1258,7 @@ window.acseeManager = function () {
         async loadCombinations() {
             this.loadingCombinations = true;
             try {
-                const response = await fetch('/admin/api/exam-types/ACSEE/combinations');
+                const response = await fetch('/api/exam-types/ACSEE/combinations');
                 const data = await response.json();
                 this.combinations = data.data || [];
                 this.filteredCombinations = this.combinations;
@@ -1418,8 +1418,8 @@ window.acseeManager = function () {
                 }
 
                 const url = this.editingSubjectId 
-                    ? `/admin/api/exam-types/ACSEE/subjects/${this.editingSubjectId}`
-                    : `/admin/api/exam-types/ACSEE/subjects`;
+                    ? `/api/exam-types/ACSEE/subjects/${this.editingSubjectId}`
+                    : `/api/exam-types/ACSEE/subjects`;
                 const method = this.editingSubjectId ? 'PUT' : 'POST';
 
                 const payload = {
@@ -1463,7 +1463,7 @@ window.acseeManager = function () {
             if (!confirm('Delete this subject?')) return;
 
             try {
-                const response = await fetch(`/admin/api/exam-types/ACSEE/subjects/${id}`, {
+                const response = await fetch(`/api/exam-types/ACSEE/subjects/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1523,8 +1523,8 @@ window.acseeManager = function () {
         async saveCombination() {
             try {
                 const url = this.editingCombinationId 
-                    ? `/admin/api/exam-types/ACSEE/combinations/${this.editingCombinationId}`
-                    : `/admin/api/exam-types/ACSEE/combinations`;
+                    ? `/api/exam-types/ACSEE/combinations/${this.editingCombinationId}`
+                    : `/api/exam-types/ACSEE/combinations`;
                 const method = this.editingCombinationId ? 'PUT' : 'POST';
 
                 // Convert selected subject codes to subject IDs for the backend
@@ -1572,7 +1572,7 @@ window.acseeManager = function () {
             if (!confirm('Delete this combination?')) return;
 
             try {
-                const response = await fetch(`/admin/api/exam-types/ACSEE/combinations/${id}`, {
+                const response = await fetch(`/api/exam-types/ACSEE/combinations/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1612,7 +1612,7 @@ window.acseeManager = function () {
         async saveCandidate() {
             try {
                 const url = this.editingCandidateId 
-                    ? `/admin/api/candidates/${this.editingCandidateId}`
+                    ? `/api/candidates/${this.editingCandidateId}`
                     : `/admin/api/candidates`;
                 const method = this.editingCandidateId ? 'PUT' : 'POST';
 
@@ -1649,7 +1649,7 @@ window.acseeManager = function () {
             if (!confirm('Delete this candidate?')) return;
 
             try {
-                const response = await fetch(`/admin/api/candidates/${id}`, {
+                const response = await fetch(`/api/candidates/${id}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -1691,7 +1691,7 @@ window.acseeManager = function () {
 
             try {
                 const ids = Array.from(this.selectedItems);
-                const response = await fetch('/admin/api/candidates/bulk-delete', {
+                const response = await fetch('/api/candidates/bulk-delete', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1742,7 +1742,7 @@ window.acseeManager = function () {
                 const newUrl = `${window.location.pathname}?${params.toString()}#candidates`;
                 window.history.replaceState({}, '', newUrl);
                 
-                const response = await fetch(`/admin/api/exam-types/acsee/candidates?${params}`);
+                const response = await fetch(`/api/exam-types/acsee/candidates?${params}`);
                 const data = await response.json();
                 
                 this.acseeCandicates = data.data || [];
@@ -1869,7 +1869,7 @@ window.acseeManager = function () {
                 this.allocationExamYears = Array.isArray(yearsData) ? yearsData : (yearsData.exam_years || yearsData.data || []);
 
                 // Load combinations for ACSEE
-                const combosResponse = await fetch('/admin/api/exam-types/ACSEE/combinations', {
+                const combosResponse = await fetch('/api/exam-types/ACSEE/combinations', {
                     headers: { 'Accept': 'application/json' }
                 });
                 if (!combosResponse.ok) {
@@ -1879,7 +1879,7 @@ window.acseeManager = function () {
                 this.allocationCombinations = Array.isArray(combosData) ? combosData : (combosData.data || []);
 
                 // Load all subjects for ACSEE
-                const subjectsResponse = await fetch('/admin/api/exam-types/ACSEE/subjects', {
+                const subjectsResponse = await fetch('/api/exam-types/ACSEE/subjects', {
                     headers: { 'Accept': 'application/json' }
                 });
                 if (!subjectsResponse.ok) {
@@ -1978,7 +1978,7 @@ window.acseeManager = function () {
                     }
                 });
 
-                const response = await fetch('/admin/api/exam-types/acsee/allocate-subjects', {
+                const response = await fetch('/api/exam-types/acsee/allocate-subjects', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2035,8 +2035,8 @@ window.acseeManager = function () {
                 : 'private_allocation.csv';
             
             const endpoint = type === 'SCHOOL'
-                ? '/admin/api/exam-types/acsee/templates/school-allocation.csv'
-                : '/admin/api/exam-types/acsee/templates/private-allocation.csv';
+                ? '/api/exam-types/acsee/templates/school-allocation.csv'
+                : '/api/exam-types/acsee/templates/private-allocation.csv';
             
             try {
                 fetch(endpoint)
@@ -2107,7 +2107,7 @@ window.acseeManager = function () {
                 formData.append('candidate_type_filter', this.bulkImportMode === 'private' ? 'PRIVATE' : (this.bulkImportMode === 'school' ? 'SCHOOL' : 'ALL'));
                 formData.append('replace_allocations', this.bulkReplaceAllocations ? 'true' : 'false');
                 
-                const response = await fetch('/admin/api/exam-types/acsee/allocate-from-csv/validate', {
+                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/validate', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -2169,7 +2169,7 @@ window.acseeManager = function () {
                 formData.append('candidate_type_filter', this.bulkImportMode === 'private' ? 'PRIVATE' : (this.bulkImportMode === 'school' ? 'SCHOOL' : 'ALL'));
                 formData.append('replace_allocations_default', this.bulkReplaceAllocations ? '1' : '0');
                 
-                const response = await fetch('/admin/api/exam-types/acsee/allocate-from-csv/commit', {
+                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/commit', {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -2214,7 +2214,7 @@ window.acseeManager = function () {
             }
             
             try {
-                const response = await fetch('/admin/api/exam-types/acsee/allocate-from-csv/download-errors', {
+                const response = await fetch('/api/exam-types/acsee/allocate-from-csv/download-errors', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

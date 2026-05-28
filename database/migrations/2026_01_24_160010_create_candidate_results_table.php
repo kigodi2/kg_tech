@@ -19,8 +19,8 @@ return new class extends Migration
             $table->enum('status', ['PENDING', 'RELEASED', 'WITHHELD'])->default('PENDING');
             $table->timestamp('released_at')->nullable();
             $table->timestamps();
-            $table->unique(['candidate_id', 'exam_type_id', 'year']);
-            $table->index(['exam_type_id', 'year']);
+            $table->unique(['candidate_id', 'exam_type_id', 'year'], 'candidate_results_candidate_exam_year_unique');
+            $table->index(['exam_type_id', 'year'], 'candidate_results_exam_year_idx');
         });
     }
 

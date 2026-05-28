@@ -11,6 +11,7 @@ use App\Models\SubjectMarks;
 use App\Services\Results\NectaGradingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * PublicAcseeResultsController
@@ -227,11 +228,23 @@ class PublicAcseeResultsController extends Controller
             return $a['aggregate'] <=> $b['aggregate'];
         });
 
+        // Paginate candidates
+        $perPage = 20;
+        $page = request()->input('page', 1);
+        $paginatedCandidates = new LengthAwarePaginator(
+            collect($candidatesData)->forPage($page, $perPage),
+            count($candidatesData),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
         return view('results.acsee.public.show', compact(
             'school',
             'examYear',
             'yearNumeric',
             'candidatesData',
+            'paginatedCandidates',
             'divisionStats'
         ));
     }

@@ -91,6 +91,7 @@ class PsleEvaluationsController extends Controller
         $examYearValue = $this->activeYear();
 
         $entries = Region::query()
+            ->where('name', 'NOT LIKE', '%UNASSIGNED%')
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn ($region) => [
@@ -266,7 +267,7 @@ class PsleEvaluationsController extends Controller
                             'non-government-schools' => $rows->filter(fn ($row) => strtoupper((string) ($row['ownership'] ?? '')) === 'NON-GOVERNMENT')->values(),
                             default => $rows,
                         };
-                    }),
+                    }, $evaluation === 'government-schools' ? 'gov' : ($evaluation === 'non-government-schools' ? 'non-gov' : 'none')),
                 ]);
 
             case 'districtwise':
@@ -783,7 +784,13 @@ class PsleEvaluationsController extends Controller
 
         return [
             'region_name' => strtoupper((string) $region->name),
-            'zonal_rank' => $this->zonalRankForGroupedMode($examYearValue, $region, $mode, $candidateFilter),
+            'zonal_rank' => $this->zonalRankForGroupedMode(
+                $examYearValue,
+                $region,
+                $mode,
+                $candidateFilter,
+                $evaluationKey === 'government-schools' ? 'gov' : ($evaluationKey === 'non-government-schools' ? 'non-gov' : 'none')
+            ),
             'group_count_label' => $groupCountLabel,
             'group_count' => $rows->count(),
             'government_school_count' => $governmentSchoolCount,
@@ -840,8 +847,39 @@ class PsleEvaluationsController extends Controller
         ];
     }
 
-    private function regionalCandidateRows(Region $region, int $examYearValue): Collection
+    private function regionalCandidateRows(Region $region, int $examYearValue, bool $lightweight = false, string $mode = ''): Collection
     {
+        $selectCols = [
+            'c.id as candidate_pk',
+            'c.gender',
+            's.id as school_id',
+            's.ownership',
+        ];
+
+        if (!$lightweight) {
+            $selectCols = array_merge($selectCols, [
+                'c.candidate_id as index_number',
+                'c.prem_no',
+                'c.full_name',
+                's.code as school_code',
+                's.name as school_name',
+                'd.id as district_id',
+                'd.code as district_code',
+                'd.name as district_name',
+                'dc.id as council_id',
+                'dc.code as council_code',
+                'dc.name as council_name',
+            ]);
+        } else {
+            if ($mode === 'councilwise') {
+                $selectCols[] = 'dc.name as council_name';
+                $selectCols[] = 'd.name as district_name';
+            } elseif ($mode === 'districtwise') {
+                $selectCols[] = 'd.name as district_name';
+                $selectCols[] = 'd.code as district_code';
+            }
+        }
+
         $registrations = DB::table('candidate_exam_registrations as cer')
             ->join('candidates as c', 'c.id', '=', 'cer.candidate_id')
             ->join('schools as s', 's.id', '=', 'c.school_id')
@@ -850,43 +888,84 @@ class PsleEvaluationsController extends Controller
             ->where('s.region_id', $region->id)
             ->where('cer.exam_type_id', $this->psleExamTypeId())
             ->where('cer.year', $examYearValue)
-            ->select([
-                'c.id as candidate_pk',
-                'c.candidate_id as index_number',
-                'c.prem_no',
-                'c.full_name',
-                'c.gender',
-                's.id as school_id',
-                's.code as school_code',
-                's.name as school_name',
-                's.ownership',
-                'd.id as district_id',
-                'd.code as district_code',
-                'd.name as district_name',
-                'dc.id as council_id',
-                'dc.code as council_code',
-                'dc.name as council_name',
-            ])
+            ->select($selectCols)
             ->get();
 
-        $candidateIds = $registrations->pluck('candidate_pk')->filter()->map(fn ($id) => (int) $id)->values();
-
-        $marksByCandidate = DB::table('subject_marks as sm')
-            ->join('subjects as sb', 'sb.id', '=', 'sm.subject_id')
+        $marksQuery = DB::table('subject_marks as sm')
+            ->join('candidate_exam_registrations as cer', 'cer.candidate_id', '=', 'sm.candidate_id')
+            ->join('candidates as c', 'c.id', '=', 'cer.candidate_id')
+            ->join('schools as s', 's.id', '=', 'c.school_id')
+            ->where('s.region_id', $region->id)
+            ->where('cer.exam_type_id', $this->psleExamTypeId())
+            ->where('cer.year', $examYearValue)
             ->where('sm.exam_type_id', $this->psleExamTypeId())
-            ->where('sm.year', $examYearValue)
-            ->whereIn('sm.candidate_id', $candidateIds->all())
-            ->select([
+            ->where('sm.year', $examYearValue);
+
+        if ($lightweight) {
+            $marksQuery->select([
                 'sm.candidate_id',
                 'sm.marks_obtained',
                 'sm.max_marks',
-                'sb.code as subject_code',
-                'sb.name as subject_name',
-            ])
-            ->get()
-            ->groupBy('candidate_id');
+            ]);
+        } else {
+            $marksQuery->join('subjects as sb', 'sb.id', '=', 'sm.subject_id')
+                ->select([
+                    'sm.candidate_id',
+                    'sm.marks_obtained',
+                    'sm.max_marks',
+                    'sb.code as subject_code',
+                    'sb.name as subject_name',
+                ]);
+        }
 
-        return $registrations->map(function ($candidate) use ($marksByCandidate) {
+        $marksByCandidate = $marksQuery->get()->groupBy('candidate_id');
+
+        return $registrations->map(function ($candidate) use ($marksByCandidate, $lightweight, $mode) {
+            if ($lightweight) {
+                $subjectRows = collect($marksByCandidate->get($candidate->candidate_pk, []))
+                    ->map(function ($row) {
+                        $score = $this->scaledScore50((float) ($row->marks_obtained ?? 0), (float) ($row->max_marks ?: 100));
+                        $grade = $this->gradeFromScaledScore($score);
+
+                        return [
+                            'score' => $score,
+                            'grade' => $grade,
+                        ];
+                    });
+
+                $subjectCount = $subjectRows->count();
+                $total = round((float) $subjectRows->sum('score'), 4);
+                $average = $subjectCount > 0 ? round($total / $subjectCount, 4) : null;
+                $aggt = $subjectCount > 0
+                    ? (int) $subjectRows->sum(fn (array $item) => $this->gradePointFromGrade((string) ($item['grade'] ?? 'E')))
+                    : null;
+                $gpa = $subjectCount > 0 && !is_null($aggt)
+                    ? round($aggt / $subjectCount, 4)
+                    : null;
+                $status = match (true) {
+                    $subjectCount === 0 => 'ABS',
+                    $subjectCount < self::EXPECTED_SUBJECTS => 'INC',
+                    default => 'COMPLETE',
+                };
+                $overallGrade = $status === 'COMPLETE' && !is_null($average)
+                    ? $this->gradeFromScaledScore($average)
+                    : null;
+
+                return [
+                    'candidate_pk' => (int) $candidate->candidate_pk,
+                    'gender' => strtoupper(trim((string) ($candidate->gender ?? ''))),
+                    'school_id' => (int) $candidate->school_id,
+                    'council' => $mode === 'councilwise' ? strtoupper(trim((string) ($candidate->council_name ?? $candidate->district_name ?? '-'))) : '-',
+                    'district' => $mode === 'districtwise' ? strtoupper(trim(((string) ($candidate->district_code ?? '')) . ' - ' . ((string) ($candidate->district_name ?? '')))) : '-',
+                    'ownership' => strtoupper(trim((string) ($candidate->ownership ?? 'UNKNOWN'))) ?: 'UNKNOWN',
+                    'status' => $status,
+                    'total_marks' => $subjectCount > 0 ? round($total, 0) : null,
+                    'avg_marks' => $average,
+                    'overall_grade' => $overallGrade,
+                    'gpa' => $status === 'COMPLETE' ? $gpa : null,
+                ];
+            }
+
             $subjectRows = collect($marksByCandidate->get($candidate->candidate_pk, []))
                 ->map(function ($row) {
                     $score = $this->scaledScore50((float) ($row->marks_obtained ?? 0), (float) ($row->max_marks ?: 100));
@@ -1235,7 +1314,7 @@ class PsleEvaluationsController extends Controller
         ];
     }
 
-    private function buildMarkEntryRows(Collection $candidateRows, int $examYearValue, array $filters = []): Collection
+    private function buildMarkEntryRows(Region $region, Collection $candidateRows, int $examYearValue, array $filters = []): Collection
     {
         $subjects = [
             'KISWAHILI' => 'kisw',
@@ -1246,12 +1325,16 @@ class PsleEvaluationsController extends Controller
             'CIVIC AND MORAL EDUCATION' => 'cme',
         ];
 
-        $candidateIds = $candidateRows->pluck('candidate_pk')->filter()->map(fn ($id) => (int) $id)->values();
         $marksQuery = DB::table('subject_marks as sm')
             ->join('subjects as sb', 'sb.id', '=', 'sm.subject_id')
+            ->join('candidate_exam_registrations as cer', 'cer.candidate_id', '=', 'sm.candidate_id')
+            ->join('candidates as c', 'c.id', '=', 'cer.candidate_id')
+            ->join('schools as s', 's.id', '=', 'c.school_id')
+            ->where('s.region_id', $region->id)
+            ->where('cer.exam_type_id', $this->psleExamTypeId())
+            ->where('cer.year', $examYearValue)
             ->where('sm.exam_type_id', $this->psleExamTypeId())
-            ->where('sm.year', $examYearValue)
-            ->whereIn('sm.candidate_id', $candidateIds->all());
+            ->where('sm.year', $examYearValue);
 
         $activityDate = trim((string) ($filters['activity_date'] ?? ''));
         $dateFrom = trim((string) ($filters['date_from'] ?? ''));
@@ -1389,7 +1472,7 @@ class PsleEvaluationsController extends Controller
             'status' => trim((string) $request->query('status', '')),
         ];
 
-        $rows = $this->buildMarkEntryRows($candidateRows, $examYearValue, $filters);
+        $rows = $this->buildMarkEntryRows($region, $candidateRows, $examYearValue, $filters);
         if ($filters['status'] !== '') {
             $rows = $rows->filter(fn ($row) => strtoupper((string) ($row['status'] ?? '')) === strtoupper($filters['status']))->values();
         }
@@ -1507,41 +1590,49 @@ class PsleEvaluationsController extends Controller
         ];
     }
 
-    private function zonalRankForGroupedMode(int $examYearValue, Region $currentRegion, string $mode, ?callable $candidateFilter = null): array
+    private function zonalRankForGroupedMode(int $examYearValue, Region $currentRegion, string $mode, ?callable $candidateFilter = null, ?string $filterType = null): array
     {
-        $rankedRegions = Region::query()
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(function (Region $region) use ($examYearValue, $mode, $candidateFilter) {
-                $candidateRows = $this->regionalCandidateRows($region, $examYearValue);
-                if ($candidateFilter) {
-                    $candidateRows = $candidateFilter($candidateRows);
-                }
+        $filterTypeStr = $filterType ?: 'none';
+        $cacheKey = "psle_zonal_rank_{$examYearValue}_{$currentRegion->id}_{$mode}_{$filterTypeStr}";
 
-                [$rows] = $this->buildGroupedRows($candidateRows, $mode);
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($examYearValue, $currentRegion, $mode, $candidateFilter) {
+            $rankedRegions = Region::query()
+                ->whereIn(DB::raw('upper(name)'), ['TABORA', 'SINGIDA', 'IRINGA', 'DODOMA'])
+                ->orderBy('name')
+                ->get(['id', 'name'])
+                ->map(function (Region $region) use ($examYearValue, $mode, $candidateFilter) {
+                    $candidateRows = $this->regionalCandidateRows($region, $examYearValue, true, $mode);
+                    if ($candidateFilter) {
+                        $candidateRows = $candidateFilter($candidateRows);
+                    }
 
-                return [
-                    'region_id' => $region->id,
-                    'region_name' => strtoupper((string) $region->name),
-                    'average' => $this->groupedAverage($rows),
-                ];
-            })
-            ->filter(fn ($row) => !is_null($row['average']))
-            ->sort(function (array $left, array $right) {
-                if ($left['average'] !== $right['average']) {
-                    return $right['average'] <=> $left['average'];
-                }
+                    [$rows] = $this->buildGroupedRows($candidateRows, $mode);
 
-                return strcmp((string) $left['region_name'], (string) $right['region_name']);
-            })
-            ->values();
+                    return [
+                        'region_id' => $region->id,
+                        'region_name' => strtoupper((string) $region->name),
+                        'average' => $this->groupedAverage($rows),
+                    ];
+                })
+                ->filter(fn ($row) => !is_null($row['average']))
+                ->sort(function (array $left, array $right) {
+                    $leftAvg = $left['average'] ?? -INF;
+                    $rightAvg = $right['average'] ?? -INF;
+                    if ($leftAvg !== $rightAvg) {
+                        return $rightAvg <=> $leftAvg;
+                    }
 
-        $rank = $rankedRegions->search(fn ($row) => (int) $row['region_id'] === (int) $currentRegion->id);
+                    return strcmp((string) ($left['region_name'] ?? ''), (string) ($right['region_name'] ?? ''));
+                })
+                ->values();
 
-        return [
-            'position' => $rank === false ? null : $rank + 1,
-            'total' => $rankedRegions->count(),
-        ];
+            $rank = $rankedRegions->search(fn ($row) => (int) ($row['region_id'] ?? 0) === (int) $currentRegion->id);
+
+            return [
+                'position' => $rank === false ? null : $rank + 1,
+                'total' => $rankedRegions->count(),
+            ];
+        });
     }
 
     private function groupRowTemplate(array $candidate, string $mode): array

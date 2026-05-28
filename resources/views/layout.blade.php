@@ -5,7 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>IRMS - Integrated Results Management System</title>
-    <link rel="icon" type="image/png" href="/images/emblem.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="manifest" href="/site.webmanifest">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.cdnfonts.com/css/maiandra-gd" rel="stylesheet">
@@ -422,7 +426,7 @@
 
         .page-footer-body {
             width: 100%;
-            padding: 10px 18px 12px;
+            padding: 8px 16px 10px;
         }
 
         .page-footer-row {
@@ -435,7 +439,7 @@
 
         .page-footer-copy,
         .page-footer-meta {
-            font-size: 0.83rem;
+            font-size: 0.75rem;
             line-height: 1.45;
         }
 
@@ -455,7 +459,20 @@
             color: #fcd116;
             font-weight: 700;
         }
+        .footer-brand {
+            background: linear-gradient(90deg, #f9d769 0%, #ffd35f 40%, #e8b822 100%);
+            -webkit-background-clip: text;
+            color: transparent;
+            font-weight: 800;
+            font-size: 0.85rem;
+            text-shadow: 0 0 6px rgba(255, 210, 80, 0.9), 0 0 16px rgba(255, 210, 80, 0.35);
+            transition: transform 0.24s ease, text-shadow 0.24s ease;
+        }
 
+        .footer-brand:hover {
+            transform: translateY(-1px);
+            text-shadow: 0 0 8px rgba(255, 210, 80, 0.95), 0 0 18px rgba(255, 210, 80, 0.5);
+        }
         .page-footer-copy p,
         .page-footer-meta p {
             margin: 0;
@@ -659,11 +676,13 @@
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="dropdown-menu">
-                        <a href="/admin/registration" class="dropdown-item"><i class="fas fa-table-columns"></i> Dashboard</a>
+                        <a href="/admin/dashboard" class="dropdown-item"><i class="fas fa-table-columns"></i> Dashboard</a>
                         <a href="/admin/registration/regions" class="dropdown-item"><i class="fas fa-map"></i> Regions</a>
                         <a href="/admin/registration/districts" class="dropdown-item"><i class="fas fa-map-location-dot"></i> Districts</a>
                         <a href="/admin/registration/schools" class="dropdown-item"><i class="fas fa-school"></i> Schools</a>
                         <a href="/admin/registration/candidates" class="dropdown-item"><i class="fas fa-user-graduate"></i> Candidates</a>
+                        <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 0.25rem 0;"></div>
+                        <a href="/mock-portal" class="dropdown-item" target="_blank"><i class="fas fa-globe"></i> Mock Portal</a>
                     </div>
                 </div>
                 @endif
@@ -681,10 +700,10 @@
                     <div class="dropdown-menu">
                         @php
                             $configuredExamTypes = \App\Models\ExamType::query()
+                                ->whereIn('code', config('irms.active_exam_types', ['PSLE']))
                                 ->orderBy('code')
                                 ->get(['code', 'name']);
                         @endphp
-                        <a href="/admin/exam-types" class="dropdown-item"><i class="fas fa-table-list"></i> All Exam Types</a>
                         @forelse ($configuredExamTypes as $configuredExamType)
                             <a href="/admin/exam-types/{{ strtolower($configuredExamType->code) }}" class="dropdown-item">
                                 <i class="fas fa-file-circle-check"></i> {{ $configuredExamType->code }}
@@ -709,17 +728,11 @@
                     </button>
                     <div class="dropdown-menu">
                         <a href="/mark-entry/psle" class="dropdown-item"><i class="fas fa-pen-to-square"></i> PSLE</a>
-                        <a href="/mark-entry/csee" class="dropdown-item"><i class="fas fa-keyboard"></i> CSEE</a>
-                        <a href="/mark-entry/acsee" class="dropdown-item"><i class="fas fa-clipboard-check"></i> ACSEE</a>
                         <hr style="margin: 0.4rem 0; border-top: 1px solid #404040;">
                         <span class="dropdown-item text-gray-400 cursor-default">
                             <i class="fas fa-list-check"></i> QUESTION ENTRY
                         </span>
                         <a href="{{ route('mark-entry.psle.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> PSLE Questions</a>
-                        <a href="{{ route('mark-entry.sfna.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> SFNA Questions</a>
-                        <a href="{{ route('mark-entry.ftna.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> FTNA Questions</a>
-                        <a href="{{ route('mark-entry.csee.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> CSEE Questions</a>
-                        <a href="{{ route('mark-entry.acsee.questions.show') }}" class="dropdown-item"><i class="fas fa-hashtag"></i> ACSEE Questions</a>
                     </div>
                 </div>
 
@@ -734,12 +747,7 @@
                     </button>
                     <div class="dropdown-menu">
                         <a href="/results/psle" class="dropdown-item"><i class="fas fa-square-poll-vertical"></i> PSLE</a>
-                        <a href="/results/csee" class="dropdown-item"><i class="fas fa-chart-column"></i> CSEE</a>
-                        <a href="/results/acsee" class="dropdown-item"><i class="fas fa-award"></i> ACSEE</a>
                         <hr style="margin: 0.4rem 0; border-top: 1px solid #404040;">
-                        <a href="/results/2026/acsee" class="dropdown-item">
-                            <i class="fas fa-globe"></i> PUBLIC RESULTS (2026 ACSEE)
-                        </a>
                         <a href="/results/2026/psle" class="dropdown-item">
                             <i class="fas fa-globe"></i> PUBLIC RESULTS (2026 PSLE)
                         </a>
@@ -757,8 +765,6 @@
                     </button>
                     <div class="dropdown-menu">
                         <a href="/evaluations/psle" class="dropdown-item"><i class="fas fa-magnifying-glass-chart"></i> PSLE</a>
-                        <a href="/evaluations/csee" class="dropdown-item"><i class="fas fa-chart-line"></i> CSEE</a>
-                        <a href="/evaluations/acsee" class="dropdown-item"><i class="fas fa-chart-pie"></i> ACSEE</a>
                     </div>
                 </div>
 
@@ -873,7 +879,7 @@
                     <p>Copyright &copy; {{ now()->year }} Integrated Results Management System | All Rights Reserved</p>
                 </div>
                 <div class="page-footer-meta">
-                    <p>Developed by <strong>ProSmart Technologies</strong></p>
+                    Developed By <strong class="footer-brand">ProSmart Technologies</strong>
                 </div>
             </div>
         </div>
@@ -894,6 +900,18 @@
     </div>
 
     <script>
+        // Disable Developer Tools for non-admins
+        (function() {
+            @if(!(auth()->check() && auth()->user()->isAdmin()))
+                document.addEventListener('contextmenu', event => event.preventDefault());
+                document.onkeydown = function(e) {
+                    if (e.keyCode == 123) return false;
+                    if (e.ctrlKey && e.shiftKey && (e.keyCode == 'I'.charCodeAt(0) || e.keyCode == 'J'.charCodeAt(0) || e.keyCode == 'C'.charCodeAt(0))) return false;
+                    if (e.ctrlKey && e.keyCode == 'U'.charCodeAt(0)) return false;
+                };
+            @endif
+        })();
+
         function openModal(title, content) {
             document.getElementById('modal-title').textContent = title;
             document.getElementById('modal-content').innerHTML = content;
