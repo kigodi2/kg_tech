@@ -888,7 +888,7 @@
             }
         }
     </style>
-    @if(request()->routeIs('public.home'))
+    @if(request()->routeIs('public.home') || request()->routeIs('login') || request()->routeIs('mock-portal.login'))
     <style>
         :root {
             --tz-green: #1EB53A;
@@ -1099,6 +1099,7 @@
                         </span>
                         <span>HOME</span>
                     </a>
+                    @if(!request()->routeIs('public.home'))
                     <div class="nav-divider" aria-hidden="true"></div>
                     <a id="examSubmissionsLink" data-admin-email-gated="true" data-enabled-href="{{ route('exam-submissions.index') }}" href="{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? 'javascript:void(0)' : route('exam-submissions.index') }}" class="nav-link{{ request()->routeIs('exam-submissions.*') ? ' active' : '' }}{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? ' is-disabled disabled-nav-link' : '' }}" @if(request()->routeIs('exam-submissions.*')) aria-current="page" @endif @if($disableMockPortalHeaderNav || request()->routeIs('login')) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
@@ -1113,6 +1114,7 @@
                         </span>
                         <span>EXAM DEVELOPMENT</span>
                     </a>
+                    @endif
                     <div class="nav-divider" aria-hidden="true"></div>
                     <a href="{{ $disableMockPortalHeaderNav ? 'javascript:void(0)' : route('login') }}" class="nav-link{{ request()->routeIs('login') ? ' active' : '' }}{{ $disableMockPortalHeaderNav ? ' is-disabled' : '' }}" @if(request()->routeIs('login')) aria-current="page" @endif @if($disableMockPortalHeaderNav) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
@@ -1138,6 +1140,7 @@
                         </span>
                         <span>HOME</span>
                     </a>
+                    @if(!request()->routeIs('public.home'))
                     <div class="mobile-nav-divider"></div>
                     <a data-admin-email-gated="true" data-enabled-href="{{ route('exam-submissions.index') }}" href="{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? 'javascript:void(0)' : route('exam-submissions.index') }}" class="mobile-nav-link{{ request()->routeIs('exam-submissions.*') ? ' active' : '' }}{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? ' is-disabled disabled-nav-link' : '' }}" @if(request()->routeIs('exam-submissions.*')) aria-current="page" @endif @if($disableMockPortalHeaderNav || request()->routeIs('login')) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
@@ -1152,6 +1155,7 @@
                         </span>
                         <span>EXAM DEVELOPMENT</span>
                     </a>
+                    @endif
                     <div class="mobile-nav-divider"></div>
                     <a href="{{ $disableMockPortalHeaderNav ? 'javascript:void(0)' : route('login') }}" class="mobile-nav-link{{ request()->routeIs('login') ? ' active' : '' }}{{ $disableMockPortalHeaderNav ? ' is-disabled' : '' }}" @if(request()->routeIs('login')) aria-current="page" @endif @if($disableMockPortalHeaderNav) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
