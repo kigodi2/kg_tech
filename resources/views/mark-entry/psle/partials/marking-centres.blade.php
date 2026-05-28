@@ -340,6 +340,27 @@
             box-shadow: 0 6px 16px rgba(22, 163, 74, 0.35) !important;
             transform: translateY(-1px);
         }
+        .psle-action-btn-red {
+            background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
+            height: 46px;
+            padding: 0 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        .psle-action-btn-red:hover {
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35) !important;
+            transform: translateY(-1px);
+        }
     </style>
 
     <div class="adm-breadcrumb">
@@ -371,6 +392,37 @@
     </div>
 
     @if($isAdmin)
+    <!-- Geofencing Global Toggle Control Panel -->
+    <div class="adm-card" style="margin-bottom: 24px;">
+        <div class="adm-card-head" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding: 16px 20px;">
+            <div class="adm-card-title" style="margin: 0; font-size: 1.1rem; font-weight: 600;">
+                <i class="fas fa-shield-alt" style="margin-right: 8px; color: #3b82f6;"></i> Location Restriction Control
+            </div>
+            <span class="badge {{ $isGeofenceEnabled ? 'badge-green' : 'badge-red' }}" id="geofence-status-badge">
+                {{ $isGeofenceEnabled ? 'Enabled' : 'Disabled' }}
+            </span>
+        </div>
+        <div class="adm-card-body" style="padding: 20px;">
+            <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px;">
+                <div style="flex: 1; min-width: 300px;">
+                    <p id="geofence-helper-text" style="color: #9ca3af; font-size: 0.9rem; margin: 0; line-height: 1.5;">
+                        @if($isGeofenceEnabled)
+                            Mark Entry Officers must verify GPS location and remain within the approved marking centre radius before accessing mark entry.
+                        @else
+                            Location restriction is currently disabled. Mark Entry Officers can access mark entry without GPS verification. One-device account restriction still applies.
+                        @endif
+                    </p>
+                </div>
+                <div>
+                    <button type="button" id="geofence-toggle-btn" class="{{ $isGeofenceEnabled ? 'psle-action-btn-red' : 'psle-action-btn-green' }}" onclick="confirmToggleGeofence({{ $isGeofenceEnabled ? 'false' : 'true' }})" style="border-radius: 8px; border: none; font-weight: 700; color: #fff; cursor: pointer;">
+                        <i class="fas {{ $isGeofenceEnabled ? 'fa-lock-open' : 'fa-lock' }}"></i>
+                        <span id="geofence-btn-text">{{ $isGeofenceEnabled ? 'Disable Location Restriction' : 'Enable Location Restriction' }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Create Centre Form -->
     <div class="adm-card">
         <div class="adm-card-head">
@@ -630,5 +682,75 @@
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
+    }
+
+    function confirmToggleGeofence(targetEnabled) {
+        if (!targetEnabled) {
+            Swal.fire({
+                title: 'Disable GPS Restriction?',
+                text: "You are about to disable marking-centre GPS restriction. Mark Entry Officers will be able to proceed with mark entry without location verification. One-device account restriction will remain active. Continue?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Disable Restriction',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: 'var(--tz-red)',
+                cancelButtonColor: 'rgba(255,255,255,0.15)',
+                background: '#101518',
+                color: '#f0f4f7'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    performGeofenceToggle(false);
+                }
+            });
+        } else {
+            performGeofenceToggle(true);
+        }
+    }
+
+    function performGeofenceToggle(enabled) {
+        Swal.fire({
+            title: 'Updating status...',
+            allowOutsideClick: false,
+            background: '#101518',
+            color: '#f0f4f7',
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        fetch('/mark-entry/psle/marking-centres/geofence-toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ enabled: enabled })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Updated!',
+                    text: data.message,
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: '#101518',
+                    color: '#f0f4f7'
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                throw new Error(data.message || 'Failed to toggle geofence.');
+            }
+        })
+        .catch(err => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: err.message,
+                background: '#101518',
+                color: '#f0f4f7'
+            });
+        });
     }
 </script>

@@ -4584,6 +4584,7 @@ Route::middleware(['auth', 'main-system', 'single-device', 'geofence'])->group(f
       Route::post('/mark-entry/psle/marking-centres/{id}/toggle-status', [\App\Http\Controllers\PsleMarkEntryController::class, 'toggleMarkingCentreStatus']);
       Route::post('/mark-entry/psle/marking-centres/{id}/update', [\App\Http\Controllers\PsleMarkEntryController::class, 'updateMarkingCentre']);
       Route::post('/mark-entry/psle/marking-centres/{id}/delete', [\App\Http\Controllers\PsleMarkEntryController::class, 'deleteMarkingCentre']);
+      Route::post('/mark-entry/psle/marking-centres/geofence-toggle', [\App\Http\Controllers\PsleMarkEntryController::class, 'toggleGeofence']);
       Route::post('/mark-entry/psle/assignments/create', [\App\Http\Controllers\PsleMarkEntryController::class, 'createAssignment']);
       Route::post('/mark-entry/psle/assignments/{id}/revoke', [\App\Http\Controllers\PsleMarkEntryController::class, 'revokeAssignment']);
       Route::get('/mark-entry/psle/subject-panel-assignments', function () {

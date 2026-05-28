@@ -18,8 +18,8 @@ class EnsureMarkEntryGeoFence
     {
         $user = $request->user();
 
-        // 1. Bypass if geofencing is disabled in config
-        if (!config('mark_entry.geofence_enabled', true)) {
+        // 1. Bypass if geofencing is disabled globally
+        if (!\App\Helpers\MarkEntrySettings::geofenceEnabled()) {
             return $next($request);
         }
 

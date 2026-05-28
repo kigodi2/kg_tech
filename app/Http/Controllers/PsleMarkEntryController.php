@@ -1338,6 +1338,7 @@ class PsleMarkEntryController extends Controller
             'returnedPanelMarks' => $returnedPanelMarks,
             'recentActivities' => $recentActivities,
             'diagnosticsMeta' => $diagnosticsMeta,
+            'isGeofenceEnabled' => \App\Helpers\MarkEntrySettings::geofenceEnabled(),
         ]);
     }
 
@@ -2526,6 +2527,49 @@ class PsleMarkEntryController extends Controller
         $centre->delete();
 
         return redirect()->back()->with('success', 'Marking Centre deleted successfully.');
+    }
+
+    public function toggleGeofence(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->isAdmin()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Unauthorized action.'
+            ], 403);
+        }
+
+        $request->validate([
+            'enabled' => 'required|boolean',
+        ]);
+
+        $enabled = (bool) $request->input('enabled');
+        $oldValue = \App\Helpers\MarkEntrySettings::geofenceEnabled();
+
+        \App\Helpers\MarkEntrySettings::setGeofenceEnabled($enabled);
+
+        // Record a structured compliance audit log
+        \App\Models\GovernanceAuditLog::log(
+            $enabled ? 'mark_entry_geofence_enabled' : 'mark_entry_geofence_disabled',
+            userId: $user->id,
+            adminId: $user->id,
+            data: [
+                'changed_by_email' => $user->email,
+                'old_value' => $oldValue,
+                'new_value' => $enabled,
+                'ip_address' => $request->ip(),
+                'user_agent_hash' => hash('sha256', $request->userAgent()),
+                'timestamp' => now()->toIso8601String()
+            ]
+        );
+
+        return response()->json([
+            'ok' => true,
+            'enabled' => $enabled,
+            'message' => $enabled 
+                ? 'Marking centre location restriction has been enabled.' 
+                : 'Marking centre location restriction has been disabled. Mark Entry Officers can proceed without GPS verification.'
+        ]);
     }
 
     public function createAssignment(Request $request)

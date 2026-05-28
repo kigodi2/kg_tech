@@ -31,6 +31,7 @@ class MarkEntrySingleDeviceTest extends TestCase
 
         // Explicitly enable single-device restriction for testing this feature specifically
         config(['mark_entry.enable_single_device_restriction' => true]);
+        \App\Helpers\MarkEntrySettings::setGeofenceEnabled(false);
 
         // Seed roles
         $this->meoRole = Role::firstOrCreate(['code' => 'mark_entry_officer'], ['name' => 'Mark Entry Officer']);

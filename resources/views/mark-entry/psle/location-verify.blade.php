@@ -20,6 +20,15 @@
         </div>
 
         <div class="login-card-body">
+            @if(!\App\Helpers\MarkEntrySettings::geofenceEnabled())
+            <!-- Disabled State -->
+            <div class="location-status-container">
+                <div class="error-icon" style="font-size: 3rem; margin-bottom: 10px;">ℹ️</div>
+                <p class="status-text" style="color: #ffffff; font-weight: 600; font-size: 1.1rem; margin: 0;">Location Verification Disabled</p>
+                <p class="sub-text" style="color: #9ca3af; font-size: 0.9rem; margin-top: 10px; margin-bottom: 20px; text-align: center;">Location verification is disabled by Admin.</p>
+                <a href="/dashboard" class="login-button" style="text-decoration: none; display: inline-block; line-height: 46px; height: 46px; text-align: center; font-weight: 700; width: 100%;">Go to Dashboard</a>
+            </div>
+            @else
             <!-- Loader State -->
             <div id="location-loader" class="location-status-container">
                 <div class="location-spinner"></div>
@@ -35,6 +44,8 @@
                 </div>
                 <button type="button" class="login-button" onclick="verifyLocation()" style="margin-top: 15px;">Retry Location Verification</button>
             </div>
+
+            @endif
 
             <form action="{{ route('logout') }}" method="POST" style="margin-top: 15px; text-align: center;">
                 @csrf
