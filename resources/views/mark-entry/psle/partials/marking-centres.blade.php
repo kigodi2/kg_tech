@@ -65,8 +65,8 @@
             padding: 16px;
         }
         .psle-modal-card {
-            width: min(940px, calc(100vw - 32px)) !important;
-            max-width: 940px !important;
+            width: min(80vw, calc(100vw - 32px)) !important;
+            max-width: 80vw !important;
             overflow: hidden;
             border-radius: 24px;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -76,6 +76,10 @@
             display: flex;
             flex-direction: column;
             text-align: left;
+        }
+        .psle-modal-card label,
+        .psle-modal-card button {
+            white-space: nowrap !important;
         }
         .psle-modal-header {
             position: relative;
