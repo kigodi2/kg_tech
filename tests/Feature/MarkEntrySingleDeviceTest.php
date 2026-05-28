@@ -104,12 +104,13 @@ class MarkEntrySingleDeviceTest extends TestCase
         Auth::logout();
         session()->invalidate();
 
-        // 2. Second Device/Session attempts Login
+        // 2. Second Device/Session attempts Login (Simulate different Device Token Cookie / User Agent)
         $response = $this->post('/login', [
             'email' => 'meo@example.com',
             'password' => 'password123',
         ], [
-            'REMOTE_ADDR' => '192.168.1.100' // Simulate different IP for second device
+            'REMOTE_ADDR' => '192.168.1.100', // Simulate different IP for second device
+            'HTTP_USER_AGENT' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)', // Different User Agent
         ]);
 
         // Should NOT log in, should redirect back with error
@@ -137,16 +138,17 @@ class MarkEntrySingleDeviceTest extends TestCase
 
         $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
 
-        // 2. Simulated Device 2 attempts access using a different session ID
-        // Let's change database to different session hash to simulate another active device
-        $activeSession->update(['session_id' => 'different_hash_device_2']);
+        // 2. Simulated Device 2 attempts access using a different session ID and device hash
+        $activeSession->update([
+            'session_id' => 'different_hash_device_2',
+            'device_hash' => 'different_device_hash_2',
+        ]);
 
         // Second device gets blocked
         $response2 = $this->get('/mark-entry/psle?view=overview');
         $response2->assertRedirect(route('login'));
 
         // Database record for Device 1/Device 2 is still preserved as 'different_hash_device_2'
-        // (meaning the second device attempt did NOT replace the active session, nor did it delete it)
         $activeSession->refresh();
         $this->assertEquals('different_hash_device_2', $activeSession->session_id);
     }
@@ -241,9 +243,12 @@ class MarkEntrySingleDeviceTest extends TestCase
 
         $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
 
-        // 2. Change session ID in database to a different hash to simulate that Device 2 is the current request context
-        // and Device 1 is the one stored in the database
-        $activeSession->update(['session_id' => 'hash_device_1_session_id']);
+        // 2. Change session ID and device hash in database to simulate that Device 2 is the current request context
+        // and Device 1 (mismatched) is stored in the database
+        $activeSession->update([
+            'session_id' => 'hash_device_1_session_id',
+            'device_hash' => 'hash_device_1_mismatched',
+        ]);
 
         // 3. Device 2 (current request context) logs out
         $this->post('/logout');
@@ -264,9 +269,10 @@ class MarkEntrySingleDeviceTest extends TestCase
 
         $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
 
-        // 2. Change session ID in database to simulate that a different device (Device 1) is active
+        // 2. Change session ID and device hash in database to simulate that a different device (Device 1) is active
         $activeSession->update([
             'session_id' => 'different_active_session_hash',
+            'device_hash' => 'different_active_device_hash',
             'ip_address' => '192.168.1.99',
         ]);
 

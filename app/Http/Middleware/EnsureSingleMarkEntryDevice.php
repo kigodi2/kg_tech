@@ -56,7 +56,7 @@ class EnsureSingleMarkEntryDevice
 
         // 6. Compute stable device hash and current hashed session ID
         $userAgent = $request->userAgent() ?? 'unknown_browser';
-        $deviceHash = hash('sha256', $userAgent . '|' . $request->ip());
+        $deviceHash = hash('sha256', $userAgent . '|' . $deviceToken);
         $currentSessionId = session()->getId();
         $currentSessionHash = hash('sha256', $currentSessionId);
 
@@ -97,12 +97,15 @@ class EnsureSingleMarkEntryDevice
         if ($storedSessionId !== $currentSessionHash) {
             // Mismatch: A different session is active in the database.
             
+            // Check if the request is coming from the SAME device
+            $isSameDevice = $activeSession->device_hash === $deviceHash;
+
             // Check for Inactivity Timeout expiration (stale session takeover)
             $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);
             $isStale = $lastSeenAt && \Carbon\Carbon::parse($lastSeenAt)->addMinutes($timeoutMinutes)->isPast();
 
-            if ($isStale) {
-                // Stale takeover allowed: replace previous inactive session
+            if ($isSameDevice || $isStale) {
+                // Same-device or Stale takeover allowed: replace previous session
                 $activeSession->delete();
 
                 MarkEntryActiveSession::create([
@@ -120,7 +123,7 @@ class EnsureSingleMarkEntryDevice
                     userId: $user->id,
                     adminId: null,
                     data: [
-                        'event' => 'mark_entry_session_stale_replaced',
+                        'event' => $isSameDevice ? 'mark_entry_session_recreated_same_device' : 'mark_entry_session_stale_replaced',
                         'previous_active_ip' => $activeSession->ip_address,
                         'new_ip' => $request->ip(),
                         'session_hash' => $currentSessionHash,

@@ -203,12 +203,47 @@ class AuthController extends Controller
 
         // Single-device login integration for MEOs
         if ($user->isMarkEntryOfficer()) {
+            $deviceToken = $request->cookie('meo_device_token');
+            if (!$deviceToken) {
+                $deviceToken = \Illuminate\Support\Str::random(40);
+                cookie()->queue(cookie()->forever('meo_device_token', $deviceToken, null, null, true, true));
+            }
+
+            $deviceHash = hash('sha256', ($request->userAgent() ?? 'unknown_browser') . '|' . $deviceToken);
+            $currentSessionId = session()->getId();
+            $currentSessionHash = hash('sha256', $currentSessionId);
+
             $activeSession = \App\Models\MarkEntryActiveSession::where('user_id', $user->id)->first();
             if ($activeSession) {
                 $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);
                 $isStale = $activeSession->last_seen_at && \Carbon\Carbon::parse($activeSession->last_seen_at)->addMinutes($timeoutMinutes)->isPast();
+                $isSameDevice = $activeSession->device_hash === $deviceHash;
 
-                if (!$isStale) {
+                if ($isSameDevice || $isStale) {
+                    // Update/Replace the stale or same-device session record
+                    $activeSession->delete();
+
+                    \App\Models\MarkEntryActiveSession::create([
+                        'user_id' => $user->id,
+                        'session_id' => $currentSessionHash,
+                        'device_hash' => $deviceHash,
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'last_seen_at' => now(),
+                        'locked_at' => now(),
+                    ]);
+
+                    GovernanceAuditLog::log(
+                        GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
+                        userId: $user->id,
+                        adminId: null,
+                        data: [
+                            'event' => $isSameDevice ? 'mark_entry_session_recreated_same_device' : 'mark_entry_session_stale_replaced',
+                            'ip_address' => $request->ip(),
+                            'session_hash' => $currentSessionHash,
+                        ]
+                    );
+                } else {
                     // Block the new login!
                     Auth::logout();
                     $request->session()->invalidate();
@@ -222,7 +257,7 @@ class AuthController extends Controller
                             'event' => 'mark_entry_session_blocked',
                             'active_ip' => $activeSession->ip_address,
                             'attempted_ip' => $request->ip(),
-                            'session_hash' => hash('sha256', session()->getId()),
+                            'session_hash' => $currentSessionHash,
                             'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
                         ]
                     );
@@ -232,55 +267,31 @@ class AuthController extends Controller
                             'email' => "This Mark Entry Officer account is already active on another device. Active IP: {$activeSession->ip_address}. To protect mark entry speed and data consistency, only one active device is allowed per account. Please log out from the active device or contact the administrator.",
                         ])
                         ->withInput($request->only('email'));
-                } else {
-                    // Stale session takeover: delete the stale session record!
-                    GovernanceAuditLog::log(
-                        GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
-                        userId: $user->id,
-                        adminId: null,
-                        data: [
-                            'event' => 'mark_entry_session_stale_replaced',
-                            'previous_active_ip' => $activeSession->ip_address,
-                            'new_ip' => $request->ip(),
-                            'session_hash' => hash('sha256', session()->getId()),
-                            'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
-                        ]
-                    );
-                    $activeSession->delete();
                 }
-            }
-
-            // Create new active session record
-            $deviceToken = $request->cookie('meo_device_token');
-            if (!$deviceToken) {
-                $deviceToken = \Illuminate\Support\Str::random(40);
-                cookie()->queue(cookie()->forever('meo_device_token', $deviceToken, null, null, true, true));
-            }
-
-            $deviceHash = hash('sha256', ($request->userAgent() ?? 'unknown_browser') . '|' . $deviceToken);
-            $currentSessionId = session()->getId();
-
-            \App\Models\MarkEntryActiveSession::create([
-                'user_id' => $user->id,
-                'session_id' => hash('sha256', $currentSessionId),
-                'device_hash' => $deviceHash,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'last_seen_at' => now(),
-                'locked_at' => now(),
-            ]);
-
-            GovernanceAuditLog::log(
-                GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
-                userId: $user->id,
-                adminId: null,
-                data: [
-                    'event' => 'mark_entry_session_created',
-                    'session_hash' => hash('sha256', $currentSessionId),
+            } else {
+                // Create new active session record
+                \App\Models\MarkEntryActiveSession::create([
+                    'user_id' => $user->id,
+                    'session_id' => $currentSessionHash,
+                    'device_hash' => $deviceHash,
                     'ip_address' => $request->ip(),
-                    'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
-                ]
-            );
+                    'user_agent' => $request->userAgent(),
+                    'last_seen_at' => now(),
+                    'locked_at' => now(),
+                ]);
+
+                GovernanceAuditLog::log(
+                    GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
+                    userId: $user->id,
+                    adminId: null,
+                    data: [
+                        'event' => 'mark_entry_session_created',
+                        'session_hash' => $currentSessionHash,
+                        'ip_address' => $request->ip(),
+                        'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
+                    ]
+                );
+            }
         }
 
         $destination = self::redirectPathForUser($user);
