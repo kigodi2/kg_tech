@@ -69,6 +69,8 @@ class PsleMarkEntryController extends Controller
         $activeYear = \App\Models\ExamYear::where('is_active', true)->first();
         $examYears = \App\Models\ExamYear::orderBy('year_label', 'desc')->get();
         $selectedYearId = $request->query('exam_year_id', $activeYear?->id);
+        $selectedStatus = $request->query('status');
+        $selectedCreatedBy = $request->query('created_by');
 
         $psleExamType = \App\Models\ExamType::where('code', 'PSLE')->first();
         $psleExamTypeId = $psleExamType?->id;
@@ -248,6 +250,8 @@ class PsleMarkEntryController extends Controller
             'district_id' => $selectedDistrictId,
             'school_id' => $selectedSchoolId,
             'subject_id' => $selectedSubjectId,
+            'status' => $selectedStatus,
+            'created_by' => $selectedCreatedBy,
         ];
 
         // Apply scopes to Summary Metrics (Cached to avoid massive live calculation overhead)
@@ -636,6 +640,13 @@ class PsleMarkEntryController extends Controller
             if ($selectedSchoolId) $batchesQuery->where('school_id', $selectedSchoolId);
             if ($selectedSubjectId) $batchesQuery->where('subject_id', $selectedSubjectId);
 
+            if ($selectedStatus) {
+                $batchesQuery->where('status', $selectedStatus);
+            }
+            if ($selectedCreatedBy) {
+                $batchesQuery->where('created_by', $selectedCreatedBy);
+            }
+
             if ($currentView === 'moderation-review') {
                 $batchesQuery->whereIn('status', ['submitted', 'approved', 'rejected']);
             } else {
@@ -655,6 +666,7 @@ class PsleMarkEntryController extends Controller
             if ($selectedDistrictId) $statsQuery->where('district_id', $selectedDistrictId);
             if ($selectedSchoolId) $statsQuery->where('school_id', $selectedSchoolId);
             if ($selectedSubjectId) $statsQuery->where('subject_id', $selectedSubjectId);
+            if ($selectedCreatedBy) $statsQuery->where('created_by', $selectedCreatedBy);
 
             if ($currentView === 'moderation-review') {
                 $moderationStats = [
@@ -673,6 +685,17 @@ class PsleMarkEntryController extends Controller
                     'locked' => (clone $statsQuery)->where('status', 'locked')->count(),
                 ];
             }
+
+            // Load officers for filtering
+            $officersQuery = \App\Models\User::where(function($q) {
+                $q->whereHas('role', fn($rq) => $rq->whereIn('code', ['mark_officer', 'mark_entry_officer', 'meo'])->orWhere('name', 'Mark Entry Officer'))
+                  ->orWhereIn('portal_role', ['mark_officer', 'mark_entry_officer', 'meo']);
+            });
+            $officersQuery->where('status', 'active');
+            if ($allowedRegionId) {
+                $officersQuery->where('region_id', $allowedRegionId);
+            }
+            $officers = $officersQuery->orderBy('name')->get();
         } elseif ($currentView === 'outliers') {
             $outliersQuery = \App\Models\MarkEntryOutlier::with(['candidate', 'school', 'subject', 'officer', 'rawMark']);
             
@@ -3757,6 +3780,317 @@ class PsleMarkEntryController extends Controller
                 'exam_year', 'region_id', 'district_id', 'school_id', 'subject_id',
             ])),
         ]);
+    }
+
+    public function bulkValidate(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $isTrulyAdmin = $user->isAdmin();
+        $isReo = $this->isReoUser($user) || ($user->region_id && !$user->hasRole('officer') && !$this->isMarkOfficerUser($user) && !$isTrulyAdmin);
+        $isMarkOfficer = $this->isMarkOfficerUser($user);
+        $isAdmin = $isTrulyAdmin;
+
+        if (!$isAdmin && !$isReo && !$isMarkOfficer) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized action.'], 403);
+        }
+
+        $activeYear = \App\Models\ExamYear::where('is_active', true)->first();
+        if (!$activeYear) {
+            return response()->json(['success' => false, 'message' => 'Active exam year is not configured.'], 422);
+        }
+
+        $psleExamType = \App\Models\ExamType::where('code', 'PSLE')->first();
+        $psleExamTypeId = $psleExamType ? $psleExamType->id : null;
+
+        // Build query for batches
+        $query = \App\Models\MarkImportBatch::with(['school', 'subject', 'user'])
+            ->where('exam_type_id', $psleExamTypeId);
+
+        if ($request->input('all_drafts')) {
+            // Apply current filters
+            $selectedYearId = $request->input('exam_year_id');
+            if ($selectedYearId) $query->where('exam_year_id', $selectedYearId);
+
+            $selectedRegionId = $request->input('region_id');
+            if ($selectedRegionId) $query->where('region_id', $selectedRegionId);
+
+            $selectedDistrictId = $request->input('district_id');
+            if ($selectedDistrictId) $query->where('district_id', $selectedDistrictId);
+
+            $selectedSchoolId = $request->input('school_id');
+            if ($selectedSchoolId) $query->where('school_id', $selectedSchoolId);
+
+            $selectedSubjectId = $request->input('subject_id');
+            if ($selectedSubjectId) $query->where('subject_id', $selectedSubjectId);
+
+            $selectedCreatedBy = $request->input('created_by');
+            if ($selectedCreatedBy) $query->where('created_by', $selectedCreatedBy);
+
+            // Filter to only DRAFT status
+            $query->where('status', 'draft');
+        } else {
+            $batchIds = $request->input('batch_ids', []);
+            if (empty($batchIds)) {
+                return response()->json(['success' => false, 'message' => 'No batches selected.'], 422);
+            }
+            $query->whereIn('id', $batchIds);
+        }
+
+        // Apply role scoping
+        if (!$isAdmin) {
+            if ($isMarkOfficer) {
+                $query->where('created_by', $user->id);
+            }
+            if ($user->region_id) {
+                $query->where('region_id', $user->region_id);
+            }
+        }
+
+        $batches = $query->get();
+
+        $eligible = [];
+        $skipped = [];
+
+        foreach ($batches as $batch) {
+            $reason = $this->getBatchIneligibilityReason($batch, $user, $activeYear);
+            
+            $batchData = [
+                'id' => $batch->id,
+                'batch_code' => $batch->batch_code,
+                'school_name' => $batch->school->name ?? 'N/A',
+                'subject_name' => $batch->subject->name ?? 'N/A',
+                'marks_count' => $batch->rawMarks()->count(),
+            ];
+
+            if ($reason) {
+                $batchData['reason'] = $reason;
+                $skipped[] = $batchData;
+            } else {
+                $eligible[] = $batchData;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'total_selected' => count($batches),
+            'eligible' => $eligible,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    public function bulkSubmit(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $isTrulyAdmin = $user->isAdmin();
+        $isReo = $this->isReoUser($user) || ($user->region_id && !$user->hasRole('officer') && !$this->isMarkOfficerUser($user) && !$isTrulyAdmin);
+        $isMarkOfficer = $this->isMarkOfficerUser($user);
+        $isAdmin = $isTrulyAdmin;
+
+        if (!$isAdmin && !$isReo && !$isMarkOfficer) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized action.'], 403);
+        }
+
+        $activeYear = \App\Models\ExamYear::where('is_active', true)->first();
+        if (!$activeYear) {
+            return response()->json(['success' => false, 'message' => 'Active exam year is not configured.'], 422);
+        }
+
+        $batchIds = $request->input('batch_ids', []);
+        if (empty($batchIds)) {
+            return response()->json(['success' => false, 'message' => 'No batches selected for submission.'], 422);
+        }
+
+        // Fetch batches
+        $batches = \App\Models\MarkImportBatch::with(['school', 'subject'])
+            ->whereIn('id', $batchIds)
+            ->get();
+
+        $submitted = [];
+        $skipped = [];
+        $failed = [];
+
+        foreach ($batches as $batch) {
+            // Scope protection checks (per batch revalidation server-side!)
+            if (!$isAdmin) {
+                if ($isMarkOfficer && (int) $batch->created_by !== (int) $user->id) {
+                    $skipped[] = ['batch_code' => $batch->batch_code, 'reason' => 'Created by another officer'];
+                    continue;
+                }
+                if ($user->region_id && (int) $batch->region_id !== (int) $user->region_id) {
+                    $skipped[] = ['batch_code' => $batch->batch_code, 'reason' => 'Belongs to another region'];
+                    continue;
+                }
+            }
+
+            // Perform backend eligibility validation
+            $ineligibilityReason = $this->getBatchIneligibilityReason($batch, $user, $activeYear);
+            if ($ineligibilityReason) {
+                $skipped[] = ['batch_code' => $batch->batch_code, 'reason' => $ineligibilityReason];
+                continue;
+            }
+
+            // Run validation and outlier services just-in-time
+            try {
+                // Trigger full outlier detection for the batch
+                $this->outlierService->detectForBatch($batch);
+
+                // Run fresh validation for the batch
+                $this->validationService->runValidation(['batch_id' => $batch->id], $user);
+
+                // Check again after validation to be 100% sure no new errors arose
+                $postValidationReason = $this->getBatchIneligibilityReason($batch, $user, $activeYear);
+                if ($postValidationReason) {
+                    $skipped[] = ['batch_code' => $batch->batch_code, 'reason' => $postValidationReason];
+                    continue;
+                }
+
+                // Proceed with transition in a database transaction per batch (so other valid batches succeed even if one fails!)
+                $result = DB::transaction(function () use ($batch, $user) {
+                    return $this->service->transitionBatch($batch->id, 'submit', $user);
+                });
+
+                if ($result['success'] ?? false) {
+                    // Log individual psle activity
+                    $this->logPsleActivity([
+                        'event_type' => 'subject_submitted',
+                        'title' => 'Subject submitted',
+                        'description' => ($batch->subject?->name ?? 'PSLE') . ' marks submitted for review (Bulk).',
+                        'exam_year_id' => $batch->exam_year_id,
+                        'region_id' => $batch->region_id,
+                        'district_id' => $batch->district_id,
+                        'school_id' => $batch->school_id,
+                        'subject_id' => $batch->subject_id,
+                        'user_id' => $user->id,
+                        'affected_marks' => $batch->rawMarks()->count(),
+                        'metadata' => ['batch_id' => $batch->id, 'batch_code' => $batch->batch_code, 'bulk_submit' => true],
+                    ]);
+
+                    $submitted[] = $batch->batch_code;
+                } else {
+                    $failed[] = ['batch_code' => $batch->batch_code, 'reason' => $result['message'] ?? 'Failed transition.'];
+                }
+            } catch (\Throwable $e) {
+                \Log::error('Bulk submit failed for batch: ' . $batch->batch_code, [
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                $failed[] = ['batch_code' => $batch->batch_code, 'reason' => $e->getMessage()];
+            }
+        }
+
+        // Add overall audit logging for this bulk chunk
+        if (count($submitted) > 0 || count($skipped) > 0 || count($failed) > 0) {
+            $context = [
+                'batch_ids_requested' => $batchIds,
+                'submitted_count' => count($submitted),
+                'skipped_count' => count($skipped),
+                'failed_count' => count($failed),
+                'submitted_batch_codes' => $submitted,
+                'skipped_batches' => $skipped,
+                'failed_batches' => $failed,
+            ];
+
+            // 1. Record System Event Log
+            \App\Models\SystemEventLog::record(
+                \App\Models\SystemEventLog::CAT_SUBMISSION,
+                'psle_bulk_submit_chunk',
+                count($failed) === 0 ? \App\Models\SystemEventLog::STATUS_SUCCESS : \App\Models\SystemEventLog::STATUS_WARNING,
+                sprintf(
+                    'PSLE Bulk submission chunk processed. Submitted: %d, Skipped: %d, Failed: %d.',
+                    count($submitted),
+                    count($skipped),
+                    count($failed)
+                ),
+                $context,
+                null,
+                $user->id
+            );
+
+            // 2. Record Governance Audit Log
+            \App\Models\GovernanceAuditLog::log(
+                'psle_bulk_submit_chunk',
+                $user->id,
+                $user->id,
+                $context
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'submitted' => $submitted,
+            'skipped' => $skipped,
+            'failed' => $failed,
+        ]);
+    }
+
+    private function getBatchIneligibilityReason(\App\Models\MarkImportBatch $batch, \App\Models\User $user, \App\Models\ExamYear $activeYear): ?string
+    {
+        // 1. Status is Draft
+        if ($batch->status !== 'draft') {
+            return 'Batch status is ' . ucfirst($batch->status) . ' (expected Draft).';
+        }
+
+        // 2. Belongs to the current exam year
+        if ((int) $batch->exam_year_id !== (int) $activeYear->id) {
+            return 'Batch belongs to exam year ' . ($batch->examYear->year_label ?? $batch->exam_year) . ' (expected current year ' . $activeYear->year_label . ').';
+        }
+
+        // 3. Has at least one entered mark
+        $marksCount = $batch->rawMarks()->count();
+        if ($marksCount === 0) {
+            return 'Batch has no entered marks.';
+        }
+
+        // 4. Has no validation errors
+        $unresolvedValidations = 0;
+        if (\Illuminate\Support\Facades\Schema::hasTable('mark_entry_validations')) {
+            $unresolvedValidations = \App\Models\MarkEntryValidation::whereHas('rawMark', fn($q) => $q->where('mark_import_batch_id', $batch->id))
+                ->where('status', 'open')
+                ->count();
+        }
+        if ($unresolvedValidations > 0) {
+            return "Batch has {$unresolvedValidations} unresolved validation errors.";
+        }
+
+        // 5. Has no unresolved missing required marks
+        $regCount = \App\Services\PsleCandidateRosterService::getDeduplicatedCount($batch->exam_year_id, $batch->school_id);
+        $missingCount = max(0, $regCount - $marksCount);
+        if ($missingCount > 0) {
+            return "Batch has {$missingCount} unresolved missing marks (all registered candidates must have marks entered).";
+        }
+
+        // 6. Belongs to the user's allowed scope
+        $isTrulyAdmin = $user->isAdmin();
+        $isReo = $this->isReoUser($user) || ($user->region_id && !$user->hasRole('officer') && !$this->isMarkOfficerUser($user) && !$isTrulyAdmin);
+        $isMarkOfficer = $this->isMarkOfficerUser($user);
+
+        if (!$isTrulyAdmin) {
+            if ($isMarkOfficer && (int) $batch->created_by !== (int) $user->id) {
+                return 'Batch was created by another officer.';
+            }
+            if ($user->region_id && (int) $batch->region_id !== (int) $user->region_id) {
+                return 'Batch belongs to another region.';
+            }
+        }
+
+        // 7. Check for unresolved high/critical outliers
+        $unresolvedOutliers = \App\Models\MarkEntryOutlier::where('batch_id', $batch->id)
+            ->whereIn('severity', ['high', 'critical'])
+            ->where('status', 'pending')
+            ->count();
+        if ($unresolvedOutliers > 0) {
+            return "Batch has {$unresolvedOutliers} unresolved high/critical outliers.";
+        }
+
+        return null;
     }
 
     public function submitBatch(Request $request, int $batchId)

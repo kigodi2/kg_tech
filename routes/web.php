@@ -4666,6 +4666,8 @@ Route::middleware(['auth', 'main-system', 'single-device', 'geofence'])->group(f
       Route::get('/api/mark-entry/psle/reports/validation-errors/csv', [\App\Http\Controllers\PsleMarkEntryController::class, 'exportValidationErrorsCsv']);
       Route::get('/api/mark-entry/psle/audit/summary', [\App\Http\Controllers\PsleMarkEntryController::class, 'auditSummary']);
       Route::get('/api/mark-entry/psle/admin/summary', [\App\Http\Controllers\PsleMarkEntryController::class, 'administrationSummary']);
+      Route::post('/api/mark-entry/psle/batches/bulk-validate', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkValidate']);
+      Route::post('/api/mark-entry/psle/batches/bulk-submit', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkSubmit']);
       Route::post('/api/mark-entry/psle/batches/{batchId}/submit', [\App\Http\Controllers\PsleMarkEntryController::class, 'submitBatch']);
       Route::post('/api/mark-entry/psle/batches/{batchId}/approve', [\App\Http\Controllers\PsleMarkEntryController::class, 'approveBatch']);
       Route::post('/api/mark-entry/psle/batches/{batchId}/reject', [\App\Http\Controllers\PsleMarkEntryController::class, 'rejectBatch']);
