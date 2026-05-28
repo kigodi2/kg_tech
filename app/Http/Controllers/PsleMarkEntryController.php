@@ -250,74 +250,43 @@ class PsleMarkEntryController extends Controller
             'subject_id' => $selectedSubjectId,
         ];
 
-        // Apply scopes to Summary Metrics
-        $candidatesQuery = \App\Models\Candidate::whereHas('examRegistrations', function($q) use ($selectedYearId, $psleExamTypeId) {
-                $q->where('exam_type_id', $psleExamTypeId);
-                if ($selectedYearId) $q->where('exam_year_id', $selectedYearId);
-            })
-            ->whereHas('school', function($q) {
-                $q->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                  ->where('education_level', 'PRIMARY');
-            });
+        // Apply scopes to Summary Metrics (Cached to avoid massive live calculation overhead)
+        $statsCacheKey = sprintf(
+            'psle:dashboard_stats:%s:%s:%s:%s:%s',
+            $selectedYearId ?? 'all',
+            $selectedRegionId ?? 'all',
+            $selectedDistrictId ?? 'all',
+            $selectedSchoolId ?? 'all',
+            $selectedSubjectId ?? 'all'
+        );
 
-        if ($selectedRegionId) {
-            $candidatesQuery->whereHas('school', function($q) use ($selectedRegionId) {
-                $q->where('region_id', $selectedRegionId);
-            });
-        }
-        if ($selectedDistrictId) {
-            $candidatesQuery->whereHas('school', function($q) use ($selectedDistrictId) {
-                $q->where('district_id', $selectedDistrictId);
-            });
-        }
-        if ($selectedSchoolId) {
-            $candidatesQuery->where('school_id', $selectedSchoolId);
-        }
-
-        $candidateCount = $candidatesQuery->count();
-        
-        $marksQuery = \App\Models\RawMark::whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
-                $cq->whereHas('examRegistrations', function($rq) use ($selectedYearId, $psleExamTypeId) {
-                    $rq->where('exam_type_id', $psleExamTypeId);
-                    if ($selectedYearId) $rq->where('exam_year_id', $selectedYearId);
+        $cachedMetrics = \Illuminate\Support\Facades\Cache::remember($statsCacheKey, 30, function() use ($selectedYearId, $psleExamTypeId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId, $selectedSubjectId, $psleSubjects) {
+            $candidatesQuery = \App\Models\Candidate::whereHas('examRegistrations', function($q) use ($selectedYearId, $psleExamTypeId) {
+                    $q->where('exam_type_id', $psleExamTypeId);
+                    if ($selectedYearId) $q->where('exam_year_id', $selectedYearId);
                 })
-                ->whereHas('school', function($sq) {
-                    $sq->whereIn('school_type', ['PRIMARY', 'BOTH'])
+                ->whereHas('school', function($q) {
+                    $q->whereIn('school_type', ['PRIMARY', 'BOTH'])
                       ->where('education_level', 'PRIMARY');
                 });
-            })
-            ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId, $selectedSubjectId) {
-                $q->whereHas('examType', fn($sq) => $sq->where('code', 'PSLE'));
-                
-                $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
-                if ($yearLabel) $q->where('exam_year', $yearLabel);
-                
-                if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
-                if ($selectedDistrictId) $q->where('district_id', $selectedDistrictId);
-                if ($selectedSchoolId) $q->where('school_id', $selectedSchoolId);
-                if ($selectedSubjectId) $q->where('subject_id', $selectedSubjectId);
-            });
 
-        $enteredMarksCount = $marksQuery->count();
+            if ($selectedRegionId) {
+                $candidatesQuery->whereHas('school', function($q) use ($selectedRegionId) {
+                    $q->where('region_id', $selectedRegionId);
+                });
+            }
+            if ($selectedDistrictId) {
+                $candidatesQuery->whereHas('school', function($q) use ($selectedDistrictId) {
+                    $q->where('district_id', $selectedDistrictId);
+                });
+            }
+            if ($selectedSchoolId) {
+                $candidatesQuery->where('school_id', $selectedSchoolId);
+            }
 
-        // Missing Marks Calculation
-        $missingMarksCount = 0;
-        $regionMissingMarksCount = 0;
-        $subjectStats = [];
-        
-        $regionCandidateCount = \App\Models\Candidate::whereHas('examRegistrations', function($q) use ($selectedYearId, $psleExamTypeId) {
-                $q->where('exam_type_id', $psleExamTypeId);
-                if ($selectedYearId) $q->where('exam_year_id', $selectedYearId);
-            })
-            ->whereHas('school', function($q) use ($selectedRegionId) {
-                $q->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                  ->where('education_level', 'PRIMARY');
-                if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
-            })->count();
-
-        foreach ($psleSubjects as $subject) {
-            $sMarksQuery = \App\Models\RawMark::where('subject_id', $subject->id)
-                ->whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
+            $candidateCount = $candidatesQuery->count();
+            
+            $marksQuery = \App\Models\RawMark::whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
                     $cq->whereHas('examRegistrations', function($rq) use ($selectedYearId, $psleExamTypeId) {
                         $rq->where('exam_type_id', $psleExamTypeId);
                         if ($selectedYearId) $rq->where('exam_year_id', $selectedYearId);
@@ -327,72 +296,134 @@ class PsleMarkEntryController extends Controller
                           ->where('education_level', 'PRIMARY');
                     });
                 })
-                ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId) {
+                ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId, $selectedSubjectId) {
                     $q->whereHas('examType', fn($sq) => $sq->where('code', 'PSLE'));
+                    
                     $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
                     if ($yearLabel) $q->where('exam_year', $yearLabel);
+                    
                     if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
                     if ($selectedDistrictId) $q->where('district_id', $selectedDistrictId);
                     if ($selectedSchoolId) $q->where('school_id', $selectedSchoolId);
+                    if ($selectedSubjectId) $q->where('subject_id', $selectedSubjectId);
                 });
 
-            // Global region-wide query for the region summary card
-            $gMarksQuery = \App\Models\RawMark::where('subject_id', $subject->id)
-                ->whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
-                    $cq->whereHas('examRegistrations', function($rq) use ($selectedYearId, $psleExamTypeId) {
-                        $rq->where('exam_type_id', $psleExamTypeId);
-                        if ($selectedYearId) $rq->where('exam_year_id', $selectedYearId);
-                    })
-                    ->whereHas('school', function($sq) {
-                        $sq->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                          ->where('education_level', 'PRIMARY');
-                    });
-                })
-                ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId) {
-                    $q->whereHas('examType', fn($sq) => $sq->where('code', 'PSLE'));
-                    $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
-                    if ($yearLabel) $q->where('exam_year', $yearLabel);
-                    if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
-                });
+            $enteredMarksCount = $marksQuery->count();
 
-            $enteredCount = $sMarksQuery->count();
-            $missingCount = max(0, $candidateCount - $enteredCount);
+            // Missing Marks Calculation
+            $missingMarksCount = 0;
+            $regionMissingMarksCount = 0;
+            $subjectStats = [];
             
-            if (!$selectedSubjectId || (int)$selectedSubjectId === (int)$subject->id) {
-                $missingMarksCount += $missingCount;
-                $regionMissingMarksCount += max(0, $regionCandidateCount - $gMarksQuery->count());
+            $regionCandidateCount = \App\Models\Candidate::whereHas('examRegistrations', function($q) use ($selectedYearId, $psleExamTypeId) {
+                    $q->where('exam_type_id', $psleExamTypeId);
+                    if ($selectedYearId) $q->where('exam_year_id', $selectedYearId);
+                })
+                ->whereHas('school', function($q) use ($selectedRegionId) {
+                    $q->whereIn('school_type', ['PRIMARY', 'BOTH'])
+                      ->where('education_level', 'PRIMARY');
+                    if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
+                })->count();
+
+            foreach ($psleSubjects as $subject) {
+                $sMarksQuery = \App\Models\RawMark::where('subject_id', $subject->id)
+                    ->whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
+                        $cq->whereHas('examRegistrations', function($rq) use ($selectedYearId, $psleExamTypeId) {
+                            $rq->where('exam_type_id', $psleExamTypeId);
+                            if ($selectedYearId) $rq->where('exam_year_id', $selectedYearId);
+                        })
+                        ->whereHas('school', function($sq) {
+                            $sq->whereIn('school_type', ['PRIMARY', 'BOTH'])
+                              ->where('education_level', 'PRIMARY');
+                        });
+                    })
+                    ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId) {
+                        $q->whereHas('examType', fn($sq) => $sq->where('code', 'PSLE'));
+                        $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
+                        if ($yearLabel) $q->where('exam_year', $yearLabel);
+                        if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
+                        if ($selectedDistrictId) $q->where('district_id', $selectedDistrictId);
+                        if ($selectedSchoolId) $q->where('school_id', $selectedSchoolId);
+                    });
+
+                // Global region-wide query for the region summary card
+                $gMarksQuery = \App\Models\RawMark::where('subject_id', $subject->id)
+                    ->whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
+                        $cq->whereHas('examRegistrations', function($rq) use ($selectedYearId, $psleExamTypeId) {
+                            $rq->where('exam_type_id', $psleExamTypeId);
+                            if ($selectedYearId) $rq->where('exam_year_id', $selectedYearId);
+                        })
+                        ->whereHas('school', function($sq) {
+                            $sq->whereIn('school_type', ['PRIMARY', 'BOTH'])
+                              ->where('education_level', 'PRIMARY');
+                        });
+                    })
+                    ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId) {
+                        $q->whereHas('examType', fn($sq) => $sq->where('code', 'PSLE'));
+                        $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
+                        if ($yearLabel) $q->where('exam_year', $yearLabel);
+                        if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
+                    });
+
+                $enteredCount = $sMarksQuery->count();
+                $missingCount = max(0, $candidateCount - $enteredCount);
+                
+                if (!$selectedSubjectId || (int)$selectedSubjectId === (int)$subject->id) {
+                    $missingMarksCount += $missingCount;
+                    $regionMissingMarksCount += max(0, $regionCandidateCount - $gMarksQuery->count());
+                }
+
+                $subjectStats[$subject->id] = [
+                    'entered' => $enteredCount,
+                    'missing' => $missingCount,
+                    'outliers' => \App\Models\MarkEntryOutlier::where('subject_id', $subject->id)
+                        ->when($selectedYearId, fn($q) => $q->where('exam_year_id', $selectedYearId))
+                        ->when($selectedRegionId, fn($q) => $q->where('region_id', $selectedRegionId))
+                        ->when($selectedDistrictId, fn($q) => $q->where('district_id', $selectedDistrictId))
+                        ->when($selectedSchoolId, fn($q) => $q->where('school_id', $selectedSchoolId))
+                        ->count()
+                ];
             }
 
-            $subjectStats[$subject->id] = [
-                'entered' => $enteredCount,
-                'missing' => $missingCount,
-                'outliers' => \App\Models\MarkEntryOutlier::where('subject_id', $subject->id)
-                    ->when($selectedYearId, fn($q) => $q->where('exam_year_id', $selectedYearId))
-                    ->when($selectedRegionId, fn($q) => $q->where('region_id', $selectedRegionId))
-                    ->when($selectedDistrictId, fn($q) => $q->where('district_id', $selectedDistrictId))
-                    ->when($selectedSchoolId, fn($q) => $q->where('school_id', $selectedSchoolId))
-                    ->count()
+            // Outlier Count
+            $outlierCount = 0;
+            if (\Illuminate\Support\Facades\Schema::hasTable('mark_entry_outliers')) {
+                $outlierCountQuery = \App\Models\MarkEntryOutlier::query();
+                if ($selectedYearId) $outlierCountQuery->where('exam_year_id', $selectedYearId);
+                if ($selectedRegionId) $outlierCountQuery->where('region_id', $selectedRegionId);
+                if ($selectedDistrictId) $outlierCountQuery->where('district_id', $selectedDistrictId);
+                if ($selectedSchoolId) $outlierCountQuery->where('school_id', $selectedSchoolId);
+                if ($selectedSubjectId) $outlierCountQuery->where('subject_id', $selectedSubjectId);
+                $outlierCount = $outlierCountQuery->count();
+            }
+
+            return [
+                'candidateCount' => $candidateCount,
+                'enteredMarksCount' => $enteredMarksCount,
+                'missingMarksCount' => $missingMarksCount,
+                'regionMissingMarksCount' => $regionMissingMarksCount,
+                'outlierCount' => $outlierCount,
+                'subjectStats' => $subjectStats,
             ];
-        }
+        });
 
-        // Outlier Count
-        $outlierCount = 0;
-        if (\Illuminate\Support\Facades\Schema::hasTable('mark_entry_outliers')) {
-            $outlierCountQuery = \App\Models\MarkEntryOutlier::query();
-            if ($selectedYearId) $outlierCountQuery->where('exam_year_id', $selectedYearId);
-            if ($selectedRegionId) $outlierCountQuery->where('region_id', $selectedRegionId);
-            if ($selectedDistrictId) $outlierCountQuery->where('district_id', $selectedDistrictId);
-            if ($selectedSchoolId) $outlierCountQuery->where('school_id', $selectedSchoolId);
-            if ($selectedSubjectId) $outlierCountQuery->where('subject_id', $selectedSubjectId);
-            $outlierCount = $outlierCountQuery->count();
-        }
+        $candidateCount = $cachedMetrics['candidateCount'];
+        $enteredMarksCount = $cachedMetrics['enteredMarksCount'];
+        $missingMarksCount = $cachedMetrics['missingMarksCount'];
+        $regionMissingMarksCount = $cachedMetrics['regionMissingMarksCount'];
+        $outlierCount = $cachedMetrics['outlierCount'];
+        $subjectStats = $cachedMetrics['subjectStats'];
 
+        // Cached regional progress
+        $progressCacheKey = 'psle:regional_progress:' . ($selectedYearId ?? 'all') . ':' . ($selectedRegionId ?? 'all');
         $overviewRegionalProgress = $selectedYearId
-            ? $this->reportService->getOverviewRegionalProgress(
-                (int) $selectedYearId,
-                $selectedRegionId ? (int) $selectedRegionId : null,
-                max(1, $psleSubjects->count())
-            )
+            ? \Illuminate\Support\Facades\Cache::remember($progressCacheKey, 30, function() use ($selectedYearId, $selectedRegionId, $psleSubjects) {
+                return $this->reportService->getOverviewRegionalProgress(
+                    (int) $selectedYearId,
+                    $selectedRegionId ? (int) $selectedRegionId : null,
+                    max(1, $psleSubjects->count())
+                );
+            })
             : collect();
 
         // View Logic
@@ -2454,58 +2485,82 @@ class PsleMarkEntryController extends Controller
 
     public function updateMarkingCentre(Request $request, $id)
     {
-        $user = $request->user();
-        if (!$user->isAdmin()) {
-            return redirect()->back()->with('error', 'Unauthorized action.');
-        }
+        try {
+            $user = $request->user();
+            if (!$user || !$user->isAdmin()) {
+                return redirect()->back()->with('error', 'Unauthorized action.');
+            }
 
-        $centre = \App\Models\MarkingCentre::findOrFail($id);
+            $centre = \App\Models\MarkingCentre::findOrFail($id);
 
-        if ($request->has('code')) {
-            $request->merge([
-                'code' => strtoupper(trim(preg_replace('/\s+/', ' ', $request->input('code'))))
+            if ($request->has('code')) {
+                $request->merge([
+                    'code' => strtoupper(trim(preg_replace('/\s+/', ' ', $request->input('code'))))
+                ]);
+            }
+
+            // Convert empty inputs to null safely for latitude, longitude, and radius
+            if ($request->has('latitude') && $request->input('latitude') === '') {
+                $request->merge(['latitude' => null]);
+            }
+            if ($request->has('longitude') && $request->input('longitude') === '') {
+                $request->merge(['longitude' => null]);
+            }
+            if ($request->has('allowed_radius_meters') && $request->input('allowed_radius_meters') === '') {
+                $request->merge(['allowed_radius_meters' => null]);
+            }
+
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'code' => 'required|string|max:50|unique:marking_centres,code,' . $centre->id,
+                'region_id' => 'required|exists:regions,id',
+                'location' => 'nullable|string|max:255',
+                'status' => 'required|in:active,inactive',
+                'latitude' => 'nullable|numeric|between:-90,90',
+                'longitude' => 'nullable|numeric|between:-180,180',
+                'allowed_radius_meters' => 'nullable|integer|min:5',
             ]);
-        }
 
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:marking_centres,code,' . $centre->id,
-            'region_id' => 'required|exists:regions,id',
-            'location' => 'nullable|string|max:255',
-            'status' => 'required|in:active,inactive',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'allowed_radius_meters' => 'nullable|integer|min:5',
-        ]);
+            $oldLat = $centre->latitude;
+            $oldLon = $centre->longitude;
+            $oldRadius = $centre->allowed_radius_meters;
 
-        $oldLat = $centre->latitude;
-        $oldLon = $centre->longitude;
-        $oldRadius = $centre->allowed_radius_meters;
-
-        $centre->update([
-            'name' => $validated['name'],
-            'code' => $validated['code'],
-            'region_id' => $validated['region_id'],
-            'location' => $validated['location'] ?? null,
-            'status' => $validated['status'],
-            'latitude' => $validated['latitude'] ?? null,
-            'longitude' => $validated['longitude'] ?? null,
-            'allowed_radius_meters' => $validated['allowed_radius_meters'] ?? 50,
-        ]);
-
-        // Audit coordinates change
-        if ($oldLat != $centre->latitude || $oldLon != $centre->longitude || $oldRadius != $centre->allowed_radius_meters) {
-            \App\Models\MarkEntryLocationLog::create([
-                'user_id' => $user->id,
-                'marking_centre_id' => $centre->id,
-                'centre_latitude' => $centre->latitude,
-                'centre_longitude' => $centre->longitude,
-                'allowed' => true,
-                'reason' => 'Centre coordinates/radius modified by admin'
+            $centre->update([
+                'name' => $validated['name'],
+                'code' => $validated['code'],
+                'region_id' => $validated['region_id'],
+                'location' => $validated['location'] ?? null,
+                'status' => $validated['status'],
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'allowed_radius_meters' => $validated['allowed_radius_meters'] ?? 50,
             ]);
-        }
 
-        return redirect()->back()->with('success', 'Marking Centre updated successfully.');
+            // Audit coordinates change
+            if ($oldLat != $centre->latitude || $oldLon != $centre->longitude || $oldRadius != $centre->allowed_radius_meters) {
+                \App\Models\MarkEntryLocationLog::create([
+                    'user_id' => $user->id,
+                    'marking_centre_id' => $centre->id,
+                    'centre_latitude' => $centre->latitude,
+                    'centre_longitude' => $centre->longitude,
+                    'allowed' => true,
+                    'reason' => 'Centre coordinates/radius modified by admin'
+                ]);
+            }
+
+            return redirect()->back()->with('success', 'Marking Centre updated successfully.');
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            \Log::error('Unable to update marking centre: ' . $e->getMessage(), [
+                'id' => $id,
+                'exception' => $e
+            ]);
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Unable to update marking centre. Please check the system log.');
+        }
     }
 
     public function deleteMarkingCentre(Request $request, $id)
