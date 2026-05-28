@@ -2405,16 +2405,34 @@ class PsleMarkEntryController extends Controller
             'code' => 'required|string|max:50|unique:marking_centres',
             'region_id' => 'required|exists:regions,id',
             'location' => 'nullable|string|max:255',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'allowed_radius_meters' => 'nullable|integer|min:5',
         ]);
 
-        \App\Models\MarkingCentre::create([
+        $centre = \App\Models\MarkingCentre::create([
             'name' => $validated['name'],
             'code' => $validated['code'],
             'region_id' => $validated['region_id'],
             'location' => $validated['location'] ?? null,
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+            'allowed_radius_meters' => $validated['allowed_radius_meters'] ?? 50,
             'status' => 'active',
             'created_by' => $user->id,
         ]);
+
+        // Audit the coordinates change
+        if ($centre->latitude !== null || $centre->longitude !== null) {
+            \App\Models\MarkEntryLocationLog::create([
+                'user_id' => $user->id,
+                'marking_centre_id' => $centre->id,
+                'centre_latitude' => $centre->latitude,
+                'centre_longitude' => $centre->longitude,
+                'allowed' => true,
+                'reason' => 'Centre coordinates configured during creation by admin'
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Marking Centre created successfully.');
     }
@@ -2454,7 +2472,14 @@ class PsleMarkEntryController extends Controller
             'region_id' => 'required|exists:regions,id',
             'location' => 'nullable|string|max:255',
             'status' => 'required|in:active,inactive',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'allowed_radius_meters' => 'nullable|integer|min:5',
         ]);
+
+        $oldLat = $centre->latitude;
+        $oldLon = $centre->longitude;
+        $oldRadius = $centre->allowed_radius_meters;
 
         $centre->update([
             'name' => $validated['name'],
@@ -2462,7 +2487,22 @@ class PsleMarkEntryController extends Controller
             'region_id' => $validated['region_id'],
             'location' => $validated['location'] ?? null,
             'status' => $validated['status'],
+            'latitude' => $validated['latitude'] ?? null,
+            'longitude' => $validated['longitude'] ?? null,
+            'allowed_radius_meters' => $validated['allowed_radius_meters'] ?? 50,
         ]);
+
+        // Audit coordinates change
+        if ($oldLat != $centre->latitude || $oldLon != $centre->longitude || $oldRadius != $centre->allowed_radius_meters) {
+            \App\Models\MarkEntryLocationLog::create([
+                'user_id' => $user->id,
+                'marking_centre_id' => $centre->id,
+                'centre_latitude' => $centre->latitude,
+                'centre_longitude' => $centre->longitude,
+                'allowed' => true,
+                'reason' => 'Centre coordinates/radius modified by admin'
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Marking Centre updated successfully.');
     }

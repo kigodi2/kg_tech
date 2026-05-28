@@ -52,6 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'main-system' => \App\Http\Middleware\RestrictMainSystemAccess::class,
             'user' => \App\Http\Middleware\UserMiddleware::class,
             'single-device' => \App\Http\Middleware\EnsureSingleMarkEntryDevice::class,
+            'geofence' => \App\Http\Middleware\EnsureMarkEntryGeoFence::class,
         ]);
     })
     ->withProviders([

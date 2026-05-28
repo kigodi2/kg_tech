@@ -127,7 +127,7 @@ if (config('app.env') === 'testing' || config('app.debug')) {
     });
 }
 
-Route::middleware(['auth', 'main-system', 'single-device'])->group(function () {
+Route::middleware(['auth', 'main-system', 'single-device', 'geofence'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -4561,6 +4561,10 @@ Route::middleware(['auth', 'main-system', 'single-device'])->group(function () {
       Route::post('/api/exam-types/acsee/allocate-from-csv/commit', [AcseeAllocationController::class, 'commitAllocationImport']);
       Route::post('/api/exam-types/acsee/allocate-from-csv', [AcseeAllocationController::class, 'importAllocations']);
       Route::post('/api/exam-types/acsee/allocate-from-csv/download-errors', [AcseeAllocationController::class, 'downloadErrorReport']);
+
+      // MEO Geofence Location Verification Routes
+      Route::get('/mark-entry/location/verify', [\App\Http\Controllers\MarkEntryLocationController::class, 'showVerificationPage'])->name('mark-entry.location.verify.page');
+      Route::post('/mark-entry/location/verify', [\App\Http\Controllers\MarkEntryLocationController::class, 'verifyLocation'])->name('mark-entry.location.verify.submit');
 
       // Mark Entry Module Routes (ACSEE)
       Route::get('/mark-entry/acsee', [MarkEntryController::class, 'index']);
