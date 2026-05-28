@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\RegionController;
@@ -24,6 +25,7 @@ use App\Http\Controllers\Admin\SubjectPaperWeightController;
 use App\Services\Candidates\CseeCandidateSubjectService;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\GithubAuthController;
 
 Route::get('/', function () {
     return auth()->check()
@@ -37,11 +39,18 @@ Route::get('/dev-login', function () {
     return redirect('/admin/dashboard');
 });
 
+Route::get('/session-heartbeat', function () {
+    return response()->noContent();
+})->name('session.heartbeat');
+
 // Auth routes
 Route::middleware('guest')->group(function () {
     Route::view('/home', 'auth.home')->name('public.home');
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/check-admin-email', [AuthController::class, 'checkAdminEmail'])->name('auth.check-admin-email');
+    Route::get('/auth/github', [GithubAuthController::class, 'redirect'])->name('auth.github.redirect');
+    Route::get('/auth/github/callback', [GithubAuthController::class, 'callback'])->name('auth.github.callback');
 });
 
 Route::get('/r/{token}', [PublicResultsPortalController::class, 'index'])
@@ -118,25 +127,27 @@ if (config('app.env') === 'testing' || config('app.debug')) {
     });
 }
 
-Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
+Route::middleware(['auth', 'main-system', 'single-device'])->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     
-    Route::get('/dashboard', [DashboardController::class, 'index']);
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard/exam/ACSEE', [DashboardController::class, 'acseeExam'])->name('dashboard.exam.acsee');
         
         // Exam Submission Routes
-        Route::get('/exam-submissions/final-report', [\App\Http\Controllers\ExamSubmissionController::class, 'finalReport'])
-            ->name('exam-submissions.final-report');
-        Route::resource('exam-submissions', \App\Http\Controllers\ExamSubmissionController::class)->except(['edit', 'update', 'destroy']);
-        Route::get('/exam-submissions/{exam_submission}/download', [\App\Http\Controllers\ExamSubmissionController::class, 'download'])->name('exam-submissions.download');
-        Route::post('/exam-submissions/{exam_submission}/approve', [\App\Http\Controllers\ExamSubmissionController::class, 'approve'])
-            ->name('exam-submissions.approve')
-            ->middleware('admin');
-        Route::post('/exam-submissions/{exam_submission}/reject', [\App\Http\Controllers\ExamSubmissionController::class, 'reject'])
-            ->name('exam-submissions.reject')
-            ->middleware('admin');
-        Route::post('/exam-submissions/validate-format', [\App\Http\Controllers\ExamSubmissionController::class, 'validateFormat'])->name('exam-submissions.validate-format');
-        Route::get('/exam-submissions/subjects/{exam_type_id}', [\App\Http\Controllers\ExamSubmissionController::class, 'getSubjects'])->name('exam-submissions.subjects');
+        Route::middleware('exam-admin-access')->group(function () {
+            Route::get('/exam-submissions/final-report', [\App\Http\Controllers\ExamSubmissionController::class, 'finalReport'])
+                ->name('exam-submissions.final-report');
+            Route::resource('exam-submissions', \App\Http\Controllers\ExamSubmissionController::class)->except(['edit', 'update', 'destroy']);
+            Route::get('/exam-submissions/{exam_submission}/download', [\App\Http\Controllers\ExamSubmissionController::class, 'download'])->name('exam-submissions.download');
+            Route::post('/exam-submissions/{exam_submission}/approve', [\App\Http\Controllers\ExamSubmissionController::class, 'approve'])
+                ->name('exam-submissions.approve')
+                ->middleware('admin');
+            Route::post('/exam-submissions/{exam_submission}/reject', [\App\Http\Controllers\ExamSubmissionController::class, 'reject'])
+                ->name('exam-submissions.reject')
+                ->middleware('admin');
+            Route::post('/exam-submissions/validate-format', [\App\Http\Controllers\ExamSubmissionController::class, 'validateFormat'])->name('exam-submissions.validate-format');
+            Route::get('/exam-submissions/subjects/{exam_type_id}', [\App\Http\Controllers\ExamSubmissionController::class, 'getSubjects'])->name('exam-submissions.subjects');
+        });
         
         // Format PDF Routes for ACSEE and FTNA (similar to CSEE)
         Route::get('/exam-types/acsee/formats/pdf', function (\Illuminate\Http\Request $request) {
@@ -400,6 +411,7 @@ Route::middleware('auth')->group(function () {
         $examYearValue = (int) ($activeYear->year_label ?? now()->year);
 
         $entries = \App\Models\Region::query()
+            ->where('name', 'NOT LIKE', '%UNASSIGNED%')
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn ($region) => [
@@ -2529,7 +2541,7 @@ Route::middleware('auth')->group(function () {
                     // Generate district code: Region Code + 2-digit sequential number
                     // Find highest number for this region
                     $lastDistrict = \App\Models\District::where('region_id', $region->id)
-                        ->orderByRaw("CAST(SUBSTR(code, -2) AS UNSIGNED) DESC")
+                        ->orderByDesc('code')
                         ->first();
                     
                     $nextNumber = 1;
@@ -2609,6 +2621,7 @@ Route::middleware('auth')->group(function () {
         }
 
         $summary = $service->syncRegisteredRegions($regions);
+        \App\Services\PsleCacheService::incrementVersion();
 
         return response()->json([
             'message' => 'NECTA PSLE 2025 school sync completed.',
@@ -2621,16 +2634,53 @@ Route::middleware('auth')->group(function () {
         $search = request('search', '');
         $regionId = request('region_id', '');
         $districtId = request('district_id', '');
+        $user = auth()->user();
 
-        $query = \App\Models\School::with('district', 'district.region')
-            ->where('source_system', \App\Services\Schools\NectaPsle2025SchoolSyncService::SOURCE_SYSTEM);
+        $examType = \App\Models\ExamType::where('code', 'PSLE')->first();
+        $examYear = \App\Models\ExamYear::where('is_active', true)->first();
+        $examTypeId = $examType ? $examType->id : 0;
+        $examYearId = $examYear ? $examYear->id : 0;
+
+        $query = \App\Models\School::select([
+            'id', 
+            'code', 
+            'registration_number', 
+            'source_system', 
+            'name', 
+            'ownership', 
+            'council_id', 
+            'district_id', 
+            'region_id'
+        ])
+        ->with([
+            'council:id,name,region_id', 
+            'district:id,name,region_id', 
+            'region:id,name'
+        ])
+        ->withCount(['candidates as candidates_count' => function ($q) use ($examTypeId, $examYearId) {
+            $q->where('exam_type', 'PSLE')
+              ->whereHas('examRegistrations', function ($r) use ($examTypeId, $examYearId) {
+                  $r->where('exam_type_id', $examTypeId)
+                    ->where('exam_year_id', $examYearId);
+              });
+        }])
+        ->where(function ($q) {
+            $q->where('source_system', \App\Services\Schools\NectaPsle2025SchoolSyncService::SOURCE_SYSTEM)
+              ->orWhereIn('school_type', ['PRIMARY', 'BOTH']);
+        });
+
+        if ($user) {
+            \App\Support\PsleUserScope::applyToSchools($query, $user);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
 
         if ($regionId) {
             $query->where('region_id', $regionId);
         }
 
         if ($districtId) {
-            $query->where('district_id', $districtId);
+            $query->where('council_id', $districtId);
         }
 
         if ($search) {
@@ -2647,10 +2697,22 @@ Route::middleware('auth')->group(function () {
             $query->take((int) $pageSize);
         }
 
-        $schools = $query->get();
+        $scopeHash = \App\Services\PsleCacheService::scopeHash($user);
+        $cacheKey = \App\Services\PsleCacheService::schoolsKey($examYearId, ($districtId ?: 'all') . '_' . ($regionId ?: 'all') . '_' . md5($search) . '_' . ($pageSize ?: 'all'), $scopeHash);
 
-        return response()->json([
-            'data' => $schools->map(function ($school) {
+        $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(15), function () use ($query, $user, $regionId, $districtId, $search) {
+            $schools = $query->get();
+
+            \Illuminate\Support\Facades\Log::info('[PSLE_SCHOOL_SEARCH_DEBUG] school search database query executed', [
+                'user_id' => $user?->id,
+                'selected_region_id' => $regionId ?: null,
+                'selected_council_id' => $districtId ?: null,
+                'search' => $search ?: null,
+                'schools_returned' => $schools->count(),
+            ]);
+
+            return $schools->map(function ($school) {
+                $candidatesCount = (int) ($school->candidates_count ?? 0);
                 return [
                     'id' => $school->id,
                     'code' => $school->code,
@@ -2658,13 +2720,201 @@ Route::middleware('auth')->group(function () {
                     'source_system' => $school->source_system,
                     'name' => $school->name,
                     'ownership' => $school->ownership,
-                    'district_id' => $school->district_id,
+                    'district_id' => $school->council_id ?? $school->district_id,
                     'region_id' => $school->region_id,
-                    'district_name' => $school->district?->name,
-                    'region_name' => $school->region?->name ?? $school->district?->region?->name,
+                    'district_name' => $school->council?->name ?? $school->district?->name,
+                    'region_name' => $school->region?->name ?? $school->council?->region?->name ?? $school->district?->region?->name,
+                    'candidates_count' => $candidatesCount,
+                    'registered_pupils' => $candidatesCount,
+                    'pupils_count' => $candidatesCount,
                 ];
-            })->values(),
+            })->values()->toArray();
+        });
+
+        return response()->json(['data' => $data]);
+    });
+
+    Route::get('/api/exam-types/psle/summary', [\App\Http\Controllers\ExamTypeController::class, 'getPsleSummary']);
+
+    Route::get('/api/exam-types/psle/councils', function () {
+        $regionId = request('region_id', '');
+        $search = request('search', '');
+        $user = auth()->user();
+
+        $query = \App\Models\DistrictCouncil::query()
+            ->where('is_active', true);
+
+        if ($user && !\App\Support\PsleUserScope::hasGlobalAccess($user)) {
+            if ($councilId = \App\Support\PsleUserScope::councilId($user)) {
+                $query->where('id', $councilId);
+            } elseif ($scopeRegionId = \App\Support\PsleUserScope::regionId($user)) {
+                $query->where('region_id', $scopeRegionId);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if ($regionId) {
+            $query->where('region_id', $regionId);
+        }
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('name', 'like', "%{$search}%");
+            });
+        }
+
+        $councils = $query->with('region')->orderBy('name')->get();
+
+        return response()->json([
+            'data' => $councils->map(fn ($council) => [
+                'id' => $council->id,
+                'code' => $council->code,
+                'name' => $council->name,
+                'region_id' => $council->region_id,
+                'region_name' => $council->region?->name,
+                'status' => $council->is_active ? 'active' : 'inactive',
+            ])->values(),
         ]);
+    });
+
+    Route::post('/api/exam-types/psle/schools', function (\Illuminate\Http\Request $request) {
+        if (!auth()->user() || !auth()->user()->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized action. Only system administrators can manually add primary schools.'], 403);
+        }
+
+        $validated = $request->validate([
+            'code' => [
+                'required',
+                'string',
+                'min:3',
+                'max:50',
+                'unique:schools,code',
+                function ($attribute, $value, $fail) {
+                    $cleaned = strtoupper(trim($value));
+                    if (empty($cleaned)) {
+                        $fail('School code cannot be empty.');
+                    }
+                }
+            ],
+            'name' => [
+                'required',
+                'string',
+                'min:2',
+                'max:255',
+                function ($attribute, $value, $fail) {
+                    $cleaned = strtoupper(trim($value));
+                    if (empty($cleaned)) {
+                        $fail('School name cannot be empty.');
+                    }
+                }
+            ],
+            'ownership' => 'required|string|in:GOVERNMENT,NON-GOVERNMENT',
+            'region_id' => 'required|integer|exists:regions,id',
+            'district_id' => 'required|integer|exists:district_councils,id',
+            'exam_year' => 'required',
+        ]);
+
+        $normalizedCode = strtoupper(trim($validated['code']));
+        $normalizedName = strtoupper(trim($validated['name']));
+
+        // Prevent duplicate school code (redundant but double safe)
+        $existsCode = \App\Models\School::where('code', $normalizedCode)->exists();
+        if ($existsCode) {
+            return response()->json([
+                'errors' => [
+                    'code' => ['A school with this code already exists.']
+                ]
+            ], 422);
+        }
+
+        // Prevent duplicate school name in the same council
+        $existsName = \App\Models\School::where('name', $normalizedName)
+            ->where('council_id', $validated['district_id'])
+            ->exists();
+        if ($existsName) {
+            return response()->json([
+                'errors' => [
+                    'name' => ['A school with this name already exists in the selected council.']
+                ]
+            ], 422);
+        }
+
+        // Resolve District and Council relation
+        $council = \App\Models\DistrictCouncil::findOrFail($validated['district_id']);
+
+        // Assert that the selected council belongs to the selected region
+        if ((string) $council->region_id !== (string) $validated['region_id']) {
+            return response()->json([
+                'message' => 'The selected council does not belong to the selected region.',
+                'errors' => [
+                    'district_id' => ['The selected council does not belong to the selected region.']
+                ]
+            ], 422);
+        }
+
+        // Find matching geographical District if it exists
+        $district = \App\Models\District::where('region_id', $council->region_id)
+            ->where('name', 'like', '%' . $council->name . '%')
+            ->first();
+        $districtId = $district ? $district->id : null;
+
+        // Create the school
+        $school = \App\Models\School::create([
+            'code' => $normalizedCode,
+            'registration_number' => $normalizedCode,
+            'name' => $normalizedName,
+            'ownership' => $validated['ownership'],
+            'region_id' => $validated['region_id'],
+            'district_id' => $districtId,
+            'council_id' => $council->id,
+            'school_type' => 'PRIMARY',
+            'education_level' => 'PRIMARY',
+            'source_system' => 'MANUAL',
+            'is_active' => true,
+        ]);
+
+        // Audit Log if possible
+        try {
+            \App\Models\GovernanceAuditLog::log(
+                'psle_school_created_manually',
+                null,
+                auth()->id(),
+                [
+                    'exam_year' => $validated['exam_year'],
+                    'school_code' => $school->code,
+                    'school_name' => $school->name,
+                    'region_id' => $school->region_id,
+                    'district_id' => $school->district_id,
+                    'timestamp' => now()->toIso8601String(),
+                ]
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Manual school creation audit log failed: ' . $e->getMessage());
+        }
+
+        \App\Services\PsleCacheService::incrementVersion();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'School added successfully.',
+            'school' => [
+                'id' => $school->id,
+                'code' => $school->code,
+                'registration_number' => $school->registration_number,
+                'source_system' => $school->source_system,
+                'name' => $school->name,
+                'ownership' => $school->ownership,
+                'district_id' => $school->council_id ?? $school->district_id,
+                'region_id' => $school->region_id,
+                'district_name' => $school->council?->name ?? $school->district?->name,
+                'region_name' => $school->region?->name ?? $school->council?->region?->name ?? $school->district?->region?->name,
+                'candidates_count' => 0,
+                'registered_pupils' => 0,
+                'pupils_count' => 0,
+            ]
+        ], 201);
     });
 
     Route::post('/api/exam-types/csee/schools/sync-necta-2025', function (\App\Services\Schools\NectaCsee2025CentreSyncService $service) {
@@ -2757,6 +3007,12 @@ Route::middleware('auth')->group(function () {
                 $regionName = $school->region?->name
                     ?? $school->council?->region?->name
                     ?? $school->district?->region?->name;
+                $isFallbackRegion = $school->region?->code === 'CSEE-UNK'
+                    || str_contains(strtoupper((string) $regionName), 'UNASSIGNED');
+
+                if ($isFallbackRegion) {
+                    $regionName = null;
+                }
 
                 return [
                     'id' => $school->id,
@@ -2857,7 +3113,30 @@ Route::middleware('auth')->group(function () {
                 'region_id' => 'required|exists:regions,id',
                 'district_id' => 'required|exists:districts,id'
             ]);
-            $school = \App\Models\School::create($validated);
+
+            $district = \App\Models\District::findOrFail($validated['district_id']);
+            if ((string) $district->region_id !== (string) $validated['region_id']) {
+                return response()->json([
+                    'message' => 'The selected district does not belong to the selected region.',
+                    'errors' => [
+                        'district_id' => ['The selected district does not belong to the selected region.']
+                    ]
+                ], 422);
+            }
+
+            $council = \App\Models\DistrictCouncil::where('region_id', $district->region_id)
+                ->where('name', 'like', '%' . $district->name . '%')
+                ->first();
+            $councilId = $council ? $council->id : null;
+
+            $school = \App\Models\School::create(array_merge($validated, [
+                'registration_number' => $validated['code'],
+                'council_id' => $councilId,
+                'school_type' => 'PRIMARY',
+                'education_level' => 'PRIMARY',
+                'source_system' => 'MANUAL',
+                'is_active' => true,
+            ]));
             return response()->json(['message' => 'School added', 'data' => $school], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['message' => 'Validation error', 'errors' => $e->errors()], 422);
@@ -2871,14 +3150,76 @@ Route::middleware('auth')->group(function () {
             if (!$school) return response()->json(['message' => 'School not found'], 404);
             
             $validated = $request->validate([
-                'code' => 'required|unique:schools,code,'.$id,
-                'name' => 'required',
+                'code' => 'required|string|max:50',
+                'name' => 'required|string|max:255',
                 'ownership' => 'required|in:GOVERNMENT,NON-GOVERNMENT',
                 'region_id' => 'required|exists:regions,id',
                 'district_id' => 'required|exists:districts,id'
             ]);
-            $school->update($validated);
-            return response()->json(['message' => 'School updated', 'data' => $school]);
+
+            // Clean inputs
+            $normalizedCode = strtoupper(trim($validated['code']));
+            $normalizedName = strtoupper(trim($validated['name']));
+
+            // Double check code uniqueness
+            $existsCode = \App\Models\School::where('code', $normalizedCode)->where('id', '!=', $school->id)->exists();
+            if ($existsCode) {
+                return response()->json([
+                    'errors' => [
+                        'code' => ['A school with this code already exists.']
+                    ]
+                ], 422);
+            }
+
+            // Check candidate safety rules
+            $candidatesCount = \App\Models\Candidate::where('school_id', $school->id)->count();
+            if ($candidatesCount > 0) {
+                // If school has registered candidates, block changes to region or district unless they remain identical
+                if ((string) $school->region_id !== (string) $validated['region_id'] || 
+                    ((string) $school->district_id !== (string) $validated['district_id'] && 
+                     (string) $school->council_id !== (string) $validated['district_id'])) {
+                    return response()->json([
+                        'message' => 'This school has registered candidates. Council/region changes require administrator approval.',
+                        'errors' => [
+                            'district_id' => ['This school has registered candidates. Council/region changes are restricted.']
+                        ]
+                    ], 422);
+                }
+            }
+
+            // Resolve District and Council relation
+            $district = \App\Models\District::findOrFail($validated['district_id']);
+            if ((string) $district->region_id !== (string) $validated['region_id']) {
+                return response()->json([
+                    'message' => 'The selected district does not belong to the selected region.',
+                    'errors' => [
+                        'district_id' => ['The selected district does not belong to the selected region.']
+                    ]
+                ], 422);
+            }
+
+            $council = \App\Models\DistrictCouncil::where('region_id', $district->region_id)
+                ->where('name', 'like', '%' . $district->name . '%')
+                ->first();
+            $councilId = $council ? $council->id : null;
+
+            // Perform update inside database transaction
+            \DB::transaction(function () use ($school, $normalizedCode, $normalizedName, $validated, $councilId) {
+                $school->update([
+                    'code' => $normalizedCode,
+                    'registration_number' => $normalizedCode,
+                    'name' => $normalizedName,
+                    'ownership' => $validated['ownership'],
+                    'region_id' => $validated['region_id'],
+                    'district_id' => $validated['district_id'],
+                    'council_id' => $councilId,
+                ]);
+            });
+
+            // Target Cache Invalidation
+            \App\Services\PsleCacheService::incrementVersion();
+
+            return response()->json(['message' => 'School updated successfully', 'data' => $school]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['message' => 'Validation error', 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
@@ -2900,6 +3241,10 @@ Route::middleware('auth')->group(function () {
         }
         
         $school->delete();
+
+        // Invalidate PSLE schools and summary cache
+        \App\Services\PsleCacheService::incrementVersion();
+
         return response()->json(['message' => 'School deleted']);
     });
     Route::post('/api/schools/import', function (\Illuminate\Http\Request $request) {
@@ -3029,7 +3374,18 @@ Route::middleware('auth')->group(function () {
             'ids.*' => 'integer|exists:schools,id'
         ]);
         
+        // Safety check: verify no registered candidates exist under these schools
+        $candidatesCount = \App\Models\Candidate::whereIn('school_id', $validated['ids'])->count();
+        if ($candidatesCount > 0) {
+            return response()->json([
+                'message' => "Cannot bulk delete schools. One or more selected schools have registered candidates.",
+                'details' => "There are total $candidatesCount candidate(s) registered under the selected schools.",
+                'count' => $candidatesCount
+            ], 409);
+        }
+        
         $deleted = \App\Models\School::whereIn('id', $validated['ids'])->delete();
+        \App\Services\PsleCacheService::incrementVersion();
         return response()->json(['deleted' => $deleted, 'message' => 'Schools deleted successfully']);
     });
 
@@ -3119,7 +3475,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/candidates', function (\Illuminate\Http\Request $request) {
         $validated = $request->validate([
             'school_id' => 'required|exists:schools,id',
-            'candidate_id' => 'nullable|unique:candidates,candidate_id',
+            'candidate_id' => 'nullable|string|max:255',
+            'prem_no' => 'nullable|string|max:100',
             'full_name' => 'required|string|max:255',
             'gender' => 'required|in:M,F',
             'combination' => 'nullable|string|max:255',
@@ -3129,18 +3486,88 @@ Route::middleware('auth')->group(function () {
             'status' => 'nullable|string|max:255',
         ]);
         
+        $examTypeCode = strtoupper((string) $validated['exam_type']);
+        $examType = \App\Models\ExamType::where('code', $examTypeCode)->first();
+        $activeExamYear = \App\Models\ExamYear::where('is_active', true)->first();
+        
+        if (!$examType || !$activeExamYear) {
+            return response()->json(['message' => 'Active exam year or exam type not found.'], 422);
+        }
+
         // Auto-generate candidate_id if not provided
         if (empty($validated['candidate_id'])) {
             $count = \App\Models\Candidate::count() + 1;
             $validated['candidate_id'] = 'CAND-' . str_pad($count, 6, '0', STR_PAD_LEFT);
         }
+
+        $user = $request->user();
+        if ($examTypeCode === 'PSLE') {
+            if (!$user) {
+                return response()->json([
+                    'message' => 'You are not authorized to register PSLE candidates for this school.',
+                ], 403);
+            }
+            if (!\App\Support\PsleUserScope::hasGlobalAccess($user)) {
+                $schoolQuery = \App\Models\School::query()->whereKey($validated['school_id']);
+                \App\Support\PsleUserScope::applyToSchools($schoolQuery, $user);
+                if (!$schoolQuery->exists()) {
+                    return response()->json([
+                        'message' => 'You are not authorized to register PSLE candidates for this school.',
+                    ], 403);
+                }
+            }
+        }
         
-        $candidate = \App\Models\Candidate::create($validated);
-
-        $examType = \App\Models\ExamType::where('code', strtoupper((string) $validated['exam_type']))->first();
-        $activeExamYear = \App\Models\ExamYear::where('is_active', true)->first();
-
-        if ($examType && $activeExamYear) {
+        // Custom Check for duplicate candidate globally using 3-tier matching priority
+        $service = app(\App\Services\MarkEntry\PsleCandidateRegistrationService::class);
+        $existingCandidate = $service->findExistingCandidate([
+            'candidate_id' => $validated['candidate_id'] ?? null,
+            'prem_no' => $validated['prem_no'] ?? null,
+            'school_id' => $validated['school_id'] ?? null,
+            'full_name' => $validated['full_name'] ?? null,
+            'gender' => $validated['gender'] ?? null,
+        ], $activeExamYear->id, $examType->id);
+        
+        if ($existingCandidate) {
+            // Check if already registered for this active year and exam type
+            $isAlreadyRegistered = \App\Models\CandidateExamRegistration::where([
+                'candidate_id' => $existingCandidate->id,
+                'exam_type_id' => $examType->id,
+                'exam_year_id' => $activeExamYear->id,
+            ])->exists();
+            
+            if ($isAlreadyRegistered && empty($validated['prem_no'])) {
+                return response()->json([
+                    'message' => "Candidate number is already registered for the active {$examTypeCode} year.",
+                    'errors' => [
+                        'candidate_id' => ["Candidate number is already registered for the active {$examTypeCode} year."]
+                    ]
+                ], 422);
+            }
+        }
+        
+        // Wrap registration operations inside a DB::transaction
+        $candidate = \DB::transaction(function () use ($validated, $existingCandidate, $examType, $activeExamYear, $examTypeCode) {
+            if ($existingCandidate) {
+                // If candidate exists globally but not registered for active year, update basic info
+                $existingCandidate->update([
+                    'school_id' => $validated['school_id'],
+                    'prem_no' => $validated['prem_no'] ? $validated['prem_no'] : null, // Cast empty to NULL
+                    'full_name' => $validated['full_name'],
+                    'gender' => $validated['gender'],
+                    'exam_type' => $validated['exam_type'],
+                    'combination' => $validated['combination'] ?? null,
+                    'combination_id' => $validated['combination_id'] ?? null,
+                    'candidate_type' => $validated['candidate_type'] ?? $existingCandidate->candidate_type,
+                    'status' => $validated['status'] ?? 'registered',
+                ]);
+                $candidate = $existingCandidate;
+            } else {
+                $candidate = \App\Models\Candidate::create(array_merge($validated, [
+                    'prem_no' => $validated['prem_no'] ? $validated['prem_no'] : null
+                ]));
+            }
+            
             \App\Models\CandidateExamRegistration::updateOrCreate(
                 [
                     'candidate_id' => $candidate->id,
@@ -3155,20 +3582,28 @@ Route::middleware('auth')->group(function () {
                 ]
             );
 
-            if (strtoupper((string) $validated['exam_type']) === 'CSEE') {
+            if ($examTypeCode === 'CSEE') {
                 app(CseeCandidateSubjectService::class)->ensureCoreSubjects($candidate, $activeExamYear);
             }
+            
+            return $candidate;
+        });
+
+        // Version invalidation using PsleCacheService (targeted/versioned)
+        if ($examTypeCode === 'PSLE') {
+            \App\Services\PsleCacheService::incrementVersion();
         }
         
         return response()->json(['message' => 'Candidate registered successfully', 'data' => $candidate->load('school')], 201);
     });
-
+ 
     Route::put('/api/candidates/{id}', function (\Illuminate\Http\Request $request, $id) {
         $candidate = \App\Models\Candidate::findOrFail($id);
         
         $validated = $request->validate([
             'school_id' => 'required|exists:schools,id',
-            'candidate_id' => 'nullable|unique:candidates,candidate_id,' . $candidate->id,
+            'candidate_id' => 'nullable|string|max:255',
+            'prem_no' => 'nullable|string|max:100',
             'full_name' => 'required|string|max:255',
             'gender' => 'required|in:M,F',
             'combination' => 'nullable|string|max:255',
@@ -3177,13 +3612,64 @@ Route::middleware('auth')->group(function () {
             'candidate_type' => 'nullable|in:SCHOOL,PRIVATE',
             'status' => 'nullable|string|max:255',
         ]);
-        
-        $candidate->update($validated);
 
-        $examType = \App\Models\ExamType::where('code', strtoupper((string) $validated['exam_type']))->first();
+        $examTypeCode = strtoupper((string) $validated['exam_type']);
+        $examType = \App\Models\ExamType::where('code', $examTypeCode)->first();
         $activeExamYear = \App\Models\ExamYear::where('is_active', true)->first();
 
-        if ($examType && $activeExamYear) {
+        if (!$examType || !$activeExamYear) {
+            return response()->json(['message' => 'Active exam year or exam type not found.'], 422);
+        }
+
+        // Custom validation: if candidate_id is changing, check if another candidate already has it
+        if (!empty($validated['candidate_id']) && $validated['candidate_id'] !== $candidate->candidate_id) {
+            $duplicate = \App\Models\Candidate::where('candidate_id', $validated['candidate_id'])->where('id', '!=', $candidate->id)->first();
+            if ($duplicate) {
+                return response()->json([
+                    'message' => "Candidate number is already taken by another student.",
+                    'errors' => [
+                        'candidate_id' => ["Candidate number is already taken by another student."]
+                    ]
+                ], 422);
+            }
+        }
+
+        // Custom validation: if prem_no is changing, check if another candidate already has it
+        if (!empty($validated['prem_no']) && $validated['prem_no'] !== $candidate->prem_no) {
+            $duplicatePrem = \App\Models\Candidate::where('prem_no', $validated['prem_no'])->where('id', '!=', $candidate->id)->first();
+            if ($duplicatePrem) {
+                return response()->json([
+                    'message' => "PReM number is already taken by another student.",
+                    'errors' => [
+                        'prem_no' => ["PReM number is already taken by another student."]
+                    ]
+                ], 422);
+            }
+        }
+
+        $user = $request->user();
+        if ($examTypeCode === 'PSLE') {
+            if (!$user) {
+                return response()->json([
+                    'message' => 'You are not authorized to update PSLE candidates for this school.',
+                ], 403);
+            }
+            if (!\App\Support\PsleUserScope::hasGlobalAccess($user)) {
+                $schoolQuery = \App\Models\School::query()->whereKey($validated['school_id']);
+                \App\Support\PsleUserScope::applyToSchools($schoolQuery, $user);
+                if (!$schoolQuery->exists()) {
+                    return response()->json([
+                        'message' => 'You are not authorized to update PSLE candidates for this school.',
+                    ], 403);
+                }
+            }
+        }
+        
+        \DB::transaction(function () use ($candidate, $validated, $examType, $activeExamYear, $examTypeCode) {
+            $candidate->update(array_merge($validated, [
+                'prem_no' => $validated['prem_no'] ? $validated['prem_no'] : null
+            ]));
+
             \App\Models\CandidateExamRegistration::updateOrCreate(
                 [
                     'candidate_id' => $candidate->id,
@@ -3198,9 +3684,13 @@ Route::middleware('auth')->group(function () {
                 ]
             );
 
-            if (strtoupper((string) $validated['exam_type']) === 'CSEE') {
+            if ($examTypeCode === 'CSEE') {
                 app(CseeCandidateSubjectService::class)->ensureCoreSubjects($candidate, $activeExamYear);
             }
+        });
+        
+        if ($examTypeCode === 'PSLE') {
+            \App\Services\PsleCacheService::incrementVersion();
         }
         
         return response()->json(['message' => 'Candidate updated successfully', 'data' => $candidate->load('school')]);
@@ -3243,6 +3733,7 @@ Route::middleware('auth')->group(function () {
         }
         
         $candidate->delete();
+        \App\Services\PsleCacheService::incrementVersion();
         return response()->json(['message' => 'Candidate deleted successfully']);
     });
 
@@ -3608,6 +4099,7 @@ Route::middleware('auth')->group(function () {
          ]);
          
          $deleted = \App\Models\Candidate::whereIn('id', $validated['ids'])->delete();
+         \App\Services\PsleCacheService::incrementVersion();
          return response()->json(['deleted' => $deleted, 'message' => 'Candidates deleted successfully']);
      });
 
@@ -3744,6 +4236,42 @@ Route::middleware('auth')->group(function () {
          } catch (\Exception $e) {
              \Log::error('Subjects API error:', ['error' => $e->getMessage()]);
              return response()->json(['data' => []], 200);
+         }
+     });
+
+     // Global Exam Years API for Mark Entry
+     Route::get('/api/exam-years/with-acsee', function () {
+         try {
+             $acseeType = \App\Models\ExamType::where('code', 'ACSEE')->first();
+             $yearsQuery = \App\Models\ExamYear::query()->orderBy('year_label', 'desc');
+             
+             if ($acseeType) {
+                 $yearsQuery->whereHas('candidateExamRegistrations', function($q) use ($acseeType) { 
+                     $q->where('exam_type_id', $acseeType->id); 
+                 });
+             }
+             
+             $years = $yearsQuery->get();
+             
+             // Fallback: If no years have ACSEE registrations yet, just return all years so the UI doesn't break
+             if ($years->isEmpty()) {
+                 $years = \App\Models\ExamYear::orderBy('year_label', 'desc')->get();
+             }
+
+             $data = $years->map(function($year) { return ['id' => $year->id, 'year_label' => $year->year_label, 'is_locked' => $year->is_locked]; });
+             return response()->json(['years' => $data]);
+         } catch (\Exception $e) {
+             return response()->json(['years' => [], 'error' => 'Unable to load exam years'], 500);
+         }
+     });
+
+     Route::get('/api/exam-years/active', function () {
+         try {
+             $activeYear = \App\Models\ExamYear::active()->first();
+             if (!$activeYear) return response()->json(['active_year' => null, 'message' => 'No active exam year set']);
+             return response()->json(['active_year' => ['id' => $activeYear->id, 'year_label' => $activeYear->year_label, 'is_locked' => $activeYear->is_locked]]);
+         } catch (\Exception $e) {
+             return response()->json(['active_year' => null, 'error' => 'Unable to load active exam year'], 500);
          }
      });
 
@@ -4042,9 +4570,32 @@ Route::middleware('auth')->group(function () {
       Route::get('/api/mark-entry/csee/schools', [\App\Http\Controllers\CseeMarkEntryController::class, 'schools']);
       Route::get('/api/mark-entry/csee/subjects', [\App\Http\Controllers\CseeMarkEntryController::class, 'subjects']);
       Route::get('/api/mark-entry/csee/dashboard', [\App\Http\Controllers\CseeMarkEntryController::class, 'dashboard']);
-      Route::get('/mark-entry/psle', function () {
-          return view('mark-entry.psle');
-      });
+      Route::get('/mark-entry/psle', [\App\Http\Controllers\PsleMarkEntryController::class, 'index'])->name('mark-entry.psle.index');
+      Route::post('/mark-entry/psle/users/create', [\App\Http\Controllers\PsleMarkEntryController::class, 'createUser']);
+      Route::get('/mark-entry/psle/users/template', [\App\Http\Controllers\PsleMarkEntryController::class, 'downloadUserImportTemplate']);
+      Route::post('/mark-entry/psle/users/import', [\App\Http\Controllers\PsleMarkEntryController::class, 'importUsers']);
+      Route::get('/mark-entry/psle/users/import-errors/{filename}', [\App\Http\Controllers\PsleMarkEntryController::class, 'downloadUserImportErrors']);
+      Route::post('/mark-entry/psle/users/{id}/toggle-status', [\App\Http\Controllers\PsleMarkEntryController::class, 'toggleUserStatus']);
+      Route::post('/mark-entry/psle/marking-centres/create', [\App\Http\Controllers\PsleMarkEntryController::class, 'createMarkingCentre']);
+      Route::post('/mark-entry/psle/marking-centres/{id}/toggle-status', [\App\Http\Controllers\PsleMarkEntryController::class, 'toggleMarkingCentreStatus']);
+      Route::post('/mark-entry/psle/marking-centres/{id}/update', [\App\Http\Controllers\PsleMarkEntryController::class, 'updateMarkingCentre']);
+      Route::post('/mark-entry/psle/marking-centres/{id}/delete', [\App\Http\Controllers\PsleMarkEntryController::class, 'deleteMarkingCentre']);
+      Route::post('/mark-entry/psle/assignments/create', [\App\Http\Controllers\PsleMarkEntryController::class, 'createAssignment']);
+      Route::post('/mark-entry/psle/assignments/{id}/revoke', [\App\Http\Controllers\PsleMarkEntryController::class, 'revokeAssignment']);
+      Route::get('/mark-entry/psle/subject-panel-assignments', function () {
+          return redirect('/mark-entry/psle?view=subject-panel-assignments');
+      })->name('mark-entry.psle.subject-panel-assignments.index');
+
+      Route::prefix('/mark-entry/psle/subject-panel-assignments')
+          ->name('mark-entry.psle.subject-panel-assignments.')
+          ->middleware(['admin'])
+          ->group(function () {
+              Route::post('/', [\App\Http\Controllers\Admin\SubjectPanelAssignmentController::class, 'store'])->name('store');
+              Route::delete('{subjectPanelAssignment}', [\App\Http\Controllers\Admin\SubjectPanelAssignmentController::class, 'destroy'])->name('destroy');
+              Route::patch('{subjectPanelAssignment}/toggle', [\App\Http\Controllers\Admin\SubjectPanelAssignmentController::class, 'toggleActive'])->name('toggle');
+          });
+      Route::get('/mark-entry/psle/health', [\App\Http\Controllers\PsleMarkEntryController::class, 'health']);
+      Route::post('/api/mark-entry/psle/marks/save', [\App\Http\Controllers\PsleMarkEntryController::class, 'saveMark']);
       Route::post('/mark-entry/psle/single/validate', [\App\Http\Controllers\PsleMarkEntryController::class, 'singleValidate']);
       Route::post('/mark-entry/psle/single/commit', [\App\Http\Controllers\PsleMarkEntryController::class, 'singleCommit']);
       Route::post('/mark-entry/psle/bulk/school/validate-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'schoolValidateZip']);
@@ -4055,7 +4606,40 @@ Route::middleware('auth')->group(function () {
       Route::get('/api/mark-entry/psle/lifecycle/dashboard', [\App\Http\Controllers\PsleMarkEntryController::class, 'lifecycleDashboard']);
       Route::get('/api/mark-entry/psle/reports/summary', [\App\Http\Controllers\PsleMarkEntryController::class, 'reportsSummary']);
       Route::get('/api/mark-entry/psle/reports/export', [\App\Http\Controllers\PsleMarkEntryController::class, 'reportsExport']);
+      Route::post('/mark-entry/psle/batches/{id}/submit', [\App\Http\Controllers\PsleMarkEntryController::class, 'submitBatch']);
+      Route::post('/mark-entry/psle/batches/{id}/approve', [\App\Http\Controllers\PsleMarkEntryController::class, 'approveBatch']);
+      Route::post('/mark-entry/psle/batches/{id}/reject', [\App\Http\Controllers\PsleMarkEntryController::class, 'rejectBatch']);
+      Route::post('/mark-entry/psle/batches/{id}/lock', [\App\Http\Controllers\PsleMarkEntryController::class, 'lockBatch']);
+      Route::post('/mark-entry/psle/batches/{id}/unlock', [\App\Http\Controllers\PsleMarkEntryController::class, 'unlockBatch']);
+      Route::post('/mark-entry/psle/outliers/{id}/verify', [\App\Http\Controllers\PsleMarkEntryController::class, 'verifyOutlier']);
+      Route::post('/mark-entry/psle/outliers/{id}/resolve', [\App\Http\Controllers\PsleMarkEntryController::class, 'resolveOutlier']);
+      Route::post('/mark-entry/psle/outliers/{id}/escalate', [\App\Http\Controllers\PsleMarkEntryController::class, 'escalateOutlier']);
       Route::get('/api/mark-entry/psle/reports/scoresheet-subjects', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetSubjects']);
+      
+      // PSLE Bulk Import Workflow Routes
+      Route::get('/mark-entry/psle/bulk/filters/regions', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkFilterRegions'])->name('mark-entry.psle.bulk.filters.regions');
+      Route::get('/mark-entry/psle/bulk/filters/districts', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkFilterDistricts'])->name('mark-entry.psle.bulk.filters.districts');
+      Route::get('/mark-entry/psle/bulk/filters/schools', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkFilterSchools'])->name('mark-entry.psle.bulk.filters.schools');
+      Route::get('/mark-entry/psle/bulk/filters/subjects', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkFilterSubjects'])->name('mark-entry.psle.bulk.filters.subjects');
+      Route::get('/mark-entry/psle/bulk-import/template', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkImportTemplate'])->name('mark-entry.psle.bulk-import.template');
+      Route::post('/mark-entry/psle/bulk-import/preview', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkImportPreview'])->name('mark-entry.psle.bulk-import.preview');
+      Route::post('/mark-entry/psle/bulk-import/confirm', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkImportConfirm'])->name('mark-entry.psle.bulk-import.confirm');
+      Route::get('/api/mark-entry/psle/bulk-import/history', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkImportHistory'])->name('mark-entry.psle.bulk-import.history');
+      Route::get('/mark-entry/psle/bulk-import/errors/{batchId}', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkImportDownloadErrors'])->name('mark-entry.psle.bulk-import.errors');
+
+      // PSLE Candidate Registration Workflow Routes
+      Route::get('/mark-entry/psle/candidates/filters/regions', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'regions'])->name('mark-entry.psle.candidates.filters.regions');
+      Route::get('/mark-entry/psle/candidates/filters/councils', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'councils'])->name('mark-entry.psle.candidates.filters.councils');
+      Route::get('/mark-entry/psle/candidates/filters/schools', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'schools'])->name('mark-entry.psle.candidates.filters.schools');
+      Route::get('/mark-entry/psle/candidates/list', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'list'])->name('mark-entry.psle.candidates.list');
+      Route::post('/mark-entry/psle/candidates', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'store'])->name('mark-entry.psle.candidates.store');
+      Route::put('/mark-entry/psle/candidates/{candidate}', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'update'])->name('mark-entry.psle.candidates.update');
+      Route::delete('/mark-entry/psle/candidates/{candidate}', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'destroy'])->name('mark-entry.psle.candidates.destroy');
+      Route::get('/mark-entry/psle/candidates/template', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'template'])->name('mark-entry.psle.candidates.template');
+      Route::post('/mark-entry/psle/candidates/bulk/preview', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'preview'])->name('mark-entry.psle.candidates.bulk.preview');
+      Route::post('/mark-entry/psle/candidates/bulk/import', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'import'])->name('mark-entry.psle.candidates.bulk.import');
+      Route::post('/mark-entry/psle/candidates/import/validate', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'preview'])->name('mark-entry.psle.candidates.import.validate');
+      Route::post('/mark-entry/psle/candidates/import/commit', [\App\Http\Controllers\MarkEntry\PsleCandidateRegistrationController::class, 'import'])->name('mark-entry.psle.candidates.import.commit');
       Route::get('/api/mark-entry/psle/reports/scoresheet-pdf', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetPdf']);
       Route::get('/api/mark-entry/psle/reports/scoresheet-pdf/school-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetSchoolZip']);
       Route::get('/api/mark-entry/psle/reports/scoresheet-pdf/district-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'scoresheetDistrictZip']);
@@ -4064,6 +4648,17 @@ Route::middleware('auth')->group(function () {
       Route::get('/api/mark-entry/psle/reports/entered-marks-pdf/school-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'enteredMarksSchoolZip']);
       Route::get('/api/mark-entry/psle/reports/entered-marks-pdf/district-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'enteredMarksDistrictZip']);
       Route::get('/api/mark-entry/psle/reports/entered-marks-pdf/region-zip', [\App\Http\Controllers\PsleMarkEntryController::class, 'enteredMarksRegionZip']);
+      Route::get('/api/mark-entry/psle/reports/progress/excel', [\App\Http\Controllers\PsleMarkEntryController::class, 'exportRegionalProgressExcel']);
+      Route::get('/api/mark-entry/psle/reports/productivity/excel', [\App\Http\Controllers\PsleMarkEntryController::class, 'exportOfficerProductivityExcel']);
+      Route::get('/api/mark-entry/psle/reports/missing-marks/excel', [\App\Http\Controllers\PsleMarkEntryController::class, 'exportMissingMarksExcel']);
+      Route::get('/api/mark-entry/psle/reports/outliers/excel', [\App\Http\Controllers\PsleMarkEntryController::class, 'exportOutliersExcel']);
+      
+      // Validation Workflow Routes
+      Route::get('/api/mark-entry/psle/performance-rankings', [\App\Http\Controllers\PsleMarkEntryController::class, 'performanceRankings'])->name('mark-entry.psle.performance-rankings');
+      Route::post('/api/mark-entry/psle/validation/run', [\App\Http\Controllers\PsleMarkEntryController::class, 'runValidation']);
+      Route::post('/api/mark-entry/psle/validation/correct', [\App\Http\Controllers\PsleMarkEntryController::class, 'correctValidationError']);
+      Route::post('/api/mark-entry/psle/validation/resolve', [\App\Http\Controllers\PsleMarkEntryController::class, 'resolveValidationError']);
+      Route::get('/api/mark-entry/psle/reports/validation-errors/csv', [\App\Http\Controllers\PsleMarkEntryController::class, 'exportValidationErrorsCsv']);
       Route::get('/api/mark-entry/psle/audit/summary', [\App\Http\Controllers\PsleMarkEntryController::class, 'auditSummary']);
       Route::get('/api/mark-entry/psle/admin/summary', [\App\Http\Controllers\PsleMarkEntryController::class, 'administrationSummary']);
       Route::post('/api/mark-entry/psle/batches/{batchId}/submit', [\App\Http\Controllers\PsleMarkEntryController::class, 'submitBatch']);
@@ -4133,7 +4728,9 @@ Route::middleware('auth')->group(function () {
       require base_path('routes/mark-entry.php');
 
       // ==================== EXAM DEVELOPMENT ROUTES ====================
-      require base_path('routes/exam-development.php');
+      Route::middleware('exam-admin-access')->group(function () {
+          require base_path('routes/exam-development.php');
+      });
       });
 
 // Temporary debug endpoint
@@ -4164,6 +4761,7 @@ Route::post('/api/test-upload', function (\Illuminate\Http\Request $request) {
 // Custom Role-Based Routes
 Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/zonal-control-centre', [\App\Http\Controllers\ZonalControlCentreController::class, 'index'])->name('admin.zonal-control-centre');
 
     // Registration Management
     Route::prefix('registration')->group(function () {
@@ -4179,9 +4777,15 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
         return view('exam-types.psle');
     })->name('admin.exam-types.psle');
     Route::get('exam-types/csee', function () {
+        if (!in_array('CSEE', config('irms.active_exam_types', ['PSLE']))) {
+            return redirect()->route('admin.exam-types.psle')->with('error', 'Only PSLE is currently enabled in this workspace.');
+        }
         return view('exam-types.csee');
     })->name('admin.exam-types.csee');
     Route::get('exam-types/acsee', function () { 
+        if (!in_array('ACSEE', config('irms.active_exam_types', ['PSLE']))) {
+            return redirect()->route('admin.exam-types.psle')->with('error', 'Only PSLE is currently enabled in this workspace.');
+        }
         return view('exam-types.acsee'); 
     })->name('admin.exam-types.acsee');
 
@@ -4283,19 +4887,92 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
              return response()->json(['data' => $data, 'pagination' => ['total_count' => $total, 'total_pages' => ceil($total / $pageSize), 'current_page' => $page, 'page_size' => $pageSize]]);
         });
 
+        Route::post('candidates', function (\Illuminate\Http\Request $request) {
+            $validated = $request->validate([
+                'school_id' => 'required|exists:schools,id',
+                'candidate_id' => 'nullable|unique:candidates,candidate_id',
+                'full_name' => 'required|string|max:255',
+                'gender' => 'required|in:M,F',
+                'combination' => 'nullable|string|max:255',
+                'combination_id' => 'nullable|exists:combinations,id',
+                'exam_type' => 'required|in:PSLE,CSEE,ACSEE',
+                'candidate_type' => 'nullable|in:SCHOOL,PRIVATE',
+                'status' => 'nullable|string|max:255',
+            ]);
+            
+            if (empty($validated['candidate_id'])) {
+                $count = \App\Models\Candidate::count() + 1;
+                $validated['candidate_id'] = 'CAND-' . str_pad($count, 6, '0', STR_PAD_LEFT);
+            }
+            
+            $candidate = \App\Models\Candidate::create($validated);
+            $examType = \App\Models\ExamType::where('code', strtoupper((string) $validated['exam_type']))->first();
+            $activeExamYear = \App\Models\ExamYear::where('is_active', true)->first();
+
+            if ($examType && $activeExamYear) {
+                \App\Models\CandidateExamRegistration::updateOrCreate(
+                    ['candidate_id' => $candidate->id, 'exam_type_id' => $examType->id, 'exam_year_id' => $activeExamYear->id],
+                    ['year' => (int) $activeExamYear->year_label, 'registration_number' => 'REG-' . uniqid(), 'is_active' => true, 'is_verified' => false]
+                );
+            }
+            
+            return response()->json(['message' => 'Candidate registered successfully', 'data' => $candidate->load('school')], 201);
+        });
+
+        Route::put('candidates/{id}', function (\Illuminate\Http\Request $request, $id) {
+            $candidate = \App\Models\Candidate::findOrFail($id);
+            $validated = $request->validate([
+                'school_id' => 'required|exists:schools,id',
+                'candidate_id' => 'nullable|unique:candidates,candidate_id,' . $candidate->id,
+                'full_name' => 'required|string|max:255',
+                'gender' => 'required|in:M,F',
+                'combination' => 'nullable|string|max:255',
+                'combination_id' => 'nullable|exists:combinations,id',
+                'exam_type' => 'required|in:PSLE,CSEE,ACSEE',
+                'candidate_type' => 'nullable|in:SCHOOL,PRIVATE',
+                'status' => 'nullable|string|max:255',
+            ]);
+            
+            $candidate->update($validated);
+            return response()->json(['message' => 'Candidate updated successfully', 'data' => $candidate->load('school')]);
+        });
+
+        Route::delete('candidates/{id}', function ($id) {
+            $candidate = \App\Models\Candidate::findOrFail($id);
+            if (\App\Models\SubjectMarks::where('candidate_id', $candidate->id)->exists()) {
+                return response()->json(['message' => "Cannot delete candidate with marks"], 409);
+            }
+            $candidate->delete();
+            return response()->json(['message' => 'Candidate deleted successfully']);
+        });
+
         // Exam Types APIs
-        Route::get('exam-types', function () {
-            $examTypes = \App\Models\ExamType::withCount('candidates')->get();
+        Route::get('/api/exam-types', function () {
+            $activeCodes = config('irms.active_exam_types', ['PSLE']);
+            $examTypes = \App\Models\ExamType::whereIn('code', $activeCodes)->withCount('candidates')->get();
+            
             $data = $examTypes->map(function($e) {
-                return ['id' => $e->id, 'name' => $e->name, 'code' => $e->code, 'level' => $e->level, 'description' => $e->description, 'candidates_count' => $e->candidates_count ?? 0];
+                return [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                    'code' => $e->code,
+                    'level' => $e->level,
+                    'description' => $e->description,
+                    'candidates_count' => $e->candidates_count ?? 0
+                ];
             });
+            
             return response()->json(['data' => $data]);
         });
-        Route::get('exam-types/{code}', function ($code) {
+        Route::get('/api/exam-types/{code}', function ($code) {
+            $activeCodes = config('irms.active_exam_types', ['PSLE']);
+            if (!in_array(strtoupper($code), $activeCodes)) {
+                return response()->json(['message' => 'Only PSLE is currently enabled.'], 403);
+            }
             $examType = \App\Models\ExamType::where('code', strtoupper($code))->withCount('candidates')->firstOrFail();
             return response()->json(['data' => ['id' => $examType->id, 'name' => $examType->name, 'code' => $examType->code, 'level' => $examType->level, 'description' => $examType->description, 'candidates_count' => $examType->candidates_count ?? 0]]);
         });
-        Route::post('exam-types/{code}/subjects', [ExamTypeController::class, 'getSubjects']);
+        Route::get('exam-types/{code}/subjects', [ExamTypeController::class, 'getSubjects']);
         Route::get('exam-types/{code}/combinations', [ExamTypeController::class, 'getCombinations']);
 
         // Exam Years API
@@ -4336,4 +5013,78 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
 
 Route::middleware(['auth', 'user'])->prefix('user')->group(function () {
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('user.dashboard');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::post('/report-jobs', [\App\Http\Controllers\ReportJobController::class, 'store'])->name('report-jobs.store');
+    Route::get('/report-jobs/{reportJob}', [\App\Http\Controllers\ReportJobController::class, 'show'])->name('report-jobs.show');
+    Route::get('/report-jobs/{reportJob}/download', [\App\Http\Controllers\ReportJobController::class, 'download'])->name('report-jobs.download');
+});
+
+// Mock Portal Routes
+Route::prefix('mock-portal')->name('mock-portal.')->group(function () {
+    // Single entry point — the sharable link: https://irms.ac.tz/mock-portal
+    Route::get('/', [App\Http\Controllers\MockPortalAuthController::class, 'welcome'])->name('welcome');
+    Route::get('check-school/{code}', [App\Http\Controllers\MockPortalAuthController::class, 'checkSchool'])->name('check-school');
+    Route::get('districts/{region}', [App\Http\Controllers\MockPortalAuthController::class, 'getDistricts'])->name('districts');
+    Route::get('expired', [App\Http\Controllers\MockPortalAuthController::class, 'expired'])->name('expired');
+
+    Route::middleware('guest')->group(function () {
+        Route::get('login', [App\Http\Controllers\MockPortalAuthController::class, 'showLogin'])->name('login');
+        Route::post('login', [App\Http\Controllers\MockPortalAuthController::class, 'login'])->name('login.submit');
+        Route::get('register', [App\Http\Controllers\MockPortalAuthController::class, 'showRegister'])->name('register');
+        Route::post('register', [App\Http\Controllers\MockPortalAuthController::class, 'register'])->name('register.submit');
+        
+        // Forgot Password
+        Route::post('password/email', [App\Http\Controllers\MockPortalAuthController::class, 'sendResetLinkEmail'])->name('password.email');
+        Route::get('password/reset/{token}', [App\Http\Controllers\MockPortalAuthController::class, 'showResetForm'])->name('password.reset');
+        Route::post('password/reset', [App\Http\Controllers\MockPortalAuthController::class, 'resetPassword'])->name('password.update');
+    });
+    Route::middleware('auth')->group(function () {
+        Route::get('secretariat', [\App\Http\Controllers\ZonalControlCentreController::class, 'index'])->name('secretariat.dashboard');
+        Route::get('rao', [App\Http\Controllers\MockPortalRaoController::class, 'index'])->name('rao.dashboard');
+        Route::put('rao/candidate/{candidate}', [App\Http\Controllers\MockPortalRaoController::class, 'updateCandidate'])->name('rao.candidate.update');
+        Route::post('rao/candidate/reject', [App\Http\Controllers\MockPortalRaoController::class, 'rejectCandidate'])->name('rao.candidate.reject');
+        Route::delete('rao/candidate/{candidate}', [App\Http\Controllers\MockPortalRaoController::class, 'destroyCandidate'])->name('rao.candidate.destroy');
+        Route::get('dao', [App\Http\Controllers\MockPortalDaoController::class, 'index'])->name('dao.dashboard');
+        Route::get('dao/schools/report/pdf', [App\Http\Controllers\MockPortalDaoController::class, 'schoolsPdfReport'])->name('dao.schools.report.pdf');
+        Route::get('dao/cal-zip', [App\Http\Controllers\MockPortalDaoController::class, 'downloadCalZip'])->name('dao.download-cal-zip');
+        Route::post('dao/schools', [App\Http\Controllers\MockPortalDaoController::class, 'storeSchool'])->name('dao.schools.store');
+        Route::put('dao/schools/{school}', [App\Http\Controllers\MockPortalDaoController::class, 'updateSchool'])->name('dao.schools.update');
+        Route::delete('dao/schools/{school}', [App\Http\Controllers\MockPortalDaoController::class, 'destroySchool'])->name('dao.schools.destroy');
+        Route::post('dao/reject', [App\Http\Controllers\MockPortalDaoController::class, 'rejectError'])->name('dao.reject');
+        Route::get('school', [App\Http\Controllers\MockPortalHeadteacherController::class, 'index'])->name('school.dashboard');
+        Route::get('school/candidate', [App\Http\Controllers\MockPortalHeadteacherController::class, 'candidate'])->name('school.candidate');
+        Route::post('school/candidate/upload', [App\Http\Controllers\MockPortalHeadteacherController::class, 'uploadCandidates'])->name('school.candidate.upload');
+        Route::post('school/candidate', [App\Http\Controllers\MockPortalHeadteacherController::class, 'storeCandidate'])->name('school.candidate.store');
+        Route::put('school/candidate/{candidate}', [App\Http\Controllers\MockPortalHeadteacherController::class, 'updateCandidate'])->name('school.candidate.update');
+        Route::delete('school/candidate/{candidate}', [App\Http\Controllers\MockPortalHeadteacherController::class, 'destroyCandidate'])->name('school.candidate.destroy');
+        Route::get('school/candidate/template', [App\Http\Controllers\MockPortalHeadteacherController::class, 'downloadTemplate'])->name('school.candidate.template');
+        Route::post('school/update-ownership', [App\Http\Controllers\MockPortalHeadteacherController::class, 'updateOwnership'])->name('school.update-ownership');
+        Route::get('school/candidate/cal-report', [App\Http\Controllers\MockPortalHeadteacherController::class, 'calPdfReport'])->name('school.candidate.cal-report');
+    });
+});
+
+// ==================== SUBJECT PANEL VERIFICATION PORTAL ====================
+Route::prefix('subject-panel')->name('subject-panel.')->middleware(['auth', 'main-system'])->group(function () {
+    Route::get('verification', [App\Http\Controllers\SubjectPanelVerificationController::class, 'index'])
+        ->name('verification.index');
+    Route::get('verification/{rawMark}', [App\Http\Controllers\SubjectPanelVerificationController::class, 'show'])
+        ->name('verification.show');
+    Route::post('verification/{rawMark}/verify', [App\Http\Controllers\SubjectPanelVerificationController::class, 'verify'])
+        ->name('verification.verify');
+    Route::post('verification/{rawMark}/return', [App\Http\Controllers\SubjectPanelVerificationController::class, 'returnForCorrection'])
+        ->name('verification.return');
+});
+
+// Admin: Subject Panel Assignments (admin-only)
+Route::prefix('admin/subject-panel-assignments')->name('admin.subject-panel-assignments.')->middleware(['auth', 'admin'])->group(function () {
+    Route::get('/', [App\Http\Controllers\Admin\SubjectPanelAssignmentController::class, 'index'])
+        ->name('index');
+    Route::post('/', [App\Http\Controllers\Admin\SubjectPanelAssignmentController::class, 'store'])
+        ->name('store');
+    Route::delete('{subjectPanelAssignment}', [App\Http\Controllers\Admin\SubjectPanelAssignmentController::class, 'destroy'])
+        ->name('destroy');
+    Route::patch('{subjectPanelAssignment}/toggle', [App\Http\Controllers\Admin\SubjectPanelAssignmentController::class, 'toggleActive'])
+        ->name('toggle');
 });
