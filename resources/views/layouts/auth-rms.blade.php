@@ -1102,7 +1102,7 @@
                         </span>
                         <span>HOME</span>
                     </a>
-                    @if(!request()->routeIs('public.home'))
+                    @if(!request()->routeIs('public.home') && !request()->routeIs('login') && !request()->routeIs('mock-portal.login'))
                     <div class="nav-divider" aria-hidden="true"></div>
                     <a id="examSubmissionsLink" data-admin-email-gated="true" data-enabled-href="{{ route('exam-submissions.index') }}" href="{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? 'javascript:void(0)' : route('exam-submissions.index') }}" class="nav-link{{ request()->routeIs('exam-submissions.*') ? ' active' : '' }}{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? ' is-disabled disabled-nav-link' : '' }}" @if(request()->routeIs('exam-submissions.*')) aria-current="page" @endif @if($disableMockPortalHeaderNav || request()->routeIs('login')) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
@@ -1143,7 +1143,7 @@
                         </span>
                         <span>HOME</span>
                     </a>
-                    @if(!request()->routeIs('public.home'))
+                    @if(!request()->routeIs('public.home') && !request()->routeIs('login') && !request()->routeIs('mock-portal.login'))
                     <div class="mobile-nav-divider"></div>
                     <a data-admin-email-gated="true" data-enabled-href="{{ route('exam-submissions.index') }}" href="{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? 'javascript:void(0)' : route('exam-submissions.index') }}" class="mobile-nav-link{{ request()->routeIs('exam-submissions.*') ? ' active' : '' }}{{ $disableMockPortalHeaderNav || request()->routeIs('login') ? ' is-disabled disabled-nav-link' : '' }}" @if(request()->routeIs('exam-submissions.*')) aria-current="page" @endif @if($disableMockPortalHeaderNav || request()->routeIs('login')) tabindex="-1" aria-disabled="true" @endif>
                         <span class="nav-icon" aria-hidden="true">
