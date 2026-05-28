@@ -151,44 +151,85 @@
                     filter 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    /* Redesigned Card - inherits transition/hover behavior from Import Pupils card */
+    /* Redesigned Card - Premium elevated 3D panel with bezel top highlights and contact shadows */
     .login-card {
         position: relative;
         z-index: 1;
         width: 100%;
         max-width: 380px;
-        background: linear-gradient(135deg, #0d1b2a, #111e29) !important;
-        border: 1px solid rgba(191, 219, 254, 0.2) !important;
-        box-shadow: 0 24px 64px rgba(5, 10, 15, 0.5), 0 0 16px rgba(219, 234, 254, 0.08) !important;
+        background: linear-gradient(145deg, rgba(15, 31, 45, 0.98), rgba(8, 22, 35, 0.98)) !important;
+        border: 2px solid rgba(56, 189, 248, 0.45) !important;
+        box-shadow:
+            0 2px 0 rgba(255, 255, 255, 0.08) inset,
+            0 -10px 22px rgba(0, 0, 0, 0.38) inset,
+            0 10px 18px rgba(0, 0, 0, 0.55),
+            0 24px 55px rgba(0, 0, 0, 0.65),
+            0 0 32px rgba(14, 165, 233, 0.2),
+            0 0 70px rgba(14, 165, 233, 0.1) !important;
         border-radius: 16px !important;
         color: #f0f4f7 !important;
         font-family: 'Maiandra GD', sans-serif !important;
-        overflow: hidden;
+        overflow: visible !important; /* Allow pseudo contact shadows to overflow */
         display: flex;
         flex-direction: column;
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-                    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        transform: perspective(1200px) translateZ(0);
+        transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1),
+                    border-color 220ms cubic-bezier(0.4, 0, 0.2, 1),
+                    box-shadow 220ms cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
-    /* Interactive growth, shadow expansion, and border highlight */
+    /* Secondary Backlight projected directly behind the card */
+    .login-card::before {
+        content: "" !important;
+        position: absolute !important;
+        inset: -18px !important;
+        z-index: -1 !important;
+        border-radius: inherit !important;
+        background:
+            radial-gradient(circle at 50% 20%, rgba(14, 165, 233, 0.35), transparent 55%),
+            radial-gradient(circle at 50% 100%, rgba(6, 182, 212, 0.18), transparent 60%) !important;
+        filter: blur(18px) !important;
+        opacity: 0.9 !important;
+        pointer-events: none !important;
+        transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* Subtle Under-Card Contact Bezel Shadow to represent thickness */
+    .login-card::after {
+        content: "" !important;
+        position: absolute !important;
+        left: 18px !important;
+        right: 18px !important;
+        bottom: -16px !important;
+        height: 28px !important;
+        z-index: -2 !important;
+        border-radius: 999px !important;
+        background: rgba(0, 0, 0, 0.65) !important;
+        filter: blur(14px) !important;
+        pointer-events: none !important;
+        transition: all 220ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    /* 3D Growth, Elevation, and Glow Expansion on hover/focus */
     .login-card:hover,
     .login-card:focus-within {
-        transform: translateY(-2px) !important;
-        border-color: rgba(191, 219, 254, 0.4) !important;
-        box-shadow: 0 28px 72px rgba(5, 10, 15, 0.6), 0 0 28px rgba(219, 234, 254, 0.24) !important;
+        transform: perspective(1200px) translateY(-4px) scale(1.015) !important;
+        border-color: rgba(56, 189, 248, 0.75) !important;
+        box-shadow:
+            0 2px 0 rgba(255, 255, 255, 0.10) inset,
+            0 -12px 26px rgba(0, 0, 0, 0.42) inset,
+            0 14px 24px rgba(0, 0, 0, 0.62),
+            0 32px 70px rgba(0, 0, 0, 0.72),
+            0 0 42px rgba(14, 165, 233, 0.32),
+            0 0 90px rgba(14, 165, 233, 0.18) !important;
     }
 
     /* Sibling backlight response on hover/focus-within */
     .login-card:hover ~ .login-backlight,
     .login-card:focus-within ~ .login-backlight {
-        opacity: 1.25 !important;
-        transform: translate(-50%, -50%) scale(1.06) !important;
-        filter: blur(42px) !important;
-    }
-
-    .login-card::before {
-        display: none !important;
+        opacity: 1.35 !important;
+        transform: translate(-50%, -50%) scale(1.08) !important;
+        filter: blur(38px) !important;
     }
 
     .login-card-header {
@@ -204,7 +245,7 @@
         margin: 0 auto 12px;
         border-radius: 50%;
         overflow: hidden;
-        border: 3px solid rgba(0, 163, 221, 0.25) !important;
+        border: 3px solid rgba(56, 189, 248, 0.3) !important;
         background: linear-gradient(135deg, #080f15, #111e29) !important;
         box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3) !important;
     }
@@ -289,29 +330,30 @@
         opacity: 0.65 !important;
     }
 
-    /* Glassmorphic Form Inputs */
+    /* Glassmorphic Form Inputs - Sleek, solid background with inset shadows */
     .form-input {
         width: 100%;
         height: 42px !important;
         padding: 9px 40px 9px 38px !important;
-        background: rgba(8, 15, 21, 0.6) !important;
-        border: 1px solid rgba(0, 163, 221, 0.2) !important;
+        background: rgba(16, 28, 41, 0.85) !important;
+        border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4) !important;
         color: #f0f4f7 !important;
         border-radius: 8px !important;
         font-size: 0.85rem !important;
         font-family: inherit;
-        transition: all 0.2s ease !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
     .form-input:focus {
         outline: none !important;
-        border-color: #00A3DD !important;
-        box-shadow: 0 0 0 3px rgba(0, 163, 221, 0.15) !important;
+        border-color: #38bdf8 !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(56, 189, 248, 0.25) !important;
     }
 
     .form-input.is-invalid {
-        border-color: rgba(239, 68, 68, 0.4) !important;
-        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+        border-color: rgba(239, 68, 68, 0.45) !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
     }
 
     .password-toggle {
@@ -359,7 +401,7 @@
         cursor: default;
     }
 
-    /* Buttons Override */
+    /* Buttons Override - Beveled 3D Button with active press states */
     .login-button {
         width: 100%;
         height: 42px;
@@ -371,8 +413,11 @@
         font-family: inherit;
         color: #fff !important;
         background: linear-gradient(135deg, #00A3DD, #006fa3) !important;
-        box-shadow: 0 8px 24px rgba(0, 163, 221, 0.2) !important;
-        transition: all 0.2s ease !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.15) inset,
+            0 -3px 0 rgba(0, 0, 0, 0.25) inset,
+            0 6px 16px rgba(0, 163, 221, 0.25) !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         cursor: pointer;
         display: inline-flex;
         align-items: center;
@@ -382,8 +427,19 @@
 
     .login-button:hover {
         background: linear-gradient(135deg, #00b4f0, #0081be) !important;
-        box-shadow: 0 10px 28px rgba(0, 163, 221, 0.3) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.2) inset,
+            0 -3px 0 rgba(0, 0, 0, 0.25) inset,
+            0 8px 20px rgba(0, 163, 221, 0.35) !important;
         transform: translateY(-1px) !important;
+    }
+
+    .login-button:active {
+        transform: translateY(1px) scale(0.985) !important;
+        box-shadow:
+            0 1px 0 rgba(255, 255, 255, 0.05) inset,
+            0 -1px 0 rgba(0, 0, 0, 0.15) inset,
+            0 2px 6px rgba(0, 163, 221, 0.15) !important;
     }
 
     .login-button-secondary {
