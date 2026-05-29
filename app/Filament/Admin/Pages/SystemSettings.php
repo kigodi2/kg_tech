@@ -248,28 +248,28 @@ class SystemSettings extends Page implements HasForms
     public function saveSettings(): void
     {
         try {
-            $data = $this->form->getState();
+            $formState = $this->form->getState();
 
-            $enabledModules = array_values($data['enabledModules'] ?? []);
+            $enabledModules = array_values($formState['enabledModules'] ?? []);
 
             $data = [
-                'applicationName' => trim((string) ($data['applicationName'] ?? '')),
-                'systemTagline' => trim((string) ($data['systemTagline'] ?? '')),
-                'dashboardIdentity' => trim((string) ($data['dashboardIdentity'] ?? '')),
-                'systemLogo' => $data['systemLogo'] ?? null,
-                'primaryColor' => (string) ($data['primaryColor'] ?? ''),
-                'sidebarBg' => (string) ($data['sidebarBg'] ?? ''),
-                'topbarBg' => (string) ($data['topbarBg'] ?? ''),
-                'fontFamily' => (string) ($data['fontFamily'] ?? ''),
-                'timezone' => (string) ($data['timezone'] ?? ''),
-                'dateFormat' => (string) ($data['dateFormat'] ?? ''),
-                'currency' => (string) ($data['currency'] ?? ''),
+                'applicationName' => trim((string) ($formState['applicationName'] ?? '')),
+                'systemTagline' => trim((string) ($formState['systemTagline'] ?? '')),
+                'dashboardIdentity' => trim((string) ($formState['dashboardIdentity'] ?? '')),
+                'systemLogo' => $formState['systemLogo'] ?? null,
+                'primaryColor' => (string) ($formState['primaryColor'] ?? ''),
+                'sidebarBg' => (string) ($formState['sidebarBg'] ?? ''),
+                'topbarBg' => (string) ($formState['topbarBg'] ?? ''),
+                'fontFamily' => (string) ($formState['fontFamily'] ?? ''),
+                'timezone' => (string) ($formState['timezone'] ?? ''),
+                'dateFormat' => (string) ($formState['dateFormat'] ?? ''),
+                'currency' => (string) ($formState['currency'] ?? ''),
                 'enabledModules' => $enabledModules,
-                'importChunkSize' => $this->importChunkSize,
-                'maxZipSize' => $this->maxZipSize,
-                'cacheTtl' => $this->cacheTtl,
-                'maintenanceMode' => $this->maintenanceMode,
-                'systemNotes' => $this->systemNotes,
+                'importChunkSize' => (int) ($formState['importChunkSize'] ?? 1000),
+                'maxZipSize' => (int) ($formState['maxZipSize'] ?? 104857600),
+                'cacheTtl' => (int) ($formState['cacheTtl'] ?? 3600),
+                'maintenanceMode' => (bool) ($formState['maintenanceMode'] ?? false),
+                'systemNotes' => (string) ($formState['systemNotes'] ?? ''),
             ];
 
             if ($data['applicationName'] === '') {
@@ -315,6 +315,11 @@ class SystemSettings extends Page implements HasForms
                 throw new \Exception('Cache TTL must be at least 60 seconds');
             }
 
+            $oldMaintenanceMode = (bool) SystemSettingsHelper::getSetting('maintenance_mode', false);
+            $newMaintenanceMode = (bool) $data['maintenanceMode'];
+            $oldSystemNotes = (string) SystemSettingsHelper::getSetting('system_notes', '');
+            $newSystemNotes = (string) $data['systemNotes'];
+
             $settingsToSave = [
                 'application_name' => [$data['applicationName'], 'string', 'IRMS application display name'],
                 'system_tagline' => [$data['systemTagline'], 'string', 'IRMS system tagline'],
@@ -346,11 +351,76 @@ class SystemSettings extends Page implements HasForms
                 $this->saveSettingWithAudit($key, $value, $type, $description);
             }
 
+            // Sync component properties
+            $this->applicationName = $data['applicationName'];
+            $this->systemTagline = $data['systemTagline'];
+            $this->dashboardIdentity = $data['dashboardIdentity'];
+            $this->systemLogo = $data['systemLogo'];
+            $this->primaryColor = $data['primaryColor'];
+            $this->sidebarBg = $data['sidebarBg'];
+            $this->topbarBg = $data['topbarBg'];
+            $this->fontFamily = $data['fontFamily'];
+            $this->timezone = $data['timezone'];
+            $this->dateFormat = $data['dateFormat'];
+            $this->currency = $data['currency'];
+            $this->enabledModules = $data['enabledModules'];
+            $this->importChunkSize = $data['importChunkSize'];
+            $this->maxZipSize = $data['maxZipSize'];
+            $this->cacheTtl = $data['cacheTtl'];
+            $this->maintenanceMode = $data['maintenanceMode'];
+            $this->systemNotes = $data['systemNotes'];
+
             SystemSettingsHelper::refreshSettingsCache();
+
+            // Distinct Audit Logging for Maintenance Mode Transitions and Notes
+            $user = auth()->user();
+            if ($oldMaintenanceMode !== $newMaintenanceMode) {
+                $actionName = $newMaintenanceMode ? 'system_maintenance_enabled' : 'system_maintenance_disabled';
+                GovernanceAuditLog::log(
+                    $actionName,
+                    userId: $user?->id,
+                    adminId: $user?->id,
+                    data: [
+                        'action' => $actionName,
+                        'old_value' => $oldMaintenanceMode ? 'enabled' : 'disabled',
+                        'new_value' => $newMaintenanceMode ? 'enabled' : 'disabled',
+                        'changed_by' => $user?->email ?? 'unknown',
+                        'changed_at' => now()->toDateTimeString(),
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent(),
+                        'system_notes' => $newSystemNotes,
+                        'system_notes_changed' => $oldSystemNotes !== $newSystemNotes,
+                    ]
+                );
+            } elseif ($oldSystemNotes !== $newSystemNotes) {
+                GovernanceAuditLog::log(
+                    'system_maintenance_notes_updated',
+                    userId: $user?->id,
+                    adminId: $user?->id,
+                    data: [
+                        'action' => 'system_maintenance_notes_updated',
+                        'old_value' => $oldSystemNotes,
+                        'new_value' => $newSystemNotes,
+                        'changed_by' => $user?->email ?? 'unknown',
+                        'changed_at' => now()->toDateTimeString(),
+                        'ip_address' => request()->ip(),
+                        'user_agent' => request()->userAgent(),
+                    ]
+                );
+            }
+
+            // Success notifications
+            if ($oldMaintenanceMode !== $newMaintenanceMode) {
+                $bodyMessage = $newMaintenanceMode 
+                    ? 'Maintenance Mode enabled successfully. Non-authorized users will now see the maintenance notice.' 
+                    : 'Maintenance Mode disabled successfully. The system is now accessible.';
+            } else {
+                $bodyMessage = 'All system settings have been saved successfully.';
+            }
 
             Notification::make()
                 ->title('Settings Updated')
-                ->body('All system settings have been saved successfully.')
+                ->body($bodyMessage)
                 ->success()
                 ->send();
         } catch (\Exception $e) {
