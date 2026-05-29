@@ -30,7 +30,7 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-family: 'Maiandra GD', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             background:
                 linear-gradient(rgba(247, 250, 252, 0.72), rgba(238, 243, 248, 0.82)),
                 url("{{ asset('assets/rms-login/images/bg.jpg') }}") center center / cover no-repeat fixed,
@@ -203,7 +203,52 @@
             line-height: 1.6;
             color: #374151;
             text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Countdown Style */
+        .countdown-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
             margin-bottom: 24px;
+            padding: 16px;
+            background: rgba(14, 76, 140, 0.05);
+            border: 1px solid rgba(14, 76, 140, 0.12);
+            border-radius: 16px;
+            box-shadow: inset 0 2px 4px rgba(14, 76, 140, 0.02);
+        }
+
+        .countdown-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+
+        .countdown-box span:first-child {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0e4c8c;
+            line-height: 1.1;
+        }
+
+        .countdown-label {
+            font-size: 0.68rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 4px;
+            letter-spacing: 0.05em;
+        }
+
+        .countdown-divider {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0e4c8c;
+            margin-bottom: 14px;
+            line-height: 1;
         }
 
         .info-grid {
@@ -452,6 +497,24 @@
                     </p>
                 </div>
 
+                {{-- Real-Time Countdown Timer --}}
+                <div class="countdown-container">
+                    <div class="countdown-box">
+                        <span id="countdown-hours">05</span>
+                        <span class="countdown-label">Hours</span>
+                    </div>
+                    <div class="countdown-divider">:</div>
+                    <div class="countdown-box">
+                        <span id="countdown-minutes">00</span>
+                        <span class="countdown-label">Minutes</span>
+                    </div>
+                    <div class="countdown-divider">:</div>
+                    <div class="countdown-box">
+                        <span id="countdown-seconds">00</span>
+                        <span class="countdown-label">Seconds</span>
+                    </div>
+                </div>
+
                 {{-- Dynamic Administrator Notice --}}
                 @php
                     $systemNotes = trim((string) \App\Helpers\SystemSettingsHelper::getSetting('system_notes', ''));
@@ -497,7 +560,7 @@
                     <div class="info-card">
                         <div class="info-card-icon">
                             <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
                             </svg>
                         </div>
                         <div>
@@ -524,7 +587,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                     <div>
-                        <strong>Estimated downtime: 2–3 hours</strong>
+                        <strong>Estimated downtime: 5 hours</strong>
                         <span>Service access will resume as soon as the database migration concludes.</span>
                     </div>
                 </div>
@@ -550,5 +613,44 @@
             </div>
         </div>
     </footer>
+
+    {{-- Countdown Script --}}
+    <script>
+        (function() {
+            // Set countdown target to exactly 5 hours from first load, persisting in localStorage
+            let targetTime = localStorage.getItem('irms_maintenance_target');
+            const fiveHoursInMs = 5 * 60 * 60 * 1000;
+            const now = new Date().getTime();
+
+            if (!targetTime || Math.abs(now - parseInt(targetTime)) > fiveHoursInMs * 2) {
+                targetTime = now + fiveHoursInMs;
+                localStorage.setItem('irms_maintenance_target', targetTime);
+            }
+
+            function updateCountdown() {
+                const current = new Date().getTime();
+                const distance = parseInt(targetTime) - current;
+
+                if (distance < 0) {
+                    // Show 00:00:00 when countdown concludes
+                    document.getElementById('countdown-hours').innerText = '00';
+                    document.getElementById('countdown-minutes').innerText = '00';
+                    document.getElementById('countdown-seconds').innerText = '00';
+                    return;
+                }
+
+                const hours = Math.floor(distance / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById('countdown-hours').innerText = String(hours).padStart(2, '0');
+                document.getElementById('countdown-minutes').innerText = String(minutes).padStart(2, '0');
+                document.getElementById('countdown-seconds').innerText = String(seconds).padStart(2, '0');
+            }
+
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+        })();
+    </script>
 </body>
 </html>
