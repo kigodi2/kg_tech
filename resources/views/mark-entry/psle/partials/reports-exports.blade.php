@@ -213,39 +213,44 @@
                                     <td><span class="badge badge-red">PDF</span></td>
                                     <td style="text-align: right;">
                                         @php
-                                            $enteredMarksExamYearLabel = \App\Models\ExamYear::where('id', $activeFilters['exam_year_id'])->value('year_label');
+                                            $enteredMarksExamYearLabel = \App\Models\ExamYear::where('id', $activeFilters['exam_year_id'] ?? null)->value('year_label');
 
                                             $enteredMarksFilters = array_merge($activeFilters, [
                                                 'exam_year' => $enteredMarksExamYearLabel,
                                             ]);
 
-                                            $isSingleSubject = !empty($activeFilters['school_id']) && !empty($activeFilters['subject_id']);
+                                            $selectedRegionId = $activeFilters['region_id'] ?? null;
+                                            $selectedDistrictId = $activeFilters['district_id'] ?? null;
+                                            $selectedSchoolId = $activeFilters['school_id'] ?? null;
+                                            $selectedSubjectId = $activeFilters['subject_id'] ?? null;
 
-                                            /*
-                                             * Priority:
-                                             * 1. School + Subject = single subject PDF.
-                                             * 2. District selected = whole district ZIP.
-                                             * 3. School selected = school ZIP.
-                                             * 4. Region selected = region ZIP.
-                                             */
-                                            if ($isSingleSubject) {
+                                            $selectedRegionId = $selectedRegionId !== '' ? $selectedRegionId : null;
+                                            $selectedDistrictId = $selectedDistrictId !== '' ? $selectedDistrictId : null;
+                                            $selectedSchoolId = $selectedSchoolId !== '' ? $selectedSchoolId : null;
+                                            $selectedSubjectId = $selectedSubjectId !== '' ? $selectedSubjectId : null;
+
+                                            if (!empty($selectedSchoolId) && !empty($selectedSubjectId)) {
                                                 $enteredMarksEndpoint = '/api/mark-entry/psle/reports/entered-marks-pdf';
-                                            } elseif (!empty($activeFilters['district_id'])) {
+                                            } elseif (!empty($selectedDistrictId)) {
                                                 $enteredMarksEndpoint = '/api/mark-entry/psle/reports/entered-marks-pdf/district-zip';
                                                 unset($enteredMarksFilters['school_id'], $enteredMarksFilters['subject_id']);
-                                            } elseif (!empty($activeFilters['school_id'])) {
+                                            } elseif (!empty($selectedSchoolId)) {
                                                 $enteredMarksEndpoint = '/api/mark-entry/psle/reports/entered-marks-pdf/school-zip';
                                                 unset($enteredMarksFilters['subject_id']);
-                                            } elseif (!empty($activeFilters['region_id'])) {
+                                            } elseif (!empty($selectedRegionId)) {
                                                 $enteredMarksEndpoint = '/api/mark-entry/psle/reports/entered-marks-pdf/region-zip';
                                                 unset($enteredMarksFilters['district_id'], $enteredMarksFilters['school_id'], $enteredMarksFilters['subject_id']);
                                             } else {
                                                 $enteredMarksEndpoint = null;
                                             }
+
+                                            $enteredMarksFilters = array_filter($enteredMarksFilters, function ($value) {
+                                                return $value !== null && $value !== '';
+                                            });
                                         @endphp
 
                                         @if($enteredMarksEndpoint)
-                                            @if($isSingleSubject)
+                                            @if(!empty($selectedSchoolId) && !empty($selectedSubjectId))
                                                 <a href="{{ url($enteredMarksEndpoint) }}?{{ http_build_query($enteredMarksFilters) }}" class="btn btn-download-active btn-sm">
                                                     <i class="fas fa-download"></i> Download
                                                 </a>
