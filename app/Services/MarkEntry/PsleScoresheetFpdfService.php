@@ -396,22 +396,43 @@ class PsleScoresheetFpdfService
         $pdfFiles = [];
         $exportedSchoolCount = 0;
 
-        foreach ($districts as $district) {
-            $schools = $this->getSchoolsWithEnteredMarks($examYearLabel, (int) $district->id, $mode);
-            foreach ($schools as $school) {
-                $subjects = $this->getEnteredSubjects($examYearLabel, (int) $school->id, $mode);
-                foreach ($subjects as $subject) {
-                    $data = $this->buildEnteredMarksSheetData($examYearLabel, (int) $school->id, (int) $subject->id, $mode);
-                    $schoolFolderName = $this->displayFileLabel($school->name, 'SCHOOL');
-                    $subjectFileName = $this->displayFileLabel($subject->name ?? $subject->code, 'SUBJECT');
-                    $entryName = sprintf('%s/%s/%s_%s_entered.pdf', $district->code ?: $district->id, $schoolFolderName, $subjectFileName, $examYear->year_label);
-                    $pdfPath = base_path(self::TEMP_DIR . '/' . str_replace('/', '_', $entryName));
-                    $this->renderPdf($data, $pdfPath);
-                    $zip->addFile($pdfPath, $entryName);
-                    $pdfFiles[] = $pdfPath;
-                }
-                $exportedSchoolCount++;
+        $districtNames = District::query()
+            ->where('region_id', $regionId)
+            ->pluck('name', 'id');
+
+        $schools = $this->getRegionSchoolsWithEnteredMarks($examYearLabel, $regionId, $mode);
+
+        foreach ($schools as $school) {
+            $subjects = $this->getEnteredSubjects($examYearLabel, (int) $school->id, $mode);
+
+            $districtFolderName = $this->displayFileLabel(
+                $districtNames[$school->district_id] ?? ('DISTRICT_' . $school->district_id),
+                'DISTRICT'
+            );
+
+            $schoolFolderName = $this->displayFileLabel($school->name, 'SCHOOL');
+
+            foreach ($subjects as $subject) {
+                $data = $this->buildEnteredMarksSheetData($examYearLabel, (int) $school->id, (int) $subject->id, $mode);
+
+                $subjectFileName = $this->displayFileLabel($subject->name ?? $subject->code, 'SUBJECT');
+
+                $entryName = sprintf(
+                    '%s/%s/%s_%s_entered.pdf',
+                    $districtFolderName,
+                    $schoolFolderName,
+                    $subjectFileName,
+                    $examYear->year_label
+                );
+
+                $pdfPath = base_path(self::TEMP_DIR . '/' . str_replace('/', '_', $entryName));
+
+                $this->renderPdf($data, $pdfPath);
+                $zip->addFile($pdfPath, $entryName);
+                $pdfFiles[] = $pdfPath;
             }
+
+            $exportedSchoolCount++;
         }
 
         if ($exportedSchoolCount === 0) {
@@ -1168,6 +1189,28 @@ class PsleScoresheetFpdfService
             ->where('raw_marks.has_errors', false)
             ->select('schools.id', 'schools.code', 'schools.name')
             ->groupBy('schools.id', 'schools.code', 'schools.name')
+            ->orderBy('schools.name')
+            ->get();
+    }
+
+    private function getRegionSchoolsWithEnteredMarks(string $examYearLabel, int $regionId, string $mode = 'approved'): Collection
+    {
+        $examYear = $this->resolveExamYear($examYearLabel);
+
+        return RawMark::query()
+            ->join('schools', 'schools.id', '=', 'raw_marks.school_id')
+            ->where('raw_marks.exam_year_id', $examYear->id)
+            ->where('schools.region_id', $regionId)
+            ->where('raw_marks.has_errors', false)
+            ->where(function ($query) {
+                $query->whereNotNull('raw_marks.paper_1_marks')
+                    ->orWhereNotNull('raw_marks.paper_2_marks')
+                    ->orWhereNotNull('raw_marks.paper_3_marks')
+                    ->orWhereNotNull('raw_marks.practical_marks')
+                    ->orWhereNotNull('raw_marks.project_marks');
+            })
+            ->select('schools.id', 'schools.code', 'schools.name', 'schools.district_id')
+            ->groupBy('schools.id', 'schools.code', 'schools.name', 'schools.district_id')
             ->orderBy('schools.name')
             ->get();
     }
