@@ -10,6 +10,8 @@ use App\Models\GovernanceAuditLog;
 use App\Models\MarkEntryAssignment;
 use App\Models\MarkImportBatch;
 use App\Models\PsleActivityLog;
+use App\Models\Region;
+use App\Models\District;
 use App\Services\MarkEntry\PsleMarkEntryService;
 use App\Services\MarkEntry\PsleScoresheetFpdfService;
 use App\Services\PsleActivityLogger;
