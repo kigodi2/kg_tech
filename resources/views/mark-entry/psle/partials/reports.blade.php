@@ -161,8 +161,32 @@
                     <div style="font-weight: 700; color: var(--tz-yellow);">Full Regional Export</div>
                     <div style="font-size: 0.85rem; color: var(--tz-text-muted);">Consolidated ZIP package containing all locked marks for the region. Ready for national promotion.</div>
                 </div>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-primary" style="background: var(--tz-yellow); color: #000; width: 100%;"><i class="fas fa-download"></i> Download Regional Package</button>
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    @php
+                        $regionalPackageExamYearLabel = \App\Models\ExamYear::where('id', $activeFilters['exam_year_id'] ?? null)->value('year_label');
+
+                        $regionalPackageFilters = [
+                            'exam_year_id' => $activeFilters['exam_year_id'] ?? null,
+                            'region_id' => $activeFilters['region_id'] ?? null,
+                            'exam_year' => $regionalPackageExamYearLabel,
+                        ];
+
+                        $regionalPackageFilters = array_filter($regionalPackageFilters, function ($value) {
+                            return $value !== null && $value !== '';
+                        });
+
+                        $regionalPackageUrl = url('/api/mark-entry/psle/reports/entered-marks-pdf/region-zip') . '?' . http_build_query($regionalPackageFilters);
+                    @endphp
+
+                    @if(!empty($activeFilters['exam_year_id']) && !empty($activeFilters['region_id']))
+                        <a href="{{ $regionalPackageUrl }}" class="btn btn-primary" style="background: var(--tz-yellow); color: #000; width: 100%; text-decoration: none; text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                            <i class="fas fa-download"></i> Download Regional Package
+                        </a>
+                    @else
+                        <button class="btn btn-primary" style="background: var(--tz-yellow); color: #000; width: 100%;" disabled title="Please select Exam Year and Region first">
+                            <i class="fas fa-lock"></i> Download Regional Package
+                        </button>
+                    @endif
                 </div>
             </div>
         </div>

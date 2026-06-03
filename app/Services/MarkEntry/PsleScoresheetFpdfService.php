@@ -384,7 +384,8 @@ class PsleScoresheetFpdfService
         $districts = District::query()->where('region_id', $regionId)->orderBy('name')->get();
 
         $this->ensureTempDirectory();
-        $zipFilename = sprintf('region_%s_%s_psle_entered_marks_sheets.zip', $region->code ?: $region->id, $examYear->year_label);
+        $regionFileName = $this->displayFileLabel($region->name ?? ('region_' . $region->id), 'REGION');
+        $zipFilename = sprintf('%s_%s_psle_entered_marks_sheets.zip', $regionFileName, $examYear->year_label);
         $zipPath = base_path(self::TEMP_DIR . '/' . $zipFilename);
 
         $zip = new ZipArchive();
