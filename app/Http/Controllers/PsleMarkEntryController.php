@@ -68,7 +68,7 @@ class PsleMarkEntryController extends Controller
         // Active Exam Year & Filters
         $activeYear = \App\Models\ExamYear::where('is_active', true)->first();
         $examYears = \App\Models\ExamYear::orderBy('year_label', 'desc')->get();
-        $selectedYearId = $request->query('exam_year_id', $activeYear?->id);
+        $selectedYearId = $this->normalizeOptionalId($request->query('exam_year_id')) ?? $activeYear?->id;
         $selectedStatus = $request->query('status');
         $selectedCreatedBy = $request->query('created_by');
 
@@ -122,7 +122,7 @@ class PsleMarkEntryController extends Controller
         $regions = $regionsQuery->get();
 
         // Safe URL Overrides
-        $selectedRegionId = $request->query('region_id');
+        $selectedRegionId = $this->normalizeOptionalId($request->query('region_id'));
         if ($allowedRegionId) {
             $selectedRegionId = $allowedRegionId; // Force REO/Officer to their own region
         } elseif ($selectedRegionId) {
@@ -135,7 +135,7 @@ class PsleMarkEntryController extends Controller
         }
 
         $districts = collect();
-        $selectedDistrictId = $request->query('district_id');
+        $selectedDistrictId = $this->normalizeOptionalId($request->query('district_id'));
         if ($selectedRegionId) {
             $districtsQuery = \App\Models\District::where('region_id', $selectedRegionId)
                 ->whereHas('schools', function($q) {
@@ -164,7 +164,7 @@ class PsleMarkEntryController extends Controller
         }
 
         $schools = collect();
-        $selectedSchoolId = $request->query('school_id');
+        $selectedSchoolId = $this->normalizeOptionalId($request->query('school_id'));
         if ($selectedDistrictId || $selectedRegionId) {
             $schoolsQuery = \App\Models\School::whereIn('school_type', ['PRIMARY', 'BOTH'])
                 ->where('education_level', 'PRIMARY');
@@ -223,7 +223,7 @@ class PsleMarkEntryController extends Controller
             }
         }
         $psleSubjects = $psleSubjectsQuery->orderBy('code')->get();
-        $selectedSubjectId = $request->query('subject_id');
+        $selectedSubjectId = $this->normalizeOptionalId($request->query('subject_id'));
 
         $currentView = $request->query('view', 'overview');
         $allowedViews = [
@@ -265,14 +265,7 @@ class PsleMarkEntryController extends Controller
         );
 
         $cachedMetrics = \Illuminate\Support\Facades\Cache::remember($statsCacheKey, 30, function() use ($selectedYearId, $psleExamTypeId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId, $selectedSubjectId, $psleSubjects) {
-            $candidatesQuery = \App\Models\Candidate::whereHas('examRegistrations', function($q) use ($selectedYearId, $psleExamTypeId) {
-                    $q->where('exam_type_id', $psleExamTypeId);
-                    if ($selectedYearId) $q->where('exam_year_id', $selectedYearId);
-                })
-                ->whereHas('school', function($q) {
-                    $q->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                      ->where('education_level', 'PRIMARY');
-                });
+            $candidatesQuery = \App\Services\PsleCandidateRosterService::rosterQuery((int) $selectedYearId);
 
             if ($selectedRegionId) {
                 $candidatesQuery->whereHas('school', function($q) use ($selectedRegionId) {
@@ -285,7 +278,7 @@ class PsleMarkEntryController extends Controller
                 });
             }
             if ($selectedSchoolId) {
-                $candidatesQuery->where('school_id', $selectedSchoolId);
+                $candidatesQuery->where('candidates.school_id', $selectedSchoolId);
             }
 
             $candidateCount = $candidatesQuery->count();
@@ -310,6 +303,14 @@ class PsleMarkEntryController extends Controller
                     if ($selectedDistrictId) $q->where('district_id', $selectedDistrictId);
                     if ($selectedSchoolId) $q->where('school_id', $selectedSchoolId);
                     if ($selectedSubjectId) $q->where('subject_id', $selectedSubjectId);
+                })
+                ->where(function($q) {
+                    $q->whereNotNull('paper_1_marks')
+                      ->orWhereNotNull('paper_2_marks')
+                      ->orWhereNotNull('paper_3_marks')
+                      ->orWhereNotNull('practical_marks')
+                      ->orWhereNotNull('project_marks')
+                      ->orWhereNotNull('subject_status');
                 });
 
             $enteredMarksCount = $marksQuery->count();
@@ -319,15 +320,13 @@ class PsleMarkEntryController extends Controller
             $regionMissingMarksCount = 0;
             $subjectStats = [];
             
-            $regionCandidateCount = \App\Models\Candidate::whereHas('examRegistrations', function($q) use ($selectedYearId, $psleExamTypeId) {
-                    $q->where('exam_type_id', $psleExamTypeId);
-                    if ($selectedYearId) $q->where('exam_year_id', $selectedYearId);
-                })
-                ->whereHas('school', function($q) use ($selectedRegionId) {
-                    $q->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                      ->where('education_level', 'PRIMARY');
-                    if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
-                })->count();
+            $regionCandidatesQuery = \App\Services\PsleCandidateRosterService::rosterQuery((int) $selectedYearId);
+            if ($selectedRegionId) {
+                $regionCandidatesQuery->whereHas('school', function($q) use ($selectedRegionId) {
+                    $q->where('region_id', $selectedRegionId);
+                });
+            }
+            $regionCandidateCount = $regionCandidatesQuery->count();
 
             foreach ($psleSubjects as $subject) {
                 $sMarksQuery = \App\Models\RawMark::where('subject_id', $subject->id)
@@ -348,6 +347,14 @@ class PsleMarkEntryController extends Controller
                         if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
                         if ($selectedDistrictId) $q->where('district_id', $selectedDistrictId);
                         if ($selectedSchoolId) $q->where('school_id', $selectedSchoolId);
+                    })
+                    ->where(function($q) {
+                        $q->whereNotNull('paper_1_marks')
+                          ->orWhereNotNull('paper_2_marks')
+                          ->orWhereNotNull('paper_3_marks')
+                          ->orWhereNotNull('practical_marks')
+                          ->orWhereNotNull('project_marks')
+                          ->orWhereNotNull('subject_status');
                     });
 
                 // Global region-wide query for the region summary card
@@ -367,6 +374,14 @@ class PsleMarkEntryController extends Controller
                         $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
                         if ($yearLabel) $q->where('exam_year', $yearLabel);
                         if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
+                    })
+                    ->where(function($q) {
+                        $q->whereNotNull('paper_1_marks')
+                          ->orWhereNotNull('paper_2_marks')
+                          ->orWhereNotNull('paper_3_marks')
+                          ->orWhereNotNull('practical_marks')
+                          ->orWhereNotNull('project_marks')
+                          ->orWhereNotNull('subject_status');
                     });
 
                 $enteredCount = $sMarksQuery->count();
@@ -866,7 +881,7 @@ class PsleMarkEntryController extends Controller
                     'critical' => (clone $valStatsQuery)->where('status', 'open')->where('severity', 'critical')->count(),
                 ];
             }
-        } elseif ($currentView === 'reports-exports') {
+        } elseif ($currentView === 'reports' || $currentView === 'reports-exports') {
             // Summary for the reports page using pre-calculated metrics
             $reportSummary = [
                 'total_candidates' => $candidateCount,
@@ -4452,6 +4467,29 @@ class PsleMarkEntryController extends Controller
         return redirect()->back()->with('success', 'Batch unlocked successfully.');
     }
 
+    private function normalizeOptionalId($value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+        }
+
+        if ($value === '' || $value === 'null' || $value === 'undefined' || $value === 'all' || $value === '0') {
+            return null;
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $id = (int) $value;
+
+        return $id > 0 ? $id : null;
+    }
+
     private function validateReportScope(Request $request, ?int $targetRegionId = null): void
     {
         $user = $request->user();
@@ -4837,30 +4875,24 @@ class PsleMarkEntryController extends Controller
     public function reportsSummary(Request $request)
     {
         $user = $request->user();
-        $this->validateReportScope($request, $request->query('region_id'));
-
-        $examYearId = $request->query('exam_year_id');
-        $regionId = $request->query('region_id');
-        $districtId = $request->query('district_id');
-        $schoolId = $request->query('school_id');
-        $subjectId = $request->query('subject_id');
+        
+        $examYearId = $this->normalizeOptionalId($request->query('exam_year_id')) ?? \App\Models\ExamYear::where('is_active', true)->value('id');
+        $regionId = $this->normalizeOptionalId($request->query('region_id'));
+        $districtId = $this->normalizeOptionalId($request->query('district_id'));
+        $schoolId = $this->normalizeOptionalId($request->query('school_id'));
+        $subjectId = $this->normalizeOptionalId($request->query('subject_id'));
 
         if ($user->region_id && !$user->isAdmin()) {
             $regionId = $user->region_id;
         }
 
+        $this->validateReportScope($request, $regionId);
+
         $examYear = ExamYear::findOrFail($examYearId);
         $psleExamType = \App\Models\ExamType::where('code', 'PSLE')->firstOrFail();
 
         // Total candidates count
-        $candidatesQuery = \App\Models\Candidate::whereHas('examRegistrations', function($q) use ($examYearId, $psleExamType) {
-                $q->where('exam_type_id', $psleExamType->id);
-                if ($examYearId) $q->where('exam_year_id', $examYearId);
-            })
-            ->whereHas('school', function($q) {
-                $q->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                  ->where('education_level', 'PRIMARY');
-            });
+        $candidatesQuery = \App\Services\PsleCandidateRosterService::rosterQuery((int) $examYearId);
 
         if ($regionId) {
             $candidatesQuery->whereHas('school', fn($q) => $q->where('region_id', $regionId));
@@ -4869,7 +4901,7 @@ class PsleMarkEntryController extends Controller
             $candidatesQuery->whereHas('school', fn($q) => $q->where('district_id', $districtId));
         }
         if ($schoolId) {
-            $candidatesQuery->where('school_id', $schoolId);
+            $candidatesQuery->where('candidates.school_id', $schoolId);
         }
         $totalCandidates = $candidatesQuery->count();
 
@@ -4892,6 +4924,14 @@ class PsleMarkEntryController extends Controller
                 if ($districtId) $q->where('district_id', $districtId);
                 if ($schoolId) $q->where('school_id', $schoolId);
                 if ($subjectId) $q->where('subject_id', $subjectId);
+            })
+            ->where(function($q) {
+                $q->whereNotNull('paper_1_marks')
+                  ->orWhereNotNull('paper_2_marks')
+                  ->orWhereNotNull('paper_3_marks')
+                  ->orWhereNotNull('practical_marks')
+                  ->orWhereNotNull('project_marks')
+                  ->orWhereNotNull('subject_status');
             });
         $totalMarks = $marksQuery->count();
 
@@ -4930,6 +4970,14 @@ class PsleMarkEntryController extends Controller
                     if ($regionId) $q->where('region_id', $regionId);
                     if ($districtId) $q->where('district_id', $districtId);
                     if ($schoolId) $q->where('school_id', $schoolId);
+                })
+                ->where(function($q) {
+                    $q->whereNotNull('paper_1_marks')
+                      ->orWhereNotNull('paper_2_marks')
+                      ->orWhereNotNull('paper_3_marks')
+                      ->orWhereNotNull('practical_marks')
+                      ->orWhereNotNull('project_marks')
+                      ->orWhereNotNull('subject_status');
                 });
             
             $entered = $subjMarksQuery->count();

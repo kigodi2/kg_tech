@@ -25,7 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         // Trust all proxies (needed for irms.ac.tz HTTPS behind nginx/load balancer)
-        $middleware->trustProxies(at: '*');
+        if (isset($_SERVER['REMOTE_ADDR'])) {
+            $middleware->trustProxies(at: '*');
+        }
 
         $middleware->redirectGuestsTo(function (Request $request) {
             // If guest hits a mock-portal protected route → send to mock-portal login
