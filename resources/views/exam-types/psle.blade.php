@@ -2661,7 +2661,6 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                                      </div>
                                  </div>
                              </div>
-                        </div>
 
                         <div x-show="importReport.rows && importReport.rows.length > 0" class="space-y-2">
                                 <h4 class="font-semibold text-gray-700">Preview Records</h4>
