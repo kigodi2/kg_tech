@@ -2561,17 +2561,21 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
 
                             <!-- Validation Status Message -->
                             <div class="rounded-2xl border p-4 text-sm" 
-                                 :class="importSummaryValue('valid_rows') > 0 ? (importReport.error_count > 0 || importSummaryValue('duplicate_conflicts') > 0 ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-green-200 bg-green-50 text-green-900') : 'border-red-200 bg-red-50 text-red-900'">
+                                 :class="(importSummaryValue('duplicate_conflicts') > 0 || importReport.error_count > 0) 
+                                         ? 'border-rose-500 bg-rose-950 text-rose-50' 
+                                         : 'border-emerald-600 bg-emerald-950 text-emerald-50'">
                                 <div class="flex items-start gap-3">
                                     <div class="mt-0.5">
                                         <i class="fas text-lg" 
-                                           :class="importSummaryValue('valid_rows') > 0 ? (importReport.error_count > 0 || importSummaryValue('duplicate_conflicts') > 0 ? 'fa-exclamation-triangle text-amber-500' : 'fa-circle-check text-green-500') : 'fa-circle-xmark text-red-500'"></i>
+                                           :class="(importSummaryValue('duplicate_conflicts') > 0 || importReport.error_count > 0) 
+                                                   ? 'fa-exclamation-triangle text-rose-400' 
+                                                   : 'fa-circle-check text-emerald-400'"></i>
                                     </div>
                                     <div class="space-y-1">
-                                        <p class="font-bold" x-text="`Validation completed. ${importSummaryValue('duplicate_conflicts')} conflict row${importSummaryValue('duplicate_conflicts') == 1 ? '' : 's'} found. ${importSummaryValue('valid_rows')} valid row${importSummaryValue('valid_rows') == 1 ? ' is' : 's are'} available for import.`"></p>
+                                        <p class="font-bold text-base" :class="(importSummaryValue('duplicate_conflicts') > 0 || importReport.error_count > 0) ? 'text-white' : 'text-emerald-100'" x-text="`Validation completed. ${importSummaryValue('duplicate_conflicts')} conflict row${importSummaryValue('duplicate_conflicts') == 1 ? '' : 's'} found. ${importSummaryValue('valid_rows')} valid row${importSummaryValue('valid_rows') == 1 ? ' is' : 's are'} available for import.`"></p>
                                         
                                         <template x-if="importSummaryValue('valid_rows') > 0 && (importReport.error_count > 0 || importSummaryValue('duplicate_conflicts') > 0)">
-                                            <p class="text-xs font-semibold">Only valid non-conflicting rows will be imported. Error/conflict rows will be skipped.</p>
+                                            <p class="text-xs font-semibold text-rose-200">Only valid non-conflicting rows will be imported. Error/conflict rows will be skipped.</p>
                                         </template>
                                     </div>
                                 </div>
@@ -2594,56 +2598,72 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                                         <i class="fas fa-download text-xs"></i> Download Errors
                                     </button>
                                 </div>
-                            <div class="registration-modal-panel overflow-hidden">
+                                <div class="registration-modal-panel overflow-hidden">
                                     <div class="overflow-x-auto">
-                                        <table class="w-full text-sm">
-                                            <thead class="bg-gray-100 border-b border-gray-200">
-                                                <tr>
-                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
-                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Candidate No</th>
-                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Pupil Name</th>
-                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Issue Type</th>
-                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Details</th>
-                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Recommended Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-gray-200">
-                                                <template x-for="(error, idx) in importReport.errors.slice(0, 50)" :key="idx">
-                                                    <tr class="hover:bg-gray-50">
-                                                        <td class="px-3 py-2 text-gray-600 text-xs" x-text="error.row_number"></td>
-                                                        <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="error.candidate_id || '-'"></td>
-                                                        <td class="px-3 py-2 text-gray-600 text-xs" x-text="error.full_name || '-'"></td>
-                                                        <td class="px-3 py-2">
-                                                            <span class="inline-block px-2 py-1 rounded text-xs font-semibold"
-                                                                  :class="error.is_conflict ? 'bg-rose-100 text-rose-800' : 'bg-red-100 text-red-800'"
-                                                                  x-text="error.is_conflict ? 'Duplicate Conflict' : 'Validation Error'"></span>
-                                                        </td>
-                                                        <td class="px-3 py-2 text-xs">
-                                                             <span x-show="!error.is_conflict" class="text-gray-600" x-text="error.primary_error"></span>
-                                                             <div x-show="error.is_conflict" class="space-y-1.5 bg-rose-50/50 p-2.5 rounded-lg border border-rose-100/50 text-rose-800">
-                                                                 <div class="font-bold flex items-center gap-1">
-                                                                     <i class="fas fa-triangle-exclamation text-rose-500"></i>
-                                                                     Registration Conflict: <span class="font-mono text-rose-600 bg-rose-100/70 px-1 py-0.5 rounded text-[11px]" x-text="error.conflict_details ? error.conflict_details.registration_number : ''"></span>
-                                                                 </div>
-                                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-rose-900/90 pt-1">
-                                                                     <div><strong>Imported Candidate:</strong> <span x-text="error.conflict_details ? error.conflict_details.imported_candidate_id + ' - ' + error.conflict_details.imported_name : ''"></span></div>
-                                                                     <div><strong>Existing Owner:</strong> <span x-text="error.conflict_details ? (error.conflict_details.existing_candidate_id || '-') + ' - ' + (error.conflict_details.existing_name || '-') : ''"></span></div>
-                                                                     <div></div>
-                                                                     <div><strong>Existing Owner School ID:</strong> <span x-text="error.conflict_details ? error.conflict_details.existing_school_id || '-' : ''"></span></div>
-                                                                 </div>
-                                                             </div>
+                                        <table class="w-full text-sm table-auto border-collapse">
+                                             <thead class="bg-gray-100 border-b border-gray-200" style="background: #161b22 !important;">
+                                                 <tr>
+                                                     <th class="px-3 py-2 text-left font-semibold" style="width: 6% !important; min-width: 60px !important;">Row</th>
+                                                     <th class="px-3 py-2 text-left font-semibold" style="width: 14% !important; min-width: 130px !important;">Candidate No</th>
+                                                     <th class="px-3 py-2 text-left font-semibold" style="width: 16% !important; min-width: 150px !important;">Pupil Name</th>
+                                                     <th class="px-3 py-2 text-left font-semibold" style="width: 14% !important; min-width: 130px !important;">Issue Type</th>
+                                                     <th class="px-3 py-2 text-left font-semibold" style="width: 36% !important; min-width: 380px !important;">Details</th>
+                                                     <th class="px-3 py-2 text-left font-semibold" style="width: 14% !important; min-width: 150px !important;">Recommended Action</th>
+                                                 </tr>
+                                             </thead>
+                                             <tbody class="divide-y divide-gray-200" style="border-color: rgba(255, 255, 255, 0.08) !important;">
+                                                 <template x-for="(error, idx) in importReport.errors.slice(0, 50)" :key="idx">
+                                                     <tr class="hover:bg-slate-900/30" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;">
+                                                         <td class="px-3 py-2 text-xs font-medium" style="color: rgba(255, 255, 255, 0.7) !important;" x-text="error.row_number"></td>
+                                                         <td class="px-3 py-2 font-mono text-xs font-semibold" style="color: rgba(255, 255, 255, 0.8) !important;" x-text="error.candidate_id || '-'"></td>
+                                                         <td class="px-3 py-2 text-xs font-semibold" style="color: rgba(255, 255, 255, 0.85) !important;" x-text="error.full_name || '-'"></td>
+                                                         <td class="px-3 py-2">
+                                                             <span class="inline-block px-2 py-1 rounded text-[11px] font-bold uppercase tracking-wider text-center"
+                                                                   :style="error.is_conflict 
+                                                                           ? 'background: rgba(244, 63, 94, 0.16) !important; color: #ff6b8b !important; border: 1px solid rgba(244, 63, 94, 0.3) !important;' 
+                                                                           : 'background: rgba(239, 68, 68, 0.16) !important; color: #ff7878 !important; border: 1px solid rgba(239, 68, 68, 0.3) !important;'"
+                                                                   x-text="error.is_conflict ? 'Duplicate Conflict' : 'Validation Error'"></span>
                                                          </td>
-                                                        <td class="px-3 py-2 text-xs text-slate-600 italic" 
-                                                            x-text="error.is_conflict ? 'Resolve candidate assignment or skip row' : 'Check field requirements and correct'"></td>
-                                                    </tr>
-                                                </template>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+                                                         <td class="px-3 py-2 text-xs whitespace-normal break-words">
+                                                              <span x-show="!error.is_conflict" style="color: rgba(255, 255, 255, 0.8) !important; font-weight: 500;" x-text="error.primary_error"></span>
+                                                              <div x-show="error.is_conflict" class="space-y-2 bg-rose-950/95 p-3 rounded-xl border border-rose-500/30 text-rose-100 w-full shadow-lg">
+                                                                  <div class="flex items-center gap-1.5 pb-1 border-b border-rose-500/20">
+                                                                      <i class="fas fa-triangle-exclamation text-rose-400 text-xs"></i>
+                                                                      <span class="font-bold text-[10px] tracking-wider uppercase text-rose-300">Registration Conflict</span>
+                                                                  </div>
+                                                                  <div class="space-y-1.5 text-xs text-rose-200">
+                                                                      <div class="flex flex-wrap items-baseline gap-1">
+                                                                          <span class="font-bold text-rose-300">Imported Candidate:</span>
+                                                                          <span class="font-semibold text-white" x-text="error.conflict_details ? error.conflict_details.imported_candidate_id + ' — ' + error.conflict_details.imported_name : ''"></span>
+                                                                      </div>
+                                                                      <div class="flex flex-wrap items-baseline gap-1">
+                                                                          <span class="font-bold text-rose-300">Existing Owner:</span>
+                                                                          <span class="font-semibold text-white" x-text="error.conflict_details ? (error.conflict_details.existing_candidate_id || '-') + ' — ' + (error.conflict_details.existing_name || '-') : ''"></span>
+                                                                      </div>
+                                                                      <div class="flex flex-wrap items-baseline gap-1">
+                                                                          <span class="font-bold text-rose-300">Existing Owner School ID:</span>
+                                                                          <span class="font-mono text-white" x-text="error.conflict_details ? error.conflict_details.existing_school_id || '-' : ''"></span>
+                                                                      </div>
+                                                                      <div class="flex flex-wrap items-baseline gap-1">
+                                                                          <span class="font-bold text-rose-300">Conflict Registration:</span>
+                                                                          <span class="font-mono text-white bg-rose-900/60 px-1.5 py-0.5 rounded text-[11px] border border-rose-800/80" x-text="error.conflict_details ? error.conflict_details.registration_number : ''"></span>
+                                                                      </div>
+                                                                  </div>
+                                                              </div>
+                                                          </td>
+                                                         <td class="px-3 py-2 text-xs font-medium whitespace-normal break-words" 
+                                                             :style="error.is_conflict ? 'color: #fda4af !important; line-height: 1.4 !important;' : 'color: rgba(255, 255, 255, 0.6) !important; line-height: 1.4 !important;'"
+                                                             x-text="error.is_conflict ? 'Resolve candidate assignment or skip row.' : 'Check field requirements and correct.'"></td>
+                                                     </tr>
+                                                 </template>
+                                             </tbody>
+                                         </table>
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
 
-                            <div x-show="importReport.rows && importReport.rows.length > 0" class="space-y-2">
+                        <div x-show="importReport.rows && importReport.rows.length > 0" class="space-y-2">
                                 <h4 class="font-semibold text-gray-700">Preview Records</h4>
                                 <div class="registration-modal-panel overflow-hidden">
                                     <div class="overflow-x-auto">
