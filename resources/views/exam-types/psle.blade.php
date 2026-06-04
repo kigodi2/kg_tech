@@ -2421,7 +2421,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                                     <i class="fas fa-file-import text-amber-300"></i>
                                     PSLE Pupil Import
                                 </span>
-                                <h2 class="registration-modal-title">Import PSLE Pupils</h2>
+                                <h2 class="registration-modal-title" x-text="importPhase === 'report' ? 'PSLE Pupil Import Validation Results' : 'Import PSLE Pupils'">Import PSLE Pupils</h2>
                                 <p class="registration-modal-subtitle">Validate PSLE pupil files, review duplicates and warnings, and commit only approved records without leaving this workspace.</p>
                             </div>
                             <button
@@ -2527,34 +2527,30 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                         <div x-show="importPhase === 'report'" class="space-y-4">
                             <h3 class="text-lg font-semibold text-gray-700">Step 3: Preview Records</h3>
 
-                            <div class="registration-modal-stats !grid-cols-2 xl:!grid-cols-4">
+                            <div class="registration-modal-stats !grid-cols-2 xl:!grid-cols-3">
                                 <div class="registration-modal-stat">
                                     <p class="registration-modal-stat-label">Total Rows</p>
                                     <p class="registration-modal-stat-value text-gray-800 mt-1" x-text="importSummaryValue('total_rows')"></p>
                                 </div>
-                                <div class="registration-modal-stat">
-                                    <p class="registration-modal-stat-label text-blue-600">Valid</p>
-                                    <p class="registration-modal-stat-value text-blue-800 mt-1" x-text="importSummaryValue('valid_rows')"></p>
+                                <div class="registration-modal-stat border-l-4 border-l-green-500">
+                                    <p class="registration-modal-stat-label text-green-600">Valid Rows</p>
+                                    <p class="registration-modal-stat-value text-green-800 mt-1" x-text="importSummaryValue('valid_rows')"></p>
                                 </div>
-                                <div class="registration-modal-stat">
-                                    <p class="registration-modal-stat-label text-purple-600">Already Existing</p>
-                                    <p class="registration-modal-stat-value text-purple-800 mt-1" x-text="importSummaryValue('already_existing')"></p>
-                                </div>
-                                <div class="registration-modal-stat">
-                                    <p class="registration-modal-stat-label text-amber-600">Duplicates</p>
-                                    <p class="registration-modal-stat-value text-amber-800 mt-1" x-text="importSummaryValue('duplicates_in_file')"></p>
-                                </div>
-                                <div class="registration-modal-stat">
+                                <div class="registration-modal-stat border-l-4 border-l-red-500">
                                     <p class="registration-modal-stat-label text-red-600">Errors</p>
                                     <p class="registration-modal-stat-value text-red-800 mt-1" x-text="importSummaryValue('invalid_rows')"></p>
                                 </div>
-                                <div class="registration-modal-stat">
+                                <div class="registration-modal-stat border-l-4 border-l-rose-500">
+                                    <p class="registration-modal-stat-label text-rose-600">Duplicate Conflicts</p>
+                                    <p class="registration-modal-stat-value text-rose-800 mt-1" x-text="importSummaryValue('duplicate_conflicts')"></p>
+                                </div>
+                                <div class="registration-modal-stat border-l-4 border-l-amber-500">
                                     <p class="registration-modal-stat-label text-amber-600">Missing PReM No</p>
                                     <p class="registration-modal-stat-value text-amber-800 mt-1" x-text="importSummaryValue('missing_prem_no')"></p>
                                 </div>
-                                <div class="registration-modal-stat">
-                                    <p class="registration-modal-stat-label text-green-600">Invalid Sex</p>
-                                    <p class="registration-modal-stat-value text-green-800 mt-1" x-text="importSummaryValue('invalid_sex')"></p>
+                                <div class="registration-modal-stat border-l-4 border-l-blue-500">
+                                    <p class="registration-modal-stat-label text-blue-600">Invalid Sex</p>
+                                    <p class="registration-modal-stat-value text-blue-800 mt-1" x-text="importSummaryValue('invalid_sex')"></p>
                                 </div>
                             </div>
 
@@ -2563,12 +2559,21 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                                 <p class="mt-1">Review the flagged rows before commit. Warnings do not block import.</p>
                             </div>
 
-                            <div x-show="importReport.error_count > 0 && importReport.can_import" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-exclamation-triangle text-amber-500 text-lg"></i>
-                                    <span>
-                                        <span class="font-bold" x-text="importReport.error_count"></span> invalid rows will be skipped. <span class="font-bold" x-text="importSummaryValue('valid_rows')"></span> valid rows will be imported.
-                                    </span>
+                            <!-- Validation Status Message -->
+                            <div class="rounded-2xl border p-4 text-sm" 
+                                 :class="importSummaryValue('valid_rows') > 0 ? (importReport.error_count > 0 || importSummaryValue('duplicate_conflicts') > 0 ? 'border-amber-200 bg-amber-50 text-amber-900' : 'border-green-200 bg-green-50 text-green-900') : 'border-red-200 bg-red-50 text-red-900'">
+                                <div class="flex items-start gap-3">
+                                    <div class="mt-0.5">
+                                        <i class="fas text-lg" 
+                                           :class="importSummaryValue('valid_rows') > 0 ? (importReport.error_count > 0 || importSummaryValue('duplicate_conflicts') > 0 ? 'fa-exclamation-triangle text-amber-500' : 'fa-circle-check text-green-500') : 'fa-circle-xmark text-red-500'"></i>
+                                    </div>
+                                    <div class="space-y-1">
+                                        <p class="font-bold" x-text="`Validation completed. ${importSummaryValue('duplicate_conflicts')} conflict row${importSummaryValue('duplicate_conflicts') == 1 ? '' : 's'} found. ${importSummaryValue('valid_rows')} valid row${importSummaryValue('valid_rows') == 1 ? ' is' : 's are'} available for import.`"></p>
+                                        
+                                        <template x-if="importSummaryValue('valid_rows') > 0 && (importReport.error_count > 0 || importSummaryValue('duplicate_conflicts') > 0)">
+                                            <p class="text-xs font-semibold">Only valid non-conflicting rows will be imported. Error/conflict rows will be skipped.</p>
+                                        </template>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2589,7 +2594,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                                         <i class="fas fa-download text-xs"></i> Download Errors
                                     </button>
                                 </div>
-                                <div class="registration-modal-panel overflow-hidden">
+                            <div class="registration-modal-panel overflow-hidden">
                                     <div class="overflow-x-auto">
                                         <table class="w-full text-sm">
                                             <thead class="bg-gray-100 border-b border-gray-200">
@@ -2597,18 +2602,39 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                                                     <th class="px-3 py-2 text-left font-semibold text-gray-700">Row</th>
                                                     <th class="px-3 py-2 text-left font-semibold text-gray-700">Candidate No</th>
                                                     <th class="px-3 py-2 text-left font-semibold text-gray-700">Pupil Name</th>
-                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Error</th>
+                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Issue Type</th>
+                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Details</th>
+                                                    <th class="px-3 py-2 text-left font-semibold text-gray-700">Recommended Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="divide-y divide-gray-200">
-                                                <template x-for="(error, idx) in importReport.errors.slice(0, 10)" :key="idx">
+                                                <template x-for="(error, idx) in importReport.errors.slice(0, 50)" :key="idx">
                                                     <tr class="hover:bg-gray-50">
                                                         <td class="px-3 py-2 text-gray-600 text-xs" x-text="error.row_number"></td>
                                                         <td class="px-3 py-2 text-gray-600 font-mono text-xs" x-text="error.candidate_id || '-'"></td>
                                                         <td class="px-3 py-2 text-gray-600 text-xs" x-text="error.full_name || '-'"></td>
                                                         <td class="px-3 py-2">
-                                                            <span class="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium" x-text="error.primary_error"></span>
+                                                            <span class="inline-block px-2 py-1 rounded text-xs font-semibold"
+                                                                  :class="error.is_conflict ? 'bg-rose-100 text-rose-800' : 'bg-red-100 text-red-800'"
+                                                                  x-text="error.is_conflict ? 'Duplicate Conflict' : 'Validation Error'"></span>
                                                         </td>
+                                                        <td class="px-3 py-2 text-xs">
+                                                             <span x-show="!error.is_conflict" class="text-gray-600" x-text="error.primary_error"></span>
+                                                             <div x-show="error.is_conflict" class="space-y-1.5 bg-rose-50/50 p-2.5 rounded-lg border border-rose-100/50 text-rose-800">
+                                                                 <div class="font-bold flex items-center gap-1">
+                                                                     <i class="fas fa-triangle-exclamation text-rose-500"></i>
+                                                                     Registration Conflict: <span class="font-mono text-rose-600 bg-rose-100/70 px-1 py-0.5 rounded text-[11px]" x-text="error.conflict_details ? error.conflict_details.registration_number : ''"></span>
+                                                                 </div>
+                                                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[11px] text-rose-900/90 pt-1">
+                                                                     <div><strong>Imported Candidate:</strong> <span x-text="error.conflict_details ? error.conflict_details.imported_candidate_id + ' - ' + error.conflict_details.imported_name : ''"></span></div>
+                                                                     <div><strong>Existing Owner:</strong> <span x-text="error.conflict_details ? (error.conflict_details.existing_candidate_id || '-') + ' - ' + (error.conflict_details.existing_name || '-') : ''"></span></div>
+                                                                     <div></div>
+                                                                     <div><strong>Existing Owner School ID:</strong> <span x-text="error.conflict_details ? error.conflict_details.existing_school_id || '-' : ''"></span></div>
+                                                                 </div>
+                                                             </div>
+                                                         </td>
+                                                        <td class="px-3 py-2 text-xs text-slate-600 italic" 
+                                                            x-text="error.is_conflict ? 'Resolve candidate assignment or skip row' : 'Check field requirements and correct'"></td>
                                                     </tr>
                                                 </template>
                                             </tbody>
@@ -2702,7 +2728,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                             x-show="importPhase === 'report'"
                             @click="commitImportFile()"
                             class="registration-modal-button registration-modal-button-primary"
-                            :disabled="!importReport.can_import || importProcessing"
+                            :disabled="importSummaryValue('valid_rows') === 0 || importProcessing"
                         >Import Valid Records</button>
                     </div>
                 </div>
@@ -4451,7 +4477,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
             },
 
             hasDuplicateRows() {
-                return (this.importReport.rows || []).some(row => ['SKIP', 'REPLACE'].includes(row.status) || /duplicate|exists/i.test(row.message || ''));
+                return (this.importReport.rows || []).some(row => ['SKIP', 'REPLACE', 'CONFLICT'].includes(row.status) || /duplicate|exists/i.test(row.message || ''));
             },
 
             importStatusLabel(status, message = '') {
@@ -4468,6 +4494,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                     SKIP: 'Already Exists',
                     REPLACE: 'Already Exists',
                     ERROR: 'Invalid',
+                    CONFLICT: 'Duplicate Conflict',
                 }[status] || status || 'Invalid';
             },
 
@@ -4482,6 +4509,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                     SKIP: 'bg-slate-100 text-slate-800',
                     REPLACE: 'bg-purple-100 text-purple-800',
                     ERROR: 'bg-red-100 text-red-800',
+                    CONFLICT: 'bg-rose-100 text-rose-800',
                 }[status] || 'bg-red-100 text-red-800';
             },
 
@@ -4534,7 +4562,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                 const updateRows = summary.already_existing ?? rows.filter(row => row.status === 'REPLACE' || row.action === 'replace').length;
                 const createRows = Math.max(validRows - skipRows - updateRows, 0);
                 const errors = report.errors || rows
-                    .filter(row => row.status === 'ERROR' || row.valid === false)
+                    .filter(row => row.status === 'ERROR' || row.valid === false || row.status === 'CONFLICT')
                     .map(row => ({
                         row_number: row.row_number,
                         candidate_id: row.candidate_id || row.candidate_number || '',
@@ -4544,6 +4572,8 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                         school_code: row.school_code || '',
                         error_messages: row.messages || [row.message || 'Invalid row'],
                         primary_error: row.message || 'Invalid row',
+                        is_conflict: row.is_conflict || false,
+                        conflict_details: row.conflict_details || null,
                     }));
 
                 return {
@@ -4607,15 +4637,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                     this.importPhase = 'report';
                     this.importProcessing = false;
 
-                    if (!this.importReport.success && this.importReport.error_count > 0) {
-                        this.showMessage(`Validation complete: ${this.importReport.error_count} error(s) found`, 'error');
-                    } else if (this.importReport.can_import) {
-                        const total = (this.importReport.create_count || 0) + (this.importReport.update_count || 0);
-                        const warningText = this.importReport.warning_count > 0 ? ` with ${this.importReport.warning_count} warning(s)` : '';
-                        this.showMessage(`Validation complete: ${total} pupil record(s) ready to import${warningText}`, this.importReport.warning_count > 0 ? 'error' : 'success');
-                    } else {
-                        this.showMessage('Validation complete: No valid PSLE pupil records to import', 'error');
-                    }
+                    // Validation complete. Results are displayed inside the validation report modal phase. No toasts or browser alerts needed.
                 } catch (error) {
                     this.importProcessing = false;
                     this.importErrorMessage = error.name === 'AbortError' ? 'Validation timed out. Please try again or use a smaller file.' : error.message;
@@ -4668,7 +4690,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                     this.pupilImportModalOpen = false;
                     const imported = (data.imported_count || 0) + (data.updated_count || 0) + (data.summary?.inserted || 0) + (data.summary?.updated || 0);
                     const skipped = this.importReport.error_count || 0;
-                    this.importResultMessage = `${imported} valid records imported. ${skipped} invalid rows skipped.`;
+                    this.importResultMessage = data.message || `${imported} valid records imported. ${skipped} invalid rows skipped.`;
                     this.showMessage(this.importResultMessage, 'success');
                     this.resetPupilImportModal();
                 } catch (error) {

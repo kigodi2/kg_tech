@@ -400,17 +400,22 @@ class PsleCandidateRegistrationService
             'total_rows' => $preview['summary']['total_rows'],
             'inserted' => 0,
             'updated' => 0,
-            'skipped' => $preview['summary']['invalid_rows'] + $preview['summary']['rows_to_skip'],
-            'invalid' => $preview['summary']['invalid_rows'],
+            'existing_skipped' => 0,
+            'duplicate_conflicts' => 0,
+            'invalid' => 0,
+            'skipped' => 0,
         ];
         $auditSchool = $selectedSchool;
 
-        DB::transaction(function () use ($preview, $examType, $examYear, &$summary, &$auditSchool) {
-            foreach ($preview['rows'] as $row) {
-                if (!$row['valid'] || $row['action'] === 'skip') {
-                    continue;
-                }
+        foreach ($preview['rows'] as $row) {
+            // Pre-check for registration conflict (different candidate)
+            $regNumber = 'PSLE-' . $row['candidate_id'];
+            $existingReg = CandidateExamRegistration::with('candidate')
+                ->where('registration_number', $regNumber)
+                ->first();
 
+            $isConflict = false;
+            if ($existingReg) {
                 $existing = $this->findExistingCandidate([
                     'candidate_id' => $row['candidate_id'],
                     'prem_no' => $row['prem_no'],
@@ -418,27 +423,85 @@ class PsleCandidateRegistrationService
                     'full_name' => $row['full_name'],
                     'gender' => $row['gender'],
                 ], $examYear->id, $examType->id);
-                
-                $candidate = $existing ?: new Candidate();
-                $school = School::where('code', $row['school_code'])->firstOrFail();
-                $auditSchool = $auditSchool ?: $school;
-                $candidate->fill([
-                    'school_id' => $school->id,
-                    'candidate_id' => $row['candidate_id'],
-                    'prem_no' => $row['prem_no'] ?: null, // Cast empty to NULL
-                    'full_name' => $row['full_name'],
-                    'gender' => $row['gender'],
-                    'candidate_type' => 'SCHOOL',
-                    'exam_type' => 'PSLE',
-                    'status' => 'registered',
-                    'is_active' => true,
-                ]);
-                $candidate->save();
-                $this->registerForPsle($candidate, $examType, $examYear);
 
-                $existing ? $summary['updated']++ : $summary['inserted']++;
+                $isSame = $existing &&
+                    (int) $existingReg->candidate_id === (int) $existing->id &&
+                    (int) $existingReg->exam_type_id === (int) $examType->id &&
+                    (int) $existingReg->exam_year_id === (int) $examYear->id;
+
+                if (!$isSame) {
+                    $isConflict = true;
+                }
             }
-        });
+
+            if ($isConflict) {
+                $summary['duplicate_conflicts']++;
+                continue;
+            }
+
+            if (!$row['valid']) {
+                if (isset($row['is_conflict']) && $row['is_conflict']) {
+                    $summary['duplicate_conflicts']++;
+                } else {
+                    $summary['invalid']++;
+                }
+                continue;
+            }
+
+            if ($row['action'] === 'skip') {
+                $summary['existing_skipped']++;
+                continue;
+            }
+
+            // Start transaction per row
+            try {
+                DB::transaction(function () use ($row, $examType, $examYear, &$summary, &$auditSchool, $mode) {
+                    $existing = $this->findExistingCandidate([
+                        'candidate_id' => $row['candidate_id'],
+                        'prem_no' => $row['prem_no'],
+                        'school_code' => $row['school_code'],
+                        'full_name' => $row['full_name'],
+                        'gender' => $row['gender'],
+                    ], $examYear->id, $examType->id);
+
+                    $candidate = $existing ?: new Candidate();
+                    $school = School::where('code', $row['school_code'])->firstOrFail();
+                    $auditSchool = $auditSchool ?: $school;
+                    $candidate->fill([
+                        'school_id' => $school->id,
+                        'candidate_id' => $row['candidate_id'],
+                        'prem_no' => $row['prem_no'] ?: null, // Cast empty to NULL
+                        'full_name' => $row['full_name'],
+                        'gender' => $row['gender'],
+                        'candidate_type' => 'SCHOOL',
+                        'exam_type' => 'PSLE',
+                        'status' => 'registered',
+                        'is_active' => true,
+                    ]);
+                    $candidate->save();
+
+                    $this->registerForPsle($candidate, $examType, $examYear);
+
+                    if ($existing) {
+                        $summary['updated']++;
+                    } else {
+                        $summary['inserted']++;
+                    }
+                });
+            } catch (\Throwable $e) {
+                if ($e->getMessage() === 'REGISTRATION_CONFLICT' || ($e instanceof \Illuminate\Database\QueryException && $e->getCode() == 23000)) {
+                    $summary['duplicate_conflicts']++;
+                } else {
+                    Log::error("Failed to import PSLE pupil row number {$row['row_number']}", [
+                        'candidate_id' => $row['candidate_id'],
+                        'error' => $e->getMessage()
+                    ]);
+                    $summary['invalid']++;
+                }
+            }
+        }
+
+        $summary['skipped'] = $summary['existing_skipped'] + $summary['duplicate_conflicts'] + $summary['invalid'];
 
         $this->audit('psle_candidate_bulk_imported', $user, $auditSchool, $examYear, [
             'file_name' => $file->getClientOriginalName(),
@@ -446,9 +509,18 @@ class PsleCandidateRegistrationService
             'summary' => $summary,
         ], $summary['inserted'] + $summary['updated']);
 
+        $message = sprintf(
+            "PSLE pupil import completed: %d inserted, %d updated, %d existing same-candidate registrations skipped/reused, %d duplicate conflicts skipped, and %d invalid rows skipped.",
+            $summary['inserted'],
+            $summary['updated'],
+            $summary['existing_skipped'],
+            $summary['duplicate_conflicts'],
+            $summary['invalid']
+        );
+
         return [
             'success' => true,
-            'message' => 'PSLE pupil import completed successfully.',
+            'message' => $message,
             'summary' => $summary,
         ];
     }
@@ -652,9 +724,32 @@ class PsleCandidateRegistrationService
                 'full_name' => $payload['full_name'],
                 'gender' => $payload['gender'],
             ], $examYear->id, $this->psleExamType()->id);
+
+            // Check if registration number already exists in candidate_exam_registrations
+            $regNumber = 'PSLE-' . $payload['candidate_id'];
+            $existingReg = CandidateExamRegistration::with('candidate')
+                ->where('registration_number', $regNumber)
+                ->first();
             
+            $isConflict = false;
+            if ($existingReg) {
+                $isSame = $existing &&
+                    (int) $existingReg->candidate_id === (int) $existing->id &&
+                    (int) $existingReg->exam_type_id === (int) $this->psleExamType()->id &&
+                    (int) $existingReg->exam_year_id === (int) $examYear->id;
+                
+                if (!$isSame) {
+                    $isConflict = true;
+                    $existingCand = $existingReg->candidate;
+                    $candDetails = $existingCand 
+                        ? "ID: {$existingCand->id}, Candidate ID: {$existingCand->candidate_id}, Name: {$existingCand->full_name}, School ID: {$existingCand->school_id}"
+                        : "ID: {$existingReg->candidate_id}";
+                    $errors['registration_conflict'] = "Registration number already belongs to another candidate: {$candDetails}";
+                }
+            }
+
             $action = 'insert';
-            if ($existing) {
+            if ($existing && !$isConflict) {
                 $action = match ($mode) {
                     'replace' => 'replace',
                     'stop' => 'stop',
@@ -676,10 +771,20 @@ class PsleCandidateRegistrationService
                 'school_name' => $school?->name,
                 'council' => $school?->council?->name,
                 'valid' => empty($errors),
-                'status' => empty($errors) ? strtoupper($action === 'insert' ? 'NEW' : $action) : 'ERROR',
-                'action' => empty($errors) ? $action : 'invalid',
+                'status' => empty($errors) ? strtoupper($action === 'insert' ? 'NEW' : $action) : ($isConflict ? 'CONFLICT' : 'ERROR'),
+                'action' => empty($errors) ? $action : ($isConflict ? 'conflict' : 'invalid'),
                 'message' => empty($errors) ? $this->candidateImportPreviewMessage($action) : implode(' ', array_values($errors)),
                 'existing' => (bool) $existing,
+                'is_conflict' => $isConflict,
+                'conflict_details' => $isConflict ? [
+                    'imported_candidate_id' => $payload['candidate_id'],
+                    'imported_name' => $payload['full_name'],
+                    'existing_id' => $existingReg->candidate_id,
+                    'existing_candidate_id' => $existingCand?->candidate_id,
+                    'existing_name' => $existingCand?->full_name,
+                    'existing_school_id' => $existingCand?->school_id,
+                    'registration_number' => $regNumber
+                ] : null,
             ];
         }
 
@@ -695,6 +800,16 @@ class PsleCandidateRegistrationService
         $valid = collect($rows)->where('valid', true);
         $invalid = collect($rows)->where('valid', false);
 
+        $missingPremCount = collect($rows)->filter(function ($row) {
+            return empty($row['prem_no']) || !preg_match('/^[0-9]{11}$/', $row['prem_no']);
+        })->count();
+
+        $invalidSexCount = collect($rows)->filter(function ($row) {
+            return empty($row['gender']) || !in_array($row['gender'], ['M', 'F'], true);
+        })->count();
+
+        $duplicateConflictsCount = collect($rows)->where('is_conflict', true)->count();
+
         return [
             'total_rows' => $totalRows,
             'valid_rows' => $valid->count(),
@@ -707,6 +822,9 @@ class PsleCandidateRegistrationService
             'rows_to_skip' => $valid->where('action', 'skip')->count(),
             'ready_to_insert' => $valid->where('action', 'insert')->count(),
             'ready_to_update' => $valid->where('action', 'replace')->count(),
+            'duplicate_conflicts' => $duplicateConflictsCount,
+            'missing_prem_no' => $missingPremCount,
+            'invalid_sex' => $invalidSexCount,
         ];
     }
 
@@ -766,18 +884,33 @@ class PsleCandidateRegistrationService
 
     private function registerForPsle(Candidate $candidate, ExamType $examType, ExamYear $examYear): void
     {
-        CandidateExamRegistration::updateOrCreate(
-            [
-                'candidate_id' => $candidate->id,
+        $regNumber = 'PSLE-' . $candidate->candidate_id;
+        $existingReg = CandidateExamRegistration::where('registration_number', $regNumber)->first();
+
+        if ($existingReg && (int) $existingReg->candidate_id === (int) $candidate->id) {
+            // Same candidate, update safe fields only
+            $existingReg->update([
+                'status' => 'APPROVED',
                 'exam_type_id' => $examType->id,
                 'exam_year_id' => $examYear->id,
-            ],
-            [
                 'year' => (int) $examYear->year_label,
-                'registration_number' => 'PSLE-' . $candidate->candidate_id,
-                'status' => 'APPROVED',
-            ]
-        );
+                'updated_at' => now(),
+            ]);
+        } else {
+            // Create or update by candidate/exam composite keys
+            CandidateExamRegistration::updateOrCreate(
+                [
+                    'candidate_id' => $candidate->id,
+                    'exam_type_id' => $examType->id,
+                    'exam_year_id' => $examYear->id,
+                ],
+                [
+                    'year' => (int) $examYear->year_label,
+                    'registration_number' => $regNumber,
+                    'status' => 'APPROVED',
+                ]
+            );
+        }
     }
 
     private function indexNumberPatternForSchool(School $school): string
