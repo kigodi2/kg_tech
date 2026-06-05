@@ -213,19 +213,19 @@ class AuthController extends Controller
             $currentSessionId = session()->getId();
             $currentSessionHash = hash('sha256', $currentSessionId);
 
+            // Global Stale Session Housekeeping
+            $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);
+            \App\Models\MarkEntryActiveSession::where('last_seen_at', '<', now()->subMinutes($timeoutMinutes))->delete();
+
             $activeSession = \App\Models\MarkEntryActiveSession::where('user_id', $user->id)->first();
             if ($activeSession) {
-                $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);
                 $isStale = $activeSession->last_seen_at && \Carbon\Carbon::parse($activeSession->last_seen_at)->addMinutes($timeoutMinutes)->isPast();
                 $isSameDevice = ($activeSession->device_hash === $deviceHash) ||
                                 ($activeSession->ip_address === $request->ip() && $activeSession->user_agent === ($request->userAgent() ?? 'unknown_browser'));
 
                 if ($isSameDevice || $isStale) {
-                    // Update/Replace the stale or same-device session record
-                    $activeSession->delete();
-
-                    \App\Models\MarkEntryActiveSession::create([
-                        'user_id' => $user->id,
+                    // Update/Replace the stale or same-device session record in-place to avoid race conditions
+                    $activeSession->update([
                         'session_id' => $currentSessionHash,
                         'device_hash' => $deviceHash,
                         'ip_address' => $request->ip(),
@@ -270,28 +270,66 @@ class AuthController extends Controller
                         ->withInput($request->only('email'));
                 }
             } else {
-                // Create new active session record
-                \App\Models\MarkEntryActiveSession::create([
-                    'user_id' => $user->id,
-                    'session_id' => $currentSessionHash,
-                    'device_hash' => $deviceHash,
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'last_seen_at' => now(),
-                    'locked_at' => now(),
-                ]);
-
-                GovernanceAuditLog::log(
-                    GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
-                    userId: $user->id,
-                    adminId: null,
-                    data: [
-                        'event' => 'mark_entry_session_created',
-                        'session_hash' => $currentSessionHash,
+                try {
+                    // Create new active session record
+                    \App\Models\MarkEntryActiveSession::create([
+                        'user_id' => $user->id,
+                        'session_id' => $currentSessionHash,
+                        'device_hash' => $deviceHash,
                         'ip_address' => $request->ip(),
-                        'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
-                    ]
-                );
+                        'user_agent' => $request->userAgent(),
+                        'last_seen_at' => now(),
+                        'locked_at' => now(),
+                    ]);
+
+                    GovernanceAuditLog::log(
+                        GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
+                        userId: $user->id,
+                        adminId: null,
+                        data: [
+                            'event' => 'mark_entry_session_created',
+                            'session_hash' => $currentSessionHash,
+                            'ip_address' => $request->ip(),
+                            'user_agent_hash' => hash('sha256', $request->userAgent() ?? ''),
+                        ]
+                    );
+                } catch (\Illuminate\Database\QueryException $e) {
+                    // If a duplicate key violation occurs due to race conditions, query the active session
+                    $msg = $e->getMessage();
+                    if ($e->getCode() === '23000' || $e->getCode() === 23000 || str_contains($msg, '23000') || str_contains($msg, '1062') || str_contains($msg, 'UNIQUE constraint')) {
+                        $activeSession = \App\Models\MarkEntryActiveSession::where('user_id', $user->id)->first();
+                        if (!$activeSession) {
+                            throw $e;
+                        }
+                        
+                        // Treat as if the record existed originally and run validation/takeover checks
+                        $isStale = $activeSession->last_seen_at && \Carbon\Carbon::parse($activeSession->last_seen_at)->addMinutes($timeoutMinutes)->isPast();
+                        $isSameDevice = ($activeSession->device_hash === $deviceHash) ||
+                                        ($activeSession->ip_address === $request->ip() && $activeSession->user_agent === ($request->userAgent() ?? 'unknown_browser'));
+
+                        if ($isSameDevice || $isStale) {
+                            $activeSession->update([
+                                'session_id' => $currentSessionHash,
+                                'device_hash' => $deviceHash,
+                                'ip_address' => $request->ip(),
+                                'user_agent' => $request->userAgent(),
+                                'last_seen_at' => now(),
+                                'locked_at' => now(),
+                            ]);
+                        } else {
+                            Auth::logout();
+                            $request->session()->invalidate();
+                            $request->session()->regenerateToken();
+                            return redirect()->route('login')
+                                ->withErrors([
+                                    'email' => "This Mark Entry Officer account is already active on another device. Active IP: {$activeSession->ip_address}. To protect mark entry speed and data consistency, only one active device is allowed per account. Please log out from the active device or contact the administrator.",
+                                ])
+                                ->withInput($request->only('email'));
+                        }
+                    } else {
+                        throw $e;
+                    }
+                }
             }
         }
 

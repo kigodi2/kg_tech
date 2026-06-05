@@ -60,56 +60,17 @@ class EnsureSingleMarkEntryDevice
         $currentSessionId = session()->getId();
         $currentSessionHash = hash('sha256', $currentSessionId);
 
+        // Global Stale Session Housekeeping
+        $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);
+        MarkEntryActiveSession::where('last_seen_at', '<', now()->subMinutes($timeoutMinutes))->delete();
+
         // Retrieve active session record for this user from database
         $activeSession = MarkEntryActiveSession::where('user_id', $user->id)->first();
 
         // 7. If no active session record exists, register the current session
         if (!$activeSession) {
-            $activeSession = MarkEntryActiveSession::create([
-                'user_id' => $user->id,
-                'session_id' => $currentSessionHash,
-                'device_hash' => $deviceHash,
-                'ip_address' => $request->ip(),
-                'user_agent' => $userAgent,
-                'last_seen_at' => now(),
-                'locked_at' => now(),
-            ]);
-
-            GovernanceAuditLog::log(
-                GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
-                userId: $user->id,
-                adminId: null,
-                data: [
-                    'event' => 'mark_entry_session_created',
-                    'session_hash' => $currentSessionHash,
-                    'ip_address' => $request->ip(),
-                    'user_agent_hash' => hash('sha256', $userAgent),
-                ]
-            );
-
-            return $next($request);
-        }
-
-        $storedSessionId = $activeSession->session_id;
-        $lastSeenAt = $activeSession->last_seen_at;
-
-        // 8. Check if the current session ID matches the stored session ID
-        if ($storedSessionId !== $currentSessionHash) {
-            // Mismatch: A different session is active in the database.
-            
-            // Check if the request is coming from the SAME device
-            $isSameDevice = ($activeSession->device_hash === $deviceHash) ||
-                            ($activeSession->ip_address === $request->ip() && $activeSession->user_agent === $userAgent);
-
-            // Check for Inactivity Timeout expiration (stale session takeover)
-            $timeoutMinutes = config('mark_entry.single_device_timeout_minutes', 30);
-            $isStale = $lastSeenAt && \Carbon\Carbon::parse($lastSeenAt)->addMinutes($timeoutMinutes)->isPast();
-
-            if ($isSameDevice || $isStale) {
-                // Same-device or Stale takeover allowed: replace previous session
-                $activeSession->delete();
-
-                MarkEntryActiveSession::create([
+            try {
+                $activeSession = MarkEntryActiveSession::create([
                     'user_id' => $user->id,
                     'session_id' => $currentSessionHash,
                     'device_hash' => $deviceHash,
@@ -124,8 +85,64 @@ class EnsureSingleMarkEntryDevice
                     userId: $user->id,
                     adminId: null,
                     data: [
+                        'event' => 'mark_entry_session_created',
+                        'session_hash' => $currentSessionHash,
+                        'ip_address' => $request->ip(),
+                        'user_agent_hash' => hash('sha256', $userAgent),
+                    ]
+                );
+
+                return $next($request);
+            } catch (\Illuminate\Database\QueryException $e) {
+                // If a duplicate key violation occurs (e.g. concurrent request already created the record),
+                // query the record that was just created and fall through to session validation.
+                $msg = $e->getMessage();
+                if ($e->getCode() === '23000' || $e->getCode() === 23000 || str_contains($msg, '23000') || str_contains($msg, '1062') || str_contains($msg, 'UNIQUE constraint')) {
+                    $activeSession = MarkEntryActiveSession::where('user_id', $user->id)->first();
+                    if (!$activeSession) {
+                        throw $e;
+                    }
+                } else {
+                    throw $e;
+                }
+            }
+        }
+
+        $storedSessionId = $activeSession->session_id;
+        $lastSeenAt = $activeSession->last_seen_at;
+
+        // 8. Check if the current session ID matches the stored session ID
+        if ($storedSessionId !== $currentSessionHash) {
+            // Mismatch: A different session is active in the database.
+            
+            // Check if the request is coming from the SAME device
+            $isSameDevice = ($activeSession->device_hash === $deviceHash) ||
+                            ($activeSession->ip_address === $request->ip() && $activeSession->user_agent === $userAgent);
+
+            // Check for Inactivity Timeout expiration (stale session takeover)
+            $isStale = $lastSeenAt && \Carbon\Carbon::parse($lastSeenAt)->addMinutes($timeoutMinutes)->isPast();
+
+            if ($isSameDevice || $isStale) {
+                // Same-device or Stale takeover allowed: replace previous session
+                $previousActiveIp = $activeSession->ip_address;
+
+                // Update the existing record in-place to avoid race-condition duplicate key errors
+                $activeSession->update([
+                    'session_id' => $currentSessionHash,
+                    'device_hash' => $deviceHash,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $userAgent,
+                    'last_seen_at' => now(),
+                    'locked_at' => now(),
+                ]);
+
+                GovernanceAuditLog::log(
+                    GovernanceAuditLog::ACTION_LOGIN_SUCCESSFUL,
+                    userId: $user->id,
+                    adminId: null,
+                    data: [
                         'event' => $isSameDevice ? 'mark_entry_session_recreated_same_device' : 'mark_entry_session_stale_replaced',
-                        'previous_active_ip' => $activeSession->ip_address,
+                        'previous_active_ip' => $previousActiveIp,
                         'new_ip' => $request->ip(),
                         'session_hash' => $currentSessionHash,
                         'user_agent_hash' => hash('sha256', $userAgent),

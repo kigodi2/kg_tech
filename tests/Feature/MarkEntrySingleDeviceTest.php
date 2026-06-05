@@ -354,4 +354,44 @@ class MarkEntrySingleDeviceTest extends TestCase
         $newActiveSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->firstOrFail();
         $this->assertNotEquals($firstSessionId, $newActiveSession->session_id); // Session must be successfully recreated!
     }
+
+    /**
+     * Test M: Concurrent first session registration is handled gracefully without throwing database exception.
+     */
+    public function test_concurrent_first_session_registration_is_handled_gracefully(): void
+    {
+        // Register creating event listener to simulate database insert right before Eloquent inserts
+        MarkEntryActiveSession::creating(function ($model) {
+            \Illuminate\Support\Facades\DB::table('mark_entry_active_sessions')->insert([
+                'user_id' => $model->user_id,
+                'session_id' => 'concurrent_inserted_session_hash',
+                'device_hash' => 'concurrent_inserted_device_hash',
+                'ip_address' => '192.168.1.99',
+                'user_agent' => 'Mozilla/5.0',
+                'last_seen_at' => now(),
+                'locked_at' => now(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        });
+
+        // Attempt login for the first time
+        $response = $this->post('/login', [
+            'email' => 'meo@example.com',
+            'password' => 'password123',
+        ]);
+
+        // Since the concurrent insert happened, the middleware should have caught the exception
+        // and determined that a different session is now active, thus redirecting/blocking the current login
+        $response->assertRedirect();
+        $response->assertSessionHasErrors(['email']);
+        
+        $errors = session('errors')->get('email');
+        $this->assertStringContainsString('already active on another device', $errors[0]);
+
+        // The concurrently inserted session should remain in the database intact
+        $activeSession = MarkEntryActiveSession::where('user_id', $this->meo->id)->first();
+        $this->assertNotNull($activeSession);
+        $this->assertEquals('concurrent_inserted_session_hash', $activeSession->session_id);
+    }
 }
