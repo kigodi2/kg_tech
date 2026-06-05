@@ -239,6 +239,48 @@ class PsleMarkSaveTest extends TestCase
         $responseReo->assertRedirect('/mark-entry/psle');
     }
 
+    public function test_concurrent_batch_creation_is_handled_gracefully(): void
+    {
+        // Clean up any existing batches
+        \App\Models\MarkImportBatch::query()->delete();
+
+        // Listen to the creating event of MarkImportBatch to simulate a concurrent insertion
+        $hasRun = false;
+        \App\Models\MarkImportBatch::creating(function ($batch) use (&$hasRun) {
+            if (!$hasRun) {
+                $hasRun = true;
+                // Insert a conflicting batch with the exact same batch_code manually
+                DB::table('mark_import_batches')->insert([
+                    'batch_code' => $batch->batch_code,
+                    'exam_year' => $batch->exam_year,
+                    'exam_year_id' => $batch->exam_year_id,
+                    'exam_type_id' => $batch->exam_type_id,
+                    'region_id' => $batch->region_id,
+                    'district_id' => $batch->district_id,
+                    'school_id' => $batch->school_id,
+                    'subject_id' => $batch->subject_id,
+                    'status' => 'draft',
+                    'batch_type' => 'manual',
+                    'created_by' => $batch->created_by,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        });
+
+        $response = $this->actingAs($this->officer)->postJson('/api/mark-entry/psle/marks/save', $this->payload(['score' => 45]));
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('status', 'entered');
+
+        $this->assertEquals(1, \App\Models\MarkImportBatch::where('school_id', $this->school->id)
+            ->where('subject_id', $this->subject->id)
+            ->where('exam_year_id', $this->examYear->id)
+            ->where('status', 'draft')
+            ->count());
+    }
+
     private function payload(array $overrides = []): array
     {
         return array_merge([

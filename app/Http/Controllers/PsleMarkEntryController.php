@@ -3076,22 +3076,48 @@ class PsleMarkEntryController extends Controller
                 $counter++;
             }
 
-            $batch = \App\Models\MarkImportBatch::create([
-                'exam_year'    => $examYear?->year_label,
-                'exam_year_id' => $examYearId,
-                'exam_type_id' => \App\Models\ExamType::where('code', 'PSLE')->value('id'),
-                'region_id'    => $school->region_id,
-                'district_id'  => $school->district_id,
-                'school_id'    => $schoolId,
-                'subject_id'   => $subjectId,
-                'assignment_id'=> $assignmentId,
-                'created_by'   => $user->id,
-                'status'       => 'draft',
-                'batch_type'   => 'manual',
-                'batch_name'   => ($isMarkOfficer ? 'Officer Entry' : 'Manual Entry')
-                                   . ' - ' . $school->name . ' (' . ($subject->name ?? '') . ')',
-                'batch_code'   => $batchCode,
-            ]);
+            try {
+                $batch = \App\Models\MarkImportBatch::create([
+                    'exam_year'    => $examYear?->year_label,
+                    'exam_year_id' => $examYearId,
+                    'exam_type_id' => \App\Models\ExamType::where('code', 'PSLE')->value('id'),
+                    'region_id'    => $school->region_id,
+                    'district_id'  => $school->district_id,
+                    'school_id'    => $schoolId,
+                    'subject_id'   => $subjectId,
+                    'assignment_id'=> $assignmentId,
+                    'created_by'   => $user->id,
+                    'status'       => 'draft',
+                    'batch_type'   => 'manual',
+                    'batch_name'   => ($isMarkOfficer ? 'Officer Entry' : 'Manual Entry')
+                                       . ' - ' . $school->name . ' (' . ($subject->name ?? '') . ')',
+                    'batch_code'   => $batchCode,
+                ]);
+            } catch (\Illuminate\Database\QueryException $e) {
+                $msg = $e->getMessage();
+                if ($e->getCode() === '23000' || $e->getCode() === 23000 || str_contains($msg, '23000') || str_contains($msg, '1062') || str_contains($msg, 'UNIQUE constraint')) {
+                    $batchQuery = \App\Models\MarkImportBatch::where([
+                        'school_id' => $schoolId,
+                        'subject_id' => $subjectId,
+                        'exam_year_id' => $examYearId,
+                        'created_by' => $user->id,
+                        'status' => 'draft',
+                        'batch_type' => 'manual',
+                    ]);
+
+                    if ($assignmentId) {
+                        $batchQuery->where('assignment_id', $assignmentId);
+                    }
+
+                    $batch = $batchQuery->first();
+
+                    if (!$batch) {
+                        throw $e;
+                    }
+                } else {
+                    throw $e;
+                }
+            }
         }
 
         $marksForCandidateSubject = \App\Models\RawMark::query()
