@@ -2822,13 +2822,24 @@ class PsleMarkEntryController extends Controller
         ]);
 
         try {
+        $subjectId = $request->input('subject_id');
+        $assignmentId = $request->input('assignment_id');
+        if ($assignmentId) {
+            $assignment = \App\Models\MarkEntryAssignment::find($assignmentId);
+            if ($assignment) {
+                $subjectId = $assignment->subject_id;
+            }
+        }
+        $subject = $subjectId ? \App\Models\Subject::find($subjectId) : null;
+        $maxScore = $subject ? $subject->max_marks : 50;
+
         $validator = Validator::make($request->all(), [
             'candidate_id' => 'required|exists:candidates,id',
             'assignment_id' => 'nullable|exists:mark_entry_assignments,id',
             'school_id' => 'required_without:assignment_id|exists:schools,id',
             'subject_id' => 'required_without:assignment_id|exists:subjects,id',
             'exam_year_id' => 'required_without:assignment_id|exists:exam_years,id',
-            'score' => 'nullable|numeric|min:0|max:50',
+            'score' => 'nullable|numeric|min:0|max:' . $maxScore,
         ]);
 
         if ($validator->fails()) {
@@ -6021,6 +6032,235 @@ class PsleMarkEntryController extends Controller
                 'success' => false,
                 'message' => 'Unable to fetch ranking data.',
             ], 500);
+        }
+    }
+
+    public function approveMissingMarks(Request $request, \App\Services\MarkEntry\PsleMissingMarksService $missingMarksService)
+    {
+        $request->validate([
+            'selected_items' => 'required|array',
+            'reason' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        if ($user->hasRole('mark_officer') || $user->portal_role === 'mark_officer') {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        try {
+            $count = $missingMarksService->approveMissingMarks(
+                $request->selected_items,
+                $request->reason,
+                $user
+            );
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully approved {$count} missing mark(s).",
+                'count' => $count
+            ]);
+        } catch (\Exception $e) {
+            $statusCode = (strpos($e->getMessage(), 'Unauthorized') !== false) ? 400 : 500;
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $statusCode);
+        }
+    }
+
+    public function rejectMissingMarks(Request $request, \App\Services\MarkEntry\PsleMissingMarksService $missingMarksService)
+    {
+        $request->validate([
+            'selected_items' => 'required|array',
+            'reason' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+        if ($user->hasRole('mark_officer') || $user->portal_role === 'mark_officer') {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        try {
+            $count = $missingMarksService->rejectMissingMarks(
+                $request->selected_items,
+                $request->reason,
+                $user
+            );
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully rejected {$count} missing mark(s).",
+                'count' => $count
+            ]);
+        } catch (\Exception $e) {
+            $statusCode = (strpos($e->getMessage(), 'Unauthorized') !== false) ? 400 : 500;
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $statusCode);
+        }
+    }
+
+    public function commitApprovedABS(Request $request, \App\Services\MarkEntry\PsleMissingMarksService $missingMarksService)
+    {
+        $request->validate([
+            'school_id' => 'required|integer',
+            'exam_year_id' => 'required|integer',
+        ]);
+
+        $user = $request->user();
+        if ($user->hasRole('mark_officer') || $user->portal_role === 'mark_officer') {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        try {
+            $result = $missingMarksService->commitApprovedABS(
+                (int)$request->school_id,
+                (int)$request->exam_year_id,
+                $user
+            );
+            return response()->json(array_merge(['success' => true], $result));
+        } catch (\Exception $e) {
+            $statusCode = (strpos($e->getMessage(), 'Unauthorized') !== false) ? 400 : 500;
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $statusCode);
+        }
+    }
+
+    public function bulkApproveMissingMarks(Request $request, \App\Services\MarkEntry\PsleMissingMarksService $missingMarksService)
+    {
+        $request->validate([
+            'school_ids' => 'required|array',
+            'exam_year_id' => 'required|integer',
+            'reason' => 'required|string',
+            'subject_id' => 'nullable|integer',
+        ]);
+
+        $user = $request->user();
+        if ($user->hasRole('mark_officer') || $user->portal_role === 'mark_officer') {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        try {
+            $count = $missingMarksService->approveBulkMissingMarks(
+                $request->school_ids,
+                (int)$request->exam_year_id,
+                $request->reason,
+                $request->subject_id ? (int)$request->subject_id : null,
+                $user
+            );
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully bulk approved {$count} missing mark(s).",
+                'count' => $count
+            ]);
+        } catch (\Exception $e) {
+            $statusCode = (strpos($e->getMessage(), 'Unauthorized') !== false) ? 400 : 500;
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $statusCode);
+        }
+    }
+
+    public function bulkCommitPreview(Request $request, \App\Services\MarkEntry\PsleMissingMarksService $missingMarksService)
+    {
+        $request->validate([
+            'exam_year_id' => 'required|integer',
+            'school_ids' => 'nullable|array',
+            'region_id' => 'nullable|integer',
+            'district_id' => 'nullable|integer',
+            'school_id' => 'nullable|integer',
+            'subject_id' => 'nullable|integer',
+        ]);
+
+        $user = $request->user();
+
+        try {
+            $result = $missingMarksService->previewBulkCommit(
+                $request->all(),
+                $user
+            );
+            return response()->json(array_merge(['success' => true], $result));
+        } catch (\Exception $e) {
+            $statusCode = (strpos($e->getMessage(), 'Unauthorized') !== false) ? 400 : 500;
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $statusCode);
+        }
+    }
+
+    public function bulkCommitApprovedABS(Request $request, \App\Services\MarkEntry\PsleMissingMarksService $missingMarksService)
+    {
+        $request->validate([
+            'exam_year_id' => 'required|integer',
+            'confirmation_text' => 'required|string',
+            'school_ids' => 'nullable|array',
+            'region_id' => 'nullable|integer',
+            'district_id' => 'nullable|integer',
+            'school_id' => 'nullable|integer',
+            'subject_id' => 'nullable|integer',
+        ]);
+
+        if ($request->confirmation_text !== 'COMMIT ABS') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation Error: Confirmation text is invalid.'
+            ], 422);
+        }
+
+        $user = $request->user();
+        if ($user->hasRole('mark_officer') || $user->portal_role === 'mark_officer') {
+            return response()->json(['success' => false, 'message' => 'Forbidden'], 403);
+        }
+
+        try {
+            $result = $missingMarksService->commitBulkApprovedABS(
+                $request->all(),
+                $user
+            );
+            return response()->json([
+                'success' => true,
+                'results' => $result
+            ]);
+        } catch (\Exception $e) {
+            $statusCode = (strpos($e->getMessage(), 'Unauthorized') !== false) ? 400 : 500;
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], $statusCode);
+        }
+    }
+
+    public function saveIncMissingMark(Request $request, \App\Services\MarkEntry\PsleMissingMarksService $missingMarksService)
+    {
+        $request->validate([
+            'candidate_id' => 'required',
+            'school_id' => 'required',
+            'subject_id' => 'required',
+            'exam_year_id' => 'required',
+            'score' => 'required',
+            'remark' => 'nullable|string',
+        ]);
+
+        $user = $request->user();
+
+        try {
+            $result = $missingMarksService->saveIncMissingMark(
+                $request->all(),
+                $user
+            );
+            return response()->json([
+                'success' => true,
+                'message' => 'Missing INC mark completed successfully.',
+                'raw_mark_id' => $result['raw_mark_id']
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 400);
         }
     }
 }

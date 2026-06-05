@@ -4171,20 +4171,62 @@ Route::middleware(['auth', 'main-system', 'single-device', 'geofence'])->group(f
      });
 
      Route::get('/api/exam-types/{code}', function ($code) {
-         $examType = \App\Models\ExamType::where('code', strtoupper($code))
+
+
+         $normalizedCode = strtoupper($code);
+
+
+         if (in_array($normalizedCode, ['PSLE_MY', 'PSLE_G', 'PSLE'])) {
+
+
+             $normalizedCode = 'PSLE';
+
+
+         }
+
+
+         $examType = \App\Models\ExamType::where('code', $normalizedCode)
+
+
              ->withCount('candidates')
+
+
              ->firstOrFail();
+
+
          
+
+
          return response()->json([
+
+
              'data' => [
+
+
                  'id' => $examType->id,
+
+
                  'name' => $examType->name,
+
+
                  'code' => $examType->code,
+
+
                  'level' => $examType->level,
+
+
                  'description' => $examType->description,
+
+
                  'candidates_count' => $examType->candidates_count ?? 0
+
+
              ]
+
+
          ]);
+
+
      });
 
      Route::post('/api/exam-types', function (\Illuminate\Http\Request $request) {
@@ -4673,6 +4715,15 @@ Route::middleware(['auth', 'main-system', 'single-device', 'geofence'])->group(f
       Route::post('/api/mark-entry/psle/batches/{batchId}/reject', [\App\Http\Controllers\PsleMarkEntryController::class, 'rejectBatch']);
       Route::post('/api/mark-entry/psle/batches/{batchId}/lock', [\App\Http\Controllers\PsleMarkEntryController::class, 'lockBatch']);
       Route::post('/api/mark-entry/psle/batches/{batchId}/unlock', [\App\Http\Controllers\PsleMarkEntryController::class, 'unlockBatch']);
+
+      // PSLE Missing Marks Approval, Reject & Commit Routes
+      Route::post('/mark-entry/psle/missing-marks/approve', [\App\Http\Controllers\PsleMarkEntryController::class, 'approveMissingMarks'])->name('mark-entry.psle.missing-marks.approve');
+      Route::post('/mark-entry/psle/missing-marks/reject', [\App\Http\Controllers\PsleMarkEntryController::class, 'rejectMissingMarks'])->name('mark-entry.psle.missing-marks.reject');
+      Route::post('/mark-entry/psle/missing-marks/commit', [\App\Http\Controllers\PsleMarkEntryController::class, 'commitApprovedABS'])->name('mark-entry.psle.missing-marks.commit');
+      Route::post('/mark-entry/psle/missing-marks/bulk-approve', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkApproveMissingMarks'])->name('mark-entry.psle.missing-marks.bulk-approve');
+      Route::post('/mark-entry/psle/missing-marks/bulk-commit-preview', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkCommitPreview'])->name('mark-entry.psle.missing-marks.bulk-commit-preview');
+      Route::post('/mark-entry/psle/missing-marks/bulk-commit', [\App\Http\Controllers\PsleMarkEntryController::class, 'bulkCommitApprovedABS'])->name('mark-entry.psle.missing-marks.bulk-commit');
+      Route::post('/mark-entry/psle/missing-marks/inc/save', [\App\Http\Controllers\PsleMarkEntryController::class, 'saveIncMissingMark'])->name('mark-entry.psle.missing-marks.inc.save');
       Route::get('/mark-entry/acsee/download-template', [MarkEntryController::class, 'downloadTemplate']);
       // DEPRECATED: legacy upload endpoint (use validate/commit)
       Route::post('/mark-entry/acsee/upload', [MarkEntryController::class, 'uploadMarks']);
@@ -4954,30 +5005,62 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
         });
 
         // Exam Types APIs
-        Route::get('/api/exam-types', function () {
+        Route::get('exam-types', function () {
+
             $activeCodes = config('irms.active_exam_types', ['PSLE']);
+
             $examTypes = \App\Models\ExamType::whereIn('code', $activeCodes)->withCount('candidates')->get();
+
             
+
             $data = $examTypes->map(function($e) {
+
                 return [
+
                     'id' => $e->id,
+
                     'name' => $e->name,
+
                     'code' => $e->code,
+
                     'level' => $e->level,
+
                     'description' => $e->description,
+
                     'candidates_count' => $e->candidates_count ?? 0
+
                 ];
+
             });
+
             
+
             return response()->json(['data' => $data]);
+
         });
-        Route::get('/api/exam-types/{code}', function ($code) {
-            $activeCodes = config('irms.active_exam_types', ['PSLE']);
-            if (!in_array(strtoupper($code), $activeCodes)) {
-                return response()->json(['message' => 'Only PSLE is currently enabled.'], 403);
+
+        Route::get('exam-types/{code}', function ($code) {
+
+            $normalizedCode = strtoupper($code);
+
+            if (in_array($normalizedCode, ['PSLE_MY', 'PSLE_G', 'PSLE'])) {
+
+                $normalizedCode = 'PSLE';
+
             }
-            $examType = \App\Models\ExamType::where('code', strtoupper($code))->withCount('candidates')->firstOrFail();
+
+            $activeCodes = config('irms.active_exam_types', ['PSLE']);
+
+            if (!in_array($normalizedCode, $activeCodes)) {
+
+                return response()->json(['message' => 'Only PSLE is currently enabled.'], 403);
+
+            }
+
+            $examType = \App\Models\ExamType::where('code', $normalizedCode)->withCount('candidates')->firstOrFail();
+
             return response()->json(['data' => ['id' => $examType->id, 'name' => $examType->name, 'code' => $examType->code, 'level' => $examType->level, 'description' => $examType->description, 'candidates_count' => $examType->candidates_count ?? 0]]);
+
         });
         Route::get('exam-types/{code}/subjects', [ExamTypeController::class, 'getSubjects']);
         Route::get('exam-types/{code}/combinations', [ExamTypeController::class, 'getCombinations']);
