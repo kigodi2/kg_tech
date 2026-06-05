@@ -159,7 +159,7 @@ return [
     |
     */
 
-    'domain' => blank(env('SESSION_DOMAIN')) || strtolower((string) env('SESSION_DOMAIN')) === 'null'
+    'domain' => blank(env('SESSION_DOMAIN')) || env('SESSION_DOMAIN') === 'null'
         ? null
         : env('SESSION_DOMAIN'),
 
@@ -175,7 +175,7 @@ return [
     */
 
     'secure' => env('SESSION_SECURE_COOKIE') === null
-        ? ($useHostOnlyLocalCookie ? false : true)
+        ? null
         : filter_var(env('SESSION_SECURE_COOKIE'), FILTER_VALIDATE_BOOLEAN),
 
     /*
