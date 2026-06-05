@@ -48,6 +48,9 @@ class PsleMarkEntryController extends Controller
         $moderationStats = [];
         $lockingStats = [];
         $diagnosticsMeta = null;
+        $schoolSummaries = null;
+        $schoolDetails = null;
+        $classification = 'all';
         
         // Role Simulator for Testing (Admins Only)
         $simulatedRole = $request->query('simulate_role');
@@ -607,6 +610,28 @@ class PsleMarkEntryController extends Controller
                 'existing_marks_found' => $existingMarksCount,
             ]);
         } elseif ($currentView === 'missing-marks') {
+            $classification = $request->query('classification', 'all');
+            $activeFilters['classification'] = $classification;
+
+            $missingMarksService = app(\App\Services\MarkEntry\PsleMissingMarksService::class);
+
+            if ($selectedSchoolId) {
+                $schoolModel = \App\Models\School::findOrFail($selectedSchoolId);
+                $schoolDetails = $missingMarksService->getSchoolDetails($schoolModel, $activeFilters, $user);
+            } else {
+                $schoolSummariesCollection = $missingMarksService->getSchoolSummaries($activeFilters, $user);
+                
+                $perPage = 20;
+                $page = $request->query('page', 1);
+                $schoolSummaries = new \Illuminate\Pagination\LengthAwarePaginator(
+                    $schoolSummariesCollection->forPage($page, $perPage)->values(),
+                    $schoolSummariesCollection->count(),
+                    $perPage,
+                    $page,
+                    ['path' => $request->url(), 'query' => $request->query()]
+                );
+            }
+
             // Find candidates who are registered but have no marks in RawMark for those subjects
             $psleSubjectIds = $psleSubjects->pluck('id')->toArray();
             
@@ -1410,6 +1435,9 @@ class PsleMarkEntryController extends Controller
             'recentActivities' => $recentActivities,
             'diagnosticsMeta' => $diagnosticsMeta,
             'isGeofenceEnabled' => \App\Helpers\MarkEntrySettings::geofenceEnabled(),
+            'schoolSummaries' => $schoolSummaries,
+            'schoolDetails' => $schoolDetails,
+            'classification' => $classification,
         ]);
     }
 
