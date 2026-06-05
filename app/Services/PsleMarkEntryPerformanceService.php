@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\RawMark;
 use App\Models\MarkEntryAssignment;
+use App\Models\Candidate;
+use App\Models\School;
 use App\Services\PsleCandidateRosterService;
 use Carbon\Carbon;
 
@@ -44,7 +46,7 @@ class PsleMarkEntryPerformanceService
             $subjectId ?? 'all'
         );
 
-        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function() use ($examYearId, $regionId, $districtId, $schoolId, $subjectId) {
+        return \Illuminate\Support\Facades\Cache::remember($cacheKey, 900, function() use ($examYearId, $regionId, $districtId, $schoolId, $subjectId) {
             // 1. Get all active Mark Entry Officers in system
             $officers = User::query()
                 ->where(function($q) {
@@ -57,45 +59,108 @@ class PsleMarkEntryPerformanceService
                 ->when($regionId, fn($q) => $q->where('region_id', $regionId))
                 ->get();
 
-            // 2. Identify all user IDs who have entered marks under the filtered scope
-            $enteredUserIds = RawMark::query()
+            // 2. Identify all user IDs: active officers and users with active assignments in this exam year
+            $assignedUserIds = MarkEntryAssignment::where('status', 'active')
                 ->when($examYearId, fn($q) => $q->where('exam_year_id', $examYearId))
-                ->when($schoolId, fn($q) => $q->where('school_id', $schoolId))
-                ->when($subjectId, fn($q) => $q->where('subject_id', $subjectId))
-                ->when($regionId, function($q) use ($regionId) {
-                    $q->whereHas('school', fn($sq) => $sq->where('region_id', $regionId));
-                })
-                ->when($districtId, function($q) use ($districtId) {
-                    $q->whereHas('school', fn($sq) => $sq->where('district_id', $districtId));
-                })
-                ->whereNotNull('entered_by')
                 ->distinct()
-                ->pluck('entered_by')
+                ->pluck('assigned_to')
                 ->toArray();
 
-            $userIds = array_unique(array_merge($officers->pluck('id')->toArray(), $enteredUserIds));
+            $userIds = array_unique(array_merge($officers->pluck('id')->toArray(), $assignedUserIds));
 
             if (empty($userIds)) {
                 return [];
             }
 
             // Pre-query total marks in scope for contribution calculations
-            $totalMarksInScope = RawMark::query()
+            $totalMarksInScopeQuery = \Illuminate\Support\Facades\DB::table('raw_marks')
+                ->when($examYearId, fn($q) => $q->where('raw_marks.exam_year_id', $examYearId))
+                ->when($schoolId, fn($q) => $q->where('raw_marks.school_id', $schoolId))
+                ->when($subjectId, fn($q) => $q->where('raw_marks.subject_id', $subjectId));
+
+            if ($regionId || $districtId) {
+                $totalMarksInScopeQuery->join('schools', 'raw_marks.school_id', '=', 'schools.id')
+                    ->when($regionId, fn($q) => $q->where('schools.region_id', $regionId))
+                    ->when($districtId, fn($q) => $q->where('schools.district_id', $districtId));
+            }
+
+            $totalMarksInScope = $totalMarksInScopeQuery->count();
+
+            // Bulk load all users in scope to avoid N+1 User query in the loop
+            $usersMap = User::whereIn('id', $userIds)->with('region')->get()->keyBy('id');
+
+            // Bulk aggregate mark stats per user in scope
+            $userStatsQuery = \Illuminate\Support\Facades\DB::table('raw_marks')
+                ->when($examYearId, fn($q) => $q->where('raw_marks.exam_year_id', $examYearId))
+                ->when($schoolId, fn($q) => $q->where('raw_marks.school_id', $schoolId))
+                ->when($subjectId, fn($q) => $q->where('raw_marks.subject_id', $subjectId));
+
+            if ($regionId || $districtId) {
+                $userStatsQuery->join('schools', 'raw_marks.school_id', '=', 'schools.id')
+                    ->when($regionId, fn($q) => $q->where('schools.region_id', $regionId))
+                    ->when($districtId, fn($q) => $q->where('schools.district_id', $districtId));
+            }
+
+            $userStats = $userStatsQuery
+                ->whereIn('raw_marks.entered_by', $userIds)
+                ->groupBy('raw_marks.entered_by')
+                ->select(
+                    'raw_marks.entered_by as user_id',
+                    \Illuminate\Support\Facades\DB::raw('count(*) as marks_count'),
+                    \Illuminate\Support\Facades\DB::raw('count(distinct raw_marks.school_id) as schools_count'),
+                    \Illuminate\Support\Facades\DB::raw('count(distinct raw_marks.subject_id) as subjects_count'),
+                    \Illuminate\Support\Facades\DB::raw('max(raw_marks.updated_at) as last_activity_updated_at'),
+                    \Illuminate\Support\Facades\DB::raw('max(raw_marks.created_at) as last_activity_created_at')
+                )
+                ->get()
+                ->keyBy('user_id');
+
+            // Pre-load all assignments for these users
+            $allAssignments = MarkEntryAssignment::whereIn('assigned_to', $userIds)
+                ->where('status', 'active')
                 ->when($examYearId, fn($q) => $q->where('exam_year_id', $examYearId))
                 ->when($schoolId, fn($q) => $q->where('school_id', $schoolId))
                 ->when($subjectId, fn($q) => $q->where('subject_id', $subjectId))
-                ->when($regionId, function($q) use ($regionId) {
-                    $q->whereHas('school', fn($sq) => $sq->where('region_id', $regionId));
-                })
-                ->when($districtId, function($q) use ($districtId) {
-                    $q->whereHas('school', fn($sq) => $sq->where('district_id', $districtId));
-                })
-                ->count();
+                ->when($regionId, fn($q) => $q->where('region_id', $regionId))
+                ->when($districtId, fn($q) => $q->where('district_id', $districtId))
+                ->get();
+
+            $schoolIds = $allAssignments->pluck('school_id')->unique()->toArray();
+            $schoolCountsMap = [];
+
+            if (!empty($schoolIds) && $examYearId) {
+                $psleType = \App\Models\ExamType::where('code', 'PSLE')->first();
+                $psleTypeId = $psleType ? $psleType->id : 4;
+
+                // Bulk query candidates for all these schools
+                $allCandidates = Candidate::query()
+                    ->where('candidates.is_active', true)
+                    ->where(function ($q) use ($psleTypeId) {
+                        $q->where('candidates.exam_type', 'PSLE')
+                          ->orWhereHas('examRegistrations', fn($r) => $r->where('exam_type_id', $psleTypeId));
+                    })
+                    ->whereHas('examRegistrations', function ($q) use ($psleTypeId, $examYearId) {
+                        $q->where('exam_type_id', $psleTypeId)
+                          ->where('exam_year_id', $examYearId);
+                    })
+                    ->whereIn('candidates.school_id', $schoolIds)
+                    ->get();
+
+                $candidatesBySchool = $allCandidates->groupBy('school_id');
+                $schoolsMap = School::whereIn('id', $schoolIds)->get()->keyBy('id');
+
+                foreach ($schoolIds as $sid) {
+                    $schoolCandidates = $candidatesBySchool->get($sid, collect());
+                    $school = $schoolsMap->get($sid);
+                    $schoolCode = $school ? $school->code : '';
+                    $schoolCountsMap[$sid] = PsleCandidateRosterService::deduplicate($schoolCandidates, $schoolCode)->count();
+                }
+            }
 
             $rankings = [];
 
             foreach ($userIds as $uid) {
-                $officer = User::find($uid);
+                $officer = $usersMap->get($uid);
                 if (!$officer) continue;
 
                 // Strict check: if officer region does not match selected region scope, skip (security check)
@@ -104,40 +169,24 @@ class PsleMarkEntryPerformanceService
                 }
 
                 // A. Marks entered by this officer in scope
-                $marksQuery = RawMark::where('entered_by', $uid)
-                    ->when($examYearId, fn($q) => $q->where('exam_year_id', $examYearId))
-                    ->when($schoolId, fn($q) => $q->where('school_id', $schoolId))
-                    ->when($subjectId, fn($q) => $q->where('subject_id', $subjectId))
-                    ->when($regionId, function($q) use ($regionId) {
-                        $q->whereHas('school', fn($sq) => $sq->where('region_id', $regionId));
-                    })
-                    ->when($districtId, function($q) use ($districtId) {
-                        $q->whereHas('school', fn($sq) => $sq->where('district_id', $districtId));
-                    });
+                $stats = $userStats->get($uid);
+                $marksCount = $stats ? $stats->marks_count : 0;
+                $schoolsCount = $stats ? $stats->schools_count : 0;
+                $subjectsCount = $stats ? $stats->subjects_count : 0;
 
-                $marksCount = $marksQuery->count();
-                $schoolsCount = (clone $marksQuery)->distinct()->count('school_id');
-                $subjectsCount = (clone $marksQuery)->distinct()->count('subject_id');
-
-                $lastActivityMark = (clone $marksQuery)->latest('updated_at')->first();
-                $lastActivityAt = $lastActivityMark ? ($lastActivityMark->updated_at ?: $lastActivityMark->created_at) : null;
+                $lastActivityUpdated = $stats ? $stats->last_activity_updated_at : null;
+                $lastActivityCreated = $stats ? $stats->last_activity_created_at : null;
+                $lastActivityAt = $lastActivityUpdated ?: $lastActivityCreated;
+                $lastActivityAt = $lastActivityAt ? Carbon::parse($lastActivityAt) : null;
 
                 // B. Expected Marks / Completion percentage
-                $assignments = MarkEntryAssignment::where('assigned_to', $uid)
-                    ->where('status', 'active')
-                    ->when($examYearId, fn($q) => $q->where('exam_year_id', $examYearId))
-                    ->when($schoolId, fn($q) => $q->where('school_id', $schoolId))
-                    ->when($subjectId, fn($q) => $q->where('subject_id', $subjectId))
-                    ->when($regionId, fn($q) => $q->where('region_id', $regionId))
-                    ->when($districtId, fn($q) => $q->where('district_id', $districtId))
-                    ->get();
-
+                $userAssignments = $allAssignments->where('assigned_to', $uid);
                 $expectedMarks = 0;
-                $hasAssignments = $assignments->isNotEmpty();
+                $hasAssignments = $userAssignments->isNotEmpty();
 
                 if ($hasAssignments && $examYearId) {
-                    foreach ($assignments as $assignment) {
-                        $candCount = PsleCandidateRosterService::getDeduplicatedCount((int) $examYearId, $assignment->school_id);
+                    foreach ($userAssignments as $assignment) {
+                        $candCount = $schoolCountsMap[$assignment->school_id] ?? 0;
                         $expectedMarks += $candCount;
                     }
                 }
