@@ -68,6 +68,12 @@ class SetExamYearContext
             // Add exam year to request for use in controllers
             $request->attributes->add(['examYear' => $examYear]);
             $request->attributes->add(['examYearId' => $examYear->id]);
+
+            // Set URL defaults for year and examYear dynamically
+            \Illuminate\Support\Facades\URL::defaults([
+                'year' => (int) ($examYear->year_label ?? 2026),
+                'examYear' => (int) ($examYear->year_label ?? 2026),
+            ]);
         } catch (\Exception $e) {
             // During testing or setup, if exam_years table doesn't exist yet, just continue
             // This allows migrations to run without failing

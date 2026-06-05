@@ -80,4 +80,32 @@ return Application::configure(basePath: dirname(__DIR__))
 
             return null;
         });
+
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
+            if ($request->expectsJson() || $request->ajax() || $request->is('api/*') || $request->is('admin/api/*') || $request->is('admin/api/api/*')) {
+                return response()->json([
+                    'message' => 'Unauthenticated.',
+                ], 401);
+            }
+            return null;
+        });
+
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, Request $request) {
+            if ($request->expectsJson() || $request->ajax() || $request->is('api/*') || $request->is('admin/api/*') || $request->is('admin/api/api/*')) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+            return null;
+        });
+
+        $exceptions->render(function (\Illuminate\Database\Eloquent\ModelNotFoundException $e, Request $request) {
+            if ($request->expectsJson() || $request->ajax() || $request->is('api/*') || $request->is('admin/api/*') || $request->is('admin/api/api/*')) {
+                return response()->json([
+                    'message' => 'Resource not found.',
+                ], 404);
+            }
+            return null;
+        });
     })->create();

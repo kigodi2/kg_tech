@@ -80,7 +80,7 @@ Route::group(['prefix' => 'results', 'middleware' => ['auth']], function () {
     // Decoupled PSLE Results Portal Route Group pointing to a dedicated Admin controller.
     // Preserves the existing reports routes exactly bound to ReportsController as required.
     Route::group(['prefix' => 'psle'], function () {
-        Route::get('/', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'index'])->name('results.psle.dashboard');
+        Route::get('/', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'legacy'])->name('results.psle.legacy');
 
         Route::group(['prefix' => 'reports', 'middleware' => ['admin']], function () {
             Route::get('/', [ReportsController::class, 'index'])->name("results.psle.reports.index");
@@ -91,23 +91,23 @@ Route::group(['prefix' => 'results', 'middleware' => ['auth']], function () {
 
         // Define route aliases/placeholders for the side menu in PSLE reports to prevent RouteNotFound exceptions
         Route::get('/grading', function () {
-            return redirect()->route('results.psle.dashboard', ['view' => 'overview']);
+            return redirect()->route('results.psle.legacy', ['view' => 'overview']);
         })->name('results.psle.grading.index');
 
         Route::get('/processing', function () {
-            return redirect()->route('results.psle.dashboard', ['view' => 'processing']);
+            return redirect()->route('results.psle.legacy', ['view' => 'processing']);
         })->name('results.psle.processing.index');
 
         Route::get('/results', function () {
-            return redirect()->route('results.psle.dashboard', ['view' => 'candidate-results']);
+            return redirect()->route('results.psle.legacy', ['view' => 'candidate-results']);
         })->name('results.psle.results.index');
 
         Route::get('/linking', function () {
-            return redirect()->route('results.psle.dashboard', ['view' => 'overview']);
+            return redirect()->route('results.psle.legacy', ['view' => 'overview']);
         })->name('results.psle.linking.index');
 
         Route::get('/audit', function () {
-            return redirect()->route('results.psle.dashboard', ['view' => 'audit']);
+            return redirect()->route('results.psle.legacy', ['view' => 'audit']);
         })->name('results.psle.audit.index');
 
         // Safe results processing actions managed by Admin
@@ -116,6 +116,11 @@ Route::group(['prefix' => 'results', 'middleware' => ['auth']], function () {
         Route::post('/processing/final-run', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'finalRun'])->name('results.psle.processing.final-run');
         Route::post('/processing/rollback', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'rollback'])->name('results.psle.processing.rollback');
     });
+
+    // Main yearly route: /results/{year}/psle
+    Route::get('/{year}/psle', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'index'])
+        ->name('results.psle.dashboard')
+        ->where('year', '[0-9]{4}');
 });
 
 Route::group(['prefix' => 'api/results/acsee', 'middleware' => ['auth']], function () {

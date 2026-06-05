@@ -29,6 +29,10 @@ class PublicPsleResultsController extends Controller
     {
         $examYear = (int) $examYear;
 
+        if (auth()->check() && auth()->user()->is_admin) {
+            return app(\App\Http\Controllers\Admin\AdminPsleResultsController::class)->index(request(), $examYear);
+        }
+
         $regions = $this->pslePortalBaseQuery()
             ->join('regions as r', 'r.id', '=', 's.region_id')
             ->leftJoin('candidates as c', function ($join) {

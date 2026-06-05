@@ -518,6 +518,9 @@ class PsleCandidateRegistrationService
             $summary['invalid']
         );
 
+        // Invalidate cached statistics
+        \App\Services\PsleCacheService::incrementVersion();
+
         return [
             'success' => true,
             'message' => $message,

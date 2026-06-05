@@ -92,13 +92,22 @@ class ExamTypeController extends Controller
         return redirect('/exam-types')->with('success', 'Exam Type deleted');
     }
 
+    private function resolveExamType($code)
+    {
+        $normalizedCode = strtoupper($code);
+        if (in_array($normalizedCode, ['PSLE_MY', 'PSLE_G', 'PSLE'])) {
+            $normalizedCode = 'PSLE';
+        }
+        return ExamType::where('code', $normalizedCode)->firstOrFail();
+    }
+
     // Subjects CRUD
     public function getSubjects($examTypeCode)
     {
-        $examType = ExamType::where('code', strtoupper($examTypeCode))->firstOrFail();
+        $examType = $this->resolveExamType($examTypeCode);
         $subjects = $examType->subjects()->get();
-        $isPsle = strtoupper($examTypeCode) === 'PSLE';
-        $isCsee = strtoupper($examTypeCode) === 'CSEE';
+        $isPsle = $examType->code === 'PSLE';
+        $isCsee = $examType->code === 'CSEE';
 
         $officialCseeCatalog = collect(config('csee.official_subjects', []))->keyBy('code');
 
@@ -134,7 +143,7 @@ class ExamTypeController extends Controller
         ]);
 
         try {
-            $examType = ExamType::where('code', strtoupper($examTypeCode))->firstOrFail();
+            $examType = $this->resolveExamType($examTypeCode);
             if ($examType->code === 'PSLE') {
                 return response()->json([
                     'message' => 'PSLE subjects are managed from the official NECTA catalog. Use the sync action instead of manual creation.',
@@ -187,7 +196,7 @@ class ExamTypeController extends Controller
         ]);
 
         try {
-            $examType = ExamType::where('code', strtoupper($examTypeCode))->firstOrFail();
+            $examType = $this->resolveExamType($examTypeCode);
             if ($examType->code === 'PSLE') {
                 return response()->json([
                     'message' => 'PSLE subjects are managed from the official NECTA catalog. Manual editing is disabled.',
@@ -237,7 +246,7 @@ class ExamTypeController extends Controller
         ]);
 
         try {
-            $examType = ExamType::where('code', strtoupper($examTypeCode))->firstOrFail();
+            $examType = $this->resolveExamType($examTypeCode);
             if ($examType->code === 'PSLE') {
                 return response()->json([
                     'message' => 'PSLE subjects are managed from the official NECTA catalog. Manual deletion is disabled.',
@@ -339,7 +348,7 @@ class ExamTypeController extends Controller
     // Combinations CRUD
     public function getCombinations($examTypeCode)
     {
-        $examType = ExamType::where('code', strtoupper($examTypeCode))->firstOrFail();
+        $examType = $this->resolveExamType($examTypeCode);
         $page = request()->get('page', 1);
         $pageSize = request()->get('page_size', 25);
         $search = request()->get('search', '');
@@ -371,7 +380,7 @@ class ExamTypeController extends Controller
 
     public function createCombination(Request $request, $examTypeCode)
     {
-        $examType = ExamType::where('code', strtoupper($examTypeCode))->firstOrFail();
+        $examType = $this->resolveExamType($examTypeCode);
         
         $validated = $request->validate([
             'code' => 'required|unique:combinations',
@@ -411,7 +420,7 @@ class ExamTypeController extends Controller
 
     public function updateCombination(Request $request, $examTypeCode, $combinationId)
     {
-        $examType = ExamType::where('code', strtoupper($examTypeCode))->firstOrFail();
+        $examType = $this->resolveExamType($examTypeCode);
         $combination = $examType->combinations()->findOrFail($combinationId);
         
         $validated = $request->validate([
@@ -451,7 +460,7 @@ class ExamTypeController extends Controller
 
     public function deleteCombination($examTypeCode, $combinationId)
     {
-        $examType = ExamType::where('code', strtoupper($examTypeCode))->firstOrFail();
+        $examType = $this->resolveExamType($examTypeCode);
         $combination = $examType->combinations()->findOrFail($combinationId);
         $combination->delete();
         
@@ -483,7 +492,7 @@ class ExamTypeController extends Controller
             $perPage = min(max((int)$perPage, 15), 100);
 
             // Get exam type from code
-            $examType = ExamType::where('code', strtoupper($code))->firstOrFail();
+            $examType = $this->resolveExamType($code);
             $examYear = null;
             if ($examYearLabel !== '') {
                 $examYear = ExamYear::where('year_label', (string) $examYearLabel)->first();
@@ -534,7 +543,7 @@ class ExamTypeController extends Controller
                 // Calculate total ACSEE candidates before filters if needed (original behavior preserved)
                 if ($examYear) {
                     $totalBeforeFiltersQuery = \App\Models\Candidate::query()
-                        ->where('exam_type', strtoupper($code))
+                        ->where('exam_type', $examType->code)
                         ->whereHas('examRegistrations', function ($q) use ($examType, $examYear) {
                             $q->where('exam_type_id', $examType->id)
                               ->where('exam_year_id', $examYear->id);
@@ -776,6 +785,7 @@ class ExamTypeController extends Controller
     public function getPsleSummary(Request $request)
     {
         try {
+            $startedAt = microtime(true);
             $user = $request->user();
             
             // Return 401 if unauthenticated
@@ -790,16 +800,24 @@ class ExamTypeController extends Controller
             }
 
             $examType = ExamType::where('code', 'PSLE')->firstOrFail();
-            $examYear = ExamYear::where('is_active', true)->first();
+            $examYearLabel = $request->query('exam_year');
+            if ($examYearLabel) {
+                $examYear = ExamYear::where('year_label', $examYearLabel)->first();
+            }
+            if (!$examYear) {
+                $examYear = ExamYear::where('is_active', true)->first();
+            }
             $examYearId = $examYear ? $examYear->id : 0;
 
             $regionId = $request->query('region_id');
             $districtId = $request->query('district_id');
+            $schoolId = $request->query('school_id');
 
             $scopeHash = \App\Services\PsleCacheService::scopeHash($user);
-            $cacheKey = \App\Services\PsleCacheService::summaryKey($examYearId, $user->id, $scopeHash) . '_' . ($regionId ?: 'all') . '_' . ($districtId ?: 'all');
+            $cacheKey = \App\Services\PsleCacheService::summaryKey($examYearId, $user->id, $scopeHash) . '_' . 
+                ($regionId ?: 'all') . '_' . ($districtId ?: 'all') . '_' . ($schoolId ?: 'all');
 
-            $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user, $examType, $examYear, $regionId, $districtId) {
+            $data = \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addMinutes(10), function () use ($user, $examType, $examYear, $regionId, $districtId, $schoolId) {
                 // 1. Subjects count
                 $subjects = \App\Models\Subject::where('exam_type_id', $examType->id)->count();
 
@@ -823,6 +841,10 @@ class ExamTypeController extends Controller
                     $schoolsQuery->where('council_id', $districtId);
                 }
 
+                if ($schoolId) {
+                    $schoolsQuery->where('id', $schoolId);
+                }
+
                 // Clone schoolsQuery to get unique councils count
                 $councilsCount = $schoolsQuery->clone()
                     ->whereNotNull('council_id')
@@ -831,27 +853,20 @@ class ExamTypeController extends Controller
 
                 $schoolsCount = $schoolsQuery->count();
 
-                // 3. Registered pupils query
-                $candidatesQuery = \App\Models\Candidate::query()
-                    ->where('exam_type', 'PSLE');
-
-                if ($examYear) {
-                    $candidatesQuery->whereHas('examRegistrations', function ($q) use ($examType, $examYear) {
-                        $q->where('exam_type_id', $examType->id)
-                          ->where('exam_year_id', $examYear->id);
-                    });
-                } else {
-                    $candidatesQuery->whereHas('examRegistrations', function ($q) use ($examType) {
-                        $q->where('exam_type_id', $examType->id);
-                    });
-                }
+                // 3. Registered pupils query (Consistent with getAcseeCandicates / rosterQuery)
+                $candidatesQuery = \App\Services\PsleCandidateRosterService::rosterQuery($examYear ? $examYear->id : 0);
 
                 PsleUserScope::applyToCandidateSchools($candidatesQuery, $user);
 
                 if ($regionId) {
                     $candidatesQuery->whereHas('school', function ($q) use ($regionId) {
                         $q->where('region_id', $regionId)
-                          ->orWhereHas('council', fn ($councilQuery) => $councilQuery->where('region_id', $regionId));
+                          ->orWhereHas('council', function ($q2) use ($regionId) {
+                              $q2->where('region_id', $regionId);
+                          })
+                          ->orWhereHas('district', function ($q2) use ($regionId) {
+                              $q2->where('region_id', $regionId);
+                          });
                     });
                 }
 
@@ -859,6 +874,10 @@ class ExamTypeController extends Controller
                     $candidatesQuery->whereHas('school', function ($q) use ($districtId) {
                         $q->where('council_id', $districtId);
                     });
+                }
+
+                if ($schoolId) {
+                    $candidatesQuery->where('school_id', $schoolId);
                 }
 
                 $candidatesCount = $candidatesQuery->count();
@@ -870,6 +889,17 @@ class ExamTypeController extends Controller
                     'registered_pupils' => $candidatesCount,
                 ];
             });
+
+            $durationMs = round((microtime(true) - $startedAt) * 1000, 2);
+            if (app()->environment('local')) {
+                Log::info('PSLE summary stats loaded', [
+                    'duration_ms' => $durationMs,
+                    'user_id' => $user->id,
+                    'exam_year_id' => $examYearId,
+                    'region_id' => $regionId ?: 'all',
+                    'district_id' => $districtId ?: 'all',
+                ]);
+            }
 
             return response()->json($data);
         } catch (\Exception $e) {

@@ -3092,6 +3092,30 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
 </div> <!-- End um-shell -->
 
 <script>
+    // Intercept all fetch requests to add headers Accept: application/json and X-Requested-With: XMLHttpRequest
+    (function() {
+        const originalFetch = window.fetch;
+        window.fetch = function(url, options = {}) {
+            options.headers = options.headers || {};
+            if (!(options.headers instanceof Headers)) {
+                if (!options.headers['Accept']) {
+                    options.headers['Accept'] = 'application/json';
+                }
+                if (!options.headers['X-Requested-With']) {
+                    options.headers['X-Requested-With'] = 'XMLHttpRequest';
+                }
+            } else {
+                if (!options.headers.has('Accept')) {
+                    options.headers.append('Accept', 'application/json');
+                }
+                if (!options.headers.has('X-Requested-With')) {
+                    options.headers.append('X-Requested-With', 'XMLHttpRequest');
+                }
+            }
+            return originalFetch(url, options);
+        };
+    })();
+
     function psleManager() {
         return {
             activeTab: 'subjects',
@@ -3282,7 +3306,9 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                 window.addEventListener('popstate', () => this.syncTabFromUrl());
                 await this.loadExamYears();
                 await this.loadRegions();
-                await this.loadDistricts();
+                if (this.filterRegion) {
+                    await this.loadDistricts();
+                }
                 if (this.activeTab === 'schools') {
                     await this.loadSchools();
                 } else {
@@ -3290,7 +3316,9 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                 }
                 await this.loadSubjects();
                 this.loadDashboardStats();
-                await this.loadCandidates();
+                if (this.activeTab === 'pupils') {
+                    await this.loadCandidates();
+                }
             },
 
             syncTabFromUrl() {
@@ -3323,8 +3351,10 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                 this.loadingStats = true;
                 try {
                     const params = new URLSearchParams();
+                    if (this.examYear) params.set('exam_year', this.examYear);
                     if (this.filterRegion) params.set('region_id', this.filterRegion);
                     if (this.filterDistrict) params.set('district_id', this.filterDistrict);
+                    if (this.filterSchool) params.set('school_id', this.filterSchool);
 
                     const response = await fetch(`/api/exam-types/psle/summary?${params.toString()}`, {
                         headers: {
@@ -3373,11 +3403,16 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
             },
 
             async loadDistricts() {
+                if (!this.filterRegion) {
+                    this.districts = [];
+                    this.syncFilterSearchLabels();
+                    return;
+                }
                 this.districtLoadSeq = (this.districtLoadSeq || 0) + 1;
                 const currentSeq = this.districtLoadSeq;
                 try {
                     const params = new URLSearchParams();
-                    if (this.filterRegion) params.set('region_id', this.filterRegion);
+                    params.set('region_id', this.filterRegion);
                     const response = await fetch(`/api/exam-types/psle/councils?${params.toString()}`);
                     const data = await response.json();
                     if (currentSeq !== this.districtLoadSeq) return;
@@ -3390,12 +3425,19 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
             },
 
             async loadSchools() {
+                if (!this.filterDistrict) {
+                    this.schools = [];
+                    this.schoolsCurrentPage = 1;
+                    this.selectedSchoolItems.clear();
+                    this.syncFilterSearchLabels();
+                    return;
+                }
                 this.schoolSearchSeq = (this.schoolSearchSeq || 0) + 1;
                 const currentSeq = this.schoolSearchSeq;
                 try {
                     const params = new URLSearchParams();
                     if (this.filterRegion) params.set('region_id', this.filterRegion);
-                    if (this.filterDistrict) params.set('district_id', this.filterDistrict);
+                    params.set('district_id', this.filterDistrict);
                     if (this.schoolSearch) params.set('search', this.schoolSearch);
 
                     const response = await fetch(`/api/exam-types/psle/schools?${params.toString()}`);
@@ -3579,7 +3621,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
             async loadSubjects() {
                 this.loadingSubjects = true;
                 try {
-                    const response = await fetch('/api/exam-types/PSLE/subjects');
+                    const response = await fetch('/api/exam-types/psle/subjects');
                     const data = await response.json();
                     this.subjects = data.data || [];
                     this.filteredSubjects = this.subjects;
@@ -3983,7 +4025,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                 this.candidateAbortController = new AbortController();
 
                 try {
-                    let url = `/api/exam-types/PSLE/candidates?page=${this.currentPage}&per_page=${this.candidatePageSize}&q=${encodeURIComponent(this.candidateSearch || '')}`;
+                    let url = `/api/exam-types/psle/candidates?page=${this.currentPage}&per_page=${this.candidatePageSize}&q=${encodeURIComponent(this.candidateSearch || '')}`;
                     if (this.examYear) url += `&exam_year=${encodeURIComponent(this.examYear)}`;
                     if (this.filterRegion) url += `&region_id=${this.filterRegion}`;
                     if (this.filterDistrict) url += `&district_id=${this.filterDistrict}`;
@@ -4035,6 +4077,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
             onExamYearChange() {
                 this.currentPage = 1;
                 this.loadCandidates();
+                this.loadDashboardStats();
             },
 
             onDistrictChange() {
@@ -4198,6 +4241,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                 this.syncFilterSearchLabels();
                 this.currentPage = 1;
                 this.loadCandidates();
+                this.loadDashboardStats();
             },
 
             buildVisiblePages(currentPage, totalPages) {

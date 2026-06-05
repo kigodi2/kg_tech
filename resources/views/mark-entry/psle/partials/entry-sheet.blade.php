@@ -1,5 +1,8 @@
 @php
     $isReadOnly = $isAdmin || $isReo;
+    $subjectId = $activeFilters['subject_id'] ?? request('subject_id');
+    $subject = $subjectId ? \App\Models\Subject::find($subjectId) : null;
+    $maxScore = $subject ? $subject->max_marks : 50;
 @endphp
 <div class="adm-breadcrumb">
     EXAMINATIONS <i class="fas fa-chevron-right" style="font-size:0.6rem; margin:0 4px;"></i> Mark Entry <i class="fas fa-chevron-right" style="font-size:0.6rem; margin:0 4px;"></i> <span>Entry Sheet</span>
@@ -116,7 +119,7 @@
                     <th width="140" class="text-center" style="white-space: nowrap;">PReM NUMBER</th>
                     <th style="white-space: nowrap;">CANDIDATE NAME</th>
                     <th width="60" class="text-center" style="white-space: nowrap;">SEX</th>
-                    <th width="140" class="text-center" style="white-space: nowrap;">SCORE (MAX 50)</th>
+                    <th width="140" class="text-center" style="white-space: nowrap;">SCORE (MAX {{ $maxScore }})</th>
                     <th width="120" class="text-center" style="white-space: nowrap;">STATUS</th>
                 </tr>
             </thead>
@@ -153,8 +156,8 @@
                                data-row-index="{{ $index }}"
                                data-last-saved-value="{{ $score }}"
                                value="{{ $score }}" 
-                               min="0" max="50" step="1"
-                               placeholder="0-50"
+                               min="0" max="{{ $maxScore }}" step="0.5"
+                               placeholder="0-{{ $maxScore }}"
                                style="width: 80px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff;"
                                oninput="queueMarkSave(this, {{ $c->id }})"
                                onblur="flushMarkSave(this, {{ $c->id }})"
@@ -287,7 +290,28 @@ function saveRow(input) {
 function saveMark(input, candidateId, attempt = 0) {
     if (readOnlyMode) return;
     const key = saveStateKey(candidateId);
-    const score = input.value.trim();
+    let score = input.value.trim();
+    const maxScore = parseFloat(input.max || '50');
+    const minScore = parseFloat(input.min || '0');
+    
+    if (input.validity && input.validity.badInput) {
+        setMarkInputError(input, `Score must be a number between ${minScore} and ${maxScore}.`);
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Score',
+            text: `Score must be a number between ${minScore} and ${maxScore}.`,
+            confirmButtonColor: 'var(--tz-blue)',
+            background: '#161b22',
+            color: '#f0f4f7'
+        });
+        input.focus();
+        return;
+    }
+    
+    if (score === '0-50' || score === `0-${maxScore}`) {
+        score = '';
+        input.value = '';
+    }
     const state = psleSaveStates.get(key) || {};
 
     if (state.inFlight && attempt === 0) {
@@ -307,9 +331,7 @@ function saveMark(input, candidateId, attempt = 0) {
     
     // Client-side score boundary check
     if (score !== '') {
-        const numScore = parseFloat(score);
-        const maxScore = parseFloat(input.max || '50');
-        const minScore = parseFloat(input.min || '0');
+        const numScore = Number(score);
         if (isNaN(numScore) || numScore < minScore || numScore > maxScore) {
             setMarkInputError(input, `Score must be a number between ${minScore} and ${maxScore}.`);
             Swal.fire({
@@ -335,16 +357,16 @@ function saveMark(input, candidateId, attempt = 0) {
     // Dynamic payload structure to satisfy Laravel validator
     const payload = {
         candidate_id: candidateId,
-        score: score === '' ? null : score
+        score: score === '' ? null : Number(score)
     };
     
     const assignmentId = '{{ $assignment->id ?? "" }}';
     if (assignmentId && assignmentId !== '') {
         payload.assignment_id = assignmentId;
     } else {
-        payload.school_id = '{{ request("school_id") }}';
-        payload.subject_id = '{{ request("subject_id") }}';
-        payload.exam_year_id = '{{ request("exam_year_id") }}';
+        payload.school_id = '{{ $activeFilters["school_id"] ?? "" }}';
+        payload.subject_id = '{{ $activeFilters["subject_id"] ?? "" }}';
+        payload.exam_year_id = '{{ $activeFilters["exam_year_id"] ?? "" }}';
     }
 
     psleSaveStates.set(key, {
@@ -451,11 +473,17 @@ function saveMark(input, candidateId, attempt = 0) {
             setMarkSaveError(input, err.message || 'Location verification required.');
             handleLocationExpired(err.message);
         } else if (err.status === 422) {
-            setMarkInputError(input, err.message || 'Some marks have validation errors.');
+            let msg = 'Invalid mark.';
+            if (err.errors && err.errors.score) {
+                msg = err.errors.score[0];
+            } else if (err.message) {
+                msg = err.message;
+            }
+            setMarkInputError(input, msg);
         } else {
-            setMarkSaveError(input, err.message || responseMessageForStatus(err.status || 0));
+            setMarkSaveError(input, responseMessageForStatus(err.status || 0));
         }
-        console.error(err);
+        console.error('Save failed:', err);
     })
     .finally(() => {
         clearTimeout(timeout);
@@ -530,9 +558,10 @@ function errorTitleForStatus(status) {
 }
 
 function responseMessageForStatus(status) {
-    if (status === 422) return 'Some marks have validation errors.';
-    if (status === 403) return 'You are not allowed to enter marks for this school or subject.';
-    if (status === 419) return 'Your session has expired. Please refresh and login again.';
+    if (status === 422) return 'Invalid mark.';
+    if (status === 419) return 'Session expired, refresh page.';
+    if (status === 403) return 'Not allowed.';
+    if (status === 500) return 'Server error.';
     if ([502, 503, 504].includes(Number(status))) return 'Server is temporarily busy. The system will retry automatically.';
     if (!status) return 'Network/server timeout. The system will retry automatically.';
     return `The mark could not be saved. Server status: ${status}.`;
@@ -553,9 +582,7 @@ function retryFailedSaves() {
     failedInputs.forEach(input => {
         const candidateId = input.closest('tr')?.dataset.candidateId;
         if (!candidateId) return;
-        clearMarkSaveError(input);
-        queueMarkSave(input, candidateId);
-        flushMarkSave(input, candidateId);
+        saveMark(input, candidateId);
     });
 }
 
