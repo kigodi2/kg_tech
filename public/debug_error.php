@@ -11,21 +11,35 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\PsleMarkEntryController;
 
-echo "Memory before: " . memory_get_usage(true) . "<br>";
-
 try {
-    $user = \App\Models\User::find(2107);
+    // 1. Find user Dickson Lemson
+    $user = \App\Models\User::where('name', 'like', '%DICKSON%LEMSON%')->first();
     if (!$user) {
-        throw new Exception("User 2107 not found");
+        $user = \App\Models\User::where('portal_role', 'mark_officer')->first();
+    }
+    if (!$user) {
+        throw new Exception("Dickson Lemson or MEO user not found");
     }
     Auth::login($user);
-    echo "Logged in as: " . Auth::user()->name . "<br>";
-    echo "Memory after login: " . memory_get_usage(true) . "<br>";
+    echo "Logged in as: " . Auth::user()->name . " (ID: " . Auth::user()->id . ")<br>";
 
+    // 2. Find candidate Martha Msafiri Witike
+    $candidate = \App\Models\Candidate::where('school_id', 7849)
+        ->where('full_name', 'like', '%MARTHA%MSAFIRI%')
+        ->first();
+    if (!$candidate) {
+        $candidate = \App\Models\Candidate::where('school_id', 7849)->first();
+    }
+    if (!$candidate) {
+        throw new Exception("Candidate not found under school 7849");
+    }
+    echo "Target Candidate: " . $candidate->full_name . " (ID: " . $candidate->id . ", Code: " . $candidate->candidate_id . ")<br>";
+
+    // 3. Prepare payload
     $payload = [
-        'candidate_id' => 49567,
-        'school_id' => 7829,
-        'subject_id' => 132,
+        'candidate_id' => $candidate->id,
+        'school_id' => 7849,
+        'subject_id' => 130,
         'exam_year_id' => 1,
         'score' => 'ABS'
     ];
@@ -44,6 +58,7 @@ try {
     echo "<pre>";
     print_r(json_decode($response->content(), true));
     echo "</pre>";
+
 } catch (\Throwable $e) {
     echo "<h3>Failed!</h3>";
     echo "<b>Exception:</b> " . get_class($e) . "<br>";
@@ -51,3 +66,4 @@ try {
     echo "<b>File:</b> " . $e->getFile() . " on line " . $e->getLine() . "<br>";
     echo "<pre><b>Trace:</b><br>" . $e->getTraceAsString() . "</pre>";
 }
+
