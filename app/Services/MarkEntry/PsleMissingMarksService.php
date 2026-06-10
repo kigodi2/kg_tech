@@ -201,6 +201,7 @@ class PsleMissingMarksService
 
             // Apply classification filter
             $keep = true;
+            if ($classificationFilter === 'all' && $absCount === 0 && $incCount === 0 && !$hasPendingVal && !$hasApprovedVal) $keep = false;
             if ($classificationFilter === 'abs' && $absCount === 0) $keep = false;
             if ($classificationFilter === 'inc' && $incCount === 0) $keep = false;
             if ($classificationFilter === 'pending' && !$hasPendingVal && !$hasApprovedVal) $keep = false;
