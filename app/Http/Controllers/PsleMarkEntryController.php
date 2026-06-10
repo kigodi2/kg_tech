@@ -269,45 +269,33 @@ class PsleMarkEntryController extends Controller
             $selectedSubjectId ?? 'all'
         );
 
-        $cachedMetrics = \Illuminate\Support\Facades\Cache::remember($statsCacheKey, 30, function() use ($selectedYearId, $psleExamTypeId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId, $selectedSubjectId, $psleSubjects) {
-            $candidatesQuery = \App\Services\PsleCandidateRosterService::rosterQuery((int) $selectedYearId);
+        $cachedMetrics = \Illuminate\Support\Facades\Cache::remember($statsCacheKey, 120, function() use ($selectedYearId, $psleExamTypeId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId, $selectedSubjectId, $psleSubjects) {
+            // 1. Get Candidate Count using optimized JOIN instead of slow whereHas
+            $candidatesQuery = \App\Models\Candidate::query()
+                ->join('candidate_exam_registrations as cer', 'candidates.id', '=', 'cer.candidate_id')
+                ->where('candidates.is_active', true)
+                ->where('cer.exam_type_id', $psleExamTypeId)
+                ->where('cer.exam_year_id', $selectedYearId);
 
-            if ($selectedRegionId) {
-                $candidatesQuery->whereHas('school', function($q) use ($selectedRegionId) {
-                    $q->where('region_id', $selectedRegionId);
-                });
-            }
-            if ($selectedDistrictId) {
-                $candidatesQuery->whereHas('school', function($q) use ($selectedDistrictId) {
-                    $q->where('district_id', $selectedDistrictId);
-                });
-            }
-            if ($selectedSchoolId) {
-                $candidatesQuery->where('candidates.school_id', $selectedSchoolId);
+            if ($selectedRegionId || $selectedDistrictId || $selectedSchoolId) {
+                $candidatesQuery->join('schools', 'candidates.school_id', '=', 'schools.id')
+                    ->when($selectedRegionId, fn($q) => $q->where('schools.region_id', $selectedRegionId))
+                    ->when($selectedDistrictId, fn($q) => $q->where('schools.district_id', $selectedDistrictId))
+                    ->when($selectedSchoolId, fn($q) => $q->where('candidates.school_id', $selectedSchoolId));
             }
 
             $candidateCount = $candidatesQuery->count();
-            
-            $marksQuery = \App\Models\RawMark::whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
-                    $cq->whereHas('examRegistrations', function($rq) use ($selectedYearId, $psleExamTypeId) {
-                        $rq->where('exam_type_id', $psleExamTypeId);
-                        if ($selectedYearId) $rq->where('exam_year_id', $selectedYearId);
-                    })
-                    ->whereHas('school', function($sq) {
-                        $sq->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                          ->where('education_level', 'PRIMARY');
+
+            // 2. Fetch Entered Marks Count (using optimized direct query on raw_marks table)
+            $enteredMarksQuery = \App\Models\RawMark::where('exam_year_id', $selectedYearId)
+                ->when($selectedSchoolId, fn($q) => $q->where('school_id', $selectedSchoolId))
+                ->when($selectedSubjectId, fn($q) => $q->where('subject_id', $selectedSubjectId))
+                ->when($selectedRegionId || $selectedDistrictId, function($q) use ($selectedRegionId, $selectedDistrictId) {
+                    $q->whereIn('school_id', function($sub) use ($selectedRegionId, $selectedDistrictId) {
+                        $sub->select('id')->from('schools')
+                            ->when($selectedRegionId, fn($sq) => $sq->where('region_id', $selectedRegionId))
+                            ->when($selectedDistrictId, fn($sq) => $sq->where('district_id', $selectedDistrictId));
                     });
-                })
-                ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId, $selectedSubjectId) {
-                    $q->whereHas('examType', fn($sq) => $sq->where('code', 'PSLE'));
-                    
-                    $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
-                    if ($yearLabel) $q->where('exam_year', $yearLabel);
-                    
-                    if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
-                    if ($selectedDistrictId) $q->where('district_id', $selectedDistrictId);
-                    if ($selectedSchoolId) $q->where('school_id', $selectedSchoolId);
-                    if ($selectedSubjectId) $q->where('subject_id', $selectedSubjectId);
                 })
                 ->where(function($q) {
                     $q->whereNotNull('paper_1_marks')
@@ -318,107 +306,96 @@ class PsleMarkEntryController extends Controller
                       ->orWhereNotNull('subject_status');
                 });
 
-            $enteredMarksCount = $marksQuery->count();
+            $enteredMarksCount = $enteredMarksQuery->count();
 
-            // Missing Marks Calculation
+            // 3. Grouped Subject counts
+            $subjectCounts = \App\Models\RawMark::select('subject_id', DB::raw('count(*) as count'))
+                ->where('exam_year_id', $selectedYearId)
+                ->when($selectedSchoolId, fn($q) => $q->where('school_id', $selectedSchoolId))
+                ->when($selectedRegionId || $selectedDistrictId, function($q) use ($selectedRegionId, $selectedDistrictId) {
+                    $q->whereIn('school_id', function($sub) use ($selectedRegionId, $selectedDistrictId) {
+                        $sub->select('id')->from('schools')
+                            ->when($selectedRegionId, fn($sq) => $sq->where('region_id', $selectedRegionId))
+                            ->when($selectedDistrictId, fn($sq) => $sq->where('district_id', $selectedDistrictId));
+                    });
+                })
+                ->where(function($q) {
+                    $q->whereNotNull('paper_1_marks')
+                      ->orWhereNotNull('paper_2_marks')
+                      ->orWhereNotNull('paper_3_marks')
+                      ->orWhereNotNull('practical_marks')
+                      ->orWhereNotNull('project_marks')
+                      ->orWhereNotNull('subject_status');
+                })
+                ->groupBy('subject_id')
+                ->pluck('count', 'subject_id')
+                ->toArray();
+
+            // 4. Grouped Outliers count
+            $outlierCounts = \App\Models\MarkEntryOutlier::select('subject_id', DB::raw('count(*) as count'))
+                ->when($selectedYearId, fn($q) => $q->where('exam_year_id', $selectedYearId))
+                ->when($selectedSchoolId, fn($q) => $q->where('school_id', $selectedSchoolId))
+                ->when($selectedRegionId, fn($q) => $q->where('region_id', $selectedRegionId))
+                ->when($selectedDistrictId, fn($q) => $q->where('district_id', $selectedDistrictId))
+                ->groupBy('subject_id')
+                ->pluck('count', 'subject_id')
+                ->toArray();
+
+            // 5. Global region-wide counts for the region progress card
+            $globalSubjectCounts = [];
+            if ($selectedRegionId) {
+                $globalSubjectCounts = \App\Models\RawMark::select('subject_id', DB::raw('count(*) as count'))
+                    ->where('exam_year_id', $selectedYearId)
+                    ->whereIn('school_id', function($sub) use ($selectedRegionId) {
+                        $sub->select('id')->from('schools')->where('region_id', $selectedRegionId);
+                    })
+                    ->where(function($q) {
+                        $q->whereNotNull('paper_1_marks')
+                          ->orWhereNotNull('paper_2_marks')
+                          ->orWhereNotNull('paper_3_marks')
+                          ->orWhereNotNull('practical_marks')
+                          ->orWhereNotNull('project_marks')
+                          ->orWhereNotNull('subject_status');
+                    })
+                    ->groupBy('subject_id')
+                    ->pluck('count', 'subject_id')
+                    ->toArray();
+            }
+
+            // 6. Build stats per subject
             $missingMarksCount = 0;
             $regionMissingMarksCount = 0;
             $subjectStats = [];
-            
-            $regionCandidatesQuery = \App\Services\PsleCandidateRosterService::rosterQuery((int) $selectedYearId);
+
+            // Region Candidate Count for region summary card
+            $regionCandidatesQuery = \App\Models\Candidate::query()
+                ->join('candidate_exam_registrations as cer', 'candidates.id', '=', 'cer.candidate_id')
+                ->where('candidates.is_active', true)
+                ->where('cer.exam_type_id', $psleExamTypeId)
+                ->where('cer.exam_year_id', $selectedYearId);
             if ($selectedRegionId) {
-                $regionCandidatesQuery->whereHas('school', function($q) use ($selectedRegionId) {
-                    $q->where('region_id', $selectedRegionId);
-                });
+                $regionCandidatesQuery->join('schools', 'candidates.school_id', '=', 'schools.id')
+                    ->where('schools.region_id', $selectedRegionId);
             }
             $regionCandidateCount = $regionCandidatesQuery->count();
 
             foreach ($psleSubjects as $subject) {
-                $sMarksQuery = \App\Models\RawMark::where('subject_id', $subject->id)
-                    ->whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
-                        $cq->whereHas('examRegistrations', function($rq) use ($selectedYearId, $psleExamTypeId) {
-                            $rq->where('exam_type_id', $psleExamTypeId);
-                            if ($selectedYearId) $rq->where('exam_year_id', $selectedYearId);
-                        })
-                        ->whereHas('school', function($sq) {
-                            $sq->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                              ->where('education_level', 'PRIMARY');
-                        });
-                    })
-                    ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId, $selectedDistrictId, $selectedSchoolId) {
-                        $q->whereHas('examType', fn($sq) => $sq->where('code', 'PSLE'));
-                        $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
-                        if ($yearLabel) $q->where('exam_year', $yearLabel);
-                        if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
-                        if ($selectedDistrictId) $q->where('district_id', $selectedDistrictId);
-                        if ($selectedSchoolId) $q->where('school_id', $selectedSchoolId);
-                    })
-                    ->where(function($q) {
-                        $q->whereNotNull('paper_1_marks')
-                          ->orWhereNotNull('paper_2_marks')
-                          ->orWhereNotNull('paper_3_marks')
-                          ->orWhereNotNull('practical_marks')
-                          ->orWhereNotNull('project_marks')
-                          ->orWhereNotNull('subject_status');
-                    });
-
-                // Global region-wide query for the region summary card
-                $gMarksQuery = \App\Models\RawMark::where('subject_id', $subject->id)
-                    ->whereHas('candidate', function($cq) use ($selectedYearId, $psleExamTypeId) {
-                        $cq->whereHas('examRegistrations', function($rq) use ($selectedYearId, $psleExamTypeId) {
-                            $rq->where('exam_type_id', $psleExamTypeId);
-                            if ($selectedYearId) $rq->where('exam_year_id', $selectedYearId);
-                        })
-                        ->whereHas('school', function($sq) {
-                            $sq->whereIn('school_type', ['PRIMARY', 'BOTH'])
-                              ->where('education_level', 'PRIMARY');
-                        });
-                    })
-                    ->whereHas('batch', function($q) use ($selectedYearId, $selectedRegionId) {
-                        $q->whereHas('examType', fn($sq) => $sq->where('code', 'PSLE'));
-                        $yearLabel = \App\Models\ExamYear::where('id', $selectedYearId)->value('year_label');
-                        if ($yearLabel) $q->where('exam_year', $yearLabel);
-                        if ($selectedRegionId) $q->where('region_id', $selectedRegionId);
-                    })
-                    ->where(function($q) {
-                        $q->whereNotNull('paper_1_marks')
-                          ->orWhereNotNull('paper_2_marks')
-                          ->orWhereNotNull('paper_3_marks')
-                          ->orWhereNotNull('practical_marks')
-                          ->orWhereNotNull('project_marks')
-                          ->orWhereNotNull('subject_status');
-                    });
-
-                $enteredCount = $sMarksQuery->count();
+                $enteredCount = $subjectCounts[$subject->id] ?? 0;
                 $missingCount = max(0, $candidateCount - $enteredCount);
-                
+
                 if (!$selectedSubjectId || (int)$selectedSubjectId === (int)$subject->id) {
                     $missingMarksCount += $missingCount;
-                    $regionMissingMarksCount += max(0, $regionCandidateCount - $gMarksQuery->count());
+
+                    $gEnteredCount = $selectedRegionId ? ($globalSubjectCounts[$subject->id] ?? 0) : $enteredCount;
+                    $rCandCount = $selectedRegionId ? $regionCandidateCount : $candidateCount;
+                    $regionMissingMarksCount += max(0, $rCandCount - $gEnteredCount);
                 }
 
                 $subjectStats[$subject->id] = [
                     'entered' => $enteredCount,
                     'missing' => $missingCount,
-                    'outliers' => \App\Models\MarkEntryOutlier::where('subject_id', $subject->id)
-                        ->when($selectedYearId, fn($q) => $q->where('exam_year_id', $selectedYearId))
-                        ->when($selectedRegionId, fn($q) => $q->where('region_id', $selectedRegionId))
-                        ->when($selectedDistrictId, fn($q) => $q->where('district_id', $selectedDistrictId))
-                        ->when($selectedSchoolId, fn($q) => $q->where('school_id', $selectedSchoolId))
-                        ->count()
+                    'outliers' => $outlierCounts[$subject->id] ?? 0,
                 ];
-            }
-
-            // Outlier Count
-            $outlierCount = 0;
-            if (\Illuminate\Support\Facades\Schema::hasTable('mark_entry_outliers')) {
-                $outlierCountQuery = \App\Models\MarkEntryOutlier::query();
-                if ($selectedYearId) $outlierCountQuery->where('exam_year_id', $selectedYearId);
-                if ($selectedRegionId) $outlierCountQuery->where('region_id', $selectedRegionId);
-                if ($selectedDistrictId) $outlierCountQuery->where('district_id', $selectedDistrictId);
-                if ($selectedSchoolId) $outlierCountQuery->where('school_id', $selectedSchoolId);
-                if ($selectedSubjectId) $outlierCountQuery->where('subject_id', $selectedSubjectId);
-                $outlierCount = $outlierCountQuery->count();
             }
 
             return [
@@ -426,7 +403,7 @@ class PsleMarkEntryController extends Controller
                 'enteredMarksCount' => $enteredMarksCount,
                 'missingMarksCount' => $missingMarksCount,
                 'regionMissingMarksCount' => $regionMissingMarksCount,
-                'outlierCount' => $outlierCount,
+                'outlierCount' => array_sum($outlierCounts),
                 'subjectStats' => $subjectStats,
             ];
         });
@@ -619,16 +596,11 @@ class PsleMarkEntryController extends Controller
                 $schoolModel = \App\Models\School::findOrFail($selectedSchoolId);
                 $schoolDetails = $missingMarksService->getSchoolDetails($schoolModel, $activeFilters, $user);
             } else {
-                $schoolSummariesCollection = $missingMarksService->getSchoolSummaries($activeFilters, $user);
-                
-                $perPage = 20;
-                $page = $request->query('page', 1);
-                $schoolSummaries = new \Illuminate\Pagination\LengthAwarePaginator(
-                    $schoolSummariesCollection->forPage($page, $perPage)->values(),
-                    $schoolSummariesCollection->count(),
-                    $perPage,
-                    $page,
-                    ['path' => $request->url(), 'query' => $request->query()]
+                $schoolSummaries = $missingMarksService->getSchoolSummaries(
+                    $activeFilters,
+                    $user,
+                    (int) $request->query('page', 1),
+                    20
                 );
             }
 

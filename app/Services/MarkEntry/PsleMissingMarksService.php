@@ -22,7 +22,7 @@ class PsleMissingMarksService
     /**
      * Get school summaries of missing marks, ABS, and INC candidates.
      */
-    public function getSchoolSummaries(array $filters, User $user): Collection
+    public function getSchoolSummaries(array $filters, User $user, int $page = 1, int $perPage = 20): \Illuminate\Pagination\LengthAwarePaginator
     {
         $examYearId = $filters['exam_year_id'];
         $regionId = $filters['region_id'] ?? null;
@@ -31,6 +31,18 @@ class PsleMissingMarksService
         $classificationFilter = $filters['classification'] ?? 'all';
         $subjectId = $filters['subject_id'] ?? null;
 
+        // Force region locking for non-admin users with region scopes
+        if (!$user->isAdmin()) {
+            if ($user->region_id) {
+                $regionId = $user->region_id;
+            } else {
+                return new \Illuminate\Pagination\LengthAwarePaginator(collect(), 0, $perPage, $page, [
+                    'path' => request()->url(),
+                    'query' => request()->query()
+                ]);
+            }
+        }
+
         // PSLE Exam Type lookup
         $psleExamTypeId = ExamType::where('code', 'PSLE')->value('id') ?? 4;
 
@@ -38,10 +50,10 @@ class PsleMissingMarksService
         $activeSubjects = Subject::where('exam_type_id', $psleExamTypeId)
             ->where('is_active', true)
             ->get();
-        $activeSubjectsCount = $activeSubjects->count();
+        $activeSubjectsCount = max(1, $activeSubjects->count());
         $activeSubjectIds = $activeSubjects->pluck('id')->toArray();
 
-        // Get schools
+        // 1. Get schools matching the region/district filters
         $schoolsQuery = School::with(['region', 'district'])
             ->where('education_level', 'PRIMARY')
             ->whereIn('school_type', ['PRIMARY', 'BOTH'])
@@ -53,27 +65,132 @@ class PsleMissingMarksService
         $schoolIds = $schools->pluck('id')->toArray();
 
         if (empty($schoolIds)) {
-            return collect();
+            return new \Illuminate\Pagination\LengthAwarePaginator(collect(), 0, $perPage, $page, [
+                'path' => request()->url(),
+                'query' => request()->query()
+            ]);
         }
 
-        // Get candidates registered for PSLE
-        $candidatesQuery = Candidate::whereIn('school_id', $schoolIds)
+        // 2. Fetch candidate counts per school matching these school IDs
+        $candCounts = DB::table('candidate_exam_registrations')
+            ->join('candidates', 'candidate_exam_registrations.candidate_id', '=', 'candidates.id')
+            ->select('candidates.school_id', DB::raw('count(*) as count'))
+            ->where('candidate_exam_registrations.exam_year_id', $examYearId)
+            ->where('candidate_exam_registrations.exam_type_id', $psleExamTypeId)
+            ->whereIn('candidates.school_id', $schoolIds)
+            ->where('candidates.is_active', true)
+            ->groupBy('candidates.school_id')
+            ->pluck('count', 'school_id')
+            ->toArray();
+
+        // 3. Fetch raw mark counts per school matching these school IDs
+        $markCounts = DB::table('raw_marks')
+            ->select('school_id', DB::raw('count(*) as count'))
+            ->where('exam_year_id', $examYearId)
+            ->whereIn('school_id', $schoolIds)
+            ->groupBy('school_id')
+            ->pluck('count', 'school_id')
+            ->toArray();
+
+        // 4. Fetch validation presence per school matching these school IDs
+        $validationPresence = DB::table('psle_missing_mark_validations')
+            ->select('school_id',
+                DB::raw("SUM(CASE WHEN decision = 'pending' THEN 1 ELSE 0 END) as pending_count"),
+                DB::raw("SUM(CASE WHEN decision = 'approved_abs' THEN 1 ELSE 0 END) as approved_count"),
+                DB::raw("SUM(CASE WHEN decision = 'committed' THEN 1 ELSE 0 END) as committed_count"),
+                DB::raw("SUM(CASE WHEN decision = 'rejected' THEN 1 ELSE 0 END) as rejected_count")
+            )
+            ->where('exam_year_id', $examYearId)
+            ->whereIn('school_id', $schoolIds)
+            ->groupBy('school_id')
+            ->get()
+            ->keyBy('school_id')
+            ->toArray();
+
+        // 5. Identify schools matching the classification filter
+        $eligibleSchoolIds = [];
+
+        foreach ($candCounts as $sid => $cc) {
+            if ($cc === 0) continue;
+            $mc = $markCounts[$sid] ?? 0;
+            $val = (array) ($validationPresence[$sid] ?? []);
+
+            $hasPending = ($val['pending_count'] ?? 0) > 0;
+            $hasApproved = ($val['approved_count'] ?? 0) > 0;
+            $hasCommitted = ($val['committed_count'] ?? 0) > 0;
+            $hasRejected = ($val['rejected_count'] ?? 0) > 0;
+
+            $isComplete = ($mc === $cc * $activeSubjectsCount);
+
+            $keep = false;
+
+            if ($classificationFilter === 'all') {
+                if (!$isComplete || $hasPending || $hasApproved) {
+                    $keep = true;
+                }
+            } elseif ($classificationFilter === 'abs') {
+                // Heuristic: school has missing marks or approved ABS validations
+                if ($mc < $cc * $activeSubjectsCount || $hasApproved) {
+                    $keep = true;
+                }
+            } elseif ($classificationFilter === 'inc') {
+                if ($mc > 0 && $mc < $cc * $activeSubjectsCount) {
+                    $keep = true;
+                }
+            } elseif ($classificationFilter === 'pending') {
+                if ($hasPending || $hasApproved) {
+                    $keep = true;
+                }
+            } elseif ($classificationFilter === 'approved') {
+                if ($hasApproved) {
+                    $keep = true;
+                }
+            } elseif ($classificationFilter === 'committed') {
+                if ($hasCommitted) {
+                    $keep = true;
+                }
+            } elseif ($classificationFilter === 'rejected') {
+                if ($hasRejected) {
+                    $keep = true;
+                }
+            }
+
+            if ($keep) {
+                $eligibleSchoolIds[] = $sid;
+            }
+        }
+
+        if (empty($eligibleSchoolIds)) {
+            return new \Illuminate\Pagination\LengthAwarePaginator(collect(), 0, $perPage, $page, [
+                'path' => request()->url(),
+                'query' => request()->query()
+            ]);
+        }
+
+        // 6. Query and paginate the matching School models (retrieving ONLY 20 rows)
+        $schoolsPaginator = School::with(['region', 'district'])
+            ->whereIn('id', $eligibleSchoolIds)
+            ->orderBy('code')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $pageSchoolIds = $schoolsPaginator->pluck('id')->toArray();
+
+        // 7. Fetch exact candidate-level status for ONLY the 20 schools on the current page
+        $candidates = Candidate::whereIn('school_id', $pageSchoolIds)
             ->whereHas('examRegistrations', function($q) use ($examYearId, $psleExamTypeId) {
                 $q->where('exam_year_id', $examYearId)
                   ->where('exam_type_id', $psleExamTypeId);
             })
-            ->where('is_active', true);
-
-        $candidates = $candidatesQuery->get();
+            ->where('is_active', true)
+            ->get();
+        
         $candidateIds = $candidates->pluck('id')->toArray();
 
-        // Get raw marks
         $rawMarks = RawMark::whereIn('candidate_id', $candidateIds)
             ->where('exam_year_id', $examYearId)
             ->get()
             ->groupBy('candidate_id');
 
-        // Get custom subject selections
         $subjectSelections = \App\Models\CandidateSubjectSelection::whereIn('candidate_id', $candidateIds)
             ->where('exam_year_id', $examYearId)
             ->where('exam_type_id', $psleExamTypeId)
@@ -81,22 +198,19 @@ class PsleMissingMarksService
             ->get()
             ->groupBy('candidate_id');
 
-        // Get validations
         $validations = PsleMissingMarkValidation::whereIn('candidate_id', $candidateIds)
             ->where('exam_year_id', $examYearId)
             ->get()
             ->groupBy('candidate_id');
 
-        // Group candidates by school
         $candidatesBySchool = $candidates->groupBy('school_id');
 
+        // 8. Calculate exact metrics for ONLY the 20 schools
         $summaries = collect();
 
-        foreach ($schools as $school) {
+        foreach ($schoolsPaginator->items() as $school) {
             $schoolCandidates = $candidatesBySchool->get($school->id) ?? collect();
-            if ($schoolCandidates->isEmpty()) {
-                continue;
-            }
+            if ($schoolCandidates->isEmpty()) continue;
 
             $registeredCount = $schoolCandidates->count();
             $completeCount = 0;
@@ -110,26 +224,14 @@ class PsleMissingMarksService
             $hasRejectedVal = false;
 
             foreach ($schoolCandidates as $candidate) {
-                // Determine required subjects for this candidate
                 $candidateSelections = $subjectSelections->get($candidate->id) ?? collect();
-                if ($candidateSelections->isNotEmpty()) {
-                    $requiredIds = $candidateSelections->pluck('subject_id')->toArray();
-                } else {
-                    $requiredIds = $activeSubjectIds;
-                }
+                $requiredIds = $candidateSelections->isNotEmpty() ? $candidateSelections->pluck('subject_id')->toArray() : $activeSubjectIds;
 
-                // If filtering by specific subject, restrict check to that subject
                 if ($subjectId) {
-                    if (in_array((int)$subjectId, $requiredIds)) {
-                        $requiredIds = [(int)$subjectId];
-                    } else {
-                        $requiredIds = [];
-                    }
+                    $requiredIds = in_array((int)$subjectId, $requiredIds) ? [(int)$subjectId] : [];
                 }
 
-                if (empty($requiredIds)) {
-                    continue;
-                }
+                if (empty($requiredIds)) continue;
 
                 $candidateMarks = $rawMarks->get($candidate->id) ?? collect();
                 $candidateVals = $validations->get($candidate->id) ?? collect();
@@ -151,7 +253,6 @@ class PsleMissingMarksService
                     }
                 }
 
-                // Check validation decisions for this candidate's missing subjects
                 foreach ($missingSubIds as $sid) {
                     $val = $candidateVals->firstWhere('subject_id', $sid);
                     if ($val) {
@@ -162,14 +263,11 @@ class PsleMissingMarksService
                     }
                 }
 
-                // Classify candidate
                 $isComplete = ($numericCount + $committedAbs) === count($requiredIds);
                 if ($isComplete) {
                     $completeCount++;
                 } else {
-                    // Update total missing subject records count
                     $totalMissingRecords += count($missingSubIds);
-
                     if ($numericCount === 0) {
                         $absCount++;
                     } else {
@@ -180,7 +278,7 @@ class PsleMissingMarksService
 
             $completionPct = $registeredCount > 0 ? round(($completeCount / $registeredCount) * 100, 1) : 0;
 
-            $summaryRow = (object) [
+            $summaries->push((object) [
                 'school_id' => $school->id,
                 'school_code' => $school->code,
                 'school_name' => $school->name,
@@ -192,29 +290,23 @@ class PsleMissingMarksService
                 'inc' => $incCount,
                 'missing_records' => $totalMissingRecords,
                 'completion_pct' => $completionPct,
-                
                 'has_pending' => $hasPendingVal,
                 'has_approved' => $hasApprovedVal,
                 'has_committed' => $hasCommittedVal,
                 'has_rejected' => $hasRejectedVal,
-            ];
-
-            // Apply classification filter
-            $keep = true;
-            if ($classificationFilter === 'all' && $absCount === 0 && $incCount === 0 && !$hasPendingVal && !$hasApprovedVal) $keep = false;
-            if ($classificationFilter === 'abs' && $absCount === 0) $keep = false;
-            if ($classificationFilter === 'inc' && $incCount === 0) $keep = false;
-            if ($classificationFilter === 'pending' && !$hasPendingVal && !$hasApprovedVal) $keep = false;
-            if ($classificationFilter === 'approved' && !$hasApprovedVal) $keep = false;
-            if ($classificationFilter === 'committed' && !$hasCommittedVal) $keep = false;
-            if ($classificationFilter === 'rejected' && !$hasRejectedVal) $keep = false;
-
-            if ($keep) {
-                $summaries->push($summaryRow);
-            }
+            ]);
         }
 
-        return $summaries;
+        return new \Illuminate\Pagination\LengthAwarePaginator(
+            $summaries,
+            $schoolsPaginator->total(),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query()
+            ]
+        );
     }
 
     /**
