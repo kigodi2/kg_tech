@@ -281,6 +281,82 @@ class PsleMarkSaveTest extends TestCase
             ->count());
     }
 
+    public function test_saving_abs_status_saves_correctly(): void
+    {
+        $response = $this->actingAs($this->officer)->postJson('/api/mark-entry/psle/marks/save', $this->payload(['score' => 'ABS']));
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('subject_status', 'ABS')
+            ->assertJsonPath('mark', 'ABS');
+
+        $this->assertDatabaseHas('raw_marks', [
+            'candidate_id' => $this->candidate->id,
+            'subject_id' => $this->subject->id,
+            'paper_1_marks' => null,
+            'subject_status' => 'ABS',
+        ]);
+    }
+
+    public function test_clearing_score_saves_as_abs_status(): void
+    {
+        // First save a numeric mark
+        $this->actingAs($this->officer)->postJson('/api/mark-entry/psle/marks/save', $this->payload(['score' => 40]))->assertOk();
+
+        // Now save empty string
+        $response = $this->actingAs($this->officer)->postJson('/api/mark-entry/psle/marks/save', $this->payload(['score' => '']));
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('subject_status', 'ABS')
+            ->assertJsonPath('mark', 'ABS');
+
+        $this->assertDatabaseHas('raw_marks', [
+            'candidate_id' => $this->candidate->id,
+            'subject_id' => $this->subject->id,
+            'paper_1_marks' => null,
+            'subject_status' => 'ABS',
+        ]);
+    }
+
+    public function test_clearing_inc_mark_updates_to_abs_status(): void
+    {
+        // First save as INC
+        $this->actingAs($this->officer)->postJson('/api/mark-entry/psle/marks/save', $this->payload(['score' => 'INC']))->assertOk();
+
+        // Now save null/empty
+        $response = $this->actingAs($this->officer)->postJson('/api/mark-entry/psle/marks/save', $this->payload(['score' => null]));
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('subject_status', 'ABS')
+            ->assertJsonPath('mark', 'ABS');
+
+        $this->assertDatabaseHas('raw_marks', [
+            'candidate_id' => $this->candidate->id,
+            'subject_id' => $this->subject->id,
+            'paper_1_marks' => null,
+            'subject_status' => 'ABS',
+        ]);
+    }
+
+    public function test_saving_inc_status_saves_correctly(): void
+    {
+        $response = $this->actingAs($this->officer)->postJson('/api/mark-entry/psle/marks/save', $this->payload(['score' => 'INC']));
+
+        $response->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('subject_status', 'INC')
+            ->assertJsonPath('mark', 'INC');
+
+        $this->assertDatabaseHas('raw_marks', [
+            'candidate_id' => $this->candidate->id,
+            'subject_id' => $this->subject->id,
+            'paper_1_marks' => null,
+            'subject_status' => 'INC',
+        ]);
+    }
+
     private function payload(array $overrides = []): array
     {
         return array_merge([

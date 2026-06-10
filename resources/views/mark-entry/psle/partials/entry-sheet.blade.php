@@ -130,7 +130,25 @@
                         ->where('subject_id', $activeFilters['subject_id'])
                         ->where('exam_year_id', $activeFilters['exam_year_id'])
                         ->first();
-                    $score = $existingMark ? $existingMark->paper_1_marks : '';
+                    $score = '';
+                    $status = 'Pending';
+                    $badgeClass = 'badge-yellow';
+                    
+                    if ($existingMark) {
+                        if ($existingMark->subject_status === 'ABS') {
+                            $score = 'ABS';
+                            $status = 'ABS';
+                            $badgeClass = 'badge-red';
+                        } elseif ($existingMark->paper_1_marks !== null && $existingMark->paper_1_marks !== '') {
+                            $score = $existingMark->paper_1_marks;
+                            $status = 'Entered';
+                            $badgeClass = 'badge-green';
+                        } elseif ($existingMark->subject_status === 'INC') {
+                            $score = 'INC';
+                            $status = 'INC';
+                            $badgeClass = 'badge-yellow';
+                        }
+                    }
                     $reg = $c->examRegistrations->where('exam_year_id', $activeFilters['exam_year_id'])->first();
                     $displayIndexNumber = $c->candidate_id ?? null;
                 @endphp
@@ -149,7 +167,7 @@
                     <td class="candidate-name" style="white-space: nowrap; font-weight: 500;">{{ $c->full_name }}</td>
                     <td class="text-center" style="white-space: nowrap;">{{ $c->gender }}</td>
                     <td class="text-center" style="white-space: nowrap;">
-                        <input type="number" 
+                        <input type="text" 
                                {{ $isReadOnly ? 'disabled' : '' }}
                                class="mark-input adm-select" 
                                data-candidate-id="{{ $c->id }}"
@@ -158,14 +176,14 @@
                                value="{{ $score }}" 
                                min="0" max="{{ $maxScore }}" step="0.5"
                                placeholder="0-{{ $maxScore }}"
-                               style="width: 80px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff;"
+                               style="width: 80px; text-align: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: {{ ($score === 'ABS') ? 'var(--tz-red)' : (($score === 'INC') ? 'var(--tz-yellow)' : '#fff') }};"
                                oninput="queueMarkSave(this, {{ $c->id }})"
                                onblur="flushMarkSave(this, {{ $c->id }})"
                                onkeydown="handleNavigation(event, this)">
                     </td>
                     <td class="text-center" style="white-space: nowrap;">
-                        <span class="mark-status badge {{ ($score !== null && $score !== '') ? 'badge-green' : 'badge-yellow' }}" style="font-size: 0.7rem;">
-                            {{ ($score !== null && $score !== '') ? 'Entered' : 'Pending' }}
+                        <span class="mark-status badge {{ $badgeClass }}" style="font-size: 0.7rem; {{ $status === 'INC' || $status === 'ABS' ? 'cursor: pointer;' : '' }}">
+                            {{ $status }}
                         </span>
                     </td>
                 </tr>
@@ -205,6 +223,17 @@ document.addEventListener('DOMContentLoaded', function() {
             input.dataset.saveStatus = input.value.trim() !== '' ? 'saved' : 'idle';
         }
     });
+    document.querySelectorAll('.mark-status').forEach(badge => {
+        badge.addEventListener('click', function() {
+            if (readOnlyMode) return;
+            const row = badge.closest('tr');
+            const input = row?.querySelector('.mark-input');
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        });
+    });
 });
 
 function updateStats() {
@@ -237,7 +266,26 @@ function saveStateKey(candidateId) {
 function queueMarkSave(input, candidateId) {
     if (readOnlyMode) return;
     const key = saveStateKey(candidateId);
-    const score = input.value.trim();
+    let score = input.value.trim();
+    
+    // Apply immediate visual styling when typing
+    let scoreUpper = score.toUpperCase();
+    if (scoreUpper === 'ABS' || score === '') {
+        input.style.color = 'var(--tz-red)';
+        setMarkStatus(input, 'ABS', 'badge-red');
+    } else if (scoreUpper === 'INC') {
+        input.style.color = 'var(--tz-yellow)';
+        setMarkStatus(input, 'INC', 'badge-yellow');
+    } else {
+        const numScore = parseFloat(score);
+        if (!isNaN(numScore) && numScore >= 0 && numScore <= 50) {
+            input.style.color = '#fff';
+            setMarkStatus(input, 'Saving...', 'badge-yellow');
+        } else {
+            input.style.color = '#fff';
+        }
+    }
+
     const state = psleSaveStates.get(key) || {};
     if (!state.inFlight && !input.classList.contains('mark-input-save-error') && psleLastSavedValues.get(key) === score) {
         return;
@@ -248,7 +296,11 @@ function queueMarkSave(input, candidateId) {
     clearTimeout(psleSaveTimers.get(key));
     clearMarkInputError(input);
     clearMarkSaveError(input);
-    setMarkStatus(input, 'Saving...', 'badge-yellow');
+    
+    if (score !== '' && scoreUpper !== 'ABS' && scoreUpper !== 'INC') {
+        setMarkStatus(input, 'Saving...', 'badge-yellow');
+    }
+    
     psleSaveTimers.set(key, setTimeout(() => saveMark(input, candidateId), PSLE_SAVE_DEBOUNCE_MS));
     updateStats();
 }
@@ -294,23 +346,40 @@ function saveMark(input, candidateId, attempt = 0) {
     const maxScore = parseFloat(input.max || '50');
     const minScore = parseFloat(input.min || '0');
     
-    if (input.validity && input.validity.badInput) {
-        setMarkInputError(input, `Score must be a number between ${minScore} and ${maxScore}.`);
-        Swal.fire({
-            icon: 'error',
-            title: 'Invalid Score',
-            text: `Score must be a number between ${minScore} and ${maxScore}.`,
-            confirmButtonColor: 'var(--tz-blue)',
-            background: '#161b22',
-            color: '#f0f4f7'
-        });
-        input.focus();
-        return;
+    let scoreUpper = score.toUpperCase();
+    if (scoreUpper === 'ABS' || score === '') {
+        score = 'ABS';
+        input.value = 'ABS';
+        input.style.color = 'var(--tz-red)';
+        setMarkStatus(input, 'ABS', 'badge-red');
+    } else if (scoreUpper === 'INC') {
+        score = 'INC';
+        input.value = 'INC';
+        input.style.color = 'var(--tz-yellow)';
+        setMarkStatus(input, 'INC', 'badge-yellow');
+    } else {
+        const numScore = parseFloat(score);
+        if (isNaN(numScore) || numScore < minScore || numScore > maxScore) {
+            setMarkInputError(input, `Score must be a number between ${minScore} and ${maxScore}, or ABS, or INC.`);
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Score',
+                text: `Score must be a number between ${minScore} and ${maxScore}, or ABS, or INC.`,
+                confirmButtonColor: 'var(--tz-blue)',
+                background: '#161b22',
+                color: '#f0f4f7'
+            });
+            input.focus();
+            return;
+        }
+        input.style.color = '#fff';
     }
     
     if (score === '0-50' || score === `0-${maxScore}`) {
-        score = '';
-        input.value = '';
+        score = 'ABS';
+        input.value = 'ABS';
+        input.style.color = 'var(--tz-red)';
+        setMarkStatus(input, 'ABS', 'badge-red');
     }
     const state = psleSaveStates.get(key) || {};
 
@@ -323,28 +392,16 @@ function saveMark(input, candidateId, attempt = 0) {
     }
 
     if (attempt === 0 && !input.classList.contains('mark-input-save-error') && psleLastSavedValues.get(key) === score) {
-        input.dataset.saveStatus = score !== '' ? 'saved' : 'idle';
-        setMarkStatus(input, score !== '' ? 'Entered' : 'Pending', score !== '' ? 'badge-green' : 'badge-yellow');
+        input.dataset.saveStatus = 'saved';
+        if (score === 'ABS') {
+            setMarkStatus(input, 'ABS', 'badge-red');
+        } else if (score === 'INC') {
+            setMarkStatus(input, 'INC', 'badge-yellow');
+        } else {
+            setMarkStatus(input, 'Entered', 'badge-green');
+        }
         checkCompletion();
         return;
-    }
-    
-    // Client-side score boundary check
-    if (score !== '') {
-        const numScore = Number(score);
-        if (isNaN(numScore) || numScore < minScore || numScore > maxScore) {
-            setMarkInputError(input, `Score must be a number between ${minScore} and ${maxScore}.`);
-            Swal.fire({
-                icon: 'error',
-                title: 'Invalid Score',
-                text: `Score must be a number between ${minScore} and ${maxScore}.`,
-                confirmButtonColor: 'var(--tz-blue)',
-                background: '#161b22',
-                color: '#f0f4f7'
-            });
-            input.focus();
-            return;
-        }
     }
     
     // UI Feedback: Loading state
@@ -354,10 +411,15 @@ function saveMark(input, candidateId, attempt = 0) {
     input.dataset.saveStatus = 'saving';
     setMarkStatus(input, attempt > 0 ? `Retrying ${attempt}/3...` : 'Saving...', 'badge-yellow');
     
-    // Dynamic payload structure to satisfy Laravel validator
+    // Dynamic payload structure
+    let scoreToSend = score;
+    if (score !== 'ABS' && score !== 'INC') {
+        scoreToSend = Number(score);
+    }
+    
     const payload = {
         candidate_id: candidateId,
-        score: score === '' ? null : Number(score)
+        score: scoreToSend
     };
     
     const assignmentId = '{{ $assignment->id ?? "" }}';
@@ -427,12 +489,14 @@ function saveMark(input, candidateId, attempt = 0) {
             psleLastSavedValues.set(key, score);
             input.dataset.lastSavedValue = score;
             input.style.borderColor = 'rgba(255,255,255,0.1)';
-            if (score !== '') {
-                input.dataset.saveStatus = 'saved';
-                setMarkStatus(input, 'Entered', 'badge-green');
+            
+            input.dataset.saveStatus = 'saved';
+            if (score === 'ABS') {
+                setMarkStatus(input, 'ABS', 'badge-red');
+            } else if (score === 'INC') {
+                setMarkStatus(input, 'INC', 'badge-yellow');
             } else {
-                input.dataset.saveStatus = 'idle';
-                setMarkStatus(input, 'Pending', 'badge-yellow');
+                setMarkStatus(input, 'Entered', 'badge-green');
             }
             updateStats();
             updateFailedSaveSummary();
@@ -507,6 +571,11 @@ function setMarkStatus(input, text, badgeClass) {
     if (!statusSpan) return;
     statusSpan.textContent = text;
     statusSpan.className = `mark-status badge ${badgeClass}`;
+    if (text === 'INC' || text === 'ABS') {
+        statusSpan.style.cursor = 'pointer';
+    } else {
+        statusSpan.style.cursor = '';
+    }
 }
 
 function setMarkInputError(input, message) {
@@ -634,7 +703,14 @@ function checkCompletion(serverCompletion = null) {
     const complete = inputs.every(input => {
         const candidateId = input.closest('tr')?.dataset.candidateId;
         const key = candidateId ? saveStateKey(candidateId) : null;
-        const value = input.value.trim();
+        const value = input.value.trim().toUpperCase();
+        if (value === 'ABS' || value === 'INC') {
+            return input.dataset.saveStatus === 'saved'
+                && key
+                && psleLastSavedValues.get(key) === value
+                && !input.classList.contains('mark-input-error')
+                && !input.classList.contains('mark-input-save-error');
+        }
         const maxScore = parseFloat(input.max || '50');
         const minScore = parseFloat(input.min || '0');
         const numericValue = parseFloat(value);
@@ -645,7 +721,7 @@ function checkCompletion(serverCompletion = null) {
             && numericValue <= maxScore
             && input.dataset.saveStatus === 'saved'
             && key
-            && psleLastSavedValues.get(key) === value
+            && psleLastSavedValues.get(key) === input.value.trim()
             && !input.classList.contains('mark-input-error')
             && !input.classList.contains('mark-input-save-error');
     });

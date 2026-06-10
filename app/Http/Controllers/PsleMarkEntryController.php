@@ -2867,7 +2867,17 @@ class PsleMarkEntryController extends Controller
             'school_id' => 'required_without:assignment_id|exists:schools,id',
             'subject_id' => 'required_without:assignment_id|exists:subjects,id',
             'exam_year_id' => 'required_without:assignment_id|exists:exam_years,id',
-            'score' => 'nullable|numeric|min:0|max:' . $maxScore,
+            'score' => [
+                'nullable',
+                function ($attribute, $value, $fail) use ($maxScore) {
+                    if ($value === 'ABS' || $value === 'INC' || $value === '') {
+                        return;
+                    }
+                    if (!is_numeric($value) || $value < 0 || $value > $maxScore) {
+                        $fail("The score must be a number between 0 and {$maxScore}, or ABS, or INC.");
+                    }
+                }
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -2883,6 +2893,18 @@ class PsleMarkEntryController extends Controller
         }
 
         $validated = $validator->validated();
+
+        $scoreInput = $validated['score'];
+        $subjectStatus = null;
+        if ($scoreInput === 'ABS' || $scoreInput === null || $scoreInput === '') {
+            $validated['score'] = null;
+            $subjectStatus = 'ABS';
+        } elseif ($scoreInput === 'INC') {
+            $validated['score'] = null;
+            $subjectStatus = 'INC';
+        } else {
+            $validated['score'] = (float) $scoreInput;
+        }
         $user = $request->user();
         if (! $user) {
             $responseStatus = 401;
@@ -3139,7 +3161,7 @@ class PsleMarkEntryController extends Controller
 
         $mark = $marksForCandidateSubject->first();
 
-        if ($validated['score'] === null || $validated['score'] === '') {
+        if (false) { // Bypassed deletion logic to save cleared marks as ABS
             if ($marksForCandidateSubject->isNotEmpty()) {
                 $blockedMark = $marksForCandidateSubject->first(function ($candidateMark) {
                     return $candidateMark->is_locked || ($candidateMark->batch && $candidateMark->batch->status !== 'draft');
@@ -3240,10 +3262,12 @@ class PsleMarkEntryController extends Controller
                 ], $responseStatus);
             }
             $oldScore = $mark->paper_1_marks;
+            $oldStatus = $mark->subject_status;
 
-            DB::transaction(function () use ($mark, $validated, $batch, $assignmentId, $examYearId, $schoolId, $user, $oldScore, $request) {
+            DB::transaction(function () use ($mark, $validated, $subjectStatus, $batch, $assignmentId, $examYearId, $schoolId, $user, $oldScore, $oldStatus, $request) {
                 $mark->update([
                     'paper_1_marks' => $validated['score'],
+                    'subject_status' => $subjectStatus,
                     'mark_import_batch_id' => $batch->id,
                     'assignment_id' => $assignmentId,
                     'exam_year_id' => $examYearId,
@@ -3251,14 +3275,14 @@ class PsleMarkEntryController extends Controller
                     'updated_by' => $user->id,
                 ]);
 
-                if ((string) $oldScore !== (string) $validated['score']) {
+                if ((string) $oldScore !== (string) $validated['score'] || (string) $oldStatus !== (string) $subjectStatus) {
                     \App\Models\MarkEntryChange::create([
                         'raw_mark_id' => $mark->id,
                         'changed_by' => $user->id,
                         'change_type' => 'edit',
                         'field_name' => 'paper_1_marks',
-                        'old_value' => $oldScore,
-                        'new_value' => $validated['score'],
+                        'old_value' => $oldScore !== null ? $oldScore : $oldStatus,
+                        'new_value' => $validated['score'] !== null ? $validated['score'] : $subjectStatus,
                         'reason' => 'PSLE manual mark edited from entry sheet.',
                         'changed_at' => now(),
                         'ip_address' => $request->ip(),
@@ -3268,7 +3292,7 @@ class PsleMarkEntryController extends Controller
 
             $saveAction = 'updated';
         } else {
-            $mark = DB::transaction(function () use ($batch, $examYearId, $schoolId, $validated, $candidate, $subjectId, $assignmentId, $user) {
+            $mark = DB::transaction(function () use ($batch, $examYearId, $schoolId, $validated, $candidate, $subjectId, $assignmentId, $user, $subjectStatus) {
                 return \App\Models\RawMark::updateOrCreate(
                     [
                         'exam_year_id' => $examYearId,
@@ -3285,6 +3309,7 @@ class PsleMarkEntryController extends Controller
                         'entered_by'             => $user->id,
                         'updated_by'             => $user->id,
                         'paper_1_marks'          => $validated['score'],
+                        'subject_status'         => $subjectStatus,
                         'row_number'             => 0,
                         'raw_data'               => [],
                     ]
@@ -3374,7 +3399,8 @@ class PsleMarkEntryController extends Controller
             'status' => 'entered',
             'message' => 'Mark saved.',
             'candidate_id' => (int) $mark->candidate_id,
-            'mark' => $mark->paper_1_marks,
+            'mark' => $mark->paper_1_marks !== null ? $mark->paper_1_marks : $mark->subject_status,
+            'subject_status' => $mark->subject_status,
             'mark_id' => $mark->id,
             'raw_mark_id' => $mark->id,
             'batch_status' => $batch->status,
@@ -3539,7 +3565,10 @@ class PsleMarkEntryController extends Controller
                 ->where('exam_year_id', $examYearId)
                 ->where('school_id', $schoolId)
                 ->where('subject_id', $subjectId)
-                ->whereNotNull('paper_1_marks')
+                ->where(function ($query) {
+                    $query->whereNotNull('paper_1_marks')
+                          ->orWhere('subject_status', 'ABS');
+                })
                 ->count()
             : 0;
 
