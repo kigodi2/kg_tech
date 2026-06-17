@@ -806,7 +806,7 @@
                                 <a href="/admin/backups" class="dropdown-item">
                                     <i class="fas fa-database"></i> Backups & Restore
                                 </a>
-                                <a href="/admin/system-settings" class="dropdown-item">
+                                <a href="{{ route('admin.system-settings') }}" class="dropdown-item">
                                     <i class="fas fa-sliders-h"></i> System Settings
                                 </a>
                                 <a href="/admin/exam-years" class="dropdown-item">

@@ -2,8 +2,7 @@
 
 namespace App\Helpers;
 
-use App\Models\SystemSetting;
-use Illuminate\Support\Facades\Cache;
+use App\Services\SettingsService;
 
 class SystemSettingsHelper
 {
@@ -26,34 +25,26 @@ class SystemSettingsHelper
     ];
 
     /**
-     * Get a system setting with caching
+     * Get a system setting via SettingsService
      */
     public static function get($key, $default = null)
     {
-        // Try to get from cache first
-        $settings = Cache::get(self::CACHE_KEY, []);
-
-        if (isset($settings[$key])) {
-            return $settings[$key];
+        if ($key === 'cache_ttl') {
+            $key = 'cache_ttl_seconds';
         }
-
-        // Get from database
-        $value = SystemSetting::getSetting($key, $default);
-
-        // Update cache
-        $settings[$key] = $value;
-        Cache::put(self::CACHE_KEY, $settings, self::CACHE_TTL);
-
-        return $value;
+        return app(SettingsService::class)->get($key, $default);
     }
 
     /**
-     * Set a system setting and clear cache
+     * Set a system setting via SettingsService
      */
     public static function set($key, $value, $type = 'string', $description = null)
     {
-        SystemSetting::setSetting($key, $value, $type, $description);
-        self::clearCache();
+        if ($key === 'cache_ttl') {
+            $key = 'cache_ttl_seconds';
+            $type = 'integer';
+        }
+        app(SettingsService::class)->set($key, $value, $type, $description);
     }
 
     public static function loadSystemSettings(): array
@@ -72,34 +63,24 @@ class SystemSettingsHelper
     }
 
     /**
-     * Get all settings with caching
+     * Get all settings via SettingsService
      */
     public static function all()
     {
-        $cached = Cache::get(self::CACHE_KEY);
-
-        if ($cached !== null) {
-            return $cached;
-        }
-
-        $settings = SystemSetting::allSettings();
-        Cache::put(self::CACHE_KEY, $settings, self::CACHE_TTL);
-
-        return $settings;
+        return app(SettingsService::class)->all();
     }
 
     /**
-     * Clear the settings cache
+     * Clear settings cache via SettingsService
      */
     public static function clearCache()
     {
-        Cache::forget(self::CACHE_KEY);
+        app(SettingsService::class)->clear();
     }
 
     public static function refreshSettingsCache(): array
     {
         self::clearCache();
-
         return self::all();
     }
 
@@ -180,7 +161,7 @@ class SystemSettingsHelper
 
     public static function getCacheTtl($default = 3600)
     {
-        return self::get('cache_ttl', $default);
+        return self::get('cache_ttl_seconds', $default);
     }
 
     public static function isMaintenanceMode($default = false)
@@ -209,7 +190,7 @@ class SystemSettingsHelper
 
     public static function setCacheTtl($value)
     {
-        self::set('cache_ttl', $value, 'integer', 'How long to cache queries (in seconds)');
+        self::set('cache_ttl_seconds', $value, 'integer', 'How long to cache queries (in seconds)');
     }
 
     public static function setMaintenanceMode($value)

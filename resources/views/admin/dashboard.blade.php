@@ -347,7 +347,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                         <div class="submenu-item"><a href="/admin/manage-users"><i class="fas fa-user-gear"></i> Users & Roles</a></div>
                         <div class="submenu-item"><a href="/admin/audit-logs"><i class="fas fa-shield-halved"></i> Audit Logs</a></div>
                         <div class="submenu-item"><a href="/admin/manage-backups"><i class="fas fa-server"></i> Backups</a></div>
-                        <div class="submenu-item"><a href="/admin/system-settings"><i class="fas fa-sliders-h"></i> System Settings</a></div>
+                        <div class="submenu-item"><a href="{{ route('admin.system-settings') }}"><i class="fas fa-sliders-h"></i> System Settings</a></div>
                         <div class="submenu-item"><a href="/admin/dashboard-announcements"><i class="fas fa-bullhorn"></i> Announcements</a></div>
                         <div class="submenu-item"><a href="/admin/restore-audit-logs"><i class="fas fa-clock-rotate-left"></i> Restore History</a></div>
                     </div>
@@ -477,7 +477,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                         <div class="adm-card-body">
                             <a href="/admin/manage-backups" class="adm-link"><span class="adm-link-icon"><i class="fas fa-server"></i></span> System Backups</a>
                             <a href="/admin/manage-users" class="adm-link"><span class="adm-link-icon"><i class="fas fa-user-gear"></i></span> User Management</a>
-                            <a href="/admin/system-settings" class="adm-link"><span class="adm-link-icon"><i class="fas fa-sliders-h"></i></span> System Settings</a>
+                            <a href="{{ route('admin.system-settings') }}" class="adm-link"><span class="adm-link-icon"><i class="fas fa-sliders-h"></i></span> System Settings</a>
                         </div>
                     </div>
 
@@ -488,7 +488,7 @@ body, html { margin: 0; padding: 0; width: 100%; max-width: 100vw; overflow-x: h
                         </div>
                         <div class="adm-card-body">
                             <a href="/admin/manage-users" class="adm-link"><span class="adm-link-icon"><i class="fas fa-user-gear"></i></span> Users &amp; Access Control</a>
-                            <a href="/admin/system-settings" class="adm-link"><span class="adm-link-icon"><i class="fas fa-sliders-h"></i></span> Global System Config</a>
+                            <a href="{{ route('admin.system-settings') }}" class="adm-link"><span class="adm-link-icon"><i class="fas fa-sliders-h"></i></span> Global System Config</a>
                             <a href="/admin/audit-logs" class="adm-link"><span class="adm-link-icon"><i class="fas fa-shield-halved"></i></span> Security Audit Logs</a>
                             <a href="/admin/restore-audit-logs" class="adm-link"><span class="adm-link-icon"><i class="fas fa-clock-rotate-left"></i></span> Restore History</a>
                             <a href="/admin/dashboard-announcements" class="adm-link"><span class="adm-link-icon"><i class="fas fa-bullhorn"></i></span> Announcements &amp; Notices</a>

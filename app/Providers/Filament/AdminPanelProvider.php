@@ -29,7 +29,16 @@ class AdminPanelProvider extends PanelProvider
         $primaryColor = $this->setting('primary_color', '#00A3DD');
         $fontFamily = $this->setting('font_family', 'Ubuntu');
         $systemLogo = $this->setting('system_logo');
-        $brandLogo = $systemLogo ? asset('storage/' . ltrim((string) $systemLogo, '/')) : asset('images/logo.png');
+        $brandLogo = asset('images/logo.png');
+        if ($systemLogo) {
+            if (str_starts_with($systemLogo, 'http://') || str_starts_with($systemLogo, 'https://')) {
+                $brandLogo = $systemLogo;
+            } elseif (str_starts_with($systemLogo, 'storage/')) {
+                $brandLogo = asset($systemLogo);
+            } else {
+                $brandLogo = asset('storage/' . ltrim((string) $systemLogo, '/'));
+            }
+        }
 
         return $panel
             // ========== BASIC CONFIGURATION ==========

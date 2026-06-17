@@ -4850,6 +4850,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
     // User Management
     Route::get('manage-users', [\App\Http\Controllers\AdminUserController::class, 'index'])->name('admin.manage-users');
 
+    // System Settings Custom Routes
+    Route::get('system-settings', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'index'])->name('admin.system-settings');
+    Route::put('system-settings', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'update'])->name('admin.system-settings.update');
+    Route::post('system-settings/clear-cache', [\App\Http\Controllers\Admin\SystemSettingsController::class, 'clearCache'])->name('admin.system-settings.clear-cache');
+
     // API Endpoints for Registration (moved for admin-only protection)
     Route::prefix('api')->group(function () {
 
