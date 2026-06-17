@@ -112,8 +112,10 @@ Route::group(['prefix' => 'results', 'middleware' => ['auth']], function () {
 
         // Safe results processing actions managed by Admin
         Route::post('/processing/validate', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'validateData'])->name('results.psle.processing.validate');
+        Route::post('/processing/submit-lock', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'submitAndLockRawMarks'])->name('results.psle.processing.submit-lock');
         Route::post('/processing/draft-run', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'draftRun'])->name('results.psle.processing.draft-run');
         Route::post('/processing/final-run', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'finalRun'])->name('results.psle.processing.final-run');
+        Route::post('/processing/publish', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'publishSnapshot'])->name('results.psle.processing.publish');
         Route::post('/processing/rollback', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'rollback'])->name('results.psle.processing.rollback');
     });
 

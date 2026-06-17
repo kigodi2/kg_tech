@@ -757,7 +757,7 @@ class PsleMarkEntryService
                 if ($existingMark) {
                     $existingRows++;
                     if ($existingMark->is_locked) {
-                        $rowErrors[] = "Line {$line}: candidate {$candidateNumber} has a locked mark record that cannot be overwritten.";
+                        $rowErrors[] = "These marks are submitted and locked for processing.";
                         $lockedRows++;
                     } elseif ($existingMark->batch && $existingMark->batch->status !== 'draft') {
                         $rowErrors[] = "Line {$line}: candidate {$candidateNumber} has a mark record in a committed/approved batch ({$existingMark->batch->batch_code}) that cannot be overwritten.";

@@ -52,6 +52,21 @@ class RawMark extends Model
         'locked_at' => 'datetime',
     ];
 
+    protected static function booted()
+    {
+        static::updating(function ($rawMark) {
+            if ($rawMark->is_locked && $rawMark->isDirty('paper_1_marks', 'subject_status')) {
+                throw new \Exception("These marks are submitted and locked for processing.");
+            }
+        });
+
+        static::deleting(function ($rawMark) {
+            if ($rawMark->is_locked) {
+                throw new \Exception("These marks are submitted and locked for processing.");
+            }
+        });
+    }
+
     // ==================== RELATIONSHIPS ====================
 
     public function batch()
@@ -221,7 +236,7 @@ class RawMark extends Model
     public function preventLocked(string $operation = 'update'): self
     {
         if ($this->is_locked) {
-            throw new \Exception("Cannot {$operation} a locked row. Unlock the row first if changes are necessary.");
+            throw new \Exception("These marks are submitted and locked for processing.");
         }
 
         return $this;

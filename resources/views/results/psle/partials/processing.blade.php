@@ -1,0 +1,707 @@
+<!-- Scoped styles for Results Processing Dashboard -->
+<style>
+    .processing-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+        margin-bottom: 28px;
+    }
+    
+    .proc-summary-card {
+        background: linear-gradient(135deg, #121924, #0e131b);
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 12px;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        transition: all 0.25s ease;
+    }
+    .proc-summary-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+        border-color: rgba(187,164,94,0.2);
+    }
+    .proc-summary-label {
+        font-size: 0.68rem;
+        color: var(--tz-text-muted);
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+    }
+    .proc-summary-value {
+        font-size: 1.7rem;
+        font-weight: 800;
+        color: #ffffff;
+        letter-spacing: -0.5px;
+    }
+    .proc-summary-sub {
+        font-size: 0.76rem;
+        color: rgba(255,255,255,0.45);
+        margin-top: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .proc-summary-icon {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        font-size: 1.15rem;
+        opacity: 0.2;
+    }
+    
+    .lifecycle-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 28px;
+        margin-bottom: 28px;
+    }
+    
+    .action-card {
+        background: rgba(255,255,255,0.015);
+        border: 1px solid rgba(255,255,255,0.04);
+        border-radius: 10px;
+        padding: 16px;
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        transition: all 0.2s ease;
+    }
+    .action-card:hover {
+        background: rgba(255,255,255,0.03);
+        border-color: rgba(255,255,255,0.08);
+    }
+    
+    .action-card-btn {
+        width: 100%;
+        justify-content: flex-start !important;
+        text-align: left;
+        padding: 14px 18px !important;
+        height: auto !important;
+        border-radius: 8px !important;
+    }
+    .action-card-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .action-card-btn-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .action-card-btn-title {
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+    .action-card-btn-desc {
+        font-size: 0.72rem;
+        font-weight: normal;
+        opacity: 0.8;
+    }
+    
+    .compliance-item {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    .compliance-item i {
+        color: var(--tz-green);
+        font-size: 0.95rem;
+        margin-top: 2px;
+    }
+    .compliance-item-text {
+        font-size: 0.82rem;
+        color: rgba(255,255,255,0.7);
+        line-height: 1.45;
+    }
+    
+    .empty-state-container {
+        padding: 48px 24px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+    }
+    .empty-state-icon {
+        font-size: 2.5rem;
+        color: var(--tz-green);
+        margin-bottom: 16px;
+        text-shadow: 0 0 20px rgba(30,181,58,0.2);
+    }
+    .empty-state-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 6px;
+    }
+    .empty-state-desc {
+        font-size: 0.85rem;
+        color: var(--tz-text-muted);
+        max-width: 420px;
+    }
+
+    @media (max-width: 1200px) {
+        .processing-summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        .lifecycle-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+    }
+    @media (max-width: 640px) {
+        .processing-summary-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+@php
+    $total = $viewData['readiness']->total ?? 0;
+    $complete = $viewData['readiness']->complete ?? 0;
+    $readyPercent = $total > 0 ? round(($complete / $total) * 100, 1) : 0;
+    
+    $lastRuns = collect($viewData['lastRuns'] ?? []);
+    
+    // Check if raw marks have been submitted & locked
+    $submitLockRun = $lastRuns->firstWhere('type', 'submit_lock');
+    $isRawMarksLocked = $submitLockRun && $submitLockRun->status === 'completed';
+
+    // Check if final run is done
+    $finalRun = $lastRuns->firstWhere('type', 'final');
+    $isFinalRunDone = $finalRun && $finalRun->status === 'completed';
+
+    // Check if draft run is done
+    $draftRun = $lastRuns->firstWhere('type', 'draft');
+    $isDraftRunDone = $draftRun && $draftRun->status === 'completed';
+
+    // Determine Active Lifecycle State Label and badge
+    if ($isFinalRunDone) {
+        $statusLabel = 'Locked & Calculated';
+        $statusClass = 'badge-green';
+    } elseif ($isDraftRunDone) {
+        $statusLabel = 'Draft Run Done';
+        $statusClass = 'badge-blue';
+    } elseif ($isRawMarksLocked) {
+        $statusLabel = 'Raw Marks Locked';
+        $statusClass = 'badge-yellow';
+    } else {
+        $statusLabel = 'Pending Submission';
+        $statusClass = 'badge-red';
+    }
+
+    // Check if published snapshot exists
+    $publishedSnapshot = DB::table('psle_result_publications')
+        ->where('exam_year_id', $examYear->id)
+        ->where('status', 'published')
+        ->first();
+
+    if ($publishedSnapshot) {
+        $pubState = 'Published (v' . $publishedSnapshot->version_no . ')';
+        $pubClass = 'badge-green';
+    } elseif ($isFinalRunDone) {
+        $pubState = 'Ready to Publish';
+        $pubClass = 'badge-blue';
+    } else {
+        $pubState = 'Not Published';
+        $pubClass = 'badge-red';
+    }
+@endphp
+
+<!-- Active Scope Information Box -->
+<div class="adm-card" style="margin-bottom: 24px; background: linear-gradient(135deg, rgba(187,164,94,0.08) 0%, rgba(17,24,35,0.6) 100%); border: 1px solid rgba(187,164,94,0.18);">
+    <div class="adm-card-body" style="padding: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 48px; height: 48px; border-radius: 10px; background: rgba(187,164,94,0.15); display: flex; align-items: center; justify-content: center; color: var(--tz-yellow); font-size: 1.5rem;">
+                <i class="fa-solid fa-earth-africa"></i>
+            </div>
+            <div>
+                <h4 style="margin: 0 0 4px 0; font-size: 1.1rem; font-weight: 800; color: #ffffff;">All TASIDO Regions</h4>
+                <p style="margin: 0; font-size: 0.8rem; color: var(--tz-text-muted);">
+                    Affected Regions ({{ count($tasidoRegions) }}): <strong>{{ $tasidoRegions->pluck('name')->map(fn($n) => ucfirst(strtolower($n)))->implode(', ') }}</strong>
+                </p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 32px;">
+            <div>
+                <span style="display: block; font-size: 0.68rem; color: var(--tz-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Active Schools</span>
+                <span style="font-size: 1.3rem; font-weight: 800; color: #ffffff;">{{ number_format($metrics['schools']) }}</span>
+            </div>
+            <div>
+                <span style="display: block; font-size: 0.68rem; color: var(--tz-text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Registered Candidates</span>
+                <span style="font-size: 1.3rem; font-weight: 800; color: #ffffff;">{{ number_format($metrics['registered']) }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status summary row -->
+<div class="processing-summary-grid">
+    <div class="proc-summary-card" style="border-left: 3px solid var(--tz-green);">
+        <div class="proc-summary-label">Data Readiness</div>
+        <div class="proc-summary-value">{{ $readyPercent }}%</div>
+        <div class="proc-summary-sub">
+            <i class="fa-solid fa-circle-check" style="color: var(--tz-green);"></i>
+            <span>{{ number_format($complete) }} of {{ number_format($total) }} Complete</span>
+        </div>
+        <i class="fa-solid fa-shield-check proc-summary-icon" style="color: var(--tz-green);"></i>
+    </div>
+    
+    <div class="proc-summary-card" style="border-left: 3px solid var(--tz-blue);">
+        <div class="proc-summary-label">Registered Candidates</div>
+        <div class="proc-summary-value">{{ number_format($metrics['registered'] ?? $total) }}</div>
+        <div class="proc-summary-sub">
+            <i class="fa-solid fa-user-graduate" style="color: var(--tz-blue);"></i>
+            <span>PSLE Candidates</span>
+        </div>
+        <i class="fa-solid fa-user-graduate proc-summary-icon" style="color: var(--tz-blue);"></i>
+    </div>
+    
+    <div class="proc-summary-card" style="border-left: 3px solid var(--tz-yellow);">
+        <div class="proc-summary-label">Processing Status</div>
+        <div class="proc-summary-value" style="font-size: 1.1rem; margin-top: 6px; height: 34px; display: flex; align-items: center;">
+            <span class="badge {{ $statusClass }}" style="font-size: 0.72rem; padding: 5px 12px;">{{ $statusLabel }}</span>
+        </div>
+        <div class="proc-summary-sub">
+            <i class="fa-solid fa-gears" style="color: var(--tz-yellow);"></i>
+            <span>Active Lifecycle State</span>
+        </div>
+        <i class="fa-solid fa-gears proc-summary-icon" style="color: var(--tz-yellow);"></i>
+    </div>
+    
+    <div class="proc-summary-card" style="border-left: 3px solid var(--tz-gold);">
+        <div class="proc-summary-label">Publication State</div>
+        <div class="proc-summary-value" style="font-size: 1.1rem; margin-top: 6px; height: 34px; display: flex; align-items: center;">
+            <span class="badge {{ $pubClass }}" style="font-size: 0.72rem; padding: 5px 12px;">{{ $pubState }}</span>
+        </div>
+        <div class="proc-summary-sub">
+            <i class="fa-solid fa-globe" style="color: var(--tz-gold);"></i>
+            <span>Portal Visibility State</span>
+        </div>
+        <i class="fa-solid fa-globe proc-summary-icon" style="color: var(--tz-gold);"></i>
+    </div>
+</div>
+
+<!-- Two column layout for Run controls and Snapshot diagnostics -->
+<div class="lifecycle-grid">
+    <!-- Run Controls Column -->
+    <div class="adm-card" style="margin-bottom: 0;">
+        <div class="adm-card-head">
+            <h3 class="adm-card-title"><i class="fa-solid fa-bolt"></i> Run Controls</h3>
+        </div>
+        <div class="adm-card-body" style="padding: 24px; display: flex; flex-direction: column; gap: 20px;">
+            <p style="font-size: 0.88rem; color: var(--tz-text-muted); margin: 0; line-height: 1.5;">
+                Execute validation sequences and results compilation loops. 
+                Running dry draft snapshots allows administrators to inspect rankings and averages before official lockout publishing.
+            </p>
+            
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- Step 1: Validation -->
+                <button id="btnValidate" class="btn btn-outline action-card-btn">
+                    <i class="fa-solid fa-clipboard-check" style="color: var(--tz-blue); font-size: 1.2rem; margin-right: 4px; flex-shrink: 0;"></i>
+                    <span class="action-card-btn-text" style="flex: 1;">
+                        <span class="action-card-btn-title">1. Run Pre-Flight Validation Checks</span>
+                        <span class="action-card-btn-desc">Inspect scoresheet records for out-of-boundary marks.</span>
+                    </span>
+                    @if(count($viewData['validationErrors'] ?? []) > 0)
+                        <span class="badge badge-red" style="font-size: 0.65rem;"><i class="fa-solid fa-triangle-exclamation"></i> Failures</span>
+                    @else
+                        <span class="badge badge-green" style="font-size: 0.65rem;"><i class="fa-solid fa-check"></i> Clean</span>
+                    @endif
+                </button>
+                
+                <!-- Step 2: Submit & Lock -->
+                <button id="btnSubmitLock" class="btn {{ $isRawMarksLocked ? 'btn-outline' : 'btn-primary' }} action-card-btn">
+                    <i class="fa-solid fa-lock" style="color: {{ $isRawMarksLocked ? 'var(--tz-green)' : 'var(--tz-yellow)' }}; font-size: 1.2rem; margin-right: 4px; flex-shrink: 0;"></i>
+                    <span class="action-card-btn-text" style="flex: 1;">
+                        <span class="action-card-btn-title">2. Submit & Lock Raw Marks</span>
+                        <span class="action-card-btn-desc">Validate all regions, lock scoresheets, and mark ready.</span>
+                    </span>
+                    @if($isRawMarksLocked)
+                        <span class="badge badge-green" style="font-size: 0.65rem;"><i class="fa-solid fa-lock"></i> Locked</span>
+                    @else
+                        <span class="badge badge-yellow" style="font-size: 0.65rem;">Pending</span>
+                    @endif
+                </button>
+                
+                <!-- Step 3: Draft Run -->
+                <button id="btnDraftRun" class="btn {{ $isRawMarksLocked && !$isFinalRunDone ? 'btn-primary' : 'btn-outline' }} action-card-btn" {{ !$isRawMarksLocked ? 'disabled' : '' }}>
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: {{ $isDraftRunDone ? 'var(--tz-green)' : 'inherit' }}; font-size: 1.2rem; margin-right: 4px; flex-shrink: 0;"></i>
+                    <span class="action-card-btn-text" style="flex: 1;">
+                        <span class="action-card-btn-title">3. Execute Draft Processing Run</span>
+                        <span class="action-card-btn-desc">Compile tentative GPAs, ranks, and performance averages.</span>
+                    </span>
+                    @if($isDraftRunDone)
+                        <span class="badge badge-green" style="font-size: 0.65rem;"><i class="fa-solid fa-check"></i> Compiled</span>
+                    @else
+                        <span class="badge badge-yellow" style="font-size: 0.65rem;">Pending</span>
+                    @endif
+                </button>
+                
+                <!-- Step 4: Final Run -->
+                <button id="btnFinalRun" class="btn {{ $isRawMarksLocked && !$isFinalRunDone ? 'btn-success' : 'btn-outline' }} action-card-btn" {{ !$isRawMarksLocked ? 'disabled' : '' }}>
+                    <i class="fa-solid fa-shield-halved" style="color: {{ $isFinalRunDone ? 'var(--tz-green)' : 'inherit' }}; font-size: 1.2rem; margin-right: 4px; flex-shrink: 0;"></i>
+                    <span class="action-card-btn-text" style="flex: 1;">
+                        <span class="action-card-btn-title">4. Execute Official Final Calculation & Lock</span>
+                        <span class="action-card-btn-desc">Generate immutable snapshot tables and close scoresheet inputs.</span>
+                    </span>
+                    @if($isFinalRunDone)
+                        <span class="badge badge-green" style="font-size: 0.65rem;"><i class="fa-solid fa-lock"></i> Snapshot Created</span>
+                    @else
+                        <span class="badge badge-yellow" style="font-size: 0.65rem;">Pending</span>
+                    @endif
+                </button>
+
+                <!-- Step 5: Publish -->
+                <button id="btnPublish" class="btn {{ $isFinalRunDone && !$publishedSnapshot ? 'btn-primary' : 'btn-outline' }} action-card-btn" {{ !$isFinalRunDone ? 'disabled' : '' }} style="{{ $isFinalRunDone && !$publishedSnapshot ? 'background: linear-gradient(135deg, var(--tz-gold), #8e732d); border-color: var(--tz-gold);' : '' }}">
+                    <i class="fa-solid fa-globe" style="color: {{ $publishedSnapshot ? 'var(--tz-green)' : 'inherit' }}; font-size: 1.2rem; margin-right: 4px; flex-shrink: 0;"></i>
+                    <span class="action-card-btn-text" style="flex: 1;">
+                        <span class="action-card-btn-title">5. Publish PSLE Snapshot</span>
+                        <span class="action-card-btn-desc">Expose final results snapshot to public results and evaluation portals.</span>
+                    </span>
+                    @if($publishedSnapshot)
+                        <span class="badge badge-green" style="font-size: 0.65rem;"><i class="fa-solid fa-globe"></i> Published</span>
+                    @else
+                        <span class="badge badge-yellow" style="font-size: 0.65rem;">Draft</span>
+                    @endif
+                </button>
+                
+                <!-- Rollback -->
+                @if($isRawMarksLocked || $isFinalRunDone)
+                    <button id="btnRollback" class="btn btn-danger action-card-btn" style="background: linear-gradient(135deg, #7c2d12, #ef4444); margin-top: 10px;">
+                        <i class="fa-solid fa-rotate-left" style="font-size: 1.2rem; margin-right: 4px; flex-shrink: 0;"></i>
+                        <span class="action-card-btn-text">
+                            <span class="action-card-btn-title" style="color: #ffffff;">Rollback to Draft Sequence</span>
+                            <span class="action-card-btn-desc" style="color: rgba(255,255,255,0.75);">Unlock candidate parameters and return context to draft state.</span>
+                        </span>
+                    </button>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <!-- Snapshot Diagnostics Column -->
+    <div style="display: flex; flex-direction: column; gap: 28px;">
+        <!-- Diagnostics Card -->
+        <div class="adm-card" style="margin-bottom: 0;">
+            <div class="adm-card-head">
+                <h3 class="adm-card-title"><i class="fa-solid fa-gauge-high"></i> Snapshot Diagnostics</h3>
+            </div>
+            <div class="adm-card-body" style="padding: 24px;">
+                <div style="background: rgba(255,255,255,0.02); padding: 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.88rem; margin-bottom: 8px;">
+                        <span style="font-weight: 600; color: #ffffff;">Data Completeness Score</span>
+                        <span style="font-weight: 800; font-size: 1.15rem; color: var(--tz-green);">{{ $readyPercent }}%</span>
+                    </div>
+                    
+                    <div style="height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.03);">
+                        <div style="width: {{ $readyPercent }}%; height: 100%; background: linear-gradient(90deg, #1eb53a, #6ae086); border-radius: 4px; transition: width 0.6s ease;"></div>
+                    </div>
+                    
+                    <span style="font-size: 0.82rem; color: var(--tz-text-muted); display: block; line-height: 1.45;">
+                        <i class="fa-solid fa-circle-info" style="color: var(--tz-blue); margin-right: 4px;"></i>
+                        <strong>{{ number_format($complete) }}</strong> of <strong>{{ number_format($total) }}</strong> primary candidates contain 100% complete core marks.
+                    </span>
+                    
+                    <div style="display: flex; gap: 12px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">
+                        <a href="{{ request()->fullUrl() }}" class="btn btn-outline" style="flex: 1; justify-content: center; font-size: 0.8rem;">
+                            <i class="fa-solid fa-arrows-rotate"></i> Refresh Status
+                        </a>
+                        @if(\Illuminate\Support\Facades\Route::has('results.psle.reports.index'))
+                            <a href="{{ route('results.psle.reports.index') }}" class="btn btn-warning" style="flex: 1; justify-content: center; font-size: 0.8rem;">
+                                <i class="fa-solid fa-file-pdf"></i> Download Reports
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Compliance Checklist -->
+        <div class="adm-card" style="margin-bottom: 0;">
+            <div class="adm-card-head">
+                <h3 class="adm-card-title"><i class="fa-solid fa-list-check" style="color: var(--tz-yellow);"></i> Compliance Checklist</h3>
+            </div>
+            <div class="adm-card-body" style="padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+                <div class="compliance-item">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span class="compliance-item-text">
+                        All raw marks must fall strictly inside the allowed <strong>0–50 scale</strong> range limit.
+                    </span>
+                </div>
+                <div class="compliance-item">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span class="compliance-item-text">
+                        Candidate calculations leverage <strong>GPA division</strong> mapping logic based on regional configurations.
+                    </span>
+                </div>
+                <div class="compliance-item">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span class="compliance-item-text">
+                        Rollback action removes publication snapshots and ranks but securely <strong>retains entered scoresheets</strong>.
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portals & Shareable Links Card -->
+        <div class="adm-card" style="margin-bottom: 0;">
+            <div class="adm-card-head">
+                <h3 class="adm-card-title"><i class="fa-solid fa-share-nodes" style="color: var(--tz-blue);"></i> Portals & Public Links</h3>
+            </div>
+            <div class="adm-card-body" style="padding: 24px; display: flex; flex-direction: column; gap: 18px;">
+                <div>
+                    <label style="display: block; font-size: 0.72rem; color: var(--tz-text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px;">Public Results Portal Link</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" readonly value="{{ url('/results/' . $examYear->year_label . '/psle') }}" id="linkPublicPortal" class="adm-input" style="font-family: monospace; font-size: 0.8rem; background: rgba(255,255,255,0.03); flex: 1;">
+                        <button onclick="copyToClipboard('linkPublicPortal')" class="btn btn-outline" style="padding: 0 14px;"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                </div>
+                <div>
+                    <label style="display: block; font-size: 0.72rem; color: var(--tz-text-muted); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px;">PSLE Evaluation Link</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" readonly value="{{ url('/evaluations/psle') }}" id="linkEvaluationPortal" class="adm-input" style="font-family: monospace; font-size: 0.8rem; background: rgba(255,255,255,0.03); flex: 1;">
+                        <button onclick="copyToClipboard('linkEvaluationPortal')" class="btn btn-outline" style="padding: 0 14px;"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Validation boundary errors section -->
+<div class="adm-card" style="margin-bottom: 30px;">
+    <div class="adm-card-head">
+        <h3 class="adm-card-title">
+            <i class="fa-solid fa-triangle-exclamation" style="color: var(--tz-yellow);"></i> 
+            Active Boundary Validation Failures
+        </h3>
+        <span style="font-size: 0.78rem; color: var(--tz-text-muted);">Integrity Check logs within active scope</span>
+    </div>
+    <div class="adm-card-body" style="padding: 0;">
+        @if(count($viewData['validationErrors'] ?? []) > 0)
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Candidate index</th>
+                            <th>Primary School</th>
+                            <th class="text-center">Subject Code</th>
+                            <th class="text-center">Entered Mark</th>
+                            <th>Failure Boundary Context</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($viewData['validationErrors'] as $err)
+                            <tr>
+                                <td><strong style="color: var(--tz-yellow);">{{ $err->candidate_cno }}</strong></td>
+                                <td>{{ strtoupper($err->school_name) }}</td>
+                                <td class="text-center">{{ $err->subject_code }}</td>
+                                <td class="text-center" style="color: #fca5a5; font-weight: bold;">{{ $err->mark }}</td>
+                                <td>
+                                    <span style="color: #fca5a5; font-size: 0.82rem; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> 
+                                        Mark falls outside the allowed 0-50 range limits!
+                                    </span>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div class="empty-state-container">
+                <i class="fa-solid fa-circle-check empty-state-icon"></i>
+                <div class="empty-state-title">No Active Boundary Validation Failures Found</div>
+                <div class="empty-state-desc">All raw scoresheets inside the active TASIDO scope contain valid marks and are clean.</div>
+            </div>
+        @endif
+    </div>
+</div>
+
+<!-- Scripts for ajax processing triggers -->
+<script>
+    function copyToClipboard(id) {
+        var copyText = document.getElementById(id);
+        copyText.select();
+        copyText.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(copyText.value);
+        
+        Swal.fire({
+            title: 'Copied!',
+            text: 'Link copied to clipboard successfully.',
+            icon: 'success',
+            timer: 1500,
+            showConfirmButton: false,
+            background: '#101518',
+            color: '#f0f4f7'
+        });
+    }
+
+    $(document).ready(function() {
+        const swalConfig = {
+            background: '#101518',
+            color: '#f0f4f7',
+            confirmButtonColor: '#00a3dd',
+            cancelButtonColor: '#ef4444'
+        };
+
+        $('#btnValidate').click(function() {
+            Swal.fire({
+                title: 'Data Validation',
+                text: 'Checking all raw scoresheets in TASIDO scope for boundary violations...',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Run Check',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Running...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.processing.validate") }}', { 
+                        _token: '{{ csrf_token() }}',
+                        exam_year_id: '{{ $examYear->id }}'
+                    }, function(res) {
+                        Swal.fire({ title: 'Success', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Validation Failed', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('#btnSubmitLock').click(function() {
+            Swal.fire({
+                title: 'Submit & Lock Raw Marks',
+                text: 'Warning: This will validate and lock all raw marks across all TASIDO regions. Nobody will be able to edit scoresheets. Proceed?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Submit & Lock',
+                confirmButtonColor: '#ffd875',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Submitting and Locking...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.processing.submit-lock") }}', { 
+                        _token: '{{ csrf_token() }}',
+                        exam_year_id: '{{ $examYear->id }}'
+                    }, function(res) {
+                        Swal.fire({ title: 'Success', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('#btnDraftRun').click(function() {
+            Swal.fire({
+                title: 'Draft Computation',
+                text: 'This will run draft GPA standing tables and rankings for all primary candidates. Continue?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Run Draft',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.processing.draft-run") }}', { 
+                        _token: '{{ csrf_token() }}',
+                        exam_year_id: '{{ $examYear->id }}'
+                    }, function(res) {
+                        Swal.fire({ title: 'Completed', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('#btnFinalRun').click(function() {
+            Swal.fire({
+                title: 'Official Lock & Calculate',
+                text: 'Executing this will lock the scoresheets and build permanent snapshot databases. This is a secure operational step!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Lock & Calc',
+                confirmButtonColor: '#1eb53a',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Finalizing Calculation...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.processing.final-run") }}', { 
+                        _token: '{{ csrf_token() }}',
+                        exam_year_id: '{{ $examYear->id }}'
+                    }, function(res) {
+                        Swal.fire({ title: 'Official Locked', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('#btnPublish').click(function() {
+            Swal.fire({
+                title: 'Publish Results Snapshot',
+                text: 'Are you sure you want to publish the active PSLE results snapshot? This will make them visible on public search portals.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Publish Now',
+                confirmButtonColor: '#bba45e',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Publishing snapshot...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.processing.publish") }}', { 
+                        _token: '{{ csrf_token() }}',
+                        exam_year_id: '{{ $examYear->id }}'
+                    }, function(res) {
+                        Swal.fire({ title: 'Success', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('#btnRollback').click(function() {
+            Swal.fire({
+                title: 'Execute Snapshot Rollback',
+                text: 'Warning! This rolls back the active calculations. It does not delete entered marks.',
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonText: 'Rollback',
+                confirmButtonColor: '#ef4444',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Rolling back snapshot...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.processing.rollback") }}', { 
+                        _token: '{{ csrf_token() }}',
+                        exam_year_id: '{{ $examYear->id }}'
+                    }, function(res) {
+                        Swal.fire({ title: 'Restored', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+    });
+</script>

@@ -24,6 +24,7 @@ class AuditLog extends Model
         'user_agent',
         'metadata',
         'status',
+        'details',
     ];
 
     protected $casts = [
@@ -33,6 +34,21 @@ class AuditLog extends Model
     ];
 
     const UPDATED_AT = null; // Logs are immutable
+
+    public function getDetailsAttribute()
+    {
+        return is_array($this->metadata) ? ($this->metadata['details'] ?? null) : null;
+    }
+
+    public function setDetailsAttribute($value)
+    {
+        $metadata = $this->metadata ?? [];
+        if (!is_array($metadata)) {
+            $metadata = [];
+        }
+        $metadata['details'] = $value;
+        $this->metadata = $metadata;
+    }
 
     public function user()
     {

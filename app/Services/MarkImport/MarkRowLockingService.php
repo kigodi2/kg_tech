@@ -203,11 +203,7 @@ class MarkRowLockingService
     public function preventLockedRowUpdate(RawMark $rawMark): void
     {
         if ($rawMark->is_locked) {
-            throw new Exception(
-                "Cannot update locked row. Row #{$rawMark->row_number} " .
-                "(Index: {$rawMark->candidate_index_number}) is locked. " .
-                "Unlock the row first if changes are necessary."
-            );
+            throw new Exception("These marks are submitted and locked for processing.");
         }
     }
 
@@ -217,11 +213,7 @@ class MarkRowLockingService
     public function preventLockedRowDelete(RawMark $rawMark): void
     {
         if ($rawMark->is_locked) {
-            throw new Exception(
-                "Cannot delete locked row. Row #{$rawMark->row_number} " .
-                "(Index: {$rawMark->candidate_index_number}) is locked. " .
-                "Unlock the row first if deletion is necessary."
-            );
+            throw new Exception("These marks are submitted and locked for processing.");
         }
     }
 

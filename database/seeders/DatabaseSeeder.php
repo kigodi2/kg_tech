@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             ExamTypeSeeder::class,
             SchoolSeeder::class,
             CandidateSeeder::class,
+            SettingsSeeder::class,
         ]);
     }
 }

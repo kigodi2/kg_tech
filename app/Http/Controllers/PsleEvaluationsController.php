@@ -20,6 +20,10 @@ class PsleEvaluationsController extends Controller
     {
         $examYearValue = $this->activeYear();
 
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYearValue);
+        }
+
         $entries = collect([
             [
                 'label' => 'ZONAL PERFORMANCE EVALUATIONS',
@@ -57,6 +61,10 @@ class PsleEvaluationsController extends Controller
     {
         $examYearValue = $this->activeYear();
 
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYearValue);
+        }
+
         $entries = $this->zonalEvaluationEntries()->map(fn (string $label) => [
             'label' => $label,
             'url' => '#',
@@ -89,6 +97,10 @@ class PsleEvaluationsController extends Controller
     public function regionalwise()
     {
         $examYearValue = $this->activeYear();
+
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYearValue);
+        }
 
         $entries = Region::query()
             ->where('name', 'NOT LIKE', '%UNASSIGNED%')
@@ -127,6 +139,10 @@ class PsleEvaluationsController extends Controller
     {
         $examYearValue = $this->activeYear();
 
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYearValue);
+        }
+
         $entries = $this->regionalEvaluationEntries()->map(fn (array $evaluation) => [
             'label' => $evaluation['label'],
             'url' => route('evaluations.psle.regionalwise.region.evaluation', [
@@ -161,14 +177,18 @@ class PsleEvaluationsController extends Controller
 
     public function regionalwiseEvaluation(Request $request, Region $region, string $evaluation)
     {
+        $examYearValue = $this->activeYear();
+
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYearValue);
+        }
+
         $evaluationMap = $this->regionalEvaluationEntries()->keyBy('key');
         abort_unless($evaluationMap->has($evaluation), 404);
 
         if (strtolower((string) $request->query('export')) === 'pdf') {
             return $this->regionalwiseEvaluationExport($request, $region, $evaluation, 'pdf');
         }
-
-        $examYearValue = $this->activeYear();
         $candidateRows = $this->regionalCandidateRows($region, $examYearValue);
         $label = (string) data_get($evaluationMap->get($evaluation), 'label', 'PSLE EVALUATION');
 
@@ -350,10 +370,14 @@ class PsleEvaluationsController extends Controller
     {
         abort_unless(in_array($format, ['pdf', 'xlsx'], true), 404);
 
+        $examYearValue = $this->activeYear();
+
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYearValue);
+        }
+
         $evaluationMap = $this->regionalEvaluationEntries()->keyBy('key');
         abort_unless($evaluationMap->has($evaluation), 404);
-
-        $examYearValue = $this->activeYear();
         $candidateRows = $this->regionalCandidateRows($region, $examYearValue);
         $label = (string) data_get($evaluationMap->get($evaluation), 'label', 'PSLE EVALUATION');
 
@@ -847,8 +871,38 @@ class PsleEvaluationsController extends Controller
         ];
     }
 
+    private function checkPublicationStatus(int $examYear): void
+    {
+        $publication = DB::table('psle_result_publications as prp')
+            ->join('result_snapshots as rs', 'rs.id', '=', 'prp.snapshot_id')
+            ->where('prp.exam_year_id', function ($query) use ($examYear) {
+                $query->select('id')->from('exam_years')->where('year_label', $examYear)->limit(1);
+            })
+            ->where('prp.status', 'published')
+            ->where('rs.is_active', true)
+            ->where('rs.is_rolled_back', false)
+            ->exists();
+
+        if (!$publication) {
+            abort(403, "Results for {$examYear} are not yet published.");
+        }
+    }
+
     private function regionalCandidateRows(Region $region, int $examYearValue, bool $lightweight = false, string $mode = ''): Collection
     {
+        $publication = DB::table('psle_result_publications as prp')
+            ->join('result_snapshots as rs', 'rs.id', '=', 'prp.snapshot_id')
+            ->where('prp.exam_year_id', function ($query) use ($examYearValue) {
+                $query->select('id')->from('exam_years')->where('year_label', $examYearValue)->limit(1);
+            })
+            ->where('prp.status', 'published')
+            ->where('rs.is_active', true)
+            ->where('rs.is_rolled_back', false)
+            ->select('rs.id as snapshot_id')
+            ->first();
+
+        $snapshotId = $publication ? $publication->snapshot_id : 0;
+
         $selectCols = [
             'c.id as candidate_pk',
             'c.gender',
@@ -899,7 +953,8 @@ class PsleEvaluationsController extends Controller
             ->where('cer.exam_type_id', $this->psleExamTypeId())
             ->where('cer.year', $examYearValue)
             ->where('sm.exam_type_id', $this->psleExamTypeId())
-            ->where('sm.year', $examYearValue);
+            ->where('sm.year', $examYearValue)
+            ->where('sm.snapshot_id', $snapshotId);
 
         if ($lightweight) {
             $marksQuery->select([

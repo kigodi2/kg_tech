@@ -3221,7 +3221,7 @@ class PsleMarkEntryController extends Controller
                     'ok' => false,
                     'success' => false,
                     'type' => 'authorization_error',
-                    'message' => 'This mark record is locked and cannot be edited. Contact an Administrator.',
+                    'message' => 'These marks are submitted and locked for processing.',
                 ], $responseStatus);
             }
             if ($mark->batch && $mark->batch->status !== 'draft' && !$returnedVerification) {
@@ -5916,7 +5916,7 @@ class PsleMarkEntryController extends Controller
         }
 
         if ($rawMark->is_locked) {
-            return response()->json(['success' => false, 'message' => 'Cannot correct a locked record.'], 422);
+            return response()->json(['success' => false, 'message' => 'These marks are submitted and locked for processing.'], 422);
         }
 
         DB::transaction(function () use ($rawMark, $validation, $request, $user) {

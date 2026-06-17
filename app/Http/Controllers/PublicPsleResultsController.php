@@ -29,6 +29,10 @@ class PublicPsleResultsController extends Controller
     {
         $examYear = (int) $examYear;
 
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYear);
+        }
+
         if (auth()->check() && auth()->user()->is_admin) {
             return app(\App\Http\Controllers\Admin\AdminPsleResultsController::class)->index(request(), $examYear);
         }
@@ -89,6 +93,10 @@ class PublicPsleResultsController extends Controller
     public function districts(string $examYear, Region $region)
     {
         $examYear = (int) $examYear;
+
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYear);
+        }
 
         $districts = $this->pslePortalBaseQuery()
             ->where('s.region_id', $region->id)
@@ -158,6 +166,10 @@ class PublicPsleResultsController extends Controller
     {
         $examYear = (int) $examYear;
         $this->assertDistrictBelongsToRegion($district, $region);
+
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYear);
+        }
 
         $schools = $this->pslePortalBaseQuery()
             ->where('s.region_id', $region->id)
@@ -229,6 +241,10 @@ class PublicPsleResultsController extends Controller
         $examYear = (int) $examYear;
         $this->assertDistrictBelongsToRegion($district, $region);
         $this->assertSchoolBelongsToHierarchy($school, $region, $district);
+
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYear);
+        }
 
         $rows = $this->psleBaseQuery($examYear)
             ->where('s.id', $school->id)
@@ -511,13 +527,44 @@ class PublicPsleResultsController extends Controller
         return [$candidates, $subjectSummary];
     }
 
+    private function checkPublicationStatus(int $examYear): void
+    {
+        $publication = DB::table('psle_result_publications as prp')
+            ->join('result_snapshots as rs', 'rs.id', '=', 'prp.snapshot_id')
+            ->where('prp.exam_year_id', function ($query) use ($examYear) {
+                $query->select('id')->from('exam_years')->where('year_label', $examYear)->limit(1);
+            })
+            ->where('prp.status', 'published')
+            ->where('rs.is_active', true)
+            ->where('rs.is_rolled_back', false)
+            ->exists();
+
+        if (!$publication) {
+            abort(403, "Results for {$examYear} are not yet published.");
+        }
+    }
+
     private function psleBaseQuery(int $examYear)
     {
+        $publication = DB::table('psle_result_publications as prp')
+            ->join('result_snapshots as rs', 'rs.id', '=', 'prp.snapshot_id')
+            ->where('prp.exam_year_id', function ($query) use ($examYear) {
+                $query->select('id')->from('exam_years')->where('year_label', $examYear)->limit(1);
+            })
+            ->where('prp.status', 'published')
+            ->where('rs.is_active', true)
+            ->where('rs.is_rolled_back', false)
+            ->select('rs.id as snapshot_id')
+            ->first();
+
+        $snapshotId = $publication ? $publication->snapshot_id : 0;
+
         return DB::table('subject_marks as sm')
             ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
             ->join('schools as s', 's.id', '=', 'c.school_id')
             ->where('sm.exam_type_id', $this->psleExamTypeId())
             ->where('sm.year', $examYear)
+            ->where('sm.snapshot_id', $snapshotId)
             ->where('s.education_level', 'PRIMARY');
     }
 
