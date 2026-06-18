@@ -385,7 +385,7 @@ class PsleDistrictSchoolFpdfService
         $pdf->SetFont('Helvetica', 'B', 11);
         $pdf->Cell(0, 6, $this->text("PRIME MINISTER'S OFFICE"), 0, 1, 'C');
         $pdf->Cell(0, 6, $this->text('REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT'), 0, 1, 'C');
-        $pdf->Cell(0, 6, $this->text('TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA'), 0, 1, 'C');
+        $pdf->Cell(0, 6, $this->text('ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)'), 0, 1, 'C');
         $pdf->Cell(0, 6, $this->text('OVERALL RESULTS FOR STANDARD SEVEN ZONAL JOINT MOCK EXAMINATION - MAY, ' . $yearLabel), 0, 1, 'C');
         $pdf->Cell(0, 6, $this->text(strtoupper((string) ($school?->code ?? '-')) . ' - ' . strtoupper((string) ($school?->name ?? 'UNKNOWN SCHOOL'))), 0, 1, 'C');
 
