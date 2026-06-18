@@ -183,6 +183,78 @@
             grid-column: span 1;
         }
     }
+
+    /* Custom Admin Dark Theme overrides for Select2 */
+    .select2-container--admin-dark {
+        font-family: inherit;
+    }
+    .select2-container--admin-dark .select2-selection--single {
+        background: #151d21 !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 6px !important;
+        height: 38px !important;
+        display: flex !important;
+        align-items: center !important;
+        color: #ffffff !important;
+        transition: border-color 0.2s, box-shadow 0.2s !important;
+    }
+    .select2-container--admin-dark .select2-selection--single .select2-selection__rendered {
+        color: #ffffff !important;
+        padding-left: 12px !important;
+        font-size: 0.85rem !important;
+    }
+    .select2-container--admin-dark .select2-selection--single .select2-selection__placeholder {
+        color: rgba(255, 255, 255, 0.4) !important;
+    }
+    .select2-container--admin-dark .select2-selection--single .select2-selection__arrow {
+        height: 36px !important;
+        right: 8px !important;
+    }
+    .select2-container--admin-dark .select2-selection--single .select2-selection__arrow b {
+        border-color: rgba(255, 255, 255, 0.6) transparent transparent transparent !important;
+    }
+    .select2-container--admin-dark.select2-container--open .select2-selection--single .select2-selection__arrow b {
+        border-color: transparent transparent rgba(255, 255, 255, 0.6) transparent !important;
+    }
+    .select2-container--admin-dark.select2-container--focus .select2-selection--single,
+    .select2-container--admin-dark.select2-container--open .select2-selection--single {
+        border-color: var(--tz-blue) !important;
+        box-shadow: 0 0 0 3px rgba(0, 163, 221, 0.15) !important;
+    }
+    
+    .select2-container--admin-dark .select2-dropdown {
+        background-color: #151d21 !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #ffffff !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3) !important;
+    }
+    .select2-container--admin-dark .select2-search--dropdown {
+        background-color: #151d21 !important;
+        padding: 8px !important;
+    }
+    .select2-container--admin-dark .select2-search--dropdown .select2-search__field {
+        background-color: #101518 !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: #ffffff !important;
+        border-radius: 6px !important;
+        padding: 6px 10px !important;
+        outline: none !important;
+    }
+    .select2-container--admin-dark .select2-results__option {
+        padding: 8px 12px !important;
+        font-size: 0.85rem !important;
+        color: rgba(255, 255, 255, 0.8) !important;
+    }
+    .select2-container--admin-dark .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--tz-blue) !important;
+        color: #ffffff !important;
+    }
+    .select2-container--admin-dark .select2-results__option[aria-selected=true] {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: #ffffff !important;
+    }
 </style>
 
 @php
@@ -579,7 +651,7 @@
                     <input type="hidden" name="exam_year_id" value="{{ $examYear->id }}">
                     <div>
                         <label class="adm-label" style="font-size: 0.75rem; margin-bottom: 6px;">Select Primary School</label>
-                        <select name="school_id" class="adm-input" required style="width: 100%; background: #151d21; border-color: rgba(255,255,255,0.12); color: #ffffff;">
+                        <select name="school_id" id="school_id_select" class="adm-input select2" required style="width: 100%; background: #151d21; border-color: rgba(255,255,255,0.12); color: #ffffff;">
                             <option value="">-- Choose School --</option>
                             @foreach($schoolsList as $s)
                                 <option value="{{ $s->id }}">{{ $s->code ? $s->code . ' - ' : '' }}{{ $s->name }}</option>
@@ -1010,5 +1082,15 @@
                 }
             });
         });
+
+        // Initialize Select2 on the school dropdown
+        if ($.fn.select2) {
+            $('#school_id_select').select2({
+                placeholder: '-- Choose School --',
+                allowClear: false,
+                width: '100%',
+                theme: 'admin-dark'
+            });
+        }
     });
 </script>
