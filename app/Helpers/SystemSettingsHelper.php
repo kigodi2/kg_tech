@@ -74,7 +74,7 @@ class SystemSettingsHelper
      */
     public static function clearCache()
     {
-        app(SettingsService::class)->clear();
+        app(SettingsService::class)->clearCache();
     }
 
     public static function refreshSettingsCache(): array
