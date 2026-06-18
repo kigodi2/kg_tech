@@ -654,6 +654,23 @@
             animation: flame-pulse 1s infinite ease-in-out;
             transform-origin: bottom center;
         }
+
+        /* Marquee Announcement Ticker for evaluation pages */
+        .announcement { margin-top: 8px; font-size: 13px; font-weight: bold; overflow: hidden; position: relative; width: 100%; }
+        .announcement-track { display: inline-block; white-space: nowrap; padding-left: 100%; animation: portalTicker 22s linear infinite; }
+        .announcement-track:hover { animation-play-state: paused; }
+        .announcement-copy { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding-right: 56px; }
+        .announcement .fire-icon { color: #ff6b00; font-weight: 900; display: inline-block; animation: flameBlink 0.9s ease-in-out infinite; transform-origin: center bottom; }
+        .announcement .fire-text { color: #ffb300; font-weight: 800; text-shadow: 0 0 6px rgba(255, 102, 0, 0.6); }
+
+        @keyframes portalTicker {
+          from { transform: translateX(0); }
+          to { transform: translateX(-100%); }
+        }
+        @keyframes flameBlink {
+          0%, 100% { opacity: 1; transform: scale(1) rotate(-2deg); text-shadow: 0 0 4px rgba(255, 90, 0, 0.55); }
+          50% { opacity: 0.7; transform: scale(1.15) rotate(2deg); text-shadow: 0 0 10px rgba(255, 160, 0, 0.95); }
+        }
     </style>
 </head>
 <body class="bg-gray-100" style="{{ request()->is('evaluations*') ? 'padding-top: 0 !important;' : '' }}">
