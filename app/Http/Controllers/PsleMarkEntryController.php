@@ -3027,7 +3027,17 @@ class PsleMarkEntryController extends Controller
             'exam_year_id' => $examYearId,
         ])->where('status', '!=', 'draft')->first();
 
-        if ($existingNonDraftBatch && !$returnedVerification) {
+        $isCorrectionBypass = false;
+        $examYear = \App\Models\ExamYear::find($examYearId);
+        if ($examYear) {
+            $isCorrectionBypass = \App\Models\SchoolResultCorrectionBatch::where('school_id', $schoolId)
+                ->where('exam_year', $examYear->year_label)
+                ->where('exam_type', 'PSLE')
+                ->where('status', 'open')
+                ->exists();
+        }
+
+        if ($existingNonDraftBatch && !$returnedVerification && !$isCorrectionBypass) {
             $responseStatus = 403;
             return response()->json([
                 'ok' => false,
@@ -3214,8 +3224,16 @@ class PsleMarkEntryController extends Controller
         }
 
         if ($mark) {
+            $isCorrectionBypassMark = false;
+            if ($mark->correction_batch_id) {
+                $isCorrectionBypassMark = \DB::table('school_result_correction_batches')
+                    ->where('id', $mark->correction_batch_id)
+                    ->where('status', 'open')
+                    ->exists() && !$mark->is_locked;
+            }
+
             // Guard: never update a locked record or a record in a non-draft batch
-            if ($mark->is_locked) {
+            if ($mark->is_locked && !$isCorrectionBypassMark) {
                 $responseStatus = 403;
                 return response()->json([
                     'ok' => false,
@@ -3224,7 +3242,7 @@ class PsleMarkEntryController extends Controller
                     'message' => 'These marks are submitted and locked for processing.',
                 ], $responseStatus);
             }
-            if ($mark->batch && $mark->batch->status !== 'draft' && !$returnedVerification) {
+            if ($mark->batch && $mark->batch->status !== 'draft' && !$returnedVerification && !$isCorrectionBypassMark) {
                 $responseStatus = 403;
                 return response()->json([
                     'ok' => false,
@@ -3265,6 +3283,36 @@ class PsleMarkEntryController extends Controller
             $saveAction = 'updated';
         } else {
             $mark = DB::transaction(function () use ($batch, $examYearId, $schoolId, $validated, $candidate, $subjectId, $assignmentId, $user, $subjectStatus) {
+                $correctionBatch = null;
+                $examYear = \App\Models\ExamYear::find($examYearId);
+                if ($examYear) {
+                    $correctionBatch = \App\Models\SchoolResultCorrectionBatch::where('school_id', $schoolId)
+                        ->where('exam_year', $examYear->year_label)
+                        ->where('exam_type', 'PSLE')
+                        ->where('status', 'open')
+                        ->first();
+                }
+
+                $data = [
+                    'mark_import_batch_id'   => $batch->id,
+                    'candidate_index_number' => $candidate->candidate_id ?? '',
+                    'full_name'              => $candidate->full_name ?? '',
+                    'assignment_id'          => $assignmentId,
+                    'entered_by'             => $user->id,
+                    'updated_by'             => $user->id,
+                    'paper_1_marks'          => $validated['score'],
+                    'subject_status'         => $subjectStatus,
+                    'row_number'             => 0,
+                    'raw_data'               => [],
+                ];
+
+                if ($correctionBatch) {
+                    $data['correction_batch_id'] = $correctionBatch->id;
+                    $data['correction_status'] = 'open';
+                    $data['correction_opened_at'] = now();
+                    $data['correction_opened_by'] = $user->id;
+                }
+
                 return \App\Models\RawMark::updateOrCreate(
                     [
                         'exam_year_id' => $examYearId,
@@ -3272,19 +3320,7 @@ class PsleMarkEntryController extends Controller
                         'candidate_id' => $validated['candidate_id'],
                         'subject_id' => $subjectId,
                     ],
-                    [
-                        'mark_import_batch_id'   => $batch->id,
-                        // candidate_index_number: use candidate_id field (PSLE index number stored there)
-                        'candidate_index_number' => $candidate->candidate_id ?? '',
-                        'full_name'              => $candidate->full_name ?? '',
-                        'assignment_id'          => $assignmentId,
-                        'entered_by'             => $user->id,
-                        'updated_by'             => $user->id,
-                        'paper_1_marks'          => $validated['score'],
-                        'subject_status'         => $subjectStatus,
-                        'row_number'             => 0,
-                        'raw_data'               => [],
-                    ]
+                    $data
                 );
             });
 

@@ -533,6 +533,16 @@ class PublicPsleResultsController extends Controller
 
     private function checkPublicationStatus(int $examYear): void
     {
+        $hasActiveCorrection = DB::table('school_result_correction_batches')
+            ->where('exam_year', $examYear)
+            ->where('exam_type', 'PSLE')
+            ->whereIn('status', ['open', 'corrected', 'recalculated'])
+            ->exists();
+
+        if ($hasActiveCorrection) {
+            abort(403, "Results are temporarily under correction. Please check again later.");
+        }
+
         $publication = DB::table('psle_result_publications as prp')
             ->join('result_snapshots as rs', 'rs.id', '=', 'prp.snapshot_id')
             ->where('prp.exam_year_id', function ($query) use ($examYear) {

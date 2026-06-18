@@ -166,6 +166,13 @@
     $readyPercent = $total > 0 ? round(($complete / $total) * 100, 1) : 0;
     
     $lastRuns = collect($viewData['lastRuns'] ?? []);
+
+    $schoolsList = DB::table('schools')
+        ->whereIn('region_id', $tasidoRegions->pluck('id')->toArray())
+        ->where('education_level', 'PRIMARY')
+        ->select('id', 'name', 'code')
+        ->orderBy('name')
+        ->get();
     
     // Check if raw marks have been submitted & locked
     $submitLockRun = $lastRuns->firstWhere('type', 'submit_lock');
@@ -523,6 +530,144 @@
     </div>
 </div>
 
+<!-- School-Level Rollback & Correction Center -->
+<div class="adm-card" style="margin-top: 30px; margin-bottom: 30px;">
+    <div class="adm-card-head" style="background: linear-gradient(135deg, rgba(14, 116, 144, 0.15) 0%, rgba(17, 24, 35, 0.6) 100%); border-bottom: 1px solid rgba(14, 116, 144, 0.25);">
+        <h3 class="adm-card-title">
+            <i class="fa-solid fa-school-flag" style="color: var(--tz-blue);"></i> 
+            School-Level Rollback & Correction Center
+        </h3>
+        <span style="font-size: 0.78rem; color: var(--tz-text-muted);">Manage single school rollback and results correction workflows</span>
+    </div>
+    <div class="adm-card-body" style="padding: 24px;">
+        <div style="display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px;">
+            <!-- Initiate Card Form -->
+            <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06); padding: 20px; border-radius: 12px;">
+                <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-plus-circle" style="color: var(--tz-blue);"></i> Initiate Single School Rollback
+                </h4>
+                <p style="font-size: 0.82rem; color: var(--tz-text-muted); margin-bottom: 16px;">
+                    Rollback a selected school's raw marks to draft sequence. All other schools will remain locked.
+                </p>
+                <form id="formInitiateCorrection" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 150px; gap: 16px; align-items: flex-end;">
+                    @csrf
+                    <input type="hidden" name="exam_year_id" value="{{ $examYear->id }}">
+                    <div>
+                        <label class="adm-label" style="font-size: 0.75rem; margin-bottom: 6px;">Select Primary School</label>
+                        <select name="school_id" class="adm-input" required style="width: 100%; background: #151d21; border-color: rgba(255,255,255,0.12); color: #ffffff;">
+                            <option value="">-- Choose School --</option>
+                            @foreach($schoolsList as $s)
+                                <option value="{{ $s->id }}">{{ $s->code ? $s->code . ' - ' : '' }}{{ $s->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="adm-label" style="font-size: 0.75rem; margin-bottom: 6px;">Rollback Reason</label>
+                        <input type="text" name="reason" class="adm-input" placeholder="e.g. Correct typo in Mathematics marks for index..." required style="width: 100%; background: #151d21; border-color: rgba(255,255,255,0.12); color: #ffffff;">
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; height: 38px;">
+                            <i class="fa-solid fa-play"></i> Start Correction
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sessions List -->
+        <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-list" style="color: var(--tz-yellow);"></i> Active & Historic Correction Batches
+        </h4>
+        @if(count($viewData['correctionBatches'] ?? []) > 0)
+            <div class="table-responsive" style="border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden;">
+                <table style="width: 100%; margin-bottom: 0;">
+                    <thead>
+                        <tr style="background: rgba(255,255,255,0.02);">
+                            <th>School</th>
+                            <th class="text-center">Status</th>
+                            <th>Reason & Details</th>
+                            <th>Opened By</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($viewData['correctionBatches'] as $batch)
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                <td>
+                                    <strong style="color: #ffffff;">{{ $batch->school_name_snapshot }}</strong><br>
+                                    <span style="font-size: 0.75rem; color: var(--tz-text-muted);">Code: {{ $batch->school_code_snapshot }} | Year: {{ $batch->exam_year }}</span>
+                                </td>
+                                <td class="text-center">
+                                    @if($batch->status === 'open')
+                                        <span class="badge badge-yellow" style="font-size: 0.65rem; padding: 4px 8px;">Correction Open</span>
+                                    @elseif($batch->status === 'corrected')
+                                        <span class="badge badge-blue" style="font-size: 0.65rem; padding: 4px 8px;">Marks Corrected</span>
+                                    @elseif($batch->status === 'recalculated')
+                                        <span class="badge badge-purple" style="font-size: 0.65rem; padding: 4px 8px; background: #8b5cf6;">Recalculated</span>
+                                    @elseif($batch->status === 'republished')
+                                        <span class="badge badge-green" style="font-size: 0.65rem; padding: 4px 8px;">Republished</span>
+                                    @elseif($batch->status === 'cancelled')
+                                        <span class="badge badge-red" style="font-size: 0.65rem; padding: 4px 8px;">Cancelled</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div style="font-size: 0.82rem; max-width: 300px; word-wrap: break-word; color: #ffffff;">
+                                        {{ $batch->reason }}
+                                    </div>
+                                    @if($batch->status === 'cancelled')
+                                        <div style="font-size: 0.75rem; color: #fca5a5; margin-top: 4px;">
+                                            Cancellation Reason: {{ $batch->cancellation_reason }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span style="font-size: 0.82rem; color: #ffffff;">{{ $batch->openedByUser?->name ?? 'System' }}</span><br>
+                                    <span style="font-size: 0.72rem; color: var(--tz-text-muted);">{{ $batch->created_at->format('Y-m-d H:i') }}</span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                        @if($batch->status === 'open')
+                                            <button class="btn btn-blue btn-sm btnCompleteCorrection" data-id="{{ $batch->id }}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                                <i class="fa-solid fa-check-double"></i> Complete Correction
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btnCancelCorrection" data-id="{{ $batch->id }}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                                <i class="fa-solid fa-ban"></i> Cancel
+                                            </button>
+                                        @elseif($batch->status === 'corrected')
+                                            <button class="btn btn-warning btn-sm btnRecalculateCorrection" data-id="{{ $batch->id }}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                                <i class="fa-solid fa-calculator"></i> Recalculate
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btnCancelCorrection" data-id="{{ $batch->id }}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                                <i class="fa-solid fa-ban"></i> Cancel
+                                            </button>
+                                        @elseif($batch->status === 'recalculated')
+                                            <button class="btn btn-success btn-sm btnRepublishCorrection" data-id="{{ $batch->id }}" style="font-size: 0.75rem; padding: 4px 8px; background: #10b981;">
+                                                <i class="fa-solid fa-globe"></i> Republish Results
+                                            </button>
+                                            <button class="btn btn-danger btn-sm btnCancelCorrection" data-id="{{ $batch->id }}" style="font-size: 0.75rem; padding: 4px 8px;">
+                                                <i class="fa-solid fa-ban"></i> Cancel
+                                            </button>
+                                        @elseif($batch->status === 'republished')
+                                            <span style="font-size: 0.75rem; color: var(--tz-green);"><i class="fa-solid fa-circle-check"></i> Republished at {{ $batch->republished_at ? \Carbon\Carbon::parse($batch->republished_at)->format('Y-m-d H:i') : '' }}</span>
+                                        @elseif($batch->status === 'cancelled')
+                                            <span style="font-size: 0.75rem; color: var(--tz-text-muted);"><i class="fa-solid fa-trash"></i> Cancelled</span>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
+            <div style="background: rgba(255, 255, 255, 0.01); border: 1px dashed rgba(255, 255, 255, 0.1); padding: 30px; text-align: center; border-radius: 8px;">
+                <i class="fa-solid fa-school-circle-check" style="font-size: 2rem; color: var(--tz-text-muted); margin-bottom: 12px; display: block;"></i>
+                <span style="font-size: 0.88rem; color: var(--tz-text-muted);">No correction batches registered for this academic year.</span>
+            </div>
+        @endif
+    </div>
+</div>
+
 <!-- Scripts for ajax processing triggers -->
 <script>
     function copyToClipboard(id) {
@@ -695,6 +840,143 @@
                         exam_year_id: '{{ $examYear->id }}'
                     }, function(res) {
                         Swal.fire({ title: 'Restored', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        // School-level correction AJAX handlers
+        $('#formInitiateCorrection').submit(function(e) {
+            e.preventDefault();
+            var form = $(this);
+            Swal.fire({
+                title: 'Initiate School Correction',
+                text: 'Are you sure you want to rollback this school? This will unlock raw marks only for the selected school, mark it as "under correction", and temporarily suspend public/evaluation portals for the year.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Start Correction',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Initiating rollback...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.correction.initiate") }}', form.serialize(), function(res) {
+                        Swal.fire({ title: 'Success', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('.btnCompleteCorrection').click(function() {
+            var batchId = $(this).data('id');
+            Swal.fire({
+                title: 'Complete Correction Phase',
+                text: 'This will lock the scoresheet for the school and mark the correction phase as completed. Proceed?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Complete',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Locking scoresheet...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.correction.complete") }}', {
+                        _token: '{{ csrf_token() }}',
+                        batch_id: batchId
+                    }, function(res) {
+                        Swal.fire({ title: 'Success', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('.btnRecalculateCorrection').click(function() {
+            var batchId = $(this).data('id');
+            Swal.fire({
+                title: 'Recalculate Year-level Results',
+                text: 'This will run year-level calculations to update all rankings, averages, and subject summaries. Proceed?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Recalculate Now',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Recalculating results...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.correction.recalculate") }}', {
+                        _token: '{{ csrf_token() }}',
+                        batch_id: batchId
+                    }, function(res) {
+                        Swal.fire({ title: 'Success', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('.btnRepublishCorrection').click(function() {
+            var batchId = $(this).data('id');
+            Swal.fire({
+                title: 'Republish Results',
+                text: 'This will restore public and evaluation portal access with the newly corrected results. Proceed?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Republish',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Republishing results...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.correction.republish") }}', {
+                        _token: '{{ csrf_token() }}',
+                        batch_id: batchId
+                    }, function(res) {
+                        Swal.fire({ title: 'Success', text: res.message, icon: 'success', ...swalConfig }).then(() => {
+                            window.location.reload();
+                        });
+                    }).fail(function(xhr) {
+                        Swal.fire({ title: 'Error', text: xhr.responseJSON?.message || 'Action failed.', icon: 'error', ...swalConfig });
+                    });
+                }
+            });
+        });
+
+        $('.btnCancelCorrection').click(function() {
+            var batchId = $(this).data('id');
+            Swal.fire({
+                title: 'Cancel Correction Batch',
+                text: 'Please specify the cancellation reason (minimum 5 characters):',
+                input: 'text',
+                inputPlaceholder: 'Reason for cancellation...',
+                inputAttributes: {
+                    required: 'true',
+                    minlength: '5'
+                },
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Cancel Batch',
+                confirmButtonColor: '#ef4444',
+                ...swalConfig
+            }).then((result) => {
+                if (result.isConfirmed && result.value) {
+                    Swal.fire({ title: 'Cancelling batch...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.post('{{ route("results.psle.correction.cancel") }}', {
+                        _token: '{{ csrf_token() }}',
+                        batch_id: batchId,
+                        reason: result.value
+                    }, function(res) {
+                        Swal.fire({ title: 'Success', text: res.message, icon: 'success', ...swalConfig }).then(() => {
                             window.location.reload();
                         });
                     }).fail(function(xhr) {

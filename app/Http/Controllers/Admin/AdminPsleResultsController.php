@@ -275,7 +275,12 @@ class AdminPsleResultsController extends Controller
             ->limit(10)
             ->get();
 
-        return compact('readiness', 'validationErrors', 'lastRuns');
+        $correctionBatches = \App\Models\SchoolResultCorrectionBatch::where('exam_year', $year)
+            ->with(['school:id,name,code', 'openedByUser:id,name', 'correctedByUser:id,name', 'recalculatedByUser:id,name', 'republishedByUser:id,name', 'cancelledByUser:id,name'])
+            ->orderByDesc('created_at')
+            ->get();
+
+        return compact('readiness', 'validationErrors', 'lastRuns', 'correctionBatches');
     }
 
     private function getCandidateResultsData(Request $request, int $year, array $regionIds, $regionId, $districtId, $schoolId): array
@@ -1077,6 +1082,138 @@ class AdminPsleResultsController extends Controller
             'success' => true,
             'message' => 'Rollback sequence finished. Active parameters restored to draft mode, and raw marks unlocked for editing.'
         ]);
+    }
+
+    public function initiateCorrection(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized. Only administrator can initiate correction.'], 403);
+        }
+
+        $request->validate([
+            'school_id' => 'required|exists:schools,id',
+            'exam_year_id' => 'required',
+            'reason' => 'required|string|min:5',
+        ]);
+
+        try {
+            $school = School::findOrFail($request->input('school_id'));
+            $examYearId = $request->input('exam_year_id');
+            $reason = $request->input('reason');
+
+            $service = app(\App\Services\Results\SchoolRollbackService::class);
+            $batch = $service->initiateRollback($school, (int)$examYearId, $reason, auth()->id());
+
+            return response()->json([
+                'success' => true,
+                'message' => "Successfully initiated correction for {$school->name}.",
+                'batch' => $batch
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function completeCorrection(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $request->validate([
+            'batch_id' => 'required|exists:school_result_correction_batches,id',
+        ]);
+
+        try {
+            $batch = \App\Models\SchoolResultCorrectionBatch::findOrFail($request->input('batch_id'));
+            $service = app(\App\Services\Results\SchoolRollbackService::class);
+            $batch = $service->completeCorrection($batch, auth()->id());
+
+            return response()->json([
+                'success' => true,
+                'message' => "Correction phase marked as completed for school {$batch->school_name_snapshot}.",
+                'batch' => $batch
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function recalculateCorrection(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $request->validate([
+            'batch_id' => 'required|exists:school_result_correction_batches,id',
+        ]);
+
+        try {
+            $batch = \App\Models\SchoolResultCorrectionBatch::findOrFail($request->input('batch_id'));
+            $service = app(\App\Services\Results\SchoolRollbackService::class);
+            $batch = $service->recalculateResults($batch, auth()->id());
+
+            return response()->json([
+                'success' => true,
+                'message' => "Results recalculated successfully.",
+                'batch' => $batch
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function republishCorrection(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $request->validate([
+            'batch_id' => 'required|exists:school_result_correction_batches,id',
+        ]);
+
+        try {
+            $batch = \App\Models\SchoolResultCorrectionBatch::findOrFail($request->input('batch_id'));
+            $service = app(\App\Services\Results\SchoolRollbackService::class);
+            $batch = $service->republishResults($batch, auth()->id());
+
+            return response()->json([
+                'success' => true,
+                'message' => "Results successfully republished.",
+                'batch' => $batch
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function cancelCorrection(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
+        }
+
+        $request->validate([
+            'batch_id' => 'required|exists:school_result_correction_batches,id',
+            'reason' => 'required|string|min:5',
+        ]);
+
+        try {
+            $batch = \App\Models\SchoolResultCorrectionBatch::findOrFail($request->input('batch_id'));
+            $reason = $request->input('reason');
+            $service = app(\App\Services\Results\SchoolRollbackService::class);
+            $batch = $service->cancelRollback($batch, $reason, auth()->id());
+
+            return response()->json([
+                'success' => true,
+                'message' => "Correction batch cancelled successfully.",
+                'batch' => $batch
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
     }
 
     // --- Helpers ---

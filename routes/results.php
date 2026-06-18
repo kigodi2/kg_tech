@@ -117,6 +117,13 @@ Route::group(['prefix' => 'results', 'middleware' => ['auth']], function () {
         Route::post('/processing/final-run', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'finalRun'])->name('results.psle.processing.final-run');
         Route::post('/processing/publish', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'publishSnapshot'])->name('results.psle.processing.publish');
         Route::post('/processing/rollback', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'rollback'])->name('results.psle.processing.rollback');
+
+        // Single School Correction / Rollback routes
+        Route::post('/processing/correction/initiate', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'initiateCorrection'])->name('results.psle.correction.initiate');
+        Route::post('/processing/correction/complete', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'completeCorrection'])->name('results.psle.correction.complete');
+        Route::post('/processing/correction/recalculate', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'recalculateCorrection'])->name('results.psle.correction.recalculate');
+        Route::post('/processing/correction/republish', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'republishCorrection'])->name('results.psle.correction.republish');
+        Route::post('/processing/correction/cancel', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'cancelCorrection'])->name('results.psle.correction.cancel');
     });
 
     // Main yearly route: /results/{year}/psle

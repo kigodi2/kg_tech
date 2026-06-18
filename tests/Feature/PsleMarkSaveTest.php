@@ -29,7 +29,14 @@ class PsleMarkSaveTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        \Illuminate\Support\Facades\DB::table('system_settings')->insertOrIgnore([
+            'key' => 'mark_entry_geofence_enabled',
+            'value' => '0',
+            'type' => 'boolean',
+            'group' => 'mark_entry',
+        ]);
         \App\Helpers\MarkEntrySettings::setGeofenceEnabled(false);
+        config(['mark_entry.enable_single_device_restriction' => false]);
 
         $this->admin = User::factory()->create([
             'is_admin' => true,
