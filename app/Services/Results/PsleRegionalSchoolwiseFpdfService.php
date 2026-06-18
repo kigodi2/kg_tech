@@ -229,7 +229,7 @@ class PsleRegionalSchoolwiseFpdfService
 
         if (!empty($summary['zonal_rank'])) {
             $rank = (array) $summary['zonal_rank'];
-            $pdf->Cell(self::CONTENT_WIDTH, 3.9, $this->text('ZONAL RANK: ' . ($rank['rank'] ?? '-') . ' OUT OF ' . ($rank['total'] ?? '-')), 0, 1, 'L');
+            $pdf->Cell(self::CONTENT_WIDTH, 3.9, $this->text('ZONAL RANK: ' . ($rank['position'] ?? $rank['rank'] ?? '-') . ' OUT OF ' . ($rank['total'] ?? '-')), 0, 1, 'L');
         }
 
         $groupLine = (string) ($summary['group_count_label'] ?? 'TOTAL GROUPS') . ': ' . (int) ($summary['group_count'] ?? 0);
