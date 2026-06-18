@@ -26,8 +26,8 @@
         .header-right-text { font-size: 24px; margin-top: 2px; color: #fff; line-height: 1.1; }
         .header-places { font-size: 24px; margin-top: 2px; color: #fff; opacity: .95; line-height: 1.15; }
         .header-logo { max-height: 96px; width: auto; }
-        .announcement { margin-top: 8px; font-size: 13px; font-weight: bold; overflow: hidden; position: relative; }
-        .announcement-track { display: inline-flex; align-items: center; white-space: nowrap; min-width: max-content; padding-left: 100%; animation: portalTicker 22s linear infinite; }
+        .announcement { margin-top: 8px; font-size: 13px; font-weight: bold; overflow: hidden; position: relative; width: 100%; }
+        .announcement-track { display: inline-block; white-space: nowrap; padding-left: 100%; animation: portalTicker 22s linear infinite; }
         .announcement-track:hover { animation-play-state: paused; }
         .announcement-copy { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding-right: 56px; }
         .announcement .fire-icon { color: #ff6b00; font-weight: 900; display: inline-block; animation: flameBlink 0.9s ease-in-out infinite; transform-origin: center bottom; }
