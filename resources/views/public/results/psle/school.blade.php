@@ -6,6 +6,7 @@
     <title>Standard Seven Mock Results {{ $examYear }} - {{ $school->name }}</title>
     
     <link href="https://fonts.cdnfonts.com/css/maiandra-gd" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -13,6 +14,7 @@
         :root { --irms-font: 'Maiandra GD', "Ubuntu Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         html, body, body * { font-family: var(--irms-font) !important; }
         input, button, select, textarea { font-family: var(--irms-font) !important; }
+        .barcode-text { font-family: 'Libre Barcode 39', cursive !important; }
         * { box-sizing: border-box; }
         
         /* Portal Site Header retro theme styles */
@@ -368,11 +370,14 @@
                     </div>
                 </div>
 
-                <!-- Print Button -->
-                <div class="print-btn-container" style="margin-top: 1.5rem; text-align: center;">
-                    <button onclick="window.print()" style="background-color: #003366; color: white; padding: 0.90rem 2rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: 600; cursor: pointer;">
-                        Print Results
-                    </button>
+                <!-- Barcode 39 -->
+                <div class="barcode-container" style="margin-top: 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <div class="barcode-text" style="font-size: 80px; line-height: 1; color: #000000;">
+                        *{{ strtoupper($school->code) }}*
+                    </div>
+                    <div style="font-family: monospace !important; font-size: 14px; font-weight: bold; letter-spacing: 4px; color: #333333; margin-top: 4px;">
+                        *{{ strtoupper($school->code) }}*
+                    </div>
                 </div>
             @endif
         </div>
