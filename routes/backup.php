@@ -20,7 +20,7 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
         ->name('backups.status');
 
     Route::post('/create', [BackupController::class, 'create'])
-        ->name('backups.create');
+        ->name('api.backups.create');
 
     Route::get('/logs', [BackupController::class, 'logs'])
         ->name('backups.logs');
