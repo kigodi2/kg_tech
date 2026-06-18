@@ -1,8 +1,8 @@
 <?php
 
 // Boot Laravel Application
-require 'C:\Users\user\Desktop\irms2026\vendor\autoload.php';
-$app = require_once 'C:\Users\user\Desktop\irms2026\bootstrap\app.php';
+require __DIR__ . '/../vendor/autoload.php';
+$app = require_once __DIR__ . '/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
