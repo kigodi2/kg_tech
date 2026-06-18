@@ -3,8 +3,12 @@
 @section('content')
 <div class="w-full" style="font-family: 'Maiandra GD', sans-serif;">
     <!-- Page Header -->
-    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm">
+    <div class="bg-white border-b border-gray-200 px-8 py-6 sticky top-0 z-40 shadow-sm flex items-center justify-between">
         <h1 class="text-2xl font-bold text-gray-800" style="font-family: 'Maiandra GD', sans-serif;">Evaluations</h1>
+        <a href="/dashboard" class="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-slate-300 hover:bg-slate-50">
+            <i class="fas fa-arrow-left text-xs"></i>
+            Back to Dashboard
+        </a>
     </div>
 
     <!-- Main Content -->

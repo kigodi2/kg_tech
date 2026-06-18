@@ -635,7 +635,8 @@
         }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100" style="{{ request()->is('evaluations*') ? 'padding-top: 0 !important;' : '' }}">
+    @if(!request()->is('evaluations*'))
     <!-- Official Header -->
     <div class="official-header">
         <div class="header-content">
@@ -840,6 +841,7 @@
             </div>
         </div>
     </nav>
+    @endif
 
     <!-- Main Content -->
     <main class="min-h-screen p-0">
