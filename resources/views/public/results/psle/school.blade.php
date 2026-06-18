@@ -372,13 +372,13 @@
 
                 <!-- Barcode 39 -->
                 <div class="barcode-container" style="margin-top: 1.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <div style="font-size: 16px; font-weight: bold; color: #003366; margin-bottom: 6px; letter-spacing: 1px;">
+                    <div style="font-size: 16px; font-weight: bold; color: #003366; margin-bottom: 15px; letter-spacing: 1px;">
                         STANDARD SEVEN OFFICIAL RESULT
                     </div>
-                    <div class="barcode-text" style="font-size: 80px; line-height: 0.6; color: #000000;">
+                    <div class="barcode-text" style="font-size: 80px; line-height: 1.0; color: #000000;">
                         *{{ strtoupper($school->code) }}*
                     </div>
-                    <div style="font-family: monospace !important; font-size: 14px; font-weight: bold; letter-spacing: 4px; color: #333333; margin-top: -8px;">
+                    <div style="font-family: monospace !important; font-size: 14px; font-weight: bold; letter-spacing: 4px; color: #333333; margin-top: -22px;">
                         *{{ strtoupper($school->code) }}*
                     </div>
                 </div>
