@@ -482,6 +482,10 @@ class PublicPsleResultsController extends Controller
 
                 return $candidate;
             })
+            ->sortBy([
+                ['total_score', 'desc'],
+                ['candidate_id', 'asc'],
+            ])
             ->values()
             ->all();
 
