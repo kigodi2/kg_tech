@@ -371,7 +371,7 @@
                 <!-- Print Button -->
                 <div class="print-btn-container" style="margin-top: 1.5rem; text-align: center;">
                     <button onclick="window.print()" style="background-color: #003366; color: white; padding: 0.90rem 2rem; border: none; border-radius: 4px; font-size: 1rem; font-weight: 600; cursor: pointer;">
-                        <i class="fas fa-print"></i> Print Results
+                        Print Results
                     </button>
                 </div>
             @endif
