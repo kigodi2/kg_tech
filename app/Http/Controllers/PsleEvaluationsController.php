@@ -961,6 +961,7 @@ class PsleEvaluationsController extends Controller
                 'sm.candidate_id',
                 'sm.marks_obtained',
                 'sm.max_marks',
+                'sm.grade',
             ]);
         } else {
             $marksQuery->join('subjects as sb', 'sb.id', '=', 'sm.subject_id')
@@ -968,6 +969,7 @@ class PsleEvaluationsController extends Controller
                     'sm.candidate_id',
                     'sm.marks_obtained',
                     'sm.max_marks',
+                    'sm.grade',
                     'sb.code as subject_code',
                     'sb.name as subject_name',
                 ]);
@@ -979,20 +981,23 @@ class PsleEvaluationsController extends Controller
             if ($lightweight) {
                 $subjectRows = collect($marksByCandidate->get($candidate->candidate_pk, []))
                     ->map(function ($row) {
-                        $score = $this->scaledScore50((float) ($row->marks_obtained ?? 0), (float) ($row->max_marks ?: 100));
-                        $grade = $this->gradeFromScaledScore($score);
+                        $isAbsent = strtoupper((string) ($row->grade ?? '')) === 'ABS' || is_null($row->marks_obtained);
+                        $score = $isAbsent ? null : $this->scaledScore50((float) ($row->marks_obtained ?? 0), (float) ($row->max_marks ?: 100));
+                        $grade = $isAbsent ? 'ABS' : $this->gradeFromScaledScore($score);
 
                         return [
                             'score' => $score,
                             'grade' => $grade,
+                            'is_absent' => $isAbsent,
                         ];
                     });
 
-                $subjectCount = $subjectRows->count();
-                $total = round((float) $subjectRows->sum('score'), 4);
+                $satSubjects = $subjectRows->filter(fn (array $item) => !($item['is_absent'] ?? false));
+                $subjectCount = $satSubjects->count();
+                $total = $subjectCount > 0 ? round((float) $satSubjects->sum('score'), 4) : 0;
                 $average = $subjectCount > 0 ? round($total / $subjectCount, 4) : null;
                 $aggt = $subjectCount > 0
-                    ? (int) $subjectRows->sum(fn (array $item) => $this->gradePointFromGrade((string) ($item['grade'] ?? 'E')))
+                    ? (int) $satSubjects->sum(fn (array $item) => $this->gradePointFromGrade((string) ($item['grade'] ?? 'E')))
                     : null;
                 $gpa = $subjectCount > 0 && !is_null($aggt)
                     ? round($aggt / $subjectCount, 4)
@@ -1014,8 +1019,8 @@ class PsleEvaluationsController extends Controller
                     'district' => $mode === 'districtwise' ? strtoupper(trim(((string) ($candidate->district_code ?? '')) . ' - ' . ((string) ($candidate->district_name ?? '')))) : '-',
                     'ownership' => strtoupper(trim((string) ($candidate->ownership ?? 'UNKNOWN'))) ?: 'UNKNOWN',
                     'status' => $status,
-                    'total_marks' => $subjectCount > 0 ? round($total, 0) : null,
-                    'avg_marks' => $average,
+                    'total_marks' => $status === 'COMPLETE' && $subjectCount > 0 ? round($total, 0) : null,
+                    'avg_marks' => $status === 'COMPLETE' ? $average : null,
                     'overall_grade' => $overallGrade,
                     'gpa' => $status === 'COMPLETE' ? $gpa : null,
                 ];
@@ -1023,8 +1028,9 @@ class PsleEvaluationsController extends Controller
 
             $subjectRows = collect($marksByCandidate->get($candidate->candidate_pk, []))
                 ->map(function ($row) {
-                    $score = $this->scaledScore50((float) ($row->marks_obtained ?? 0), (float) ($row->max_marks ?: 100));
-                    $grade = $this->gradeFromScaledScore($score);
+                    $isAbsent = strtoupper((string) ($row->grade ?? '')) === 'ABS' || is_null($row->marks_obtained);
+                    $score = $isAbsent ? null : $this->scaledScore50((float) ($row->marks_obtained ?? 0), (float) ($row->max_marks ?: 100));
+                    $grade = $isAbsent ? 'ABS' : $this->gradeFromScaledScore($score);
 
                     return [
                         'code' => strtoupper((string) ($row->subject_code ?? '')),
@@ -1032,16 +1038,18 @@ class PsleEvaluationsController extends Controller
                         'subject_short' => $this->candidateSubjectLabel((string) ($row->subject_name ?? '')),
                         'score' => $score,
                         'grade' => $grade,
+                        'is_absent' => $isAbsent,
                     ];
                 })
                 ->sortBy(fn (array $item) => $this->subjectOrderIndex((string) ($item['subject_name'] ?? '')))
                 ->values();
 
-            $subjectCount = $subjectRows->count();
-            $total = round((float) $subjectRows->sum('score'), 4);
+            $satSubjects = $subjectRows->filter(fn (array $item) => !($item['is_absent'] ?? false));
+            $subjectCount = $satSubjects->count();
+            $total = $subjectCount > 0 ? round((float) $satSubjects->sum('score'), 4) : 0;
             $average = $subjectCount > 0 ? round($total / $subjectCount, 4) : null;
             $aggt = $subjectCount > 0
-                ? (int) $subjectRows->sum(fn (array $item) => $this->gradePointFromGrade((string) ($item['grade'] ?? 'E')))
+                ? (int) $satSubjects->sum(fn (array $item) => $this->gradePointFromGrade((string) ($item['grade'] ?? 'E')))
                 : null;
             $gpa = $subjectCount > 0 && !is_null($aggt)
                 ? round($aggt / $subjectCount, 4)
@@ -1070,13 +1078,16 @@ class PsleEvaluationsController extends Controller
                 'status' => $status,
                 'subject_rows' => $subjectRows->all(),
                 'subject_results_text' => $subjectRows->map(function (array $item) {
+                    if ($item['is_absent'] ?? false) {
+                        return "{$item['subject_short']} - ABS";
+                    }
                     $score = number_format((float) $item['score'], 0);
                     return "{$item['subject_short']} - {$score} '{$item['grade']}'";
                 })->implode(', '),
-                'total_marks' => $subjectCount > 0 ? round($total, 0) : null,
-                'avg_marks' => $average,
+                'total_marks' => $status === 'COMPLETE' && $subjectCount > 0 ? round($total, 0) : null,
+                'avg_marks' => $status === 'COMPLETE' ? $average : null,
                 'overall_grade' => $overallGrade,
-                'aggt' => $aggt,
+                'aggt' => $status === 'COMPLETE' ? $aggt : null,
                 'gpa' => $status === 'COMPLETE' ? $gpa : null,
             ];
         })->values();
