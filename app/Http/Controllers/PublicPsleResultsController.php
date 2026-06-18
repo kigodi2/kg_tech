@@ -688,19 +688,19 @@ class PublicPsleResultsController extends Controller
 
     private function gradeFromScaledScore(float $score): string
     {
-        if ($score >= 41) {
+        if ($score >= 241 / 6) {
             return 'A';
         }
 
-        if ($score >= 31) {
+        if ($score >= 181 / 6) {
             return 'B';
         }
 
-        if ($score >= 21) {
+        if ($score >= 121 / 6) {
             return 'C';
         }
 
-        if ($score >= 11) {
+        if ($score >= 61 / 6) {
             return 'D';
         }
 

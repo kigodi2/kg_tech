@@ -742,10 +742,10 @@ class PsleDistrictSchoolFpdfService
     protected function gradeFromScore50(float $score): string
     {
         return match (true) {
-            $score >= 41 => 'A',
-            $score >= 31 => 'B',
-            $score >= 21 => 'C',
-            $score >= 11 => 'D',
+            $score >= 241 / 6 => 'A',
+            $score >= 181 / 6 => 'B',
+            $score >= 121 / 6 => 'C',
+            $score >= 61 / 6 => 'D',
             default => 'E',
         };
     }

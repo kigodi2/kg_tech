@@ -298,4 +298,36 @@ class PsleSchoolRollbackCorrectionTest extends TestCase
         $this->get('/results/2026/psle')->assertOk();
         $this->get('/evaluations/psle?year=2026')->assertOk();
     }
+
+    public function test_overall_grading_thresholds(): void
+    {
+        $service = new SchoolRollbackService();
+        $reflector = new \ReflectionClass(SchoolRollbackService::class);
+        $method = $reflector->getMethod('gradeFromRaw50');
+        $method->setAccessible(true);
+
+        // A boundaries
+        $this->assertEquals('A', $method->invoke($service, 241 / 6));
+        $this->assertEquals('A', $method->invoke($service, 40.5));
+        $this->assertEquals('A', $method->invoke($service, 50));
+
+        // B boundaries
+        $this->assertEquals('B', $method->invoke($service, 240 / 6));
+        $this->assertEquals('B', $method->invoke($service, 181 / 6));
+        $this->assertEquals('B', $method->invoke($service, 35));
+
+        // C boundaries
+        $this->assertEquals('C', $method->invoke($service, 180 / 6));
+        $this->assertEquals('C', $method->invoke($service, 121 / 6));
+        $this->assertEquals('C', $method->invoke($service, 25));
+
+        // D boundaries
+        $this->assertEquals('D', $method->invoke($service, 120 / 6));
+        $this->assertEquals('D', $method->invoke($service, 61 / 6));
+        $this->assertEquals('D', $method->invoke($service, 15));
+
+        // E boundaries
+        $this->assertEquals('E', $method->invoke($service, 60 / 6));
+        $this->assertEquals('E', $method->invoke($service, 0));
+    }
 }

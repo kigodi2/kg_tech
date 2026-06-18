@@ -1544,10 +1544,10 @@ class AdminPsleResultsController extends Controller
     private function gradeFromRaw50($mark): string
     {
         if (is_null($mark)) return 'E';
-        if ($mark >= 41) return 'A';
-        if ($mark >= 31) return 'B';
-        if ($mark >= 21) return 'C';
-        if ($mark >= 11) return 'D';
+        if ($mark >= 241 / 6) return 'A';
+        if ($mark >= 181 / 6) return 'B';
+        if ($mark >= 121 / 6) return 'C';
+        if ($mark >= 61 / 6) return 'D';
         return 'E';
     }
 
