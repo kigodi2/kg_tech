@@ -11,33 +11,34 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('school_result_correction_batches')) {
-            Schema::create('school_result_correction_batches', function (Blueprint $table) {
-                $table->id();
-                $table->unsignedSmallInteger('exam_year');
-                $table->string('exam_type')->default('psle');
-                $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
-                $table->string('school_name_snapshot')->nullable();
-                $table->string('status')->default('open');
-                $table->text('reason');
-                $table->foreignId('opened_by')->constrained('users')->onDelete('cascade');
-                $table->dateTime('opened_at');
-                $table->foreignId('corrected_by')->nullable()->constrained('users')->nullOnDelete();
-                $table->dateTime('corrected_at')->nullable();
-                $table->foreignId('recalculated_by')->nullable()->constrained('users')->nullOnDelete();
-                $table->dateTime('recalculated_at')->nullable();
-                $table->foreignId('republished_by')->nullable()->constrained('users')->nullOnDelete();
-                $table->dateTime('republished_at')->nullable();
-                $table->foreignId('cancelled_by')->nullable()->constrained('users')->nullOnDelete();
-                $table->dateTime('cancelled_at')->nullable();
-                $table->json('metadata')->nullable();
-                $table->timestamps();
+        Schema::dropIfExists('school_result_correction_batches');
 
-                $table->index(['exam_year', 'exam_type', 'school_id'], 'src_batch_year_type_school_idx');
-                $table->index('status', 'src_batch_status_idx');
-                $table->index('opened_by', 'src_batch_opened_by_idx');
-            });
-        }
+        Schema::create('school_result_correction_batches', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedSmallInteger('exam_year');
+            $table->string('exam_type', 20)->default('psle');
+            $table->foreignId('school_id')->constrained('schools')->onDelete('cascade');
+            $table->string('school_name_snapshot')->nullable();
+            $table->string('status', 50)->default('open');
+            $table->text('reason');
+            $table->foreignId('opened_by')->constrained('users')->onDelete('cascade');
+            $table->dateTime('opened_at');
+            $table->foreignId('corrected_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->dateTime('corrected_at')->nullable();
+            $table->foreignId('recalculated_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->dateTime('recalculated_at')->nullable();
+            $table->foreignId('republished_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->dateTime('republished_at')->nullable();
+            $table->foreignId('cancelled_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->dateTime('cancelled_at')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+
+            $table->index(['exam_year', 'exam_type', 'school_id'], 'src_batch_year_type_school_idx');
+            $table->index('status', 'src_batch_status_idx');
+            $table->index('opened_by', 'src_batch_opened_by_idx');
+        });
+
 
         Schema::table('raw_marks', function (Blueprint $table) {
             if (!Schema::hasColumn('raw_marks', 'correction_batch_id')) {
