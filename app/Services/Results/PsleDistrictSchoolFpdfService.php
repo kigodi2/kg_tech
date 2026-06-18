@@ -485,8 +485,8 @@ class PsleDistrictSchoolFpdfService
     protected function renderCandidates(\FPDF $pdf, array $metrics): void
     {
         $pdf->Ln(4);
-        $columns = ['CAND. NO', 'PREM NO', 'SEX', 'DETAILED SUBJECTS RESULT', 'TOTAL', 'GRD', 'AGGT', 'GPA', 'POS'];
-        $widths = [24, 28, 12, 162, 12, 11, 11, 15, 10];
+        $columns = ['CAND. NO', 'PREM NO', 'SEX', 'DETAILED SUBJECTS RESULT', 'TOTAL', 'GRD', 'POS'];
+        $widths = [24, 28, 12, 188, 12, 11, 10];
         $rowHeight = 6.4;
         $pdf->SetFillColor(0, 51, 102);
         $pdf->SetTextColor(255, 255, 255);
@@ -521,9 +521,7 @@ class PsleDistrictSchoolFpdfService
             $pdf->Cell($widths[3], $rowHeight, $this->text($candidate['subject_line'], 128), 1, 0, 'L', true);
             $pdf->Cell($widths[4], $rowHeight, number_format((float) $candidate['total_score'], 0), 1, 0, 'C', true);
             $pdf->Cell($widths[5], $rowHeight, strtoupper((string) $candidate['average_grade']), 1, 0, 'C', true);
-            $pdf->Cell($widths[6], $rowHeight, (string) $candidate['aggregate_points'], 1, 0, 'C', true);
-            $pdf->Cell($widths[7], $rowHeight, number_format((float) $candidate['gpa'], 4), 1, 0, 'C', true);
-            $pdf->Cell($widths[8], $rowHeight, (string) $candidate['position'], 1, 1, 'C', true);
+            $pdf->Cell($widths[6], $rowHeight, (string) $candidate['position'], 1, 1, 'C', true);
         }
     }
 

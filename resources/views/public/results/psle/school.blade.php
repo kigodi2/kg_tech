@@ -242,8 +242,6 @@
                                     <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: left; color: #FFFFFF;">DETAILED SUBJECTS RESULT</th>
                                     <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }};">TOTAL</th>
                                     <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }};">GRD</th>
-                                    <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }};">AGGT</th>
-                                    <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $avgColumnWidth }}; min-width: {{ $avgColumnWidth }}; max-width: {{ $avgColumnWidth }};">GPA</th>
                                     <th style="border: 1px solid #999; padding: 0.25rem; font-size: 0.90rem; font-weight: bold; text-align: center; color: #FFFFFF; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }};">POS</th>
                                 </tr>
                             </thead>
@@ -271,8 +269,6 @@
                                         <td style="border: 1px solid #999; padding: 0.25rem;">{{ $subjectLine }}</td>
                                         <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ number_format($candidate['total_score'], 0) }}</td>
                                         <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ strtoupper($candidate['average_grade']) }}</td>
-                                        <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ $candidate['aggregate_points'] }}</td>
-                                        <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $avgColumnWidth }}; min-width: {{ $avgColumnWidth }}; max-width: {{ $avgColumnWidth }}; text-align: center; font-weight: bold;">{{ number_format($candidate['gpa'], 4) }}</td>
                                         <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ $candidate['position'] }}</td>
                                     </tr>
                                 @endforeach
