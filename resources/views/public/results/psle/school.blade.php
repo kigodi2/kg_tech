@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PSLE {{ $examYear }} - {{ $school->name }} School Results</title>
+    <title>Standard Seven Mock Results {{ $examYear }} - {{ $school->name }}</title>
     
     <link href="https://fonts.cdnfonts.com/css/maiandra-gd" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -73,8 +73,8 @@
             <div class="site-header-center">
                 <div class="header-right-text">PRIME MINISTER'S OFFICE</div>
                 <div class="site-subtitle">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</div>
-                <div class="header-places">TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA</div>
-                <div class="site-title">PSLE PUBLIC RESULTS - {{ $examYear }} - {{ strtoupper($school->name) }}</div>
+                <div class="header-places">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA</div>
+                <div class="site-title">STANDARD SEVEN MOCK RESULTS - {{ $examYear }} - {{ strtoupper($school->name) }}</div>
                 <div class="header-right-text"><div></div></div>
             </div>
 
@@ -143,8 +143,8 @@
                     <div style="background-color: LIGHTYELLOW; border: 1px solid #999; padding: 1rem; color: #000080; line-height: 1.8;">
                         <div style="font-weight: bold; font-size: 1rem;">RESULTS NOT AVAILABLE YET</div>
                         <div>{{ strtoupper($school->code) }} - {{ strtoupper($school->name) }}</div>
-                        <div>No stored PSLE {{ $examYear }} result rows were found for this school yet.</div>
-                        <div>The school is listed because it exists in the NECTA-synced PSLE schools directory.</div>
+                        <div>No stored Standard Seven Mock {{ $examYear }} result rows were found for this school yet.</div>
+                        <div>The school is listed because it exists in the synced schools directory.</div>
                     </div>
                 </div>
             @else

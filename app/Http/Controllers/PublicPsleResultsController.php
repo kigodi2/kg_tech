@@ -55,7 +55,7 @@ class PublicPsleResultsController extends Controller
 
         $meta = $this->portalMeta([
             'eyebrow' => 'PSLE Public Results Workspace',
-            'header_title' => 'PSLE PUBLIC RESULTS - ' . $examYear,
+            'header_title' => 'STANDARD SEVEN MOCK RESULTS - ' . $examYear,
             'hero_badge' => 'Regional Reporting Centre',
             'hero_title' => 'Browse PSLE public results by region.',
             'hero_copy' => 'Start from the regional level, then continue to districts, schools, and final school result pages using the same portal implementation pattern as ACSEE.',
@@ -123,7 +123,7 @@ class PublicPsleResultsController extends Controller
 
         $meta = $this->portalMeta([
             'eyebrow' => strtoupper($region->name) . ' Regional Workspace',
-            'header_title' => 'PSLE PUBLIC RESULTS - ' . $examYear . ' - ' . strtoupper($region->name),
+            'header_title' => 'STANDARD SEVEN MOCK RESULTS - ' . $examYear . ' - ' . strtoupper($region->name),
             'hero_badge' => strtoupper($region->name) . ' District Centre',
             'hero_title' => 'Open available districts for ' . strtoupper($region->name) . '.',
             'hero_copy' => 'Continue from the selected region into its available PSLE public-results districts using the same shared portal implementation path.',
@@ -197,7 +197,7 @@ class PublicPsleResultsController extends Controller
 
         $meta = $this->portalMeta([
             'eyebrow' => strtoupper($district->name) . ' District Workspace',
-            'header_title' => 'PSLE PUBLIC RESULTS - ' . $examYear . ' - ' . strtoupper($district->name),
+            'header_title' => 'STANDARD SEVEN MOCK RESULTS - ' . $examYear . ' - ' . strtoupper($district->name),
             'hero_badge' => strtoupper($district->name) . ' School Centre',
             'hero_title' => 'Open school results entries for ' . strtoupper($district->name) . '.',
             'hero_copy' => 'Choose the exact school entry and move directly into the public PSLE school-results page from the shared portal workspace.',
@@ -806,7 +806,7 @@ class PublicPsleResultsController extends Controller
             'author' => 'Examination Board',
             'header_top' => "PRIME MINISTER'S OFFICE",
             'header_subtitle' => 'REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT',
-            'header_places' => 'TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA',
+            'header_places' => 'ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA',
             'announcement' => 'Results have been officially published. Please use the search facility below to locate your school or examination centre.',
             'columns' => 3,
         ];

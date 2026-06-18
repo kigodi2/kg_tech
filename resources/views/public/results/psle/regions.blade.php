@@ -1,18 +1,18 @@
 @extends('public.results.psle.layout')
 
-@section('title', 'PSLE ' . $examYear . ' Regions')
-@section('eyebrow', 'PSLE 2026 Public Portal')
-@section('page_title', 'PSLE ' . $examYear . ' Regions')
+@section('title', 'Standard Seven Mock ' . $examYear . ' Regions')
+@section('eyebrow', 'Standard Seven Mock ' . $examYear . ' Public Portal')
+@section('page_title', 'Standard Seven Mock ' . $examYear . ' Regions')
 @section('page_copy', 'Start from the regional level, then drill down to districts, schools, and individual school result pages.')
 @section('hero_badge', 'Professional Reporting Portal')
-@section('hero_title', 'Browse PSLE public results by region.')
-@section('hero_copy', 'This page mirrors the portal workspace frame while organizing PSLE public results through a clean region-to-school hierarchy.')
+@section('hero_title', 'Browse Standard Seven Mock results by region.')
+@section('hero_copy', 'This page mirrors the portal workspace frame while organizing Standard Seven Mock results through a clean region-to-school hierarchy.')
 
 @section('hero_panel')
     <div class="glass-card">
         <small>Regions</small>
         <strong>{{ $regions->count() }}</strong>
-        <span>Total regions that currently have result-bearing PSLE school data for {{ $examYear }}.</span>
+        <span>Total regions that currently have result-bearing Standard Seven Mock school data for {{ $examYear }}.</span>
     </div>
     <div class="glass-card">
         <small>Flow</small>
@@ -26,12 +26,12 @@
         <article class="stat-card">
             <small><span>Entries</span><span>01</span></small>
             <strong>{{ $regions->count() }}</strong>
-            <span>Total regional entries currently visible in this PSLE public portal view.</span>
+            <span>Total regional entries currently visible in this Standard Seven Mock public portal view.</span>
         </article>
         <article class="stat-card">
             <small><span>Stage</span><span>02</span></small>
             <strong>Regions</strong>
-            <span>The first hierarchy level for public PSLE result browsing.</span>
+            <span>The first hierarchy level for public Standard Seven Mock result browsing.</span>
         </article>
         <article class="stat-card">
             <small><span>Mode</span><span>03</span></small>

@@ -1,12 +1,12 @@
 @extends('public.results.psle.layout')
 
-@section('title', 'PSLE ' . $examYear . ' Schools - ' . $district->name)
-@section('eyebrow', 'PSLE 2026 Public Portal')
+@section('title', 'Standard Seven Mock ' . $examYear . ' Schools - ' . $district->name)
+@section('eyebrow', 'Standard Seven Mock ' . $examYear . ' Public Portal')
 @section('page_title', strtoupper($district->name))
 @section('page_copy', 'Browse the schools available in ' . strtoupper($district->name) . ' using the same ACSEE portal frame and styling.')
 @section('hero_badge', 'Professional Reporting Portal')
 @section('hero_title', 'School entries for ' . strtoupper($district->name) . '.')
-@section('hero_copy', 'Open a school entry to view the public PSLE school-results page in the same portal workspace.')
+@section('hero_copy', 'Open a school entry to view the public Standard Seven Mock school-results page in the same portal workspace.')
 
 @section('top_actions')
     <a href="{{ route('public.results.psle.districts', ['examYear' => $examYear, 'region' => $region->id]) }}" class="top-btn secondary">
@@ -19,7 +19,7 @@
     <div class="glass-card">
         <small>Schools</small>
         <strong>{{ $schools->count() }}</strong>
-        <span>Total schools currently available in this district for PSLE public results.</span>
+        <span>Total schools currently available in this district for Standard Seven Mock results.</span>
     </div>
     <div class="glass-card">
         <small>Current District</small>

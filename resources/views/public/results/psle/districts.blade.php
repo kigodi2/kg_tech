@@ -1,12 +1,12 @@
 @extends('public.results.psle.layout')
 
-@section('title', 'PSLE ' . $examYear . ' Districts - ' . $region->name)
-@section('eyebrow', 'PSLE 2026 Public Portal')
+@section('title', 'Standard Seven Mock ' . $examYear . ' Districts - ' . $region->name)
+@section('eyebrow', 'Standard Seven Mock ' . $examYear . ' Public Portal')
 @section('page_title', strtoupper($region->name) . ' Region')
 @section('page_copy', 'Browse districts inside ' . strtoupper($region->name) . ' using the same portal shell and navigation frame.')
 @section('hero_badge', 'Professional Reporting Portal')
 @section('hero_title', 'District results workspace for ' . strtoupper($region->name) . '.')
-@section('hero_copy', 'Open a district card to continue to the school list for that public PSLE results area.')
+@section('hero_copy', 'Open a district card to continue to the school list for that public Standard Seven Mock results area.')
 
 @section('top_actions')
     <a href="{{ route('public.results.psle.regions', ['examYear' => $examYear]) }}" class="top-btn secondary">
@@ -19,7 +19,7 @@
     <div class="glass-card">
         <small>Districts</small>
         <strong>{{ $districts->count() }}</strong>
-        <span>Total districts currently visible in {{ strtoupper($region->name) }} for the selected PSLE public-results view.</span>
+        <span>Total districts currently visible in {{ strtoupper($region->name) }} for the selected Standard Seven Mock public-results view.</span>
     </div>
     <div class="glass-card">
         <small>Current Region</small>
@@ -38,7 +38,7 @@
         <article class="stat-card">
             <small><span>Stage</span><span>02</span></small>
             <strong>Districts</strong>
-            <span>This is the second hierarchy level in the public PSLE browsing flow.</span>
+            <span>This is the second hierarchy level in the public Standard Seven Mock browsing flow.</span>
         </article>
         <article class="stat-card">
             <small><span>Region</span><span>03</span></small>

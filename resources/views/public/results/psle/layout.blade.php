@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'PSLE Public Results')</title>
+    <title>@yield('title', 'Standard Seven Mock Results')</title>
     <link href="https://fonts.cdnfonts.com/css/maiandra-gd" rel="stylesheet">
     <style>
         :root { --irms-font: 'Maiandra GD', "Ubuntu Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
@@ -508,9 +508,9 @@
     <header class="topbar">
         <div class="topbar-inner">
             <div>
-                <span class="eyebrow"><span class="eyebrow-dot"></span>@yield('eyebrow', 'PSLE Public Results Workspace')</span>
-                <h1 class="page-title">@yield('page_title', 'PSLE Public Results')</h1>
-                <p class="page-copy">@yield('page_copy', 'Browse the public PSLE hierarchy and open the exact result page you need with the same frame and presentation style as the portal workspace.')</p>
+                <span class="eyebrow"><span class="eyebrow-dot"></span>@yield('eyebrow', 'Standard Seven Mock Results Workspace')</span>
+                <h1 class="page-title">@yield('page_title', 'Standard Seven Mock Results')</h1>
+                <p class="page-copy">@yield('page_copy', 'Browse the Standard Seven Mock Results hierarchy and open the exact result page you need with the same frame and presentation style as the portal workspace.')</p>
             </div>
             <div class="top-actions">
                 @yield('top_actions')
