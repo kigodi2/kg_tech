@@ -13,6 +13,7 @@ use App\Models\Region;
 use App\Models\School;
 use App\Models\Candidate;
 use App\Models\AuditLog;
+use App\Helpers\SystemSettingsHelper;
 
 function heading($text) {
     echo "\n=== " . strtoupper($text) . " ===\n";
@@ -25,6 +26,83 @@ function success($text) {
 function failure($text) {
     echo "  [FAIL] " . $text . "\n";
 }
+
+// Variables for global cleanup in shutdown handler
+$originalActiveYearId = null;
+$examYearId = null;
+$tempSchoolId = null;
+$candidateIds = [];
+$batchIds = [];
+$createdOfficerId = null;
+
+// Save original maintenance mode setting
+$originalMaintenanceMode = SystemSettingsHelper::isMaintenanceMode(false);
+if ($originalMaintenanceMode) {
+    echo "  [INFO] Maintenance mode is currently enabled. Temporarily disabling for E2E tests...\n";
+    SystemSettingsHelper::setMaintenanceMode(false);
+    SystemSettingsHelper::clearCache();
+}
+
+// Register a shutdown function to restore database state and clean up test data
+register_shutdown_function(function() use (&$originalActiveYearId, &$examYearId, &$tempSchoolId, &$candidateIds, &$batchIds, &$createdOfficerId, $originalMaintenanceMode) {
+    try {
+        DB::transaction(function() use ($originalActiveYearId, $examYearId, $tempSchoolId, $candidateIds, $batchIds, $createdOfficerId) {
+            // Delete raw marks
+            if (!empty($candidateIds)) {
+                DB::table('raw_marks')->whereIn('candidate_id', $candidateIds)->delete();
+            }
+            
+            // Delete registrations
+            if (!empty($candidateIds)) {
+                DB::table('candidate_exam_registrations')->whereIn('candidate_id', $candidateIds)->delete();
+            }
+            
+            // Delete candidates
+            if (!empty($candidateIds)) {
+                DB::table('candidates')->whereIn('id', $candidateIds)->delete();
+            }
+            
+            // Delete batches
+            if (!empty($batchIds)) {
+                DB::table('mark_import_batches')->whereIn('id', $batchIds)->delete();
+            }
+            
+            // Delete school
+            if ($tempSchoolId) {
+                DB::table('schools')->where('id', $tempSchoolId)->delete();
+            }
+
+            // Delete mock officer
+            if ($createdOfficerId) {
+                DB::table('users')->where('id', $createdOfficerId)->delete();
+            }
+
+            // Delete result processes and snapshots of the test year
+            if ($examYearId) {
+                DB::table('result_processes')->where('exam_year_id', $examYearId)->delete();
+                DB::table('result_snapshots')->where('exam_year_id', $examYearId)->delete();
+                DB::table('psle_result_publications')->where('exam_year_id', $examYearId)->delete();
+                DB::table('candidate_results')->where('year', 2099)->delete();
+                DB::table('subject_marks')->where('year', 2099)->delete();
+                DB::table('psle_result_validation_errors')->where('exam_year_id', $examYearId)->delete();
+                DB::table('exam_years')->where('id', $examYearId)->delete();
+            }
+
+            // Restore original active year
+            if ($originalActiveYearId) {
+                DB::table('exam_years')->where('id', $originalActiveYearId)->update(['is_active' => true]);
+            }
+        });
+        
+        if ($originalMaintenanceMode) {
+            SystemSettingsHelper::setMaintenanceMode(true);
+            SystemSettingsHelper::clearCache();
+            echo "  [INFO] Restored maintenance mode to enabled.\n";
+        }
+    } catch (\Throwable $e) {
+        echo "Error in shutdown cleanup: " . $e->getMessage() . "\n";
+    }
+});
 
 heading("1. Setup & Context Verification");
 
@@ -102,11 +180,9 @@ heading("2. Seeding Test Candidates");
 
 $tempSchool = null;
 $subjects = [];
-$candidateIds = [];
-$batchIds = [];
 
 try {
-    DB::transaction(function() use ($parentSchool, $activeYear, $psleExamTypeId, &$tempSchool, &$subjects, &$candidateIds, &$batchIds) {
+    DB::transaction(function() use ($parentSchool, $activeYear, $psleExamTypeId, &$tempSchool, &$subjects, &$candidateIds, &$batchIds, &$tempSchoolId) {
         // Create temp school
         $tempSchool = School::create([
             'region_id' => $parentSchool->region_id,
@@ -118,6 +194,7 @@ try {
             'ownership' => 'GOVERNMENT',
             'is_active' => true,
         ]);
+        $tempSchoolId = $tempSchool->id;
 
         // Get subjects
         $subjects = DB::table('subjects')
@@ -264,6 +341,7 @@ if (!$officer) {
         'is_active' => true,
     ]);
     $createdOfficer = true;
+    $createdOfficerId = $officer->id;
 }
 
 $request = new \Illuminate\Http\Request(['exam_year_id' => $examYearId]);
