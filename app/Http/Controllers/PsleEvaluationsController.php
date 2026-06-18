@@ -1974,7 +1974,7 @@ class PsleEvaluationsController extends Controller
             'author' => 'Examination Board',
             'header_top' => "PRIME MINISTER'S OFFICE",
             'header_subtitle' => 'REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT',
-            'header_places' => 'TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA',
+            'header_places' => 'ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)',
             'announcement' => 'Results have been officially published. Please use the search facility below to locate your school or examination centre.',
         ];
 

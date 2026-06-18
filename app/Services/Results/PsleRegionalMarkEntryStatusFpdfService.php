@@ -81,7 +81,7 @@ class PsleRegionalMarkEntryStatusFpdfService
                 $this->SetTextColor(71, 85, 105);
                 $this->SetFont('Helvetica', '', 7.5);
                 $this->SetX($titleBlockX);
-                $this->Cell($titleBlockWidth, 3.2, $this->service->text('TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA'), 0, 1, 'C');
+                $this->Cell($titleBlockWidth, 3.2, $this->service->text('ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)'), 0, 1, 'C');
                 $this->SetTextColor(15, 23, 42);
                 $this->SetFont('Helvetica', 'B', 10.5);
                 $this->SetX($titleBlockX);
@@ -134,14 +134,6 @@ class PsleRegionalMarkEntryStatusFpdfService
                 $this->SetFont('Helvetica', '', 6.2);
                 $this->SetXY(8, 191.0);
                 $this->Cell(PsleRegionalMarkEntryStatusFpdfService::CONTENT_WIDTH, 3.2, $this->service->text('GENERATED: ' . $this->generatedAt . ' | IRMS NODE: ' . $this->host), 0, 1, 'R');
-
-                $barcodeWidth = $this->service->code39Width($this->barcodePayload, 0.22);
-                $barcodeX = 8 + ((PsleRegionalMarkEntryStatusFpdfService::CONTENT_WIDTH - $barcodeWidth) / 2);
-                $this->service->drawCode39($this, $barcodeX, 194.0, $this->barcodePayload, 0.22, 2.8);
-
-                $this->SetXY(8, 197.3);
-                $this->SetFont('Helvetica', '', 5.8);
-                $this->Cell(PsleRegionalMarkEntryStatusFpdfService::CONTENT_WIDTH, 2.8, $this->barcodePayload, 0, 0, 'C');
 
                 $this->SetY(203.5);
                 $this->SetFillColor(0, 166, 81);

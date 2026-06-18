@@ -642,7 +642,7 @@
             <div class="header-text">
                 <div class="header-line-1">PRIME MINISTER'S OFFICE</div>
                 <div class="header-line-2">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</div>
-                <div class="header-line-3">TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA</div>
+                <div class="header-line-3">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</div>
                 <div class="header-title">INTEGRATED RESULT MANAGEMENT SYSTEM</div>
             </div>
             <div class="header-emblem left-emblem">

@@ -80,7 +80,7 @@ class PsleRegionalSchoolwiseFpdfService
                 $this->SetTextColor(71, 85, 105);
                 $this->SetFont('Helvetica', '', 7.5);
                 $this->SetX($titleBlockX);
-                $this->Cell($titleBlockWidth, 3.2, $this->service->text('TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA'), 0, 1, 'C');
+                $this->Cell($titleBlockWidth, 3.2, $this->service->text('ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)'), 0, 1, 'C');
                 $this->SetTextColor(15, 23, 42);
                 $this->SetFont('Helvetica', 'B', 10.5);
                 $this->SetX($titleBlockX);
@@ -130,14 +130,6 @@ class PsleRegionalSchoolwiseFpdfService
                 $this->SetFont('Helvetica', '', 6.2);
                 $this->SetXY(8, 191.0);
                 $this->Cell(PsleRegionalSchoolwiseFpdfService::CONTENT_WIDTH, 3.2, $this->service->text('GENERATED: ' . $this->generatedAt . ' | IRMS NODE: ' . $this->host), 0, 1, 'R');
-
-                $barcodeWidth = $this->service->code39Width($this->barcodePayload, 0.22);
-                $barcodeX = 8 + ((PsleRegionalSchoolwiseFpdfService::CONTENT_WIDTH - $barcodeWidth) / 2);
-                $this->service->drawCode39($this, $barcodeX, 194.0, $this->barcodePayload, 0.22, 2.8);
-
-                $this->SetXY(8, 197.3);
-                $this->SetFont('Helvetica', '', 5.8);
-                $this->Cell(PsleRegionalSchoolwiseFpdfService::CONTENT_WIDTH, 2.8, $this->barcodePayload, 0, 0, 'C');
 
                 $this->SetY(203.5);
                 $this->SetFillColor(0, 166, 81);
@@ -339,7 +331,6 @@ class PsleRegionalSchoolwiseFpdfService
             'metric' => (float) ($options['metric_width'] ?? 4.5),
             'average' => (float) ($options['average_width'] ?? 11.0),
             'grd' => (float) ($options['grd_width'] ?? 6.0),
-            'gpa' => (float) ($options['gpa_width'] ?? 12.0),
             'pos' => (float) ($options['pos_width'] ?? 6.0),
         ];
 
@@ -350,7 +341,6 @@ class PsleRegionalSchoolwiseFpdfService
             + ($columnWidths['metric'] * 28)
             + $columnWidths['average']
             + $columnWidths['grd']
-            + $columnWidths['gpa']
             + $columnWidths['pos'];
 
         if ($baseTableWidth > 0) {
@@ -366,7 +356,6 @@ class PsleRegionalSchoolwiseFpdfService
                 + ($columnWidths['metric'] * 28)
                 + $columnWidths['average']
                 + $columnWidths['grd']
-                + $columnWidths['gpa']
                 + $columnWidths['pos'];
 
             $remainder = round($tableWidth - $scaledTableWidth, 3);
@@ -394,7 +383,6 @@ class PsleRegionalSchoolwiseFpdfService
             ['E', $columnWidths['metric']],
             ['AVERAGE', $columnWidths['average']],
             ['GRD', $columnWidths['grd']],
-            ['GPA', $columnWidths['gpa']],
             ['POS', $columnWidths['pos']],
         ];
 
@@ -471,7 +459,6 @@ class PsleRegionalSchoolwiseFpdfService
             $pdf->Cell($columnWidths['metric'], 9.2, 'E', 1, 0, 'C', true);
             $pdf->Cell($columnWidths['average'], 9.2, 'AVG', 1, 0, 'C', true);
             $pdf->Cell($columnWidths['grd'], 9.2, 'GRD', 1, 0, 'C', true);
-            $pdf->Cell($columnWidths['gpa'], 9.2, 'GPA', 1, 0, 'C', true);
             $pdf->Cell($columnWidths['pos'], 9.2, 'POS', 1, 0, 'C', true);
 
             $secondRowX = $startX
@@ -540,7 +527,6 @@ class PsleRegionalSchoolwiseFpdfService
                 $row['grades']['e']['t'] ?? 0,
                 is_null($row['avg_marks'] ?? null) ? '-' : number_format((float) $row['avg_marks'], 2),
                 $row['avg_grade'] ?? '-',
-                is_null($row['gpa'] ?? null) ? '-' : number_format((float) $row['gpa'], 4),
                 $row['pos'] ?? '',
             ];
 
@@ -606,7 +592,6 @@ class PsleRegionalSchoolwiseFpdfService
             $total['grades']['d']['t'] ?? 0,
             $total['pass_ad']['m'] ?? 0, $total['pass_ad']['f'] ?? 0, $total['pass_ad']['t'] ?? 0, number_format((float) ($total['pass_ad']['pct'] ?? 0), 1),
             $total['grades']['e']['t'] ?? 0,
-            '',
             '',
             '',
             '',

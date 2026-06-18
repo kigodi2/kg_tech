@@ -217,7 +217,7 @@
                 <div class="flex-1 text-center px-4">
                     <p class="text-lg font-bold text-blue-900">PRIME MINISTER'S OFFICE</p>
                     <p class="text-lg font-bold text-blue-900">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
-                    <p class="text-lg font-bold text-blue-900 mt-1">TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA</p>
+                    <p class="text-lg font-bold text-blue-900 mt-1">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
                     <p class="text-lg font-bold text-blue-900 mt-1">STANDARD SEVEN ZONAL JOINT MOCK EVALUATION RESULTS - MAY, {{ $examYearValue }}</p>
                     <p class="text-lg font-bold text-blue-900 mt-1">{{ strtoupper($region->name) }} - {{ strtoupper($evaluationLabel) }}</p>
                 </div>
@@ -255,7 +255,7 @@
                 <table style="width: max-content; min-width: 100%; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
                     <thead>
                         <tr style="background-color: #003366;">
-                            <th colspan="{{ $hideSecondColumn ? 34 : 35 }}" style="border: 1px solid #999; padding: 0.18rem 0.25rem; font-size: 0.92rem; font-weight: bold; text-align: left; color: #FFFFFF;">{{ strtoupper($evaluationLabel) }}</th>
+                            <th colspan="{{ $hideSecondColumn ? 33 : 34 }}" style="border: 1px solid #999; padding: 0.18rem 0.25rem; font-size: 0.92rem; font-weight: bold; text-align: left; color: #FFFFFF;">{{ strtoupper($evaluationLabel) }}</th>
                         </tr>
                         <tr style="background-color: #003366; color: #FFFFFF;">
                             <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.12rem; text-align: center; font-size: 0.84rem; line-height: 1.05; width: 28px; min-width: 28px; max-width: 28px;">S/N</th>
@@ -276,7 +276,6 @@
                                 <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.84rem; line-height: 1.05;">E</th>
                                 <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.68rem; line-height: 1.05; white-space: normal; word-break: break-word;">{{ $averageColumnLabel }}</th>
                                 <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.84rem; line-height: 1.05;">GRD</th>
-                                <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.16rem; text-align: center; font-size: 0.84rem; line-height: 1.05; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }};">GPA</th>
                                 <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.84rem; line-height: 1.05;">POS</th>
                             </tr>
                             <tr style="background-color: #003366; color: #FFFFFF;">
@@ -336,12 +335,11 @@
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['e']['t'] }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ is_null($row['avg_marks']) ? '-' : number_format((float) $row['avg_marks'], 2) }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['avg_grade'] ?? '-' }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: center; font-weight: bold; font-size: 0.8rem; line-height: 1; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }};">{{ is_null($row['gpa']) ? '-' : number_format((float) $row['gpa'], 4) }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; font-weight: bold; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pos'] }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ $hideSecondColumn ? 34 : 35 }}" style="border: 1px solid #999; padding: 1rem; text-align: center;">No PSLE regional evaluation rows are available for this category yet.</td>
+                                <td colspan="{{ $hideSecondColumn ? 33 : 34 }}" style="border: 1px solid #999; padding: 1rem; text-align: center;">No PSLE regional evaluation rows are available for this category yet.</td>
                             </tr>
                         @endforelse
                     </tbody>

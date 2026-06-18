@@ -651,7 +651,7 @@
       <div class="site-header-center">
         <div class="header-right-text">{{ data_get($meta, 'header_top', "PRIME MINISTER'S OFFICE") }}</div>
         <div class="site-subtitle">{{ data_get($meta, 'header_subtitle', 'REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT') }}</div>
-        <div class="header-places">{{ data_get($meta, 'header_places', 'TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA') }}</div>
+        <div class="header-places">{{ data_get($meta, 'header_places', 'ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)') }}</div>
         <div class="site-title">{{ data_get($meta, 'header_title', 'FORM SIX ZONAL JOINT MOCK RESULTS - FEBRUARY, 2026') }}</div>
         <div class="header-right-text"><div>{{ data_get($meta, 'header_right', '') }}</div></div>
       </div>

@@ -134,7 +134,7 @@
                 <div class="flex-1 text-center px-4">
                     <p class="text-lg font-bold text-blue-900">PRIME MINISTER'S OFFICE</p>
                     <p class="text-lg font-bold text-blue-900">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
-                    <p class="text-lg font-bold text-blue-900 mt-1">TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA</p>
+                    <p class="text-lg font-bold text-blue-900 mt-1">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
                     <p class="text-lg font-bold text-blue-900 mt-1">STANDARD SEVEN ZONAL JOINT MOCK EVALUATION RESULTS - MAY, {{ $examYearValue }}</p>
                     <p class="text-lg font-bold text-blue-900 mt-1">{{ strtoupper($region->name) }} - {{ strtoupper($evaluationLabel) }}</p>
                 </div>
@@ -180,7 +180,6 @@
                             <th style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; font-size: 0.84rem; line-height: 1.05; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }};">TOTAL</th>
                             <th style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; font-size: 0.84rem; line-height: 1.05; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }};">GRD</th>
                             <th style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; font-size: 0.84rem; line-height: 1.05; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }};">AGGT</th>
-                            <th style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; font-size: 0.84rem; line-height: 1.05;">GPA</th>
                             <th style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: center; font-size: 0.84rem; line-height: 1.05; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }};">POS</th>
                         </tr>
                     </thead>
@@ -195,12 +194,11 @@
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ is_null($row['total_marks']) ? '-' : number_format((float) $row['total_marks'], 0) }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['overall_grade'] ?? '-' }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ is_null($row['aggt']) ? '-' : $row['aggt'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.18rem; text-align: center; font-size: 0.8rem; line-height: 1;">{{ is_null($row['gpa']) ? '-' : number_format((float) $row['gpa'], 4) }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['position'] }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" style="border: 1px solid #999; padding: 1rem; text-align: center;">No ranked students are available for this PSLE evaluation.</td>
+                                <td colspan="9" style="border: 1px solid #999; padding: 1rem; text-align: center;">No ranked students are available for this PSLE evaluation.</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -64,7 +64,7 @@
                 <div class="flex-1 text-center px-4">
                     <p class="text-lg font-bold text-blue-900">PRIME MINISTER'S OFFICE</p>
                     <p class="text-lg font-bold text-blue-900">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
-                    <p class="text-lg font-bold text-blue-900 mt-1">TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA</p>
+                    <p class="text-lg font-bold text-blue-900 mt-1">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
                     <p class="text-lg font-bold text-blue-900 mt-1">STANDARD SEVEN ZONAL JOINT MOCK EVALUATION RESULTS - MAY, {{ $examYearValue }}</p>
                     <p class="text-lg font-bold text-blue-900 mt-1">{{ strtoupper($region->name) }} - {{ strtoupper($evaluationLabel) }}</p>
                 </div>

@@ -57,7 +57,7 @@ class PsleRegionalSubjectwiseFpdfService
                 $this->SetX(28);
                 $this->Cell(241, 4.6, 'REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT', 0, 1, 'C');
                 $this->SetX(28);
-                $this->Cell(241, 4.6, 'TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA', 0, 1, 'C');
+                $this->Cell(241, 4.6, 'ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)', 0, 1, 'C');
                 $this->SetX(28);
                 $this->Cell(241, 4.8, 'STANDARD SEVEN ZONAL JOINT MOCK EVALUATION RESULTS - MAY, ' . $this->examYearValue, 0, 1, 'C');
                 $this->SetX(28);
@@ -87,12 +87,6 @@ class PsleRegionalSubjectwiseFpdfService
                 $this->SetFont('Helvetica', '', 6.2);
                 $this->SetXY(8, 191.0);
                 $this->Cell(PsleRegionalSubjectwiseFpdfService::CONTENT_WIDTH, 3.2, 'GENERATED: ' . $this->generatedAt . ' | IRMS NODE: ' . $this->node, 0, 1, 'R');
-                $barcodeWidth = $this->service->code39Width($this->barcodePayload, 0.22);
-                $barcodeX = 8 + ((PsleRegionalSubjectwiseFpdfService::CONTENT_WIDTH - $barcodeWidth) / 2);
-                $this->service->drawCode39($this, $barcodeX, 194.0, $this->barcodePayload, 0.22, 2.8);
-                $this->SetXY(8, 197.3);
-                $this->SetFont('Helvetica', '', 5.8);
-                $this->Cell(PsleRegionalSubjectwiseFpdfService::CONTENT_WIDTH, 2.8, $this->barcodePayload, 0, 0, 'C');
                 $this->SetFillColor(0, 166, 81);
                 $this->Rect(8, 203.5, 84.78, 0.5, 'F');
                 $this->SetFillColor(245, 208, 0);

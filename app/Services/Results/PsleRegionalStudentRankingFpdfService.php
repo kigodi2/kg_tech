@@ -72,7 +72,7 @@ class PsleRegionalStudentRankingFpdfService
                 $this->SetTextColor(71, 85, 105);
                 $this->SetFont('Helvetica', '', 7.5);
                 $this->SetX($titleBlockX);
-                $this->Cell($titleBlockWidth, 3.2, $this->service->text('TANGA, IRINGA, SINGIDA, MOROGORO, DODOMA, TABORA, LINDI AND MTWARA'), 0, 1, 'C');
+                $this->Cell($titleBlockWidth, 3.2, $this->service->text('ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)'), 0, 1, 'C');
                 $this->SetTextColor(15, 23, 42);
                 $this->SetFont('Helvetica', 'B', 10.5);
                 $this->SetX($titleBlockX);
@@ -120,14 +120,6 @@ class PsleRegionalStudentRankingFpdfService
                 $this->SetFont('Helvetica', '', 6.2);
                 $this->SetXY(8, 191.0);
                 $this->Cell(PsleRegionalStudentRankingFpdfService::CONTENT_WIDTH, 3.2, 'GENERATED: ' . $this->generatedAt . ' | IRMS NODE: ' . $this->node, 0, 1, 'R');
-
-                $barcodeWidth = $this->service->code39Width($this->barcodePayload, 0.22);
-                $barcodeX = 8 + ((PsleRegionalStudentRankingFpdfService::CONTENT_WIDTH - $barcodeWidth) / 2);
-                $this->service->drawCode39($this, $barcodeX, 194.0, $this->barcodePayload, 0.22, 2.8);
-
-                $this->SetXY(8, 197.3);
-                $this->SetFont('Helvetica', '', 5.8);
-                $this->Cell(PsleRegionalStudentRankingFpdfService::CONTENT_WIDTH, 2.8, $this->barcodePayload, 0, 0, 'C');
 
                 $this->SetFillColor(0, 166, 81);
                 $this->Rect(8, 203.5, 84.78, 0.5, 'F');
@@ -351,7 +343,6 @@ class PsleRegionalStudentRankingFpdfService
             'total' => 12,
             'grd' => 10,
             'aggt' => 12,
-            'gpa' => 16,
             'pos' => 8,
         ];
 
@@ -381,7 +372,6 @@ class PsleRegionalStudentRankingFpdfService
         $pdf->Cell($widths['total'], 5.2, 'TOTAL', 1, 0, 'C', true);
         $pdf->Cell($widths['grd'], 5.2, 'GRD', 1, 0, 'C', true);
         $pdf->Cell($widths['aggt'], 5.2, 'AGGT', 1, 0, 'C', true);
-        $pdf->Cell($widths['gpa'], 5.2, 'GPA', 1, 0, 'C', true);
         $pdf->Cell($widths['pos'], 5.2, 'POS', 1, 1, 'C', true);
 
         $pdf->SetFillColor(255, 255, 255);
@@ -396,7 +386,6 @@ class PsleRegionalStudentRankingFpdfService
             $this->fitCell($pdf, $widths['total'], 4.8, is_null($row['total_marks'] ?? null) ? '-' : number_format((float) $row['total_marks'], 0), 'C', true, 5.7);
             $this->fitCell($pdf, $widths['grd'], 4.8, (string) ($row['overall_grade'] ?? '-'), 'C', true, 5.7);
             $this->fitCell($pdf, $widths['aggt'], 4.8, is_null($row['aggt'] ?? null) ? '-' : (string) $row['aggt'], 'C', true, 5.7);
-            $this->fitCell($pdf, $widths['gpa'], 4.8, is_null($row['gpa'] ?? null) ? '-' : number_format((float) $row['gpa'], 4), 'C', true, 5.7);
             $this->fitCell($pdf, $widths['pos'], 4.8, (string) ($row['position'] ?? '-'), 'C', true, 5.7);
             $pdf->Ln();
         }
