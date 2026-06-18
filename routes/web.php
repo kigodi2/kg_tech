@@ -33,11 +33,13 @@ Route::get('/', function () {
         : redirect()->route('public.home');
 });
 
-Route::get('/dev-login', function () {
-    $user = \App\Models\User::where('email', 'agreykigodi@gmail.com')->first();
-    auth()->login($user);
-    return redirect('/admin/dashboard');
-});
+if (app()->environment('local')) {
+    Route::get('/dev-login', function () {
+        $user = \App\Models\User::where('email', 'agreykigodi@gmail.com')->first();
+        auth()->login($user);
+        return redirect('/admin/dashboard');
+    });
+}
 
 Route::get('/session-heartbeat', function () {
     return response()->noContent();

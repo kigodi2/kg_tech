@@ -45,7 +45,7 @@ class PsleEvaluationsController extends Controller
             'alpha_label' => 'CLICK ANY LETTER BELOW TO FILTER EVALUATION PATHS BY ALPHABET',
             'alpha_all_label' => 'ALL PATHS',
             'columns' => 2,
-            'back_url' => '/evaluations',
+            'back_url' => auth()->check() ? '/evaluations' : null,
             'back_label' => 'Back to Evaluations',
         ]);
 
