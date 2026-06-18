@@ -208,28 +208,33 @@
             </a>
         </div>
 
-        <div style="background-color: #B0E0E6; padding-top: 1.5rem; padding-bottom: 0.35rem; padding-left: 0.35rem; padding-right: 0.35rem; margin-bottom: 0.2rem;">
+        <div style="background-color: #0b2f5b; padding-top: 1.2rem; padding-bottom: 1.2rem; padding-left: 1.5rem; padding-right: 1.5rem; margin-bottom: 0.2rem; position: relative;">
             <div class="flex items-center justify-between gap-4">
                 <div class="flex-shrink-0">
                     <img src="{{ asset('images/emblem.png') }}" alt="Coat of Arms" class="h-20 w-20 object-contain">
                 </div>
 
                 <div class="flex-1 text-center px-4">
-                    <p class="text-lg font-bold text-blue-900">PRIME MINISTER'S OFFICE</p>
-                    <p class="text-lg font-bold text-blue-900">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
-                    <p class="text-lg font-bold text-blue-900 mt-1">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
-                    <p class="text-lg font-bold text-blue-900 mt-1">STANDARD SEVEN ZONAL JOINT MOCK EVALUATION RESULTS - MAY, {{ $examYearValue }}</p>
-                    <p class="text-lg font-bold text-blue-900 mt-1">{{ strtoupper($region->name) }} - {{ strtoupper($evaluationLabel) }}</p>
+                    <p style="margin: 0; font-size: 1.2rem; font-weight: bold; color: #ffffff; line-height: 1.25;">PRIME MINISTER'S OFFICE</p>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 1.2rem; font-weight: bold; color: #f5d000; line-height: 1.25;">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #ffffff; line-height: 1.25;">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #f5d000; line-height: 1.25;">
+                        PSLE REGIONAL EVALUATIONS - {{ $examYearValue }} - {{ strtoupper($region->name) }}
+                    </p>
                 </div>
 
                 <div class="flex-shrink-0">
                     <img src="{{ asset('images/emblem.png') }}" alt="Coat of Arms" class="h-20 w-20 object-contain">
                 </div>
             </div>
+            
+            <div style="position: absolute; bottom: 8px; left: 1.5rem; color: #f5d000; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 4px;">
+                <span>{{ $groupCount }} {{ $groupCount == 1 ? 'centre' : 'centres' }}. 🔥</span>
+            </div>
         </div>
 
         <div style="padding: 0 0.35rem; margin-bottom: 0.35rem;">
-            <div style="height: 4px; width: 100%; background: linear-gradient(to right, #00a651 0%, #00a651 30%, #f5d000 30%, #f5d000 54%, #000000 54%, #000000 70%, #0b2f5b 70%, #0b2f5b 100%);"></div>
+            <div style="height: 4px; width: 100%; background: #f5d000;"></div>
         </div>
 
         @if($showSummaryBlock)
