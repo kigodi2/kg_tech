@@ -147,7 +147,7 @@
             </div>
             
             <div style="position: absolute; bottom: 8px; left: 1.5rem; color: #f5d000; font-size: 0.85rem; font-weight: bold; display: flex; align-items: center; gap: 4px;">
-                <span>{{ $candidateCount }} {{ $candidateCount == 1 ? 'candidate' : 'candidates' }}. 🔥</span>
+                <span>{{ $candidateCount }} {{ $candidateCount == 1 ? 'candidate' : 'candidates' }}. <span class="animate-fire">🔥</span></span>
             </div>
         </div>
 

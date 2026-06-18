@@ -633,6 +633,27 @@
         select.acsee-square-select {
             border-radius: 0 !important;
         }
+
+        /* Animated Flame Effect */
+        @keyframes flame-pulse {
+            0% {
+                transform: scale(1) rotate(-1.5deg);
+                filter: drop-shadow(0 0 1px rgba(245, 158, 11, 0.4));
+            }
+            50% {
+                transform: scale(1.18) rotate(2deg) translateY(-1px);
+                filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.8));
+            }
+            100% {
+                transform: scale(1) rotate(-2.5deg);
+                filter: drop-shadow(0 0 1px rgba(245, 158, 11, 0.4));
+            }
+        }
+        .animate-fire {
+            display: inline-block;
+            animation: flame-pulse 1s infinite ease-in-out;
+            transform-origin: bottom center;
+        }
     </style>
 </head>
 <body class="bg-gray-100" style="{{ request()->is('evaluations*') ? 'padding-top: 0 !important;' : '' }}">
