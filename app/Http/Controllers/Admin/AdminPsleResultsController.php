@@ -752,6 +752,11 @@ class AdminPsleResultsController extends Controller
 
     public function draftRun(Request $request)
     {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+        @ini_set('memory_limit', '1024M');
+
         $activeYear = ExamYear::where('is_active', true)->first();
         $examYearId = (int) $request->input('exam_year_id', $activeYear->id ?? 0);
         $examYear = ExamYear::find($examYearId) ?: $activeYear;
@@ -830,6 +835,11 @@ class AdminPsleResultsController extends Controller
 
     public function finalRun(Request $request)
     {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+        @ini_set('memory_limit', '1024M');
+
         $activeYear = ExamYear::where('is_active', true)->first();
         $examYearId = (int) $request->input('exam_year_id', $activeYear->id ?? 0);
         $examYear = ExamYear::find($examYearId) ?: $activeYear;

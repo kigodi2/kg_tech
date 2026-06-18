@@ -152,6 +152,11 @@ class SchoolRollbackService
      */
     public function recalculateResults(SchoolResultCorrectionBatch $batch, int $userId): SchoolResultCorrectionBatch
     {
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(0);
+        }
+        @ini_set('memory_limit', '1024M');
+
         if ($batch->status !== SchoolResultCorrectionBatch::STATUS_CORRECTED) {
             throw new \Exception("Cannot recalculate results. Batch is not in corrected status.");
         }
