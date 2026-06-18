@@ -265,14 +265,13 @@ class PsleDistrictSchoolFpdfService
                 'aggregate_points' => $aggregate,
                 'gpa' => $gpa,
             ];
-        })->sortBy('candidate_no')->values();
-
-        $positions = [];
-        $sortedByMerit = $candidates->sortBy([
+        })->sortBy([
             ['total_score', 'desc'],
             ['candidate_no', 'asc'],
         ])->values();
-        foreach ($sortedByMerit as $index => $candidate) {
+
+        $positions = [];
+        foreach ($candidates as $index => $candidate) {
             $positions[$candidate['candidate_no']] = $index + 1;
         }
 
@@ -346,7 +345,7 @@ class PsleDistrictSchoolFpdfService
         }
         $schoolAverage = $candidateCount > 0 ? round($candidates->sum('total_score') / $candidateCount, 4) : 0.0;
         $schoolAverageGrade = $this->gradeFromScore50($schoolAverage / 6);
-        $topCandidate = $sortedByMerit->first();
+        $topCandidate = $candidates->first();
         $passRateAC = $candidateCount > 0 ? round(($candidates->whereIn('average_grade', ['A', 'B', 'C'])->count() / $candidateCount) * 100, 2) : 0.0;
         $passRateAD = $candidateCount > 0 ? round(($candidates->whereIn('average_grade', ['A', 'B', 'C', 'D'])->count() / $candidateCount) * 100, 2) : 0.0;
         [$districtPosition, $districtSchoolsWithResults] = $this->schoolPositionByScope($examYear, 'district', (int) ($school?->district_id ?? 0), (int) ($school?->id ?? 0));
