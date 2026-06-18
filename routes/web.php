@@ -94,6 +94,19 @@ Route::get('/results/{examYear}/{examType}/school/{schoolId}', [PublicResultsCon
     ->where(['examYear' => '[0-9]{4}', 'examType' => '[A-Za-z0-9_-]+'])
     ->name('public.results.school');
 
+Route::get('/evaluations/psle', [PsleEvaluationsController::class, 'index'])
+    ->name('evaluations.psle.index');
+Route::get('/evaluations/psle/zonalwise', [PsleEvaluationsController::class, 'zonalwise'])
+    ->name('evaluations.psle.zonalwise');
+Route::get('/evaluations/psle/regionalwise', [PsleEvaluationsController::class, 'regionalwise'])
+    ->name('evaluations.psle.regionalwise');
+Route::get('/evaluations/psle/regionalwise/{region}', [PsleEvaluationsController::class, 'regionalwiseRegion'])
+    ->name('evaluations.psle.regionalwise.region');
+Route::get('/evaluations/psle/regionalwise/{region}/evaluation/{evaluation}', [PsleEvaluationsController::class, 'regionalwiseEvaluation'])
+    ->name('evaluations.psle.regionalwise.region.evaluation');
+Route::get('/evaluations/psle/regionalwise/{region}/evaluation/{evaluation}/export/{format}', [PsleEvaluationsController::class, 'regionalwiseEvaluationExport'])
+    ->name('evaluations.psle.regionalwise.region.evaluation.export');
+
 // Forced password change on first login
 Route::get('/password/change-required', [PasswordChangeController::class, 'showChangeRequired'])->name('password.change-required')->middleware('auth');
 Route::post('/password/update-required', [PasswordChangeController::class, 'updateRequired'])->name('password.update-required')->middleware('auth');
@@ -319,18 +332,6 @@ Route::middleware(['auth', 'main-system', 'single-device', 'geofence'])->group(f
     Route::get('/evaluations/acsee', function () { 
         return view('evaluations.acsee'); 
     });
-    Route::get('/evaluations/psle', [PsleEvaluationsController::class, 'index'])
-        ->name('evaluations.psle.index');
-    Route::get('/evaluations/psle/zonalwise', [PsleEvaluationsController::class, 'zonalwise'])
-        ->name('evaluations.psle.zonalwise');
-    Route::get('/evaluations/psle/regionalwise', [PsleEvaluationsController::class, 'regionalwise'])
-        ->name('evaluations.psle.regionalwise');
-    Route::get('/evaluations/psle/regionalwise/{region}', [PsleEvaluationsController::class, 'regionalwiseRegion'])
-        ->name('evaluations.psle.regionalwise.region');
-    Route::get('/evaluations/psle/regionalwise/{region}/evaluation/{evaluation}', [PsleEvaluationsController::class, 'regionalwiseEvaluation'])
-        ->name('evaluations.psle.regionalwise.region.evaluation');
-    Route::get('/evaluations/psle/regionalwise/{region}/evaluation/{evaluation}/export/{format}', [PsleEvaluationsController::class, 'regionalwiseEvaluationExport'])
-        ->name('evaluations.psle.regionalwise.region.evaluation.export');
     Route::get('/evaluations/acsee/zonalwise', function () {
         $activeYear = \App\Models\ExamYear::query()->where('is_active', true)->first();
         $examYearValue = (int) ($activeYear->year_label ?? now()->year);
