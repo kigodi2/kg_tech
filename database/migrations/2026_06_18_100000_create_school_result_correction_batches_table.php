@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::dropIfExists('school_result_correction_batches');
 
         Schema::create('school_result_correction_batches', function (Blueprint $table) {
+            $table->engine = 'InnoDB';
             $table->id();
             $table->unsignedSmallInteger('exam_year');
             $table->string('exam_type', 20)->default('psle');
