@@ -42,9 +42,8 @@ class SystemSettingsHelper
     {
         if ($key === 'cache_ttl') {
             $key = 'cache_ttl_seconds';
-            $type = 'integer';
         }
-        app(SettingsService::class)->set($key, $value, $type, $description);
+        app(SettingsService::class)->set($key, $value);
     }
 
     public static function loadSystemSettings(): array
