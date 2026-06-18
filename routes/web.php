@@ -79,6 +79,9 @@ Route::get('/results/{examYear}/psle/regions/{region}/districts/{district}/schoo
     ->where(['examYear' => '[0-9]{4}'])
     ->name('public.results.psle.school');
 
+Route::get('/results-portal/psle/school/{school}/export', [\App\Http\Controllers\Results\ReportsController::class, 'exportSchoolPdf'])
+    ->name('public.results.psle.school-export');
+
 Route::get('/results/{examYear}/{examType}', [PublicResultsPortalController::class, 'landing'])
     ->where(['examYear' => '[0-9]{4}', 'examType' => '[A-Za-z0-9_-]+'])
     ->name('public.results');
