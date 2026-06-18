@@ -28,6 +28,19 @@ function failure($text) {
 
 heading("1. Setup & Context Verification");
 
+// Clean up any stray test year 2099 left over from interrupted runs
+$strayYear = ExamYear::where('year_label', 2099)->first();
+if ($strayYear) {
+    DB::table('result_processes')->where('exam_year_id', $strayYear->id)->delete();
+    DB::table('result_snapshots')->where('exam_year_id', $strayYear->id)->delete();
+    DB::table('psle_result_publications')->where('exam_year_id', $strayYear->id)->delete();
+    DB::table('candidate_results')->where('year', 2099)->delete();
+    DB::table('subject_marks')->where('year', 2099)->delete();
+    DB::table('psle_result_validation_errors')->where('exam_year_id', $strayYear->id)->delete();
+    DB::table('raw_marks')->where('exam_year_id', $strayYear->id)->delete();
+    $strayYear->delete();
+}
+
 $originalActiveYear = ExamYear::where('is_active', true)->first();
 $originalActiveYearId = $originalActiveYear ? $originalActiveYear->id : null;
 
