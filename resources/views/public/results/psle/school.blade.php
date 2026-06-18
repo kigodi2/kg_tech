@@ -123,20 +123,9 @@
                 </a>
                 
                 @if($resultsAvailable)
-                    @if(auth()->check() && (auth()->user()->is_admin || (auth()->user()->role ?? '') === 'admin'))
-                        <a href="{{ route('results.psle.reports.school-export', ['school' => $school->id, 'exam_year_id' => \App\Models\ExamYear::where('year_label', $examYear)->value('id'), 'mode' => 'draft']) }}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background-color: #003366; color: #FFFFFF; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#002244'" onmouseout="this.style.backgroundColor='#003366'">
-                            <i class="fa-solid fa-file-pdf"></i> Download Official School PDF
-                        </a>
-                    @else
-                        <div style="position: relative; display: inline-block;" class="pdf-tooltip-container">
-                            <span style="display: inline-flex; align-items: center; gap: 8px; background-color: rgba(0,51,102,0.4); color: rgba(255,255,255,0.85); padding: 6px 14px; border-radius: 4px; font-weight: bold; font-size: 0.9rem; cursor: help;">
-                                <i class="fa-solid fa-lock"></i> PDF Statement Sheet
-                            </span>
-                            <div class="pdf-tooltip-text" style="visibility: hidden; width: 260px; background-color: #333; color: #fff; text-align: center; border-radius: 6px; padding: 8px 12px; position: absolute; z-index: 100; right: 0; top: 125%; opacity: 0; transition: opacity 0.3s; font-size: 0.75rem; font-family: sans-serif; font-weight: normal; line-height: 1.4; box-shadow: 0 4px 10px rgba(0,0,0,0.25); white-space: normal;">
-                                Official Statement Sheets are compiled in the **Admin Results Portal**. Please log in as an administrator to download the print-ready PDF.
-                            </div>
-                        </div>
-                    @endif
+                    <a href="{{ route('results.psle.reports.school-export', ['school' => $school->id, 'exam_year_id' => \App\Models\ExamYear::where('year_label', $examYear)->value('id'), 'mode' => 'published']) }}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background-color: #003366; color: #FFFFFF; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#002244'" onmouseout="this.style.backgroundColor='#003366'">
+                        PDF Statement Sheet
+                    </a>
                 @endif
             </div>
 

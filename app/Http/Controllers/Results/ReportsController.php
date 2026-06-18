@@ -433,9 +433,9 @@ class ReportsController extends Controller
             $result->setRelation('subjectMarks', $subjectMarks->get($result->candidate_id, collect())->values());
         });
 
-        $tempDir = storage_path('app/tmp/psle-school-exports-' . uniqid());
-        if (!is_dir($tempDir)) {
-            @mkdir($tempDir, 0755, true);
+        $pdfDir = storage_path('app/public/psle-school-exports/' . $examYear->id);
+        if (!is_dir($pdfDir)) {
+            @mkdir($pdfDir, 0755, true);
         }
 
         $safeSchoolName = preg_replace('/[^A-Za-z0-9_-]+/', '_', strtoupper((string) $school->name));
@@ -444,28 +444,22 @@ class ReportsController extends Controller
             strtoupper((string) $school->code),
             trim((string) $safeSchoolName, '_')
         );
-        $pdfPath = $tempDir . DIRECTORY_SEPARATOR . $pdfFilename;
+        $pdfPath = $pdfDir . DIRECTORY_SEPARATOR . 'school_' . $school->id . '.pdf';
 
-        $this->psleDistrictSchoolFpdfService->generateSchoolPdf(
-            $results->values(),
-            $pdfPath,
-            (string) $examYear->year_label,
-            $region,
-            $district,
-            (string) (auth()->user()->name ?? 'System')
-        );
+        $isAdmin = auth()->check() && (auth()->user()->is_admin || (auth()->user()->role ?? '') === 'admin');
 
-        register_shutdown_function(function () use ($tempDir) {
-            if (!is_dir($tempDir)) {
-                return;
-            }
-            foreach (glob($tempDir . DIRECTORY_SEPARATOR . '*') ?: [] as $file) {
-                @unlink($file);
-            }
-            @rmdir($tempDir);
-        });
+        if (!file_exists($pdfPath) || $isAdmin) {
+            $this->psleDistrictSchoolFpdfService->generateSchoolPdf(
+                $results->values(),
+                $pdfPath,
+                (string) $examYear->year_label,
+                $region,
+                $district,
+                (string) (auth()->user()->name ?? 'System')
+            );
+        }
 
-        return response()->download($pdfPath, $pdfFilename)->deleteFileAfterSend(true);
+        return response()->download($pdfPath, $pdfFilename);
     }
 
     private function buildDistrictOptions(int $examYearId, $regionId = null)

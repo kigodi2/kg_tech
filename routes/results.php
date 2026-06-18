@@ -81,12 +81,12 @@ Route::group(['prefix' => 'results', 'middleware' => ['auth']], function () {
     // Preserves the existing reports routes exactly bound to ReportsController as required.
     Route::group(['prefix' => 'psle'], function () {
         Route::get('/', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'legacy'])->name('results.psle.legacy');
+        Route::get('/reports/school/{school}/export', [ReportsController::class, 'exportSchoolPdf'])->name("results.psle.reports.school-export");
 
         Route::group(['prefix' => 'reports', 'middleware' => ['admin']], function () {
             Route::get('/', [ReportsController::class, 'index'])->name("results.psle.reports.index");
             Route::get('/district-options', [ReportsController::class, 'districtOptions'])->name("results.psle.reports.district-options");
             Route::post('/district-school-results/export', [ReportsController::class, 'exportDistrictSchoolResults'])->name("results.psle.reports.district-school-results-export");
-            Route::get('/school/{school}/export', [ReportsController::class, 'exportSchoolPdf'])->name("results.psle.reports.school-export");
         });
 
         // Define route aliases/placeholders for the side menu in PSLE reports to prevent RouteNotFound exceptions
