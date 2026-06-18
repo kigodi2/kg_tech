@@ -28,13 +28,22 @@ function failure($text) {
 
 heading("1. Setup & Context Verification");
 
-$activeYear = ExamYear::where('is_active', true)->first();
-if ($activeYear) {
-    success("Active Exam Year: " . $activeYear->year_label . " (ID: " . $activeYear->id . ")");
-} else {
-    $activeYear = ExamYear::orderByDesc('year_label')->first();
-    success("Using Latest Year: " . $activeYear->year_label . " (ID: " . $activeYear->id . ")");
+$originalActiveYear = ExamYear::where('is_active', true)->first();
+$originalActiveYearId = $originalActiveYear ? $originalActiveYear->id : null;
+
+if ($originalActiveYear) {
+    $originalActiveYear->update(['is_active' => false]);
 }
+
+$activeYear = ExamYear::create([
+    'year_label' => 2099,
+    'is_active' => true,
+    'is_locked' => false,
+    'created_at' => now(),
+    'updated_at' => now(),
+]);
+
+success("Created temporary test active year: " . $activeYear->year_label . " (ID: " . $activeYear->id . ")");
 $examYearId = $activeYear->id;
 $examYearValue = $activeYear->year_label;
 
@@ -627,25 +636,51 @@ if ($admin) {
 }
 
 try {
-    DB::transaction(function() use ($tempSchool, $candidateIds, $batchIds, $createdOfficer, $officer) {
+    DB::transaction(function() use ($tempSchool, $candidateIds, $batchIds, $createdOfficer, $officer, $examYearId, $originalActiveYearId) {
         // Delete raw marks
-        DB::table('raw_marks')->whereIn('candidate_id', $candidateIds)->delete();
+        if (!empty($candidateIds)) {
+            DB::table('raw_marks')->whereIn('candidate_id', $candidateIds)->delete();
+        }
         
         // Delete registrations
-        DB::table('candidate_exam_registrations')->whereIn('candidate_id', $candidateIds)->delete();
+        if (!empty($candidateIds)) {
+            DB::table('candidate_exam_registrations')->whereIn('candidate_id', $candidateIds)->delete();
+        }
         
         // Delete candidates
-        DB::table('candidates')->whereIn('id', $candidateIds)->delete();
+        if (!empty($candidateIds)) {
+            DB::table('candidates')->whereIn('id', $candidateIds)->delete();
+        }
         
         // Delete batches
-        DB::table('mark_import_batches')->whereIn('id', $batchIds)->delete();
+        if (!empty($batchIds)) {
+            DB::table('mark_import_batches')->whereIn('id', $batchIds)->delete();
+        }
         
         // Delete school
-        DB::table('schools')->where('id', $tempSchool->id)->delete();
+        if ($tempSchool) {
+            DB::table('schools')->where('id', $tempSchool->id)->delete();
+        }
 
         // Delete mock officer
         if ($createdOfficer && $officer) {
             DB::table('users')->where('id', $officer->id)->delete();
+        }
+
+        // Delete result processes and snapshots of the test year
+        DB::table('result_processes')->where('exam_year_id', $examYearId)->delete();
+        DB::table('result_snapshots')->where('exam_year_id', $examYearId)->delete();
+        DB::table('psle_result_publications')->where('exam_year_id', $examYearId)->delete();
+        DB::table('candidate_results')->where('year', 2099)->delete();
+        DB::table('subject_marks')->where('year', 2099)->delete();
+        DB::table('psle_result_validation_errors')->where('exam_year_id', $examYearId)->delete();
+
+        // Delete temporary ExamYear
+        DB::table('exam_years')->where('id', $examYearId)->delete();
+
+        // Restore original active year
+        if ($originalActiveYearId) {
+            DB::table('exam_years')->where('id', $originalActiveYearId)->update(['is_active' => true]);
         }
     });
     success("All temporary test data successfully cleaned up from the database.");
