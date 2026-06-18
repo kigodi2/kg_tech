@@ -299,7 +299,7 @@ class PublicPsleResultsController extends Controller
             [$candidates, $subjectSummary] = $this->buildSchoolResultsPayload($rows);
 
             // Paginate candidates
-            $perPage = 20;
+            $perPage = max(1, count($candidates));
             $page = request()->input('page', 1);
             $paginatedCandidates = new LengthAwarePaginator(
                 collect($candidates)->forPage($page, $perPage),
