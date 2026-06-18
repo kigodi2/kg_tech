@@ -300,7 +300,7 @@ class PublicPsleResultsController extends Controller
 
             // Paginate candidates
             $perPage = max(1, count($candidates));
-            $page = request()->input('page', 1);
+            $page = 1;
             $paginatedCandidates = new LengthAwarePaginator(
                 collect($candidates)->forPage($page, $perPage),
                 count($candidates),
