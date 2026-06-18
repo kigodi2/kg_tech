@@ -15,14 +15,18 @@ class PsleDistrictSchoolFpdfService
     public const RIGHT_MARGIN = 6.0;
     public const CONTENT_WIDTH = self::PAGE_WIDTH - self::LEFT_MARGIN - self::RIGHT_MARGIN;
 
+    private ?int $snapshotId = null;
+
     public function generateSchoolPdf(
         Collection $schoolResults,
         string $outputPath,
         string $yearLabel,
         ?object $region,
         ?object $district,
-        string $exportedBy
+        string $exportedBy,
+        ?int $snapshotId = null
     ): void {
+        $this->snapshotId = $snapshotId;
         if (!defined('FPDF_FONTPATH')) {
             define('FPDF_FONTPATH', app_path('Support/Pdf/font/'));
         }
@@ -653,6 +657,12 @@ class PsleDistrictSchoolFpdfService
             ->where('sm.exam_type_id', $this->psleExamTypeId())
             ->where('sm.year', $examYear)
             ->where('s.education_level', 'PRIMARY');
+
+        if ($this->snapshotId !== null) {
+            $query->where('sm.snapshot_id', $this->snapshotId);
+        } else {
+            $query->whereNull('sm.snapshot_id');
+        }
 
         if ($scope === 'region') {
             $query->where('s.region_id', $scopeId);

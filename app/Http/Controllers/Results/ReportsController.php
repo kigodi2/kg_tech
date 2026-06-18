@@ -269,11 +269,29 @@ class ReportsController extends Controller
         $psleExamTypeId = (int) ExamType::query()->where('code', 'PSLE')->value('id');
         $yearValue = (int) $examYear->year_label;
 
-        $results = CandidateResult::query()
+        $publication = \DB::table('psle_result_publications as prp')
+            ->join('result_snapshots as rs', 'rs.id', '=', 'prp.snapshot_id')
+            ->where('prp.exam_year_id', $examYear->id)
+            ->where('prp.status', 'published')
+            ->where('rs.is_active', true)
+            ->where('rs.is_rolled_back', false)
+            ->select('rs.id as snapshot_id')
+            ->first();
+
+        $snapshotId = $publication ? (int) $publication->snapshot_id : null;
+
+        $resultsQuery = CandidateResult::query()
             ->where('exam_type_id', $psleExamTypeId)
             ->where('year', $yearValue)
-            ->whereHas('candidate.school', fn ($query) => $query->where('district_id', $district->id))
-            ->with([
+            ->whereHas('candidate.school', fn ($query) => $query->where('district_id', $district->id));
+
+        if ($snapshotId !== null) {
+            $resultsQuery->where('snapshot_id', $snapshotId);
+        } else {
+            $resultsQuery->whereNull('snapshot_id');
+        }
+
+        $results = $resultsQuery->with([
                 'candidate:id,school_id,candidate_id,prem_no,full_name,gender',
                 'candidate.school:id,code,name,district_id,region_id',
                 'candidate.school.district:id,name,region_id',
@@ -292,11 +310,18 @@ class ReportsController extends Controller
         }
 
         $candidateIds = $results->pluck('candidate_id')->filter()->unique()->values();
-        $subjectMarks = SubjectMarks::query()
+        $subjectMarksQuery = SubjectMarks::query()
             ->where('exam_type_id', $psleExamTypeId)
             ->where('year', $yearValue)
-            ->whereIn('candidate_id', $candidateIds)
-            ->with('subject:id,code,name')
+            ->whereIn('candidate_id', $candidateIds);
+
+        if ($snapshotId !== null) {
+            $subjectMarksQuery->where('snapshot_id', $snapshotId);
+        } else {
+            $subjectMarksQuery->whereNull('snapshot_id');
+        }
+
+        $subjectMarks = $subjectMarksQuery->with('subject:id,code,name')
             ->orderBy('subject_id')
             ->get()
             ->groupBy('candidate_id');
@@ -359,7 +384,8 @@ class ReportsController extends Controller
                 (string) $examYear->year_label,
                 $region,
                 $district,
-                (string) (auth()->user()->name ?? 'System')
+                (string) (auth()->user()->name ?? 'System'),
+                $snapshotId
             );
 
             $zip->addFile($pdfPath, $pdfFilename);
@@ -398,11 +424,29 @@ class ReportsController extends Controller
         $region = $school->region;
         $district = $school->district;
 
-        $results = CandidateResult::query()
+        $publication = \DB::table('psle_result_publications as prp')
+            ->join('result_snapshots as rs', 'rs.id', '=', 'prp.snapshot_id')
+            ->where('prp.exam_year_id', $examYear->id)
+            ->where('prp.status', 'published')
+            ->where('rs.is_active', true)
+            ->where('rs.is_rolled_back', false)
+            ->select('rs.id as snapshot_id')
+            ->first();
+
+        $snapshotId = $publication ? (int) $publication->snapshot_id : null;
+
+        $resultsQuery = CandidateResult::query()
             ->where('exam_type_id', $psleExamTypeId)
             ->where('year', $yearValue)
-            ->whereHas('candidate', fn ($query) => $query->where('school_id', $school->id))
-            ->with([
+            ->whereHas('candidate', fn ($query) => $query->where('school_id', $school->id));
+
+        if ($snapshotId !== null) {
+            $resultsQuery->where('snapshot_id', $snapshotId);
+        } else {
+            $resultsQuery->whereNull('snapshot_id');
+        }
+
+        $results = $resultsQuery->with([
                 'candidate:id,school_id,candidate_id,prem_no,full_name,gender',
                 'candidate.school:id,code,name,district_id,region_id',
                 'candidate.school.district:id,name,region_id',
@@ -420,11 +464,18 @@ class ReportsController extends Controller
         }
 
         $candidateIds = $results->pluck('candidate_id')->filter()->unique()->values();
-        $subjectMarks = SubjectMarks::query()
+        $subjectMarksQuery = SubjectMarks::query()
             ->where('exam_type_id', $psleExamTypeId)
             ->where('year', $yearValue)
-            ->whereIn('candidate_id', $candidateIds)
-            ->with('subject:id,code,name')
+            ->whereIn('candidate_id', $candidateIds);
+
+        if ($snapshotId !== null) {
+            $subjectMarksQuery->where('snapshot_id', $snapshotId);
+        } else {
+            $subjectMarksQuery->whereNull('snapshot_id');
+        }
+
+        $subjectMarks = $subjectMarksQuery->with('subject:id,code,name')
             ->orderBy('subject_id')
             ->get()
             ->groupBy('candidate_id');
@@ -455,7 +506,8 @@ class ReportsController extends Controller
                 (string) $examYear->year_label,
                 $region,
                 $district,
-                (string) (auth()->user()->name ?? 'System')
+                (string) (auth()->user()->name ?? 'System'),
+                $snapshotId
             );
         }
 
