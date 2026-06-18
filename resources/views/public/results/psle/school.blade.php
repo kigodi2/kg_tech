@@ -73,7 +73,7 @@
             <div class="site-header-center">
                 <div class="header-right-text">PRIME MINISTER'S OFFICE</div>
                 <div class="site-subtitle">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</div>
-                <div class="header-places">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA</div>
+                <div class="header-places">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</div>
                 <div class="site-title">STANDARD SEVEN MOCK RESULTS - {{ $examYear }} - {{ strtoupper($school->name) }}</div>
                 <div class="header-right-text"><div></div></div>
             </div>
