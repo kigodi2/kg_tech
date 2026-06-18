@@ -122,7 +122,7 @@
                 
                 @if($resultsAvailable)
                     @if(auth()->check() && (auth()->user()->is_admin || (auth()->user()->role ?? '') === 'admin'))
-                        <a href="{{ route('results.psle.reports.school-export', ['school' => $school->id, 'exam_year_id' => $examYear->id, 'mode' => 'draft']) }}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background-color: #003366; color: #FFFFFF; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#002244'" onmouseout="this.style.backgroundColor='#003366'">
+                        <a href="{{ route('results.psle.reports.school-export', ['school' => $school->id, 'exam_year_id' => \App\Models\ExamYear::where('year_label', $examYear)->value('id'), 'mode' => 'draft']) }}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background-color: #003366; color: #FFFFFF; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-weight: bold; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.15); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#002244'" onmouseout="this.style.backgroundColor='#003366'">
                             <i class="fa-solid fa-file-pdf"></i> Download Official School PDF
                         </a>
                     @else
