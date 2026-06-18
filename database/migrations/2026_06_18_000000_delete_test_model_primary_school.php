@@ -32,8 +32,19 @@ return new class extends Migration
             DB::table('candidates')->whereIn('id', $candidateIds)->delete();
         }
 
-        DB::table('result_snapshots')->where('school_id', $schoolId)->delete();
-        DB::table('result_processes')->where('school_id', $schoolId)->delete();
+        if (Schema::hasTable('result_snapshots')) {
+            if (Schema::hasColumn('result_snapshots', 'scope_type') && Schema::hasColumn('result_snapshots', 'scope_id')) {
+                DB::table('result_snapshots')->where('scope_type', 'school')->where('scope_id', $schoolId)->delete();
+            } elseif (Schema::hasColumn('result_snapshots', 'school_id')) {
+                DB::table('result_snapshots')->where('school_id', $schoolId)->delete();
+            }
+        }
+
+        if (Schema::hasTable('result_processes')) {
+            if (Schema::hasColumn('result_processes', 'school_id')) {
+                DB::table('result_processes')->where('school_id', $schoolId)->delete();
+            }
+        }
         
         // Delete the school itself
         DB::table('schools')->where('id', $schoolId)->delete();
