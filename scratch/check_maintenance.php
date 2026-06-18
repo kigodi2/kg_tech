@@ -5,23 +5,34 @@ $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 use App\Helpers\SystemSettingsHelper;
 use Illuminate\Support\Facades\Route;
+use App\Models\User;
 
 echo "Maintenance Mode Setting: " . var_export(SystemSettingsHelper::getSetting('maintenance_mode', false), true) . "\n";
 
-$request = \Illuminate\Http\Request::create('/results/2099/psle', 'GET');
-try {
-    $route = Route::getRoutes()->match($request);
-    echo "Matched Route Name: " . $route->getName() . "\n";
-    echo "Matched Controller: " . get_class($route->getController()) . "\n";
-    echo "Matched Middleware: " . implode(', ', $route->middleware()) . "\n";
-} catch (\Exception $e) {
-    echo "Route match error: " . $e->getMessage() . "\n";
+// Find user officer@test.com (created by verification script) or similar
+$officer = User::where('email', 'officer@test.com')->first();
+if (!$officer) {
+    // If not found, let's look for any user or create a temporary one
+    $officer = User::first();
 }
+echo "Officer Email: " . ($officer ? $officer->email : 'NONE') . "\n";
 
-// Simulate the request as guest
+// Test 1: Guest to /results/2099/psle
 auth()->logout();
-$response = app(\Illuminate\Contracts\Http\Kernel::class)->handle($request);
-echo "Response status code for guest: " . $response->getStatusCode() . "\n";
-if ($response->getStatusCode() === 503) {
-    echo "Response Content (first 200 chars): " . substr($response->getContent(), 0, 200) . "\n";
+$req1 = \Illuminate\Http\Request::create('/results/2099/psle', 'GET');
+$res1 = app(\Illuminate\Contracts\Http\Kernel::class)->handle($req1);
+echo "Guest -> /results/2099/psle: HTTP " . $res1->getStatusCode() . "\n";
+
+// Test 2: Officer to /evaluations/psle
+if ($officer) {
+    auth()->login($officer);
 }
+$req2 = \Illuminate\Http\Request::create('/evaluations/psle', 'GET');
+$res2 = app(\Illuminate\Contracts\Http\Kernel::class)->handle($req2);
+echo "Officer -> /evaluations/psle: HTTP " . $res2->getStatusCode() . "\n";
+
+// Test 3: Guest to /evaluations/psle
+auth()->logout();
+$req3 = \Illuminate\Http\Request::create('/evaluations/psle', 'GET');
+$res3 = app(\Illuminate\Contracts\Http\Kernel::class)->handle($req3);
+echo "Guest -> /evaluations/psle: HTTP " . $res3->getStatusCode() . "\n";
