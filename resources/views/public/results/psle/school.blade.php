@@ -105,7 +105,7 @@
         $subjectNameColumnWidth = '320px';
         $avgColumnWidth = '66px';
         $competenceColumnWidth = '170px';
-        $candidateNoColumnWidth = '124px';
+        $candidateNoColumnWidth = '165px';
         $premNoColumnWidth = '149px';
         $sexColumnWidth = '44px';
         $candidateMetricColumnWidth = '58px';
