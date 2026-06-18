@@ -158,6 +158,31 @@
             grid-template-columns: 1fr;
         }
     }
+
+    .correction-form-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 2fr 180px;
+        gap: 16px;
+        align-items: flex-end;
+    }
+
+    @media (max-width: 992px) {
+        .correction-form-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        .correction-form-grid > div:last-child {
+            grid-column: span 2;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .correction-form-grid {
+            grid-template-columns: 1fr;
+        }
+        .correction-form-grid > div:last-child {
+            grid-column: span 1;
+        }
+    }
 </style>
 
 @php
@@ -549,7 +574,7 @@
                 <p style="font-size: 0.82rem; color: var(--tz-text-muted); margin-bottom: 16px;">
                     Rollback a selected school's raw marks to draft sequence. All other schools will remain locked.
                 </p>
-                <form id="formInitiateCorrection" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 150px; gap: 16px; align-items: flex-end;">
+                <form id="formInitiateCorrection" class="correction-form-grid">
                     @csrf
                     <input type="hidden" name="exam_year_id" value="{{ $examYear->id }}">
                     <div>
@@ -575,7 +600,7 @@
         </div>
 
         <!-- Sessions List -->
-        <h4 style="margin: 0 0 12px 0; font-size: 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+        <h4 style="margin: 32px 0 16px 0; font-size: 1rem; color: #ffffff; display: flex; align-items: center; gap: 8px;">
             <i class="fa-solid fa-list" style="color: var(--tz-yellow);"></i> Active & Historic Correction Batches
         </h4>
         @if(count($viewData['correctionBatches'] ?? []) > 0)
