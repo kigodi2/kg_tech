@@ -129,8 +129,6 @@ class PsleRegionalSchoolwiseFpdfService
                 $this->SetTextColor(71, 85, 105);
                 $this->SetFont('Helvetica', '', 6.2);
                 $this->SetXY(8, 191.0);
-                $this->Cell(PsleRegionalSchoolwiseFpdfService::CONTENT_WIDTH, 3.2, $this->service->text('GENERATED: ' . $this->generatedAt . ' | IRMS NODE: ' . $this->host), 0, 1, 'R');
-
                 $this->SetY(203.5);
                 $this->SetFillColor(0, 166, 81);
                 $this->Rect(8, 203.5, 84.78, 0.5, 'F');

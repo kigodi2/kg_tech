@@ -85,7 +85,6 @@ class PsleDistrictSchoolFpdfService
                     $this->SetTextColor(71, 85, 105);
                     $this->SetFont('Helvetica', '', 6.2);
                     $this->SetXY(6, 403.0);
-                    $this->Cell(PsleDistrictSchoolFpdfService::CONTENT_WIDTH, 3.2, $this->service->text('GENERATED: ' . $this->generatedAt . ' | IRMS NODE: ' . $this->node), 0, 1, 'R');
 
                     $barcodeWidth = $this->service->code39Width($this->barcodePayload, 0.22);
                     $barcodeX = 6 + ((PsleDistrictSchoolFpdfService::CONTENT_WIDTH - $barcodeWidth) / 2);
