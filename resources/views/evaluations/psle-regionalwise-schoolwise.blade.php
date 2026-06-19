@@ -9,6 +9,7 @@
 }
 </style>
 @php
+    $isZonal = !isset($region->id) || is_null($region->id);
     $isZonalCouncilwiseEvaluation = ($tableMode ?? null) === 'zonal-councilwise';
     $isZonalSchoolwiseEvaluation = ($tableMode ?? null) === 'zonal-schoolwise';
     $isOwnershipEvaluation = ($tableMode ?? null) === 'ownership' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'OWNERSHIP');
@@ -193,7 +194,7 @@
 
     $barcodePayload = sprintf(
         'PSLE-%s-%s-WEB',
-        substr((string) (preg_replace('/[^A-Z0-9]/', '', strtoupper((string) ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation || !$region ? 'ZONAL' : ($region->name ?? 'REG')))) ?: 'REG'), 0, 3),
+        substr((string) (preg_replace('/[^A-Z0-9]/', '', strtoupper((string) ($isZonal ? 'ZONAL' : ($region->name ?? 'REG')))) ?: 'REG'), 0, 3),
         now()->format('Ymd-His')
     );
     $barcodePatterns = [
@@ -228,8 +229,8 @@
 <div style="background-color: #B0E0E6; min-height: 100vh; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: 'Maiandra GD', sans-serif; font-weight: 700; white-space: nowrap;">
     <div style="width: min(94vw, 1700px); margin: 0 auto; padding: 0 0.35rem;">
         <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-            <a href="{{ ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation) ? route('evaluations.psle.zonalwise') : route('evaluations.psle.regionalwise.region', ['region' => $region->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
-                ← Back to {{ ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation) ? 'Zonalwise' : ($region ? strtoupper($region->name) : 'Zonalwise') }}
+            <a href="{{ $isZonal ? route('evaluations.psle.zonalwise') : route('evaluations.psle.regionalwise.region', ['region' => $region->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
+                ← Back to {{ $isZonal ? 'Zonalwise' : ($region ? strtoupper($region->name) : 'Zonalwise') }}
             </a>
 
             <a href="{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}"
@@ -251,7 +252,7 @@
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.2rem; font-weight: bold; color: #f5d000; line-height: 1.25;">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #ffffff; line-height: 1.25;">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #f5d000; line-height: 1.25;">
-                        @if($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation)
+                        @if($isZonal)
                             {{ strtoupper($evaluationLabel ?? 'PSLE ZONAL EVALUATION') }} - {{ $examYearValue }}
                         @else
                             PSLE REGIONAL EVALUATIONS - {{ $examYearValue }} - {{ strtoupper($region->name) }}
@@ -282,7 +283,7 @@
         @if($showSummaryBlock)
             <div style="padding: 0.2rem 0.35rem 0.35rem 0.35rem; color: #000080;">
                 <div style="font-size: 1rem; line-height: 1.35; white-space: normal;">
-                    @if($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation)
+                    @if($isZonal)
                         <p style="margin: 0 0 0.2rem 0;">ZONE: TASIDO</p>
                     @else
                         <p style="margin: 0 0 0.2rem 0;">REGION: {{ strtoupper($region->name) }}</p>

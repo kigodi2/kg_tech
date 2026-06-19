@@ -317,15 +317,24 @@ class PsleRegionalSchoolwiseFpdfService
         $tableStartX = 8.0;
         $tableWidth = self::CONTENT_WIDTH;
         $hideSecondColumn = (bool) ($options['hide_second_column'] ?? false);
+        $hasThirdColumn = !empty($options['third_column_label']);
+
         $firstColumnLabel = strtoupper((string) ($options['first_column_label'] ?? 'COUNCIL'));
         $secondColumnLabel = strtoupper((string) ($options['second_column_label'] ?? 'SCHOOL'));
+        $thirdColumnLabel = strtoupper((string) ($options['third_column_label'] ?? 'REGION'));
+
         $firstColumnKey = (string) ($options['first_column_key'] ?? 'council');
         $secondColumnKey = (string) ($options['second_column_key'] ?? 'school');
+        $thirdColumnKey = (string) ($options['third_column_key'] ?? 'region');
+
         $secondColumnAlign = strtoupper((string) ($options['second_column_align'] ?? 'L'));
+        $thirdColumnAlign = strtoupper((string) ($options['third_column_align'] ?? 'L'));
+
         $columnWidths = [
             'sn' => 8.0,
             'first' => (float) ($options['first_column_width'] ?? 22.0),
             'second' => $hideSecondColumn ? 0.0 : (float) ($options['second_column_width'] ?? 58.0),
+            'third' => $hasThirdColumn ? (float) ($options['third_column_width'] ?? 30.0) : 0.0,
             'metric' => (float) ($options['metric_width'] ?? 4.5),
             'average' => (float) ($options['average_width'] ?? 11.0),
             'grd' => (float) ($options['grd_width'] ?? 6.0),
@@ -336,6 +345,7 @@ class PsleRegionalSchoolwiseFpdfService
             $columnWidths['sn']
             + $columnWidths['first']
             + $columnWidths['second']
+            + $columnWidths['third']
             + ($columnWidths['metric'] * 28)
             + $columnWidths['average']
             + $columnWidths['grd']
@@ -351,6 +361,7 @@ class PsleRegionalSchoolwiseFpdfService
                 $columnWidths['sn']
                 + $columnWidths['first']
                 + $columnWidths['second']
+                + $columnWidths['third']
                 + ($columnWidths['metric'] * 28)
                 + $columnWidths['average']
                 + $columnWidths['grd']
@@ -358,7 +369,9 @@ class PsleRegionalSchoolwiseFpdfService
 
             $remainder = round($tableWidth - $scaledTableWidth, 3);
             if (abs($remainder) > 0.001) {
-                if (!$hideSecondColumn) {
+                if ($hasThirdColumn) {
+                    $columnWidths['third'] += $remainder;
+                } elseif (!$hideSecondColumn) {
                     $columnWidths['second'] += $remainder;
                 } else {
                     $columnWidths['first'] += $remainder;
@@ -370,6 +383,7 @@ class PsleRegionalSchoolwiseFpdfService
             ['S/N', $columnWidths['sn']],
             [$firstColumnLabel, $columnWidths['first']],
             ...($hideSecondColumn ? [] : [[$secondColumnLabel, $columnWidths['second']]]),
+            ...($hasThirdColumn ? [[$thirdColumnLabel, $columnWidths['third']]] : []),
             ['REG M', $columnWidths['metric']], ['REG F', $columnWidths['metric']], ['REG T', $columnWidths['metric']],
             ['ABS M', $columnWidths['metric']], ['ABS F', $columnWidths['metric']], ['ABS T', $columnWidths['metric']], ['ABS %', $columnWidths['metric']],
             ['SAT M', $columnWidths['metric']], ['SAT F', $columnWidths['metric']], ['SAT T', $columnWidths['metric']], ['SAT %', $columnWidths['metric']],
@@ -412,8 +426,11 @@ class PsleRegionalSchoolwiseFpdfService
             $reportLabel,
             $firstColumnLabel,
             $secondColumnLabel,
+            $thirdColumnLabel,
             $secondColumnAlign,
-            $hideSecondColumn
+            $thirdColumnAlign,
+            $hideSecondColumn,
+            $hasThirdColumn
         ) {
             $currentTableTop = $pdf->GetY();
             $pdf->SetFillColor(255, 255, 255);
@@ -443,6 +460,9 @@ class PsleRegionalSchoolwiseFpdfService
             if (!$hideSecondColumn) {
                 $pdf->Cell($columnWidths['second'], 9.2, $secondColumnLabel, 1, 0, $secondColumnAlign, true);
             }
+            if ($hasThirdColumn) {
+                $pdf->Cell($columnWidths['third'], 9.2, $thirdColumnLabel, 1, 0, $thirdColumnAlign, true);
+            }
 
             $pdf->Cell($columnWidths['metric'] * 3, 3.4, 'REG', 1, 0, 'C', true);
             $pdf->Cell($columnWidths['metric'] * 4, 3.4, 'ABS', 1, 0, 'C', true);
@@ -462,7 +482,8 @@ class PsleRegionalSchoolwiseFpdfService
             $secondRowX = $startX
                 + $columnWidths['sn']
                 + $columnWidths['first']
-                + ($hideSecondColumn ? 0 : $columnWidths['second']);
+                + ($hideSecondColumn ? 0 : $columnWidths['second'])
+                + ($hasThirdColumn ? $columnWidths['third'] : 0);
 
             $pdf->SetXY($secondRowX, $y + 3.4);
 
@@ -492,7 +513,15 @@ class PsleRegionalSchoolwiseFpdfService
 
         $printHeader();
 
-            foreach ($rows as $index => $row) {
+        $metricStartIndex = 2;
+        if (!$hideSecondColumn) {
+            $metricStartIndex++;
+        }
+        if ($hasThirdColumn) {
+            $metricStartIndex++;
+        }
+
+        foreach ($rows as $index => $row) {
             if ($pdf->GetY() > 394) {
                 $drawOuterBorder();
                 $pdf->AddPage();
@@ -512,6 +541,7 @@ class PsleRegionalSchoolwiseFpdfService
                 $index + 1,
                 (string) ($row[$firstColumnKey] ?? ''),
                 ...($hideSecondColumn ? [] : [(string) ($row[$secondColumnKey] ?? '')]),
+                ...($hasThirdColumn ? [(string) ($row[$thirdColumnKey] ?? '')] : []),
                 $row['registered']['m'] ?? 0, $row['registered']['f'] ?? 0, $row['registered']['t'] ?? 0,
                 $row['absent']['m'] ?? 0, $row['absent']['f'] ?? 0, $row['absent']['t'] ?? 0, number_format((float) ($row['absent']['pct'] ?? 0), 0),
                 $row['sat']['m'] ?? 0, $row['sat']['f'] ?? 0, $row['sat']['t'] ?? 0, number_format((float) ($row['sat']['pct'] ?? 0), 0),
@@ -529,11 +559,20 @@ class PsleRegionalSchoolwiseFpdfService
             ];
 
             foreach ($flatHeaders as $cellIndex => [, $width]) {
-                $align = match ($cellIndex) {
-                    1 => 'L',
-                    2 => $hideSecondColumn ? 'C' : $secondColumnAlign,
-                    default => 'C',
-                };
+                $align = 'C';
+                if ($cellIndex === 1) {
+                    $align = 'L';
+                } elseif ($cellIndex === 2) {
+                    if (!$hideSecondColumn) {
+                        $align = $secondColumnAlign;
+                    } elseif ($hasThirdColumn) {
+                        $align = $thirdColumnAlign;
+                    }
+                } elseif ($cellIndex === 3) {
+                    if (!$hideSecondColumn && $hasThirdColumn) {
+                        $align = $thirdColumnAlign;
+                    }
+                }
 
                 if ($cellIndex === count($flatHeaders) - 1 || $cellIndex === count($flatHeaders) - 2) {
                     $pdf->SetFont('Helvetica', 'B', 5.7);
@@ -541,7 +580,7 @@ class PsleRegionalSchoolwiseFpdfService
                     $pdf->SetFont('Helvetica', '', 5.7);
                 }
 
-                if ($cellIndex === 1 || ($cellIndex === 2 && !$hideSecondColumn)) {
+                if ($cellIndex >= 1 && $cellIndex < $metricStartIndex) {
                     $this->drawFittedCell($pdf, $width, 4.8, (string) ($cells[$cellIndex] ?? ''), $align, true, 5.7);
                     continue;
                 }
@@ -567,7 +606,7 @@ class PsleRegionalSchoolwiseFpdfService
         $pdf->SetX($tableStartX);
 
         $pdf->Cell(
-            $columnWidths['sn'] + $columnWidths['first'] + ($hideSecondColumn ? 0 : $columnWidths['second']),
+            $columnWidths['sn'] + $columnWidths['first'] + ($hideSecondColumn ? 0 : $columnWidths['second']) + ($hasThirdColumn ? $columnWidths['third'] : 0),
             5.2,
             'TOTAL',
             1,
@@ -595,9 +634,8 @@ class PsleRegionalSchoolwiseFpdfService
             '',
         ];
 
-        $metricStartIndex = $hideSecondColumn ? 2 : 3;
         foreach (array_slice($flatHeaders, $metricStartIndex) as $cellIndex => [, $width]) {
-            $value = $totalCells[$cellIndex] ?? '';
+            $value = $totalCells[$cellIndex - $metricStartIndex] ?? '';
             $pdf->Cell($width, 5.2, $this->text((string) $value, 8), 1, 0, 'C', true);
         }
 

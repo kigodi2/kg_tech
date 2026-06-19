@@ -2,6 +2,7 @@
 
 @section('content')
 @php
+    $isZonal = !isset($region->id) || is_null($region->id);
     $metricWidth = '38px';
     $summaryMetricWidth = '52px';
     $gradeSummary = $summary['grade_summary'] ?? [];
@@ -10,7 +11,7 @@
     $isSubjectSummary = str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'SUMMARY');
     $barcodePayload = sprintf(
         'PSLE-%s-%s-WEB',
-        substr((string) (preg_replace('/[^A-Z0-9]/', '', strtoupper((string) $region->name)) ?: 'REG'), 0, 3),
+        substr((string) (preg_replace('/[^A-Z0-9]/', '', strtoupper((string) ($isZonal ? 'ZONAL' : ($region->name ?? 'REG')))) ?: 'REG'), 0, 3),
         now()->format('Ymd-His')
     );
     $barcodePatterns = [
@@ -45,10 +46,10 @@
 <div style="background-color: #B0E0E6; min-height: 100vh; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: 'Maiandra GD', sans-serif; font-weight: 700; white-space: nowrap;">
     <div style="width: min(96vw, 1820px); margin: 0 auto; padding: 0 0.35rem;">
         <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-            <a href="{{ route('evaluations.psle.regionalwise.region', ['region' => $region->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
-                ← Back to {{ strtoupper($region->name) }}
+            <a href="{{ $isZonal ? route('evaluations.psle.zonalwise') : route('evaluations.psle.regionalwise.region', ['region' => $region->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
+                ← Back to {{ $isZonal ? 'Zonalwise' : strtoupper($region->name) }}
             </a>
-            <a href="{{ route('evaluations.psle.regionalwise.region.evaluation.export', ['region' => $region->id, 'evaluation' => $evaluationKey, 'format' => 'pdf']) }}"
+            <a href="{{ $isZonal ? route('evaluations.psle.zonalwise.evaluation.export', ['evaluation' => $evaluationKey, 'format' => 'pdf']) : route('evaluations.psle.regionalwise.region.evaluation.export', ['region' => $region->id, 'evaluation' => $evaluationKey, 'format' => 'pdf']) }}"
                style="border: 1px solid #065f46; background: linear-gradient(180deg, #10b981 0%, #059669 55%, #047857 100%); color: #ffffff; padding: 0.34rem 0.95rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.42rem; height: 38px; border-radius: 0.75rem; box-shadow: 0 3px 0 #064e3b, 0 10px 20px rgba(4, 120, 87, 0.24), inset 0 1px 0 rgba(255,255,255,0.28);">
                 <i class="fas fa-file-pdf" style="color: #ffffff;"></i>
                 <span>Export PDF</span>
@@ -67,7 +68,11 @@
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.2rem; font-weight: bold; color: #f5d000; line-height: 1.25;">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #ffffff; line-height: 1.25;">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #f5d000; line-height: 1.25;">
-                        PSLE REGIONAL SUBJECT PERFORMANCE - {{ $examYearValue }} - {{ strtoupper($region->name) }}
+                        @if($isZonal)
+                            {{ strtoupper($evaluationLabel ?? 'PSLE ZONAL SUBJECT PERFORMANCE') }} - {{ $examYearValue }}
+                        @else
+                            PSLE REGIONAL SUBJECT PERFORMANCE - {{ $examYearValue }} - {{ strtoupper($region->name) }}
+                        @endif
                     </p>
                 </div>
 
