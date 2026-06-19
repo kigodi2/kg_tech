@@ -100,6 +100,10 @@ Route::get('/evaluations/psle', [PsleEvaluationsController::class, 'index'])
     ->name('evaluations.psle.index');
 Route::get('/evaluations/psle/zonalwise', [PsleEvaluationsController::class, 'zonalwise'])
     ->name('evaluations.psle.zonalwise');
+Route::get('/evaluations/psle/zonalwise/evaluation/{evaluation}', [PsleEvaluationsController::class, 'zonalwiseEvaluation'])
+    ->name('evaluations.psle.zonalwise.evaluation');
+Route::get('/evaluations/psle/zonalwise/evaluation/{evaluation}/export/{format}', [PsleEvaluationsController::class, 'zonalwiseEvaluationExport'])
+    ->name('evaluations.psle.zonalwise.evaluation.export');
 Route::get('/evaluations/psle/regionalwise', [PsleEvaluationsController::class, 'regionalwise'])
     ->name('evaluations.psle.regionalwise');
 Route::get('/evaluations/psle/regionalwise/{region}', [PsleEvaluationsController::class, 'regionalwiseRegion'])
