@@ -2596,8 +2596,6 @@ class PsleEvaluationsController extends Controller
             ['key' => 'least-ten-schools', 'label' => 'ZONAL LEAST TEN (10) SCHOOLS'],
             ['key' => 'ownership-result-evaluation', 'label' => 'ZONAL OWNERSHIP RESULT EVALUATION'],
             ['key' => 'subjectwise-result-evaluation', 'label' => 'ZONAL SUBJECTWISE RESULT EVALUATION'],
-            ['key' => 'mark-entry-status-report', 'label' => 'ZONAL MARK ENTRY STATUS REPORT'],
-            ['key' => 'regionalwise', 'label' => 'ZONAL REGIONALWISE EVALUATION'],
         ]);
     }
 
