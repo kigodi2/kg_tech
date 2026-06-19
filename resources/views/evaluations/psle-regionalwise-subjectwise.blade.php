@@ -320,16 +320,16 @@
                                 <td class="center-cell">{{ $row['code'] }}</td>
                                 <td class="subject-name-cell">{{ $row['name'] }}</td>
                                 <td class="center-cell">{{ $row['registered'] }}</td>
-                                <td class="numeric-cell">{{ $row['sat'] }}</td>
-                                <td class="numeric-cell">{{ $row['abs'] }}</td>
-                                <td class="numeric-cell">{{ $row['grade_a'] }}</td>
-                                <td class="numeric-cell">{{ $row['grade_b'] }}</td>
-                                <td class="numeric-cell">{{ $row['grade_c'] }}</td>
-                                <td class="numeric-cell">{{ $row['a_to_c'] }}</td>
-                                <td class="numeric-cell">{{ $row['grade_d'] }}</td>
-                                <td class="numeric-cell">{{ $row['a_to_d'] }}</td>
-                                <td class="numeric-cell">{{ $row['grade_e'] }}</td>
-                                <td class="numeric-cell">{{ number_format((float) $row['avg_marks'], 0) }}</td>
+                                <td class="center-cell">{{ $row['sat'] }}</td>
+                                <td class="center-cell">{{ $row['abs'] }}</td>
+                                <td class="center-cell">{{ $row['grade_a'] }}</td>
+                                <td class="center-cell">{{ $row['grade_b'] }}</td>
+                                <td class="center-cell">{{ $row['grade_c'] }}</td>
+                                <td class="center-cell">{{ $row['a_to_c'] }}</td>
+                                <td class="center-cell">{{ $row['grade_d'] }}</td>
+                                <td class="center-cell">{{ $row['a_to_d'] }}</td>
+                                <td class="center-cell">{{ $row['grade_e'] }}</td>
+                                <td class="center-cell">{{ number_format((float) $row['avg_marks'], 0) }}</td>
                                 <td class="center-cell">{{ $row['grade'] }}</td>
                                 <td class="competency-cell" style="background: {{ data_get($row, 'competence.color', '#fffde7') }};">{{ data_get($row, 'competence.label', '-') }}</td>
                             </tr>
