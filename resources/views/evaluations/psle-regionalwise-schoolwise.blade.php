@@ -3,29 +3,37 @@
 @section('content')
 @php
     $isZonalCouncilwiseEvaluation = ($tableMode ?? null) === 'zonal-councilwise';
+    $isZonalSchoolwiseEvaluation = ($tableMode ?? null) === 'zonal-schoolwise';
     $isOwnershipEvaluation = ($tableMode ?? null) === 'ownership' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'OWNERSHIP');
-    $isCouncilwiseEvaluation = !$isZonalCouncilwiseEvaluation && (($tableMode ?? null) === 'councilwise' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'COUNCIL'));
+    $isCouncilwiseEvaluation = !$isZonalCouncilwiseEvaluation && !$isZonalSchoolwiseEvaluation && (($tableMode ?? null) === 'councilwise' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'COUNCIL'));
     $isDistrictwiseEvaluation = ($tableMode ?? null) === 'districtwise' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'DISTRICT');
     $isGeneralEvaluation = ($tableMode ?? null) === 'general' || trim(strtoupper((string) ($evaluationLabel ?? ''))) === 'GENERAL EVALUATION';
     $isSchoolwiseEvaluation = ($tableMode ?? null) === 'schoolwise';
     $isRegionalwiseEvaluation = ($tableMode ?? null) === 'regionalwise';
-    $showSummaryBlock = in_array(($tableMode ?? null), ['schoolwise', 'councilwise', 'zonal-councilwise', 'districtwise', 'ownership', 'general', 'regionalwise'], true);
-    $hideSecondColumn = !$isZonalCouncilwiseEvaluation && ($isCouncilwiseEvaluation || $isDistrictwiseEvaluation || $isGeneralEvaluation || $isRegionalwiseEvaluation);
-    $primaryColumnLabel = $isZonalCouncilwiseEvaluation ? 'COUNCIL' : ($isOwnershipEvaluation ? 'OWNERSHIP' : ($isGeneralEvaluation ? 'SEX' : ($isDistrictwiseEvaluation ? 'DISTRICT' : ($isRegionalwiseEvaluation ? 'REGION' : 'COUNCIL'))));
-    $secondaryColumnLabel = $isZonalCouncilwiseEvaluation ? 'REGION' : ($isOwnershipEvaluation ? 'SCHOOLS' : 'SCHOOL');
-    $primaryColumnKey = $isZonalCouncilwiseEvaluation ? 'council' : ($isOwnershipEvaluation ? 'ownership' : ($isDistrictwiseEvaluation ? 'district' : ($isRegionalwiseEvaluation ? 'region' : 'council')));
-    $secondaryColumnKey = $isZonalCouncilwiseEvaluation ? 'region' : ($isOwnershipEvaluation ? 'schools_count' : 'school');
+    $showSummaryBlock = in_array(($tableMode ?? null), ['schoolwise', 'zonal-schoolwise', 'councilwise', 'zonal-councilwise', 'districtwise', 'ownership', 'general', 'regionalwise'], true);
+    $hideSecondColumn = !$isZonalCouncilwiseEvaluation && !$isZonalSchoolwiseEvaluation && ($isCouncilwiseEvaluation || $isDistrictwiseEvaluation || $isGeneralEvaluation || $isRegionalwiseEvaluation);
+    $showThirdColumn = $isZonalSchoolwiseEvaluation;
+    $primaryColumnLabel = $isZonalSchoolwiseEvaluation ? 'SCHOOL' : ($isZonalCouncilwiseEvaluation ? 'COUNCIL' : ($isOwnershipEvaluation ? 'OWNERSHIP' : ($isGeneralEvaluation ? 'SEX' : ($isDistrictwiseEvaluation ? 'DISTRICT' : ($isRegionalwiseEvaluation ? 'REGION' : 'COUNCIL')))));
+    $secondaryColumnLabel = $isZonalSchoolwiseEvaluation ? 'COUNCIL' : ($isZonalCouncilwiseEvaluation ? 'REGION' : ($isOwnershipEvaluation ? 'SCHOOLS' : 'SCHOOL'));
+    $thirdColumnLabel = 'REGION';
+    $primaryColumnKey = $isZonalSchoolwiseEvaluation ? 'school' : ($isZonalCouncilwiseEvaluation ? 'council' : ($isOwnershipEvaluation ? 'ownership' : ($isDistrictwiseEvaluation ? 'district' : ($isRegionalwiseEvaluation ? 'region' : 'council'))));
+    $secondaryColumnKey = $isZonalSchoolwiseEvaluation ? 'council' : ($isZonalCouncilwiseEvaluation ? 'region' : ($isOwnershipEvaluation ? 'schools_count' : 'school'));
+    $thirdColumnKey = 'region';
     $secondaryColumnAlign = $isOwnershipEvaluation ? 'text-center' : 'text-left';
-    $primaryColumnWidth = $isOwnershipEvaluation ? '168px' : '92px';
-    $secondaryColumnWidth = $isOwnershipEvaluation ? '64px' : null;
+    $primaryColumnWidth = ($isOwnershipEvaluation || $isZonalSchoolwiseEvaluation) ? '168px' : '92px';
+    $secondaryColumnWidth = $isOwnershipEvaluation ? '64px' : ($isZonalSchoolwiseEvaluation ? '120px' : null);
     $metricWidth = '38px';
     $summaryMetricWidth = '52px';
     $groupCount = $rows->count();
     $regionalAverage = null;
     $bestRow = null;
     $leastRow = null;
+    $tableColspan = $hideSecondColumn ? 33 : 34;
+    if ($showThirdColumn) {
+        $tableColspan++;
+    }
     $groupCountLabel = match (true) {
-        $isSchoolwiseEvaluation => 'TOTAL SCHOOLS',
+        $isSchoolwiseEvaluation || $isZonalSchoolwiseEvaluation => 'TOTAL SCHOOLS',
         $isZonalCouncilwiseEvaluation => 'TOTAL COUNCILS',
         $isCouncilwiseEvaluation => 'TOTAL COUNCILS',
         $isDistrictwiseEvaluation => 'TOTAL DISTRICTS',
@@ -36,6 +44,7 @@
     };
     $averageLabel = match (true) {
         $isSchoolwiseEvaluation => 'REGIONAL AVERAGE',
+        $isZonalSchoolwiseEvaluation => 'ZONAL AVERAGE',
         $isZonalCouncilwiseEvaluation => 'COUNCILWISE AVERAGE',
         $isCouncilwiseEvaluation => 'COUNCILWISE AVERAGE',
         $isDistrictwiseEvaluation => 'DISTRICTWISE AVERAGE',
@@ -45,7 +54,7 @@
         default => 'GROUP AVERAGE',
     };
     $averageColumnLabel = match (true) {
-        $isSchoolwiseEvaluation => 'SCHOOL AVERAGE',
+        $isSchoolwiseEvaluation || $isZonalSchoolwiseEvaluation => 'SCHOOL AVERAGE',
         $isZonalCouncilwiseEvaluation => 'COUNCIL AVERAGE',
         $isCouncilwiseEvaluation => 'COUNCIL AVERAGE',
         $isDistrictwiseEvaluation => 'DISTRICT AVERAGE',
@@ -55,7 +64,7 @@
         default => 'AVERAGE',
     };
     $bestLabel = match (true) {
-        $isSchoolwiseEvaluation => 'BEST SCHOOL',
+        $isSchoolwiseEvaluation || $isZonalSchoolwiseEvaluation => 'BEST SCHOOL',
         $isZonalCouncilwiseEvaluation => 'BEST COUNCIL',
         $isCouncilwiseEvaluation => 'BEST COUNCIL',
         $isDistrictwiseEvaluation => 'BEST DISTRICT',
@@ -65,7 +74,7 @@
         default => 'BEST GROUP',
     };
     $leastLabel = match (true) {
-        $isSchoolwiseEvaluation => 'LEAST SCHOOL',
+        $isSchoolwiseEvaluation || $isZonalSchoolwiseEvaluation => 'LEAST SCHOOL',
         $isZonalCouncilwiseEvaluation => 'LEAST COUNCIL',
         $isCouncilwiseEvaluation => 'LEAST COUNCIL',
         $isDistrictwiseEvaluation => 'LEAST DISTRICT',
@@ -115,7 +124,7 @@
     };
 
     if ($showSummaryBlock && $rows->isNotEmpty()) {
-        if ($isSchoolwiseEvaluation) {
+        if ($isSchoolwiseEvaluation || $isZonalSchoolwiseEvaluation) {
             $governmentSchoolCount = $rows->filter(fn ($row) => strtoupper((string) ($row['ownership'] ?? '')) === 'GOVERNMENT')->count();
             $nonGovernmentSchoolCount = $rows->filter(fn ($row) => strtoupper((string) ($row['ownership'] ?? '')) === 'NON-GOVERNMENT')->count();
         }
@@ -154,7 +163,7 @@
         $bestRow = $rows->sortBy('pos')->first();
         $leastRow = $rows->sortByDesc('pos')->first();
         $bestName = match (true) {
-            $isSchoolwiseEvaluation => $bestRow['school'] ?? '-',
+            $isSchoolwiseEvaluation || $isZonalSchoolwiseEvaluation => $bestRow['school'] ?? '-',
             $isZonalCouncilwiseEvaluation => $bestRow['council'] ?? '-',
             $isCouncilwiseEvaluation => $bestRow['council'] ?? '-',
             $isDistrictwiseEvaluation => $bestRow['district'] ?? '-',
@@ -164,7 +173,7 @@
             default => '-',
         };
         $leastName = match (true) {
-            $isSchoolwiseEvaluation => $leastRow['school'] ?? '-',
+            $isSchoolwiseEvaluation || $isZonalSchoolwiseEvaluation => $leastRow['school'] ?? '-',
             $isZonalCouncilwiseEvaluation => $leastRow['council'] ?? '-',
             $isCouncilwiseEvaluation => $leastRow['council'] ?? '-',
             $isDistrictwiseEvaluation => $leastRow['district'] ?? '-',
@@ -177,7 +186,7 @@
 
     $barcodePayload = sprintf(
         'PSLE-%s-%s-WEB',
-        substr((string) (preg_replace('/[^A-Z0-9]/', '', strtoupper((string) ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || !$region ? 'ZONAL' : ($region->name ?? 'REG')))) ?: 'REG'), 0, 3),
+        substr((string) (preg_replace('/[^A-Z0-9]/', '', strtoupper((string) ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation || !$region ? 'ZONAL' : ($region->name ?? 'REG')))) ?: 'REG'), 0, 3),
         now()->format('Ymd-His')
     );
     $barcodePatterns = [
@@ -212,8 +221,8 @@
 <div style="background-color: #B0E0E6; min-height: 100vh; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: 'Maiandra GD', sans-serif; font-weight: 700; white-space: nowrap;">
     <div style="width: min(94vw, 1700px); margin: 0 auto; padding: 0 0.35rem;">
         <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-            <a href="{{ ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation) ? route('evaluations.psle.zonalwise') : route('evaluations.psle.regionalwise.region', ['region' => $region->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
-                ← Back to {{ ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation) ? 'Zonalwise' : ($region ? strtoupper($region->name) : 'Zonalwise') }}
+            <a href="{{ ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation) ? route('evaluations.psle.zonalwise') : route('evaluations.psle.regionalwise.region', ['region' => $region->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
+                ← Back to {{ ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation) ? 'Zonalwise' : ($region ? strtoupper($region->name) : 'Zonalwise') }}
             </a>
 
             <a href="{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}"
@@ -235,7 +244,7 @@
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.2rem; font-weight: bold; color: #f5d000; line-height: 1.25;">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #ffffff; line-height: 1.25;">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #f5d000; line-height: 1.25;">
-                        @if($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation)
+                        @if($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation)
                             {{ strtoupper($evaluationLabel ?? 'PSLE ZONAL EVALUATION') }} - {{ $examYearValue }}
                         @else
                             PSLE REGIONAL EVALUATIONS - {{ $examYearValue }} - {{ strtoupper($region->name) }}
@@ -266,7 +275,7 @@
         @if($showSummaryBlock)
             <div style="padding: 0.2rem 0.35rem 0.35rem 0.35rem; color: #000080;">
                 <div style="font-size: 1rem; line-height: 1.35; white-space: normal;">
-                    @if($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation)
+                    @if($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || $isZonalSchoolwiseEvaluation)
                         <p style="margin: 0 0 0.2rem 0;">ZONE: TASIDO</p>
                     @else
                         <p style="margin: 0 0 0.2rem 0;">REGION: {{ strtoupper($region->name) }}</p>
@@ -274,7 +283,7 @@
                     @if(!empty($zonalRank['position']) && !empty($zonalRank['total']))
                         <p style="margin: 0 0 0.2rem 0;">ZONAL RANK: {{ $zonalRank['position'] }} OUT OF {{ $zonalRank['total'] }}</p>
                     @endif
-                    <p style="margin: 0 0 0.2rem 0;">{{ $groupCountLabel }}: {{ number_format($groupCount) }}@if($isSchoolwiseEvaluation) (GOVERNMENT: {{ number_format($governmentSchoolCount) }}, NON-GOVERNMENT: {{ number_format($nonGovernmentSchoolCount) }})@endif</p>
+                    <p style="margin: 0 0 0.2rem 0;">{{ $groupCountLabel }}: {{ number_format($groupCount) }}@if($isSchoolwiseEvaluation || $isZonalSchoolwiseEvaluation) (GOVERNMENT: {{ number_format($governmentSchoolCount) }}, NON-GOVERNMENT: {{ number_format($nonGovernmentSchoolCount) }})@endif</p>
                     <p style="margin: 0 0 0.2rem 0;">TOTAL REGISTERED CANDIDATES: {{ number_format((int) data_get($total ?? [], 'registered.t', 0)) }} (F: {{ number_format((int) data_get($total ?? [], 'registered.f', 0)) }}, M: {{ number_format((int) data_get($total ?? [], 'registered.m', 0)) }})</p>
                     <p style="margin: 0 0 0.2rem 0;">TOTAL SAT CANDIDATES: {{ number_format((int) data_get($total ?? [], 'sat.t', 0)) }} (F: {{ number_format((int) data_get($total ?? [], 'sat.f', 0)) }}, M: {{ number_format((int) data_get($total ?? [], 'sat.m', 0)) }}) | TOTAL ABSENT CANDIDATES: {{ number_format((int) data_get($total ?? [], 'absent.t', 0)) }} (F: {{ number_format((int) data_get($total ?? [], 'absent.f', 0)) }}, M: {{ number_format((int) data_get($total ?? [], 'absent.m', 0)) }}) | TOTAL CANDIDATES WITH INCOMPLETES: {{ number_format((int) data_get($total ?? [], 'inc.t', 0)) }} (F: {{ number_format((int) data_get($total ?? [], 'inc.f', 0)) }}, M: {{ number_format((int) data_get($total ?? [], 'inc.m', 0)) }})</p>
                     <p style="margin: 0 0 0.2rem 0;">PASS RATE (A-C): {{ number_format((float) data_get($total ?? [], 'pass_ac.pct', 0), 2) }}% | PASS RATE (A-D): {{ number_format((float) data_get($total ?? [], 'pass_ad.pct', 0), 2) }}%</p>
@@ -290,14 +299,17 @@
                 <table style="width: max-content; min-width: 100%; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
                     <thead>
                         <tr style="background-color: #003366;">
-                            <th colspan="{{ $hideSecondColumn ? 33 : 34 }}" style="border: 1px solid #999; padding: 0.18rem 0.25rem; font-size: 0.92rem; font-weight: bold; text-align: left; color: #FFFFFF;">{{ strtoupper($evaluationLabel) }}</th>
+                            <th colspan="{{ $tableColspan }}" style="border: 1px solid #999; padding: 0.18rem 0.25rem; font-size: 0.92rem; font-weight: bold; text-align: left; color: #FFFFFF;">{{ strtoupper($evaluationLabel) }}</th>
                         </tr>
                         <tr style="background-color: #003366; color: #FFFFFF;">
                             <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.12rem; text-align: center; font-size: 0.84rem; line-height: 1.05; width: 28px; min-width: 28px; max-width: 28px;">S/N</th>
-                            <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: left; font-size: 0.84rem; line-height: 1.05; width: {{ $primaryColumnWidth }}; min-width: {{ $primaryColumnWidth }}; max-width: {{ $primaryColumnWidth }};">{{ $primaryColumnLabel }}</th>
+                            <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.18rem; text-align: left; font-size: 0.84rem; line-height: 1.05; min-width: {{ $primaryColumnWidth }};">{{ $primaryColumnLabel }}</th>
                             @unless($hideSecondColumn)
-                                <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.16rem; text-align: {{ $isOwnershipEvaluation ? 'center' : 'left' }}; font-size: 0.84rem; line-height: 1.05; @if($secondaryColumnWidth) width: {{ $secondaryColumnWidth }}; min-width: {{ $secondaryColumnWidth }}; max-width: {{ $secondaryColumnWidth }}; @endif">{{ $secondaryColumnLabel }}</th>
+                                <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.16rem; text-align: {{ $isOwnershipEvaluation ? 'center' : 'left' }}; font-size: 0.84rem; line-height: 1.05; @if($secondaryColumnWidth) min-width: {{ $secondaryColumnWidth }}; @endif">{{ $secondaryColumnLabel }}</th>
                             @endunless
+                            @if($showThirdColumn)
+                                <th rowspan="2" style="border: 1px solid #999; padding: 0.14rem 0.16rem; text-align: left; font-size: 0.84rem; line-height: 1.05; min-width: 120px;">{{ $thirdColumnLabel }}</th>
+                            @endif
                                 <th colspan="3" style="border: 1px solid #999; padding: 0.14rem 0.22rem; text-align: center; font-size: 0.84rem; line-height: 1.05;">REGISTERED</th>
                                 <th colspan="4" style="border: 1px solid #999; padding: 0.14rem 0.22rem; text-align: center; font-size: 0.84rem; line-height: 1.05;">ABSENT</th>
                                 <th colspan="4" style="border: 1px solid #999; padding: 0.14rem 0.22rem; text-align: center; font-size: 0.84rem; line-height: 1.05;">SAT</th>
@@ -336,10 +348,13 @@
                         @forelse($rows as $index => $row)
                             <tr>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.08rem; text-align: center; font-size: 0.82rem; line-height: 1.05; width: 28px; min-width: 28px; max-width: 28px;">{{ $index + 1 }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: left; font-size: 0.82rem; line-height: 1.05; width: {{ $primaryColumnWidth }}; min-width: {{ $primaryColumnWidth }}; max-width: {{ $primaryColumnWidth }};">{{ $row[$primaryColumnKey] }}</td>
+                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: left; font-size: 0.82rem; line-height: 1.05; min-width: {{ $primaryColumnWidth }};">{{ $row[$primaryColumnKey] }}</td>
                                 @unless($hideSecondColumn)
-                                    <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: {{ $isOwnershipEvaluation ? 'center' : 'left' }}; font-size: 0.82rem; line-height: 1.05; @if($secondaryColumnWidth) width: {{ $secondaryColumnWidth }}; min-width: {{ $secondaryColumnWidth }}; max-width: {{ $secondaryColumnWidth }}; @endif">{{ $row[$secondaryColumnKey] }}</td>
+                                    <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: {{ $isOwnershipEvaluation ? 'center' : 'left' }}; font-size: 0.82rem; line-height: 1.05; @if($secondaryColumnWidth) min-width: {{ $secondaryColumnWidth }}; @endif">{{ $row[$secondaryColumnKey] }}</td>
                                 @endunless
+                                @if($showThirdColumn)
+                                    <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: left; font-size: 0.82rem; line-height: 1.05; min-width: 120px;">{{ $row[$thirdColumnKey] }}</td>
+                                @endif
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['m'] }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['f'] }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['t'] }}</td>
@@ -374,16 +389,19 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ $hideSecondColumn ? 33 : 34 }}" style="border: 1px solid #999; padding: 1rem; text-align: center;">No PSLE regional evaluation rows are available for this category yet.</td>
+                                <td colspan="{{ $tableColspan }}" style="border: 1px solid #999; padding: 1rem; text-align: center;">No PSLE regional evaluation rows are available for this category yet.</td>
                             </tr>
                         @endforelse
                         @if($rows->isNotEmpty() && isset($total))
                             <tr style="background-color: #cbd5e1; font-weight: bold; border-top: 2px solid #666; border-bottom: 2px solid #666;">
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.08rem; text-align: center; font-size: 0.82rem; line-height: 1.05; width: 28px; min-width: 28px; max-width: 28px;">&nbsp;</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: left; font-size: 0.82rem; line-height: 1.05; width: {{ $primaryColumnWidth }}; min-width: {{ $primaryColumnWidth }}; max-width: {{ $primaryColumnWidth }};">TOTAL</td>
+                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: left; font-size: 0.82rem; line-height: 1.05; min-width: {{ $primaryColumnWidth }};">TOTAL</td>
                                 @unless($hideSecondColumn)
-                                    <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: center; font-size: 0.82rem; line-height: 1.05; @if($secondaryColumnWidth) width: {{ $secondaryColumnWidth }}; min-width: {{ $secondaryColumnWidth }}; max-width: {{ $secondaryColumnWidth }}; @endif">&nbsp;</td>
+                                    <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: center; font-size: 0.82rem; line-height: 1.05; @if($secondaryColumnWidth) min-width: {{ $secondaryColumnWidth }}; @endif">&nbsp;</td>
                                 @endunless
+                                @if($showThirdColumn)
+                                    <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: center; font-size: 0.82rem; line-height: 1.05; min-width: 120px;">&nbsp;</td>
+                                @endif
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ data_get($total, 'registered.m', 0) }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ data_get($total, 'registered.f', 0) }}</td>
                                 <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ data_get($total, 'registered.t', 0) }}</td>

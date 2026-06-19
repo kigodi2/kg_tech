@@ -67,7 +67,7 @@ class PsleEvaluationsController extends Controller
 
         $entries = $this->zonalEvaluationEntries()->map(fn (array $evaluation) => [
             'label' => $evaluation['label'],
-            'url' => in_array($evaluation['key'], ['general', 'regionalwise', 'councilwise'], true)
+            'url' => in_array($evaluation['key'], ['general', 'regionalwise', 'councilwise', 'schoolwise'], true)
                 ? route('evaluations.psle.zonalwise.evaluation', ['evaluation' => $evaluation['key']])
                 : '#',
         ]);
@@ -216,6 +216,17 @@ class PsleEvaluationsController extends Controller
                     'rows' => $rows,
                     'total' => $total,
                     'tableMode' => 'zonal-councilwise',
+                    'zonalRank' => null,
+                ]);
+            case 'schoolwise':
+                [$rows, $total] = $this->buildZonalSchoolwiseGroupedRows($examYearValue);
+                return view('evaluations.psle-regionalwise-schoolwise', [
+                    'region' => null,
+                    'evaluationLabel' => 'ZONAL SCHOOLWISE EVALUATION',
+                    'examYearValue' => $examYearValue,
+                    'rows' => $rows,
+                    'total' => $total,
+                    'tableMode' => 'zonal-schoolwise',
                     'zonalRank' => null,
                 ]);
         }
@@ -1219,6 +1230,68 @@ class PsleEvaluationsController extends Controller
         return [$sortedRows, $total];
     }
 
+    private function buildZonalSchoolwiseGroupedRows(int $examYearValue): array
+    {
+        $regions = Region::query()
+            ->whereIn(DB::raw('upper(name)'), ['TABORA', 'SINGIDA', 'IRINGA', 'DODOMA'])
+            ->get();
+
+        $allRows = collect();
+
+        foreach ($regions as $region) {
+            $candidateRows = $this->regionalCandidateRows($region, $examYearValue, true, 'zonal-schoolwise');
+            [$rows] = $this->buildGroupedRows($candidateRows, 'zonal-schoolwise');
+            
+            if ($rows->isNotEmpty()) {
+                $allRows = $allRows->merge($rows);
+            }
+            
+            unset($candidateRows, $rows);
+            gc_collect_cycles();
+        }
+
+        $sortedRows = $allRows->sort(function (array $left, array $right) {
+            $leftAvg = $left['avg_marks'] ?? -INF;
+            $rightAvg = $right['avg_marks'] ?? -INF;
+            if ($leftAvg !== $rightAvg) {
+                return $rightAvg <=> $leftAvg;
+            }
+
+            $leftGpa = $left['gpa'] ?? INF;
+            $rightGpa = $right['gpa'] ?? INF;
+            if ($leftGpa !== $rightGpa) {
+                return $leftGpa <=> $rightGpa;
+            }
+
+            $leftPass = $left['pass_ac']['t'] ?? 0;
+            $rightPass = $right['pass_ac']['t'] ?? 0;
+            if ($leftPass !== $rightPass) {
+                return $rightPass <=> $leftPass;
+            }
+
+            $leftSchoolName = strtoupper((string) ($left['school'] ?? ''));
+            $rightSchoolName = strtoupper((string) ($right['school'] ?? ''));
+            if ($leftSchoolName !== $rightSchoolName) {
+                return strcmp($leftSchoolName, $rightSchoolName);
+            }
+
+            $leftCouncilName = strtoupper((string) ($left['council'] ?? ''));
+            $rightCouncilName = strtoupper((string) ($right['council'] ?? ''));
+            if ($leftCouncilName !== $rightCouncilName) {
+                return strcmp($leftCouncilName, $rightCouncilName);
+            }
+
+            $leftRegionName = strtoupper((string) ($left['region'] ?? ''));
+            $rightRegionName = strtoupper((string) ($right['region'] ?? ''));
+            return strcmp($leftRegionName, $rightRegionName);
+        })->values();
+
+        $sortedRows = $this->applyPositions($sortedRows);
+        $total = $this->summariseGroupedRows($sortedRows);
+
+        return [$sortedRows, $total];
+    }
+
 
     private function zonalCandidateRows(int $examYearValue, bool $lightweight = false, string $mode = ''): Collection
     {
@@ -1467,6 +1540,12 @@ class PsleEvaluationsController extends Controller
                 $selectCols[] = 'dc.id as council_id';
                 $selectCols[] = 'dc.name as council_name';
                 $selectCols[] = 'd.name as district_name';
+            } elseif ($mode === 'zonal-schoolwise') {
+                $selectCols[] = 'r.id as region_id';
+                $selectCols[] = 'r.name as region_name';
+                $selectCols[] = 'dc.id as council_id';
+                $selectCols[] = 'dc.name as council_name';
+                $selectCols[] = 's.name as school_name';
             } elseif ($mode === 'districtwise') {
                 $selectCols[] = 'd.name as district_name';
                 $selectCols[] = 'd.code as district_code';
@@ -1555,9 +1634,11 @@ class PsleEvaluationsController extends Controller
                     'candidate_pk' => (int) $candidate->candidate_pk,
                     'gender' => strtoupper(trim((string) ($candidate->gender ?? ''))),
                     'school_id' => (int) $candidate->school_id,
-                    'council' => ($mode === 'councilwise' || $mode === 'zonal-councilwise') ? strtoupper(trim((string) ($candidate->council_name ?? $candidate->district_name ?? '-'))) : '-',
+                    'school' => $mode === 'zonal-schoolwise' ? strtoupper(trim((string) ($candidate->school_name ?? '-'))) : '-',
+                    'school_name' => $mode === 'zonal-schoolwise' ? strtoupper(trim((string) ($candidate->school_name ?? '-'))) : '-',
+                    'council' => ($mode === 'councilwise' || $mode === 'zonal-councilwise' || $mode === 'zonal-schoolwise') ? strtoupper(trim((string) ($candidate->council_name ?? $candidate->district_name ?? '-'))) : '-',
                     'council_id' => isset($candidate->council_id) ? (int) $candidate->council_id : null,
-                    'region' => ($mode === 'councilwise' || $mode === 'zonal-councilwise') ? strtoupper(trim((string) ($candidate->region_name ?? '-'))) : '-',
+                    'region' => ($mode === 'councilwise' || $mode === 'zonal-councilwise' || $mode === 'zonal-schoolwise') ? strtoupper(trim((string) ($candidate->region_name ?? '-'))) : '-',
                     'region_id' => isset($candidate->region_id) ? (int) $candidate->region_id : null,
                     'district' => $mode === 'districtwise' ? strtoupper(trim(((string) ($candidate->district_code ?? '')) . ' - ' . ((string) ($candidate->district_name ?? '')))) : '-',
                     'ownership' => strtoupper(trim((string) ($candidate->ownership ?? 'UNKNOWN'))) ?: 'UNKNOWN',
@@ -1648,6 +1729,7 @@ class PsleEvaluationsController extends Controller
                 'general' => strtoupper((string) ($candidate['gender'] ?? '')) === 'F' ? 'F' : 'M',
                 'councilwise' => (string) ($candidate['council'] ?? '-'),
                 'zonal-councilwise' => ((string) ($candidate['region_id'] ?? '0')) . '-' . ((string) ($candidate['council_id'] ?? '0')),
+                'zonal-schoolwise' => (string) ($candidate['school_id'] ?? '0'),
                 'districtwise' => (string) ($candidate['district'] ?? '-'),
                 'ownership' => (string) ($candidate['ownership'] ?? 'UNKNOWN'),
                 'regionalwise' => (string) ($candidate['region'] ?? '-'),
@@ -1662,6 +1744,17 @@ class PsleEvaluationsController extends Controller
                 $councilVal = strtoupper(trim((string) ($candidate['council'] ?? '')));
                 $regionVal = strtoupper(trim((string) ($candidate['region'] ?? '')));
                 if (in_array($councilVal, ['-', '', 'UNKNOWN', 'UNASSIGNED'], true) || in_array($regionVal, ['-', '', 'UNKNOWN', 'UNASSIGNED'], true)) {
+                    continue;
+                }
+            }
+
+            if ($mode === 'zonal-schoolwise') {
+                $schoolVal = strtoupper(trim((string) ($candidate['school'] ?? '')));
+                $councilVal = strtoupper(trim((string) ($candidate['council'] ?? '')));
+                $regionVal = strtoupper(trim((string) ($candidate['region'] ?? '')));
+                if (in_array($schoolVal, ['-', '', 'UNKNOWN', 'UNASSIGNED'], true) ||
+                    in_array($councilVal, ['-', '', 'UNKNOWN', 'UNASSIGNED'], true) ||
+                    in_array($regionVal, ['-', '', 'UNKNOWN', 'UNASSIGNED'], true)) {
                     continue;
                 }
             }
@@ -2188,7 +2281,7 @@ class PsleEvaluationsController extends Controller
 
     private function groupedAverageStats(array $row, int $registeredTotal, string $mode): array
     {
-        if ($mode === 'schoolwise') {
+        if ($mode === 'schoolwise' || $mode === 'zonal-schoolwise') {
             $average = $registeredTotal > 0
                 ? round(((float) ($row['total_marks_sum'] ?? 0)) / $registeredTotal, 4)
                 : null;
@@ -2267,6 +2360,7 @@ class PsleEvaluationsController extends Controller
             'general' => strtoupper((string) ($candidate['gender'] ?? '')) === 'F' ? 'FEMALE' : 'MALE',
             'councilwise' => (string) ($candidate['council'] ?? '-'),
             'zonal-councilwise' => (string) ($candidate['council'] ?? '-'),
+            'zonal-schoolwise' => (string) ($candidate['school'] ?? '-'),
             'districtwise' => (string) ($candidate['district'] ?? '-'),
             'ownership' => (string) ($candidate['ownership'] ?? 'UNKNOWN'),
             'regionalwise' => (string) ($candidate['region'] ?? '-'),
@@ -2274,6 +2368,7 @@ class PsleEvaluationsController extends Controller
         };
 
         return [
+            'school_id' => isset($candidate['school_id']) ? (int) $candidate['school_id'] : null,
             'council' => $mode === 'general' ? $label : (string) ($candidate['council'] ?? '-'),
             'council_id' => isset($candidate['council_id']) ? (int) $candidate['council_id'] : null,
             'district' => (string) ($candidate['district'] ?? '-'),
@@ -2281,7 +2376,7 @@ class PsleEvaluationsController extends Controller
             'school' => (string) ($candidate['school'] ?? '-'),
             'region' => (string) ($candidate['region'] ?? '-'),
             'region_id' => isset($candidate['region_id']) ? (int) $candidate['region_id'] : null,
-            'sort_label' => $mode === 'schoolwise'
+            'sort_label' => ($mode === 'schoolwise' || $mode === 'zonal-schoolwise')
                 ? (string) ($candidate['school'] ?? '-')
                 : ($mode === 'ownership' ? (string) ($candidate['ownership'] ?? 'UNKNOWN') : $label),
             'registered' => ['m' => 0, 'f' => 0, 't' => 0],
