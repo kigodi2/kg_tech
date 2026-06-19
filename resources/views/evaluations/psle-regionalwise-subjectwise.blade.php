@@ -203,32 +203,32 @@
                         </tr>
                         <tr style="background-color: #003366; color: #FFFFFF;">
                             <th style="text-align: center;">SEX</th>
-                            <th style="text-align: right;">REGIST</th>
-                            <th style="text-align: right;">SAT</th>
-                            <th style="text-align: right;">A</th>
-                            <th style="text-align: right;">B</th>
-                            <th style="text-align: right;">C</th>
-                            <th style="text-align: right;">D</th>
-                            <th style="text-align: right;">E</th>
-                            <th style="text-align: right;">INC</th>
-                            <th style="text-align: right;">ABS</th>
-                            <th style="text-align: right;">CLEAN</th>
+                            <th style="text-align: center;">REGIST</th>
+                            <th style="text-align: center;">SAT</th>
+                            <th style="text-align: center;">A</th>
+                            <th style="text-align: center;">B</th>
+                            <th style="text-align: center;">C</th>
+                            <th style="text-align: center;">D</th>
+                            <th style="text-align: center;">E</th>
+                            <th style="text-align: center;">INC</th>
+                            <th style="text-align: center;">ABS</th>
+                            <th style="text-align: center;">CLEAN</th>
                         </tr>
                     </thead>
                     <tbody style="background-color: LIGHTYELLOW; color: #000080;">
                         @foreach(['F', 'M', 'T'] as $sex)
                             <tr>
                                 <td style="text-align: center; font-weight: bold;">{{ $sex }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.REGIST', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.SAT', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.A', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.B', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.C', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.D', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.E', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.INC', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.ABS', 0) }}</td>
-                                <td style="text-align: right;" class="numeric-cell">{{ data_get($gradeSummary, $sex.'.CLEAN', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.REGIST', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.SAT', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.A', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.B', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.C', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.D', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.E', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.INC', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.ABS', 0) }}</td>
+                                <td style="text-align: center;">{{ data_get($gradeSummary, $sex.'.CLEAN', 0) }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -319,7 +319,7 @@
                             <tr>
                                 <td class="center-cell">{{ $row['code'] }}</td>
                                 <td class="subject-name-cell">{{ $row['name'] }}</td>
-                                <td class="numeric-cell">{{ $row['registered'] }}</td>
+                                <td class="center-cell">{{ $row['registered'] }}</td>
                                 <td class="numeric-cell">{{ $row['sat'] }}</td>
                                 <td class="numeric-cell">{{ $row['abs'] }}</td>
                                 <td class="numeric-cell">{{ $row['grade_a'] }}</td>
