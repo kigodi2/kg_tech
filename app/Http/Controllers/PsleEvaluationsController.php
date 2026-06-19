@@ -65,9 +65,11 @@ class PsleEvaluationsController extends Controller
             $this->checkPublicationStatus($examYearValue);
         }
 
-        $entries = $this->zonalEvaluationEntries()->map(fn (string $label) => [
-            'label' => $label,
-            'url' => '#',
+        $entries = $this->zonalEvaluationEntries()->map(fn (array $evaluation) => [
+            'label' => $evaluation['label'],
+            'url' => in_array($evaluation['key'], ['general', 'regionalwise', 'councilwise'], true)
+                ? route('evaluations.psle.zonalwise.evaluation', ['evaluation' => $evaluation['key']])
+                : '#',
         ]);
 
         $meta = $this->baseMeta([
@@ -175,8 +177,216 @@ class PsleEvaluationsController extends Controller
         ]);
     }
 
+    public function zonalwiseEvaluation(Request $request, string $evaluation)
+    {
+        @ini_set('memory_limit', '2048M');
+        $examYearValue = $this->activeYear();
+
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYearValue);
+        }
+
+        $evaluationMap = $this->zonalEvaluationEntries()->keyBy('key');
+        abort_unless($evaluationMap->has($evaluation), 404);
+
+        if (strtolower((string) $request->query('export')) === 'pdf') {
+            return $this->zonalwiseEvaluationExport($request, $evaluation, 'pdf');
+        }
+        $label = (string) data_get($evaluationMap->get($evaluation), 'label', 'PSLE ZONAL EVALUATION');
+
+        switch ($evaluation) {
+            case 'general':
+            case 'regionalwise':
+                [$rows, $total] = $this->buildZonalRegionalwiseGroupedRows($examYearValue);
+                return view('evaluations.psle-regionalwise-schoolwise', [
+                    'region' => null,
+                    'evaluationLabel' => $label,
+                    'examYearValue' => $examYearValue,
+                    'rows' => $rows,
+                    'total' => $total,
+                    'tableMode' => 'regionalwise',
+                    'zonalRank' => [],
+                ]);
+            case 'councilwise':
+                [$rows, $total] = $this->buildZonalCouncilwiseGroupedRows($examYearValue);
+                return view('evaluations.psle-regionalwise-schoolwise', [
+                    'region' => null,
+                    'evaluationLabel' => 'ZONAL COUNCILWISE EVALUATION',
+                    'examYearValue' => $examYearValue,
+                    'rows' => $rows,
+                    'total' => $total,
+                    'tableMode' => 'zonal-councilwise',
+                    'zonalRank' => null,
+                ]);
+        }
+
+        abort(404);
+    }
+
+    public function zonalwiseEvaluationExport(Request $request, string $evaluation, string $format)
+    {
+        @ini_set('memory_limit', '2048M');
+        abort_unless(in_array($format, ['pdf', 'xlsx'], true), 404);
+
+        $examYearValue = $this->activeYear();
+
+        if (!(auth()->check() && auth()->user()->is_admin)) {
+            $this->checkPublicationStatus($examYearValue);
+        }
+
+        $evaluationMap = $this->zonalEvaluationEntries()->keyBy('key');
+        abort_unless($evaluationMap->has($evaluation), 404);
+        $label = (string) data_get($evaluationMap->get($evaluation), 'label', 'PSLE ZONAL EVALUATION');
+
+        if (in_array($evaluation, ['general', 'regionalwise'], true)) {
+            abort_unless($format === 'pdf', 404);
+            $filename = 'psle_zonal_' . $evaluation . '_' . $examYearValue . '.pdf';
+            $tempPath = tempnam(sys_get_temp_dir(), 'psle_zonal_grouped_eval_');
+            if ($tempPath === false) {
+                abort(500, 'Unable to prepare PDF export file.');
+            }
+
+            $pdfPath = $tempPath . '.pdf';
+            @rename($tempPath, $pdfPath);
+
+            [$rows, $total] = $this->buildZonalRegionalwiseGroupedRows($examYearValue);
+
+            $bestRow = $rows->sortBy('pos')->first();
+            $leastRow = $rows->sortByDesc('pos')->first();
+
+            $summary = [
+                'region_name' => 'TASIDO ZONE',
+                'zonal_rank' => [],
+                'group_count_label' => 'TOTAL REGIONS',
+                'group_count' => $rows->count(),
+                'government_school_count' => 0,
+                'non_government_school_count' => 0,
+                'registered' => $total['registered'] ?? ['m' => 0, 'f' => 0, 't' => 0],
+                'sat' => $total['sat'] ?? ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                'absent' => $total['absent'] ?? ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                'inc' => $total['inc'] ?? ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                'pass_ac_pct' => (float) data_get($total, 'pass_ac.pct', 0),
+                'pass_ad_pct' => (float) data_get($total, 'pass_ad.pct', 0),
+                'average_label' => 'REGIONALWISE AVERAGE',
+                'regional_average' => $this->groupedAverage($rows),
+                'regional_average_badge' => $this->averageBadgeData($this->groupedAverage($rows)),
+                'best_label' => 'BEST REGION',
+                'best_name' => $bestRow['region'] ?? '-',
+                'best_average' => $bestRow['avg_marks'] ?? null,
+                'best_average_badge' => $this->averageBadgeData($bestRow['avg_marks'] ?? null),
+                'best_pos' => $bestRow['pos'] ?? null,
+                'least_label' => 'LEAST REGION',
+                'least_name' => $leastRow['region'] ?? '-',
+                'least_average' => $leastRow['avg_marks'] ?? null,
+                'least_average_badge' => $this->averageBadgeData($leastRow['avg_marks'] ?? null),
+                'least_pos' => $leastRow['pos'] ?? null,
+                'is_schoolwise' => false,
+            ];
+
+            $options = [
+                'first_column_label' => 'REGION',
+                'first_column_key' => 'region',
+                'first_column_width' => 86,
+                'hide_second_column' => true,
+                'metric_width' => 8.0,
+                'average_width' => 20,
+                'gpa_width' => 20,
+                'pos_width' => 10,
+                'summary' => $summary,
+            ];
+
+            app(\App\Services\Results\PsleRegionalSchoolwiseFpdfService::class)
+                ->generate(
+                    (object) ['name' => 'TASIDO ZONE'],
+                    $examYearValue,
+                    $rows->all(),
+                    $total,
+                    $pdfPath,
+                    $label,
+                    $options
+                );
+
+            return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+        } elseif ($evaluation === 'councilwise') {
+            abort_unless($format === 'pdf', 404);
+            $filename = 'psle_zonal_' . $evaluation . '_' . $examYearValue . '.pdf';
+            $tempPath = tempnam(sys_get_temp_dir(), 'psle_zonal_grouped_eval_');
+            if ($tempPath === false) {
+                abort(500, 'Unable to prepare PDF export file.');
+            }
+
+            $pdfPath = $tempPath . '.pdf';
+            @rename($tempPath, $pdfPath);
+
+            [$rows, $total] = $this->buildZonalCouncilwiseGroupedRows($examYearValue);
+
+            $bestRow = $rows->sortBy('pos')->first();
+            $leastRow = $rows->sortByDesc('pos')->first();
+
+            $summary = [
+                'region_name' => 'TASIDO ZONE',
+                'zonal_rank' => [],
+                'group_count_label' => 'TOTAL COUNCILS',
+                'group_count' => $rows->count(),
+                'government_school_count' => 0,
+                'non_government_school_count' => 0,
+                'registered' => $total['registered'] ?? ['m' => 0, 'f' => 0, 't' => 0],
+                'sat' => $total['sat'] ?? ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                'absent' => $total['absent'] ?? ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                'inc' => $total['inc'] ?? ['m' => 0, 'f' => 0, 't' => 0, 'pct' => 0.0],
+                'pass_ac_pct' => (float) data_get($total, 'pass_ac.pct', 0),
+                'pass_ad_pct' => (float) data_get($total, 'pass_ad.pct', 0),
+                'average_label' => 'COUNCILWISE AVERAGE',
+                'regional_average' => $this->groupedAverage($rows),
+                'regional_average_badge' => $this->averageBadgeData($this->groupedAverage($rows)),
+                'best_label' => 'BEST COUNCIL',
+                'best_name' => $bestRow['council'] ?? '-',
+                'best_average' => $bestRow['avg_marks'] ?? null,
+                'best_average_badge' => $this->averageBadgeData($bestRow['avg_marks'] ?? null),
+                'best_pos' => $bestRow['pos'] ?? null,
+                'least_label' => 'LEAST COUNCIL',
+                'least_name' => $leastRow['council'] ?? '-',
+                'least_average' => $leastRow['avg_marks'] ?? null,
+                'least_average_badge' => $this->averageBadgeData($leastRow['avg_marks'] ?? null),
+                'least_pos' => $leastRow['pos'] ?? null,
+                'is_schoolwise' => false,
+            ];
+
+            $options = [
+                'first_column_label' => 'COUNCIL',
+                'first_column_key' => 'council',
+                'first_column_width' => 34,
+                'second_column_label' => 'REGION',
+                'second_column_key' => 'region',
+                'second_column_width' => 52,
+                'hide_second_column' => false,
+                'metric_width' => 8.0,
+                'average_width' => 20,
+                'gpa_width' => 20,
+                'pos_width' => 10,
+                'summary' => $summary,
+            ];
+
+            app(\App\Services\Results\PsleRegionalSchoolwiseFpdfService::class)
+                ->generate(
+                    (object) ['name' => 'TASIDO ZONE'],
+                    $examYearValue,
+                    $rows->all(),
+                    $total,
+                    $pdfPath,
+                    $label,
+                    $options
+                );
+
+            return response()->download($pdfPath, $filename)->deleteFileAfterSend(true);
+        }
+
+        abort(404);
+    }
+
     public function regionalwiseEvaluation(Request $request, Region $region, string $evaluation)
     {
+        @ini_set('memory_limit', '2048M');
         $examYearValue = $this->activeYear();
 
         if (!(auth()->check() && auth()->user()->is_admin)) {
@@ -368,6 +578,7 @@ class PsleEvaluationsController extends Controller
 
     public function regionalwiseEvaluationExport(Request $request, Region $region, string $evaluation, string $format)
     {
+        @ini_set('memory_limit', '2048M');
         abort_unless(in_array($format, ['pdf', 'xlsx'], true), 404);
 
         $examYearValue = $this->activeYear();
@@ -898,6 +1109,319 @@ class PsleEvaluationsController extends Controller
         }
     }
 
+    private function buildZonalRegionalwiseGroupedRows(int $examYearValue): array
+    {
+        $regions = Region::query()
+            ->whereIn(DB::raw('upper(name)'), ['TABORA', 'SINGIDA', 'IRINGA', 'DODOMA'])
+            ->get();
+
+        $allRows = collect();
+
+        foreach ($regions as $region) {
+            $candidateRows = $this->regionalCandidateRows($region, $examYearValue)->map(function (array $row) use ($region) {
+                $row['region'] = strtoupper($region->name);
+                return $row;
+            });
+            [$rows] = $this->buildGroupedRows($candidateRows, 'regionalwise');
+            
+            if ($rows->isNotEmpty()) {
+                $allRows = $allRows->merge($rows);
+            }
+            
+            unset($candidateRows, $rows);
+            gc_collect_cycles();
+        }
+
+        $sortedRows = $allRows->sort(function (array $left, array $right) {
+            $leftAvg = $left['avg_marks'] ?? -INF;
+            $rightAvg = $right['avg_marks'] ?? -INF;
+            if ($leftAvg !== $rightAvg) {
+                return $rightAvg <=> $leftAvg;
+            }
+
+            $leftGpa = $left['gpa'] ?? INF;
+            $rightGpa = $right['gpa'] ?? INF;
+            if ($leftGpa !== $rightGpa) {
+                return $leftGpa <=> $rightGpa;
+            }
+
+            $leftPass = $left['pass_ac']['t'] ?? 0;
+            $rightPass = $right['pass_ac']['t'] ?? 0;
+            if ($leftPass !== $rightPass) {
+                return $rightPass <=> $leftPass;
+            }
+
+            $leftName = strtoupper((string) ($left['sort_label'] ?? ''));
+            $rightName = strtoupper((string) ($right['sort_label'] ?? ''));
+
+            return strcmp($leftName, $rightName);
+        })->values();
+
+        $sortedRows = $this->applyPositions($sortedRows);
+        $total = $this->summariseGroupedRows($sortedRows);
+
+        return [$sortedRows, $total];
+    }
+
+    private function buildZonalCouncilwiseGroupedRows(int $examYearValue): array
+    {
+        $regions = Region::query()
+            ->whereIn(DB::raw('upper(name)'), ['TABORA', 'SINGIDA', 'IRINGA', 'DODOMA'])
+            ->get();
+
+        $allRows = collect();
+
+        foreach ($regions as $region) {
+            $candidateRows = $this->regionalCandidateRows($region, $examYearValue, true, 'zonal-councilwise');
+            [$rows] = $this->buildGroupedRows($candidateRows, 'zonal-councilwise');
+            
+            if ($rows->isNotEmpty()) {
+                $allRows = $allRows->merge($rows);
+            }
+            
+            unset($candidateRows, $rows);
+            gc_collect_cycles();
+        }
+
+        $sortedRows = $allRows->sort(function (array $left, array $right) {
+            $leftAvg = $left['avg_marks'] ?? -INF;
+            $rightAvg = $right['avg_marks'] ?? -INF;
+            if ($leftAvg !== $rightAvg) {
+                return $rightAvg <=> $leftAvg;
+            }
+
+            $leftGpa = $left['gpa'] ?? INF;
+            $rightGpa = $right['gpa'] ?? INF;
+            if ($leftGpa !== $rightGpa) {
+                return $leftGpa <=> $rightGpa;
+            }
+
+            $leftPass = $left['pass_ac']['t'] ?? 0;
+            $rightPass = $right['pass_ac']['t'] ?? 0;
+            if ($leftPass !== $rightPass) {
+                return $rightPass <=> $leftPass;
+            }
+
+            $leftCouncilName = strtoupper((string) ($left['council'] ?? ''));
+            $rightCouncilName = strtoupper((string) ($right['council'] ?? ''));
+            if ($leftCouncilName !== $rightCouncilName) {
+                return strcmp($leftCouncilName, $rightCouncilName);
+            }
+
+            $leftRegionName = strtoupper((string) ($left['region'] ?? ''));
+            $rightRegionName = strtoupper((string) ($right['region'] ?? ''));
+            return strcmp($leftRegionName, $rightRegionName);
+        })->values();
+
+        $sortedRows = $this->applyPositions($sortedRows);
+        $total = $this->summariseGroupedRows($sortedRows);
+
+        return [$sortedRows, $total];
+    }
+
+
+    private function zonalCandidateRows(int $examYearValue, bool $lightweight = false, string $mode = ''): Collection
+    {
+        $publication = DB::table('psle_result_publications as prp')
+            ->join('result_snapshots as rs', 'rs.id', '=', 'prp.snapshot_id')
+            ->where('prp.exam_year_id', function ($query) use ($examYearValue) {
+                $query->select('id')->from('exam_years')->where('year_label', $examYearValue)->limit(1);
+            })
+            ->where('prp.status', 'published')
+            ->where('rs.is_active', true)
+            ->where('rs.is_rolled_back', false)
+            ->select('rs.id as snapshot_id')
+            ->first();
+
+        $snapshotId = $publication ? $publication->snapshot_id : 0;
+
+        $regionIds = Region::query()
+            ->whereIn(DB::raw('upper(name)'), ['TABORA', 'SINGIDA', 'IRINGA', 'DODOMA'])
+            ->pluck('id')
+            ->all();
+
+        $selectCols = [
+            'c.id as candidate_pk',
+            'c.gender',
+            's.id as school_id',
+            's.ownership',
+            'r.name as region_name',
+        ];
+
+        if (!$lightweight) {
+            $selectCols = array_merge($selectCols, [
+                'c.candidate_id as index_number',
+                'c.prem_no',
+                'c.full_name',
+                's.code as school_code',
+                's.name as school_name',
+                'd.id as district_id',
+                'd.code as district_code',
+                'd.name as district_name',
+                'dc.id as council_id',
+                'dc.code as council_code',
+                'dc.name as council_name',
+            ]);
+        }
+
+        $registrations = DB::table('candidate_exam_registrations as cer')
+            ->join('candidates as c', 'c.id', '=', 'cer.candidate_id')
+            ->join('schools as s', 's.id', '=', 'c.school_id')
+            ->leftJoin('regions as r', 'r.id', '=', 's.region_id')
+            ->leftJoin('districts as d', 'd.id', '=', 's.district_id')
+            ->leftJoin('district_councils as dc', 'dc.id', '=', 's.council_id')
+            ->whereIn('s.region_id', $regionIds)
+            ->where('cer.exam_type_id', $this->psleExamTypeId())
+            ->where('cer.year', $examYearValue)
+            ->select($selectCols)
+            ->get();
+
+        $marksQuery = DB::table('subject_marks as sm')
+            ->join('candidate_exam_registrations as cer', 'cer.candidate_id', '=', 'sm.candidate_id')
+            ->join('candidates as c', 'c.id', '=', 'cer.candidate_id')
+            ->join('schools as s', 's.id', '=', 'c.school_id')
+            ->whereIn('s.region_id', $regionIds)
+            ->where('cer.exam_type_id', $this->psleExamTypeId())
+            ->where('cer.year', $examYearValue)
+            ->where('sm.exam_type_id', $this->psleExamTypeId())
+            ->where('sm.year', $examYearValue)
+            ->where('sm.snapshot_id', $snapshotId);
+
+        if ($lightweight) {
+            $marksQuery->select([
+                'sm.candidate_id',
+                'sm.marks_obtained',
+                'sm.max_marks',
+                'sm.grade',
+            ]);
+        } else {
+            $marksQuery->join('subjects as sb', 'sb.id', '=', 'sm.subject_id')
+                ->select([
+                    'sm.candidate_id',
+                    'sm.marks_obtained',
+                    'sm.max_marks',
+                    'sm.grade',
+                    'sb.code as subject_code',
+                    'sb.name as subject_name',
+                ]);
+        }
+
+        $marksByCandidate = $marksQuery->get()->groupBy('candidate_id');
+
+        return $registrations->map(function ($candidate) use ($marksByCandidate, $lightweight, $mode) {
+            if ($lightweight) {
+                $subjectRows = collect($marksByCandidate->get($candidate->candidate_pk, []))
+                    ->map(function ($row) {
+                        $isAbsent = strtoupper((string) ($row->grade ?? '')) === 'ABS' || is_null($row->marks_obtained);
+                        $score = $isAbsent ? null : $this->scaledScore50((float) ($row->marks_obtained ?? 0), (float) ($row->max_marks ?: 100));
+                        $grade = $isAbsent ? 'ABS' : $this->gradeFromScaledScore($score);
+
+                        return [
+                            'score' => $score,
+                            'grade' => $grade,
+                            'is_absent' => $isAbsent,
+                        ];
+                    });
+
+                $satSubjects = $subjectRows->filter(fn (array $item) => !($item['is_absent'] ?? false));
+                $subjectCount = $satSubjects->count();
+                $total = $subjectCount > 0 ? round((float) $satSubjects->sum('score'), 4) : 0;
+                $average = $subjectCount > 0 ? round($total / $subjectCount, 4) : null;
+                $aggt = $subjectCount > 0
+                    ? (int) $satSubjects->sum(fn (array $item) => $this->gradePointFromGrade((string) ($item['grade'] ?? 'E')))
+                    : null;
+                $gpa = $subjectCount > 0 && !is_null($aggt)
+                    ? round($aggt / $subjectCount, 4)
+                    : null;
+                $status = match (true) {
+                    $subjectCount === 0 => 'ABS',
+                    $subjectCount < self::EXPECTED_SUBJECTS => 'INC',
+                    default => 'COMPLETE',
+                };
+                $overallGrade = $status === 'COMPLETE' && !is_null($average)
+                    ? $this->gradeFromScaledScore($average)
+                    : null;
+
+                return [
+                    'candidate_pk' => (int) $candidate->candidate_pk,
+                    'gender' => strtoupper(trim((string) ($candidate->gender ?? ''))),
+                    'school_id' => (int) $candidate->school_id,
+                    'region' => strtoupper(trim((string) ($candidate->region_name ?? '-'))),
+                    'status' => $status,
+                    'total_marks' => $status === 'COMPLETE' && $subjectCount > 0 ? round($total, 0) : null,
+                    'avg_marks' => $status === 'COMPLETE' ? $average : null,
+                    'overall_grade' => $overallGrade,
+                    'gpa' => $status === 'COMPLETE' ? $gpa : null,
+                ];
+            }
+
+            $subjectRows = collect($marksByCandidate->get($candidate->candidate_pk, []))
+                ->map(function ($row) {
+                    $isAbsent = strtoupper((string) ($row->grade ?? '')) === 'ABS' || is_null($row->marks_obtained);
+                    $score = $isAbsent ? null : $this->scaledScore50((float) ($row->marks_obtained ?? 0), (float) ($row->max_marks ?: 100));
+                    $grade = $isAbsent ? 'ABS' : $this->gradeFromScaledScore($score);
+
+                    return [
+                        'code' => strtoupper((string) ($row->subject_code ?? '')),
+                        'subject_name' => strtoupper(trim((string) ($row->subject_name ?? ''))),
+                        'subject_short' => $this->candidateSubjectLabel((string) ($row->subject_name ?? '')),
+                        'score' => $score,
+                        'grade' => $grade,
+                        'is_absent' => $isAbsent,
+                    ];
+                })
+                ->sortBy(fn (array $item) => $this->subjectOrderIndex((string) ($item['subject_name'] ?? '')))
+                ->values();
+
+            $satSubjects = $subjectRows->filter(fn (array $item) => !($item['is_absent'] ?? false));
+            $subjectCount = $satSubjects->count();
+            $total = $subjectCount > 0 ? round((float) $satSubjects->sum('score'), 4) : 0;
+            $average = $subjectCount > 0 ? round($total / $subjectCount, 4) : null;
+            $aggt = $subjectCount > 0
+                ? (int) $satSubjects->sum(fn (array $item) => $this->gradePointFromGrade((string) ($item['grade'] ?? 'E')))
+                : null;
+            $gpa = $subjectCount > 0 && !is_null($aggt)
+                ? round($aggt / $subjectCount, 4)
+                : null;
+            $status = match (true) {
+                $subjectCount === 0 => 'ABS',
+                $subjectCount < self::EXPECTED_SUBJECTS => 'INC',
+                default => 'COMPLETE',
+            };
+            $overallGrade = $status === 'COMPLETE' && !is_null($average)
+                ? $this->gradeFromScaledScore($average)
+                : null;
+
+            return [
+                'candidate_pk' => (int) $candidate->candidate_pk,
+                'index_number' => (string) ($candidate->index_number ?? '-'),
+                'prem_no' => (string) ($candidate->prem_no ?? '-'),
+                'candidate' => strtoupper(trim((string) ($candidate->full_name ?? $candidate->index_number))) ?: '-',
+                'gender' => strtoupper(trim((string) ($candidate->gender ?? ''))),
+                'school_id' => (int) $candidate->school_id,
+                'school' => trim(((string) ($candidate->school_code ?? '')) . ' - ' . ((string) ($candidate->school_name ?? ''))),
+                'school_name' => strtoupper(trim((string) ($candidate->school_name ?? ''))),
+                'region' => strtoupper(trim((string) ($candidate->region_name ?? '-'))),
+                'council' => strtoupper(trim((string) ($candidate->council_name ?? $candidate->district_name ?? '-'))) ?: '-',
+                'district' => strtoupper(trim(((string) ($candidate->district_code ?? '')) . ' - ' . ((string) ($candidate->district_name ?? '')))) ?: '-',
+                'ownership' => strtoupper(trim((string) ($candidate->ownership ?? 'UNKNOWN'))) ?: 'UNKNOWN',
+                'status' => $status,
+                'subject_rows' => $subjectRows->all(),
+                'subject_results_text' => $subjectRows->map(function (array $item) {
+                    if ($item['is_absent'] ?? false) {
+                        return "{$item['subject_short']} - ABS";
+                    }
+                    $score = number_format((float) $item['score'], 0);
+                    return "{$item['subject_short']} - {$score} '{$item['grade']}'";
+                })->implode(', '),
+                'total_marks' => $status === 'COMPLETE' && $subjectCount > 0 ? round($total, 0) : null,
+                'avg_marks' => $status === 'COMPLETE' ? $average : null,
+                'overall_grade' => $overallGrade,
+                'gpa' => $status === 'COMPLETE' ? $gpa : null,
+            ];
+        });
+    }
+
     private function regionalCandidateRows(Region $region, int $examYearValue, bool $lightweight = false, string $mode = ''): Collection
     {
         $publication = DB::table('psle_result_publications as prp')
@@ -927,6 +1451,8 @@ class PsleEvaluationsController extends Controller
                 'c.full_name',
                 's.code as school_code',
                 's.name as school_name',
+                'r.id as region_id',
+                'r.name as region_name',
                 'd.id as district_id',
                 'd.code as district_code',
                 'd.name as district_name',
@@ -935,7 +1461,10 @@ class PsleEvaluationsController extends Controller
                 'dc.name as council_name',
             ]);
         } else {
-            if ($mode === 'councilwise') {
+            if ($mode === 'councilwise' || $mode === 'zonal-councilwise') {
+                $selectCols[] = 'r.id as region_id';
+                $selectCols[] = 'r.name as region_name';
+                $selectCols[] = 'dc.id as council_id';
                 $selectCols[] = 'dc.name as council_name';
                 $selectCols[] = 'd.name as district_name';
             } elseif ($mode === 'districtwise') {
@@ -947,6 +1476,7 @@ class PsleEvaluationsController extends Controller
         $registrations = DB::table('candidate_exam_registrations as cer')
             ->join('candidates as c', 'c.id', '=', 'cer.candidate_id')
             ->join('schools as s', 's.id', '=', 'c.school_id')
+            ->leftJoin('regions as r', 'r.id', '=', 's.region_id')
             ->leftJoin('districts as d', 'd.id', '=', 's.district_id')
             ->leftJoin('district_councils as dc', 'dc.id', '=', 's.council_id')
             ->where('s.region_id', $region->id)
@@ -1025,7 +1555,10 @@ class PsleEvaluationsController extends Controller
                     'candidate_pk' => (int) $candidate->candidate_pk,
                     'gender' => strtoupper(trim((string) ($candidate->gender ?? ''))),
                     'school_id' => (int) $candidate->school_id,
-                    'council' => $mode === 'councilwise' ? strtoupper(trim((string) ($candidate->council_name ?? $candidate->district_name ?? '-'))) : '-',
+                    'council' => ($mode === 'councilwise' || $mode === 'zonal-councilwise') ? strtoupper(trim((string) ($candidate->council_name ?? $candidate->district_name ?? '-'))) : '-',
+                    'council_id' => isset($candidate->council_id) ? (int) $candidate->council_id : null,
+                    'region' => ($mode === 'councilwise' || $mode === 'zonal-councilwise') ? strtoupper(trim((string) ($candidate->region_name ?? '-'))) : '-',
+                    'region_id' => isset($candidate->region_id) ? (int) $candidate->region_id : null,
                     'district' => $mode === 'districtwise' ? strtoupper(trim(((string) ($candidate->district_code ?? '')) . ' - ' . ((string) ($candidate->district_name ?? '')))) : '-',
                     'ownership' => strtoupper(trim((string) ($candidate->ownership ?? 'UNKNOWN'))) ?: 'UNKNOWN',
                     'status' => $status,
@@ -1082,7 +1615,10 @@ class PsleEvaluationsController extends Controller
                 'school_id' => (int) $candidate->school_id,
                 'school' => trim(((string) ($candidate->school_code ?? '')) . ' - ' . ((string) ($candidate->school_name ?? ''))),
                 'school_name' => strtoupper(trim((string) ($candidate->school_name ?? ''))),
+                'region' => strtoupper(trim((string) ($candidate->region_name ?? '-'))),
+                'region_id' => isset($candidate->region_id) ? (int) $candidate->region_id : null,
                 'council' => strtoupper(trim((string) ($candidate->council_name ?? $candidate->district_name ?? '-'))) ?: '-',
+                'council_id' => isset($candidate->council_id) ? (int) $candidate->council_id : null,
                 'district' => strtoupper(trim(((string) ($candidate->district_code ?? '')) . ' - ' . ((string) ($candidate->district_name ?? '')))) ?: '-',
                 'ownership' => strtoupper(trim((string) ($candidate->ownership ?? 'UNKNOWN'))) ?: 'UNKNOWN',
                 'status' => $status,
@@ -1111,10 +1647,24 @@ class PsleEvaluationsController extends Controller
             $groupKey = match ($mode) {
                 'general' => strtoupper((string) ($candidate['gender'] ?? '')) === 'F' ? 'F' : 'M',
                 'councilwise' => (string) ($candidate['council'] ?? '-'),
+                'zonal-councilwise' => ((string) ($candidate['region_id'] ?? '0')) . '-' . ((string) ($candidate['council_id'] ?? '0')),
                 'districtwise' => (string) ($candidate['district'] ?? '-'),
                 'ownership' => (string) ($candidate['ownership'] ?? 'UNKNOWN'),
+                'regionalwise' => (string) ($candidate['region'] ?? '-'),
                 default => (string) ($candidate['school_id'] ?? '0'),
             };
+
+            if ($mode === 'regionalwise' && in_array(strtoupper(trim($groupKey)), ['-', '', 'UNASSIGNED', 'UNKNOWN'], true)) {
+                continue;
+            }
+
+            if ($mode === 'zonal-councilwise') {
+                $councilVal = strtoupper(trim((string) ($candidate['council'] ?? '')));
+                $regionVal = strtoupper(trim((string) ($candidate['region'] ?? '')));
+                if (in_array($councilVal, ['-', '', 'UNKNOWN', 'UNASSIGNED'], true) || in_array($regionVal, ['-', '', 'UNKNOWN', 'UNASSIGNED'], true)) {
+                    continue;
+                }
+            }
 
             if (!isset($groups[$groupKey])) {
                 $groups[$groupKey] = $this->groupRowTemplate($candidate, $mode);
@@ -1716,16 +2266,21 @@ class PsleEvaluationsController extends Controller
         $label = match ($mode) {
             'general' => strtoupper((string) ($candidate['gender'] ?? '')) === 'F' ? 'FEMALE' : 'MALE',
             'councilwise' => (string) ($candidate['council'] ?? '-'),
+            'zonal-councilwise' => (string) ($candidate['council'] ?? '-'),
             'districtwise' => (string) ($candidate['district'] ?? '-'),
             'ownership' => (string) ($candidate['ownership'] ?? 'UNKNOWN'),
+            'regionalwise' => (string) ($candidate['region'] ?? '-'),
             default => (string) ($candidate['council'] ?? '-'),
         };
 
         return [
             'council' => $mode === 'general' ? $label : (string) ($candidate['council'] ?? '-'),
+            'council_id' => isset($candidate['council_id']) ? (int) $candidate['council_id'] : null,
             'district' => (string) ($candidate['district'] ?? '-'),
             'ownership' => (string) ($candidate['ownership'] ?? 'UNKNOWN'),
             'school' => (string) ($candidate['school'] ?? '-'),
+            'region' => (string) ($candidate['region'] ?? '-'),
+            'region_id' => isset($candidate['region_id']) ? (int) $candidate['region_id'] : null,
             'sort_label' => $mode === 'schoolwise'
                 ? (string) ($candidate['school'] ?? '-')
                 : ($mode === 'ownership' ? (string) ($candidate['ownership'] ?? 'UNKNOWN') : $label),
@@ -1937,26 +2492,17 @@ class PsleEvaluationsController extends Controller
     private function zonalEvaluationEntries(): Collection
     {
         return collect([
-            'ZONAL GENERAL EVALUATION',
-            'ZONAL COUNCILWISE EVALUATION',
-            'ZONAL SCHOOLWISE EVALUATION',
-            'ZONAL DISTRICTWISE EVALUATION',
-            'ZONAL BEST TEN (10) COUNCILS',
-            'ZONAL LEAST TEN (10) COUNCILS',
-            'ZONAL BEST TEN (10) SCHOOLS',
-            'ZONAL LEAST TEN (10) SCHOOLS',
-            'ZONAL BEST TEN (10) GIRLS',
-            'ZONAL LEAST TEN (10) GIRLS',
-            'ZONAL BEST TEN (10) BOYS',
-            'ZONAL LEAST TEN (10) BOYS',
-            'ZONAL OVERALL TEN (10) BEST STUDENTS',
-            'ZONAL OVERALL TEN (10) LEAST STUDENTS',
-            'ZONAL GOVERNMENT SCHOOLS',
-            'ZONAL NON-GOVERNMENT SCHOOLS',
-            'ZONAL OWNERSHIP RESULT EVALUATION',
-            'ZONAL SUBJECTWISE RESULT EVALUATION',
-            'ZONAL MARK ENTRY STATUS REPORT',
-            'ZONAL SUBJECT SUMMARY EVALUATION',
+            ['key' => 'general', 'label' => 'ZONAL GENERAL EVALUATION'],
+            ['key' => 'councilwise', 'label' => 'ZONAL COUNCILWISE EVALUATION'],
+            ['key' => 'schoolwise', 'label' => 'ZONAL SCHOOLWISE EVALUATION'],
+            ['key' => 'best-ten-councils', 'label' => 'ZONAL BEST TEN (10) COUNCILS'],
+            ['key' => 'least-ten-councils', 'label' => 'ZONAL LEAST TEN (10) COUNCILS'],
+            ['key' => 'best-ten-schools', 'label' => 'ZONAL BEST TEN (10) SCHOOLS'],
+            ['key' => 'least-ten-schools', 'label' => 'ZONAL LEAST TEN (10) SCHOOLS'],
+            ['key' => 'ownership-result-evaluation', 'label' => 'ZONAL OWNERSHIP RESULT EVALUATION'],
+            ['key' => 'subjectwise-result-evaluation', 'label' => 'ZONAL SUBJECTWISE RESULT EVALUATION'],
+            ['key' => 'mark-entry-status-report', 'label' => 'ZONAL MARK ENTRY STATUS REPORT'],
+            ['key' => 'regionalwise', 'label' => 'ZONAL REGIONALWISE EVALUATION'],
         ]);
     }
 

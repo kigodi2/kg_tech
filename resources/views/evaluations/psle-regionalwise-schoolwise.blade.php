@@ -2,17 +2,19 @@
 
 @section('content')
 @php
+    $isZonalCouncilwiseEvaluation = ($tableMode ?? null) === 'zonal-councilwise';
     $isOwnershipEvaluation = ($tableMode ?? null) === 'ownership' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'OWNERSHIP');
-    $isCouncilwiseEvaluation = ($tableMode ?? null) === 'councilwise' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'COUNCIL');
+    $isCouncilwiseEvaluation = !$isZonalCouncilwiseEvaluation && (($tableMode ?? null) === 'councilwise' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'COUNCIL'));
     $isDistrictwiseEvaluation = ($tableMode ?? null) === 'districtwise' || str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'DISTRICT');
     $isGeneralEvaluation = ($tableMode ?? null) === 'general' || trim(strtoupper((string) ($evaluationLabel ?? ''))) === 'GENERAL EVALUATION';
     $isSchoolwiseEvaluation = ($tableMode ?? null) === 'schoolwise';
-    $showSummaryBlock = in_array(($tableMode ?? null), ['schoolwise', 'councilwise', 'districtwise', 'ownership', 'general'], true);
-    $hideSecondColumn = $isCouncilwiseEvaluation || $isDistrictwiseEvaluation || $isGeneralEvaluation;
-    $primaryColumnLabel = $isOwnershipEvaluation ? 'OWNERSHIP' : ($isGeneralEvaluation ? 'SEX' : ($isDistrictwiseEvaluation ? 'DISTRICT' : 'COUNCIL'));
-    $secondaryColumnLabel = $isOwnershipEvaluation ? 'SCHOOLS' : 'SCHOOL';
-    $primaryColumnKey = $isOwnershipEvaluation ? 'ownership' : ($isDistrictwiseEvaluation ? 'district' : 'council');
-    $secondaryColumnKey = $isOwnershipEvaluation ? 'schools_count' : 'school';
+    $isRegionalwiseEvaluation = ($tableMode ?? null) === 'regionalwise';
+    $showSummaryBlock = in_array(($tableMode ?? null), ['schoolwise', 'councilwise', 'zonal-councilwise', 'districtwise', 'ownership', 'general', 'regionalwise'], true);
+    $hideSecondColumn = !$isZonalCouncilwiseEvaluation && ($isCouncilwiseEvaluation || $isDistrictwiseEvaluation || $isGeneralEvaluation || $isRegionalwiseEvaluation);
+    $primaryColumnLabel = $isZonalCouncilwiseEvaluation ? 'COUNCIL' : ($isOwnershipEvaluation ? 'OWNERSHIP' : ($isGeneralEvaluation ? 'SEX' : ($isDistrictwiseEvaluation ? 'DISTRICT' : ($isRegionalwiseEvaluation ? 'REGION' : 'COUNCIL'))));
+    $secondaryColumnLabel = $isZonalCouncilwiseEvaluation ? 'REGION' : ($isOwnershipEvaluation ? 'SCHOOLS' : 'SCHOOL');
+    $primaryColumnKey = $isZonalCouncilwiseEvaluation ? 'council' : ($isOwnershipEvaluation ? 'ownership' : ($isDistrictwiseEvaluation ? 'district' : ($isRegionalwiseEvaluation ? 'region' : 'council')));
+    $secondaryColumnKey = $isZonalCouncilwiseEvaluation ? 'region' : ($isOwnershipEvaluation ? 'schools_count' : 'school');
     $secondaryColumnAlign = $isOwnershipEvaluation ? 'text-center' : 'text-left';
     $primaryColumnWidth = $isOwnershipEvaluation ? '168px' : '92px';
     $secondaryColumnWidth = $isOwnershipEvaluation ? '64px' : null;
@@ -24,42 +26,52 @@
     $leastRow = null;
     $groupCountLabel = match (true) {
         $isSchoolwiseEvaluation => 'TOTAL SCHOOLS',
+        $isZonalCouncilwiseEvaluation => 'TOTAL COUNCILS',
         $isCouncilwiseEvaluation => 'TOTAL COUNCILS',
         $isDistrictwiseEvaluation => 'TOTAL DISTRICTS',
         $isOwnershipEvaluation => 'TOTAL OWNERSHIP GROUPS',
         $isGeneralEvaluation => 'TOTAL SEX GROUPS',
+        $isRegionalwiseEvaluation => 'TOTAL REGIONS',
         default => 'TOTAL GROUPS',
     };
     $averageLabel = match (true) {
         $isSchoolwiseEvaluation => 'REGIONAL AVERAGE',
+        $isZonalCouncilwiseEvaluation => 'COUNCILWISE AVERAGE',
         $isCouncilwiseEvaluation => 'COUNCILWISE AVERAGE',
         $isDistrictwiseEvaluation => 'DISTRICTWISE AVERAGE',
         $isOwnershipEvaluation => 'OWNERSHIP GROUP AVERAGE',
         $isGeneralEvaluation => 'SEX GROUP AVERAGE',
+        $isRegionalwiseEvaluation => 'REGIONALWISE AVERAGE',
         default => 'GROUP AVERAGE',
     };
     $averageColumnLabel = match (true) {
         $isSchoolwiseEvaluation => 'SCHOOL AVERAGE',
+        $isZonalCouncilwiseEvaluation => 'COUNCIL AVERAGE',
         $isCouncilwiseEvaluation => 'COUNCIL AVERAGE',
         $isDistrictwiseEvaluation => 'DISTRICT AVERAGE',
         $isOwnershipEvaluation => 'GROUP AVERAGE',
         $isGeneralEvaluation => 'SEX AVERAGE',
+        $isRegionalwiseEvaluation => 'REGION AVERAGE',
         default => 'AVERAGE',
     };
     $bestLabel = match (true) {
         $isSchoolwiseEvaluation => 'BEST SCHOOL',
+        $isZonalCouncilwiseEvaluation => 'BEST COUNCIL',
         $isCouncilwiseEvaluation => 'BEST COUNCIL',
         $isDistrictwiseEvaluation => 'BEST DISTRICT',
         $isOwnershipEvaluation => 'BEST OWNERSHIP GROUP',
         $isGeneralEvaluation => 'BEST SEX GROUP',
+        $isRegionalwiseEvaluation => 'BEST REGION',
         default => 'BEST GROUP',
     };
     $leastLabel = match (true) {
         $isSchoolwiseEvaluation => 'LEAST SCHOOL',
+        $isZonalCouncilwiseEvaluation => 'LEAST COUNCIL',
         $isCouncilwiseEvaluation => 'LEAST COUNCIL',
         $isDistrictwiseEvaluation => 'LEAST DISTRICT',
         $isOwnershipEvaluation => 'LEAST OWNERSHIP GROUP',
         $isGeneralEvaluation => 'LEAST SEX GROUP',
+        $isRegionalwiseEvaluation => 'LEAST REGION',
         default => 'LEAST GROUP',
     };
     $bestName = null;
@@ -143,25 +155,29 @@
         $leastRow = $rows->sortByDesc('pos')->first();
         $bestName = match (true) {
             $isSchoolwiseEvaluation => $bestRow['school'] ?? '-',
+            $isZonalCouncilwiseEvaluation => $bestRow['council'] ?? '-',
             $isCouncilwiseEvaluation => $bestRow['council'] ?? '-',
             $isDistrictwiseEvaluation => $bestRow['district'] ?? '-',
             $isOwnershipEvaluation => $bestRow['ownership'] ?? '-',
             $isGeneralEvaluation => $bestRow['council'] ?? '-',
+            $isRegionalwiseEvaluation => $bestRow['region'] ?? '-',
             default => '-',
         };
         $leastName = match (true) {
             $isSchoolwiseEvaluation => $leastRow['school'] ?? '-',
+            $isZonalCouncilwiseEvaluation => $leastRow['council'] ?? '-',
             $isCouncilwiseEvaluation => $leastRow['council'] ?? '-',
             $isDistrictwiseEvaluation => $leastRow['district'] ?? '-',
             $isOwnershipEvaluation => $leastRow['ownership'] ?? '-',
             $isGeneralEvaluation => $leastRow['council'] ?? '-',
+            $isRegionalwiseEvaluation => $leastRow['region'] ?? '-',
             default => '-',
         };
     }
 
     $barcodePayload = sprintf(
         'PSLE-%s-%s-WEB',
-        substr((string) (preg_replace('/[^A-Z0-9]/', '', strtoupper((string) $region->name)) ?: 'REG'), 0, 3),
+        substr((string) (preg_replace('/[^A-Z0-9]/', '', strtoupper((string) ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation || !$region ? 'ZONAL' : ($region->name ?? 'REG')))) ?: 'REG'), 0, 3),
         now()->format('Ymd-His')
     );
     $barcodePatterns = [
@@ -196,8 +212,8 @@
 <div style="background-color: #B0E0E6; min-height: 100vh; padding-top: 1.5rem; padding-bottom: 1.5rem; font-family: 'Maiandra GD', sans-serif; font-weight: 700; white-space: nowrap;">
     <div style="width: min(94vw, 1700px); margin: 0 auto; padding: 0 0.35rem;">
         <div style="margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-            <a href="{{ route('evaluations.psle.regionalwise.region', ['region' => $region->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
-                ← Back to {{ strtoupper($region->name) }}
+            <a href="{{ ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation) ? route('evaluations.psle.zonalwise') : route('evaluations.psle.regionalwise.region', ['region' => $region->id]) }}" style="color: #003366; text-decoration: none; font-weight: bold; font-size: 1.05rem;">
+                ← Back to {{ ($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation) ? 'Zonalwise' : ($region ? strtoupper($region->name) : 'Zonalwise') }}
             </a>
 
             <a href="{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}"
@@ -219,7 +235,11 @@
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.2rem; font-weight: bold; color: #f5d000; line-height: 1.25;">REGIONAL ADMINISTRATION AND LOCAL GOVERNMENT</p>
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #ffffff; line-height: 1.25;">ACADEMIC ZONE: TABORA, SINGIDA, IRINGA AND DODOMA (TASIDO)</p>
                     <p style="margin: 0.25rem 0 0 0; font-size: 1.15rem; font-weight: bold; color: #f5d000; line-height: 1.25;">
-                        PSLE REGIONAL EVALUATIONS - {{ $examYearValue }} - {{ strtoupper($region->name) }}
+                        @if($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation)
+                            {{ strtoupper($evaluationLabel ?? 'PSLE ZONAL EVALUATION') }} - {{ $examYearValue }}
+                        @else
+                            PSLE REGIONAL EVALUATIONS - {{ $examYearValue }} - {{ strtoupper($region->name) }}
+                        @endif
                     </p>
                 </div>
 
@@ -246,7 +266,11 @@
         @if($showSummaryBlock)
             <div style="padding: 0.2rem 0.35rem 0.35rem 0.35rem; color: #000080;">
                 <div style="font-size: 1rem; line-height: 1.35; white-space: normal;">
-                    <p style="margin: 0 0 0.2rem 0;">REGION: {{ strtoupper($region->name) }}</p>
+                    @if($isRegionalwiseEvaluation || $isZonalCouncilwiseEvaluation)
+                        <p style="margin: 0 0 0.2rem 0;">ZONE: TASIDO</p>
+                    @else
+                        <p style="margin: 0 0 0.2rem 0;">REGION: {{ strtoupper($region->name) }}</p>
+                    @endif
                     @if(!empty($zonalRank['position']) && !empty($zonalRank['total']))
                         <p style="margin: 0 0 0.2rem 0;">ZONAL RANK: {{ $zonalRank['position'] }} OUT OF {{ $zonalRank['total'] }}</p>
                     @endif
