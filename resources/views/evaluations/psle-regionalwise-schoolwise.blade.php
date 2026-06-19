@@ -1,6 +1,13 @@
 @extends('layout')
 
 @section('content')
+<style>
+.keyboard-navigable-table td:focus {
+    outline: 2px solid #f5d000;
+    outline-offset: -2px;
+    background-color: #fff8b3;
+}
+</style>
 @php
     $isZonalCouncilwiseEvaluation = ($tableMode ?? null) === 'zonal-councilwise';
     $isZonalSchoolwiseEvaluation = ($tableMode ?? null) === 'zonal-schoolwise';
@@ -296,7 +303,7 @@
 
         <div style="background-color: #B0E0E6; padding: 0.35rem;">
             <div style="width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch;">
-                <table style="width: max-content; min-width: 100%; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
+                <table class="psle-evaluation-table keyboard-navigable-table" style="width: max-content; min-width: 100%; background-color: LIGHTYELLOW; border-collapse: collapse; border: 1px solid #999;">
                     <thead>
                         <tr style="background-color: #003366;">
                             <th colspan="{{ $tableColspan }}" style="border: 1px solid #999; padding: 0.18rem 0.25rem; font-size: 0.92rem; font-weight: bold; text-align: left; color: #FFFFFF;">{{ strtoupper($evaluationLabel) }}</th>
@@ -347,45 +354,45 @@
                     <tbody style="background-color: LIGHTYELLOW; color: #000080;">
                         @forelse($rows as $index => $row)
                             <tr>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.08rem; text-align: center; font-size: 0.82rem; line-height: 1.05; width: 28px; min-width: 28px; max-width: 28px;">{{ $index + 1 }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: left; font-size: 0.82rem; line-height: 1.05; min-width: {{ $primaryColumnWidth }};">{{ $row[$primaryColumnKey] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.08rem; text-align: center; font-size: 0.82rem; line-height: 1.05; width: 28px; min-width: 28px; max-width: 28px;">{{ $index + 1 }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: left; font-size: 0.82rem; line-height: 1.05; min-width: {{ $primaryColumnWidth }};">{{ $row[$primaryColumnKey] }}</td>
                                 @unless($hideSecondColumn)
-                                    <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: {{ $isOwnershipEvaluation ? 'center' : 'left' }}; font-size: 0.82rem; line-height: 1.05; @if($secondaryColumnWidth) min-width: {{ $secondaryColumnWidth }}; @endif">{{ $row[$secondaryColumnKey] }}</td>
+                                    <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: {{ $isOwnershipEvaluation ? 'center' : 'left' }}; font-size: 0.82rem; line-height: 1.05; @if($secondaryColumnWidth) min-width: {{ $secondaryColumnWidth }}; @endif">{{ $row[$secondaryColumnKey] }}</td>
                                 @endunless
                                 @if($showThirdColumn)
-                                    <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: left; font-size: 0.82rem; line-height: 1.05; min-width: 120px;">{{ $row[$thirdColumnKey] }}</td>
+                                    <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: left; font-size: 0.82rem; line-height: 1.05; min-width: 120px;">{{ $row[$thirdColumnKey] }}</td>
                                 @endif
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['m'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['f'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['absent']['m'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['absent']['f'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['absent']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['absent']['pct'], 0) }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['sat']['m'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['sat']['f'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['sat']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['sat']['pct'], 0) }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['inc']['m'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['inc']['f'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['inc']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['inc']['pct'], 0) }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['a']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['b']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['c']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ac']['m'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ac']['f'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ac']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['pass_ac']['pct'], 0) }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['d']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ad']['m'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ad']['f'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ad']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['pass_ad']['pct'], 0) }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['e']['t'] }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ is_null($row['avg_marks']) ? '-' : number_format((float) $row['avg_marks'], 2) }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['avg_grade'] ?? '-' }}</td>
-                                <td style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; font-weight: bold; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pos'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['m'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['f'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['registered']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['absent']['m'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['absent']['f'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['absent']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['absent']['pct'], 0) }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['sat']['m'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['sat']['f'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['sat']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['sat']['pct'], 0) }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['inc']['m'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['inc']['f'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['inc']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['inc']['pct'], 0) }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['a']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['b']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['c']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ac']['m'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ac']['f'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ac']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['pass_ac']['pct'], 0) }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['d']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ad']['m'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ad']['f'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pass_ad']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ number_format((float) $row['pass_ad']['pct'], 0) }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $metricWidth }}; min-width: {{ $metricWidth }}; max-width: {{ $metricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['grades']['e']['t'] }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.12rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ is_null($row['avg_marks']) ? '-' : number_format((float) $row['avg_marks'], 2) }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['avg_grade'] ?? '-' }}</td>
+                                <td tabindex="0" style="border: 1px solid #999; padding: 0.12rem 0.14rem; text-align: center; font-weight: bold; width: {{ $summaryMetricWidth }}; min-width: {{ $summaryMetricWidth }}; max-width: {{ $summaryMetricWidth }}; font-size: 0.8rem; line-height: 1;">{{ $row['pos'] }}</td>
                             </tr>
                         @empty
                             <tr>
@@ -454,4 +461,65 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.keyboard-navigable-table');
+    if (!table) return;
+
+    table.addEventListener('keydown', function(e) {
+        const active = document.activeElement;
+        if (!active || active.tagName !== 'TD' || !table.contains(active)) return;
+
+        const key = e.key;
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) return;
+
+        const row = active.parentElement;
+        if (!row || row.parentElement.tagName !== 'TBODY') return;
+
+        const tbody = row.parentElement;
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const currentRowIndex = rows.indexOf(row);
+        if (currentRowIndex === -1) return;
+
+        const cells = Array.from(row.querySelectorAll('td'));
+        const currentCellIndex = cells.indexOf(active);
+        if (currentCellIndex === -1) return;
+
+        let targetCell = null;
+
+        if (key === 'ArrowLeft') {
+            if (currentCellIndex > 0) {
+                targetCell = cells[currentCellIndex - 1];
+            }
+        } else if (key === 'ArrowRight') {
+            if (currentCellIndex < cells.length - 1) {
+                targetCell = cells[currentCellIndex + 1];
+            }
+        } else if (key === 'ArrowUp') {
+            if (currentRowIndex > 0) {
+                const targetRow = rows[currentRowIndex - 1];
+                const targetRowCells = Array.from(targetRow.querySelectorAll('td'));
+                if (currentCellIndex < targetRowCells.length) {
+                    targetCell = targetRowCells[currentCellIndex];
+                }
+            }
+        } else if (key === 'ArrowDown') {
+            if (currentRowIndex < rows.length - 1) {
+                const targetRow = rows[currentRowIndex + 1];
+                const targetRowCells = Array.from(targetRow.querySelectorAll('td'));
+                if (currentCellIndex < targetRowCells.length) {
+                    targetCell = targetRowCells[currentCellIndex];
+                }
+            }
+        }
+
+        if (targetCell) {
+            e.preventDefault();
+            targetCell.focus();
+            targetCell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        }
+    });
+});
+</script>
 @endsection
