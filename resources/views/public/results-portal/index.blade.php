@@ -629,9 +629,36 @@
 
       <section class="cards-grid" id="schoolsContainer">
         @forelse($entries->values() as $index => $it)
-          <a href="{{ $it['url'] }}" class="portal-card item" data-label="{{ strtoupper($it['label']) }}">
+          @php
+            $status = $it['status'] ?? null;
+            $hasStatus = !is_null($status);
+            $isAdmin = auth()->check() && auth()->user()->is_admin;
+          @endphp
+          <a href="{{ $it['url'] }}" 
+             class="portal-card item" 
+             data-label="{{ strtoupper($it['label']) }}"
+             @if($hasStatus)
+               data-status="{{ $status }}"
+               data-is-admin="{{ $isAdmin ? 'true' : 'false' }}"
+             @endif
+             onclick="return handleEvaluationClick(event, this)">
             <span class="card-index">{{ str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT) }}</span>
-            <h3 class="card-label">{{ $it['label'] }}</h3>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; width: 100%;">
+              <h3 class="card-label" style="flex-grow: 1;">{{ $it['label'] }}</h3>
+              @if($hasStatus)
+                @if($status === 'ready')
+                  <span style="background-color: #10b981; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap;">Ready</span>
+                @elseif($status === 'building')
+                  <span style="background-color: #f59e0b; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap;">Preparing</span>
+                @elseif($status === 'failed')
+                  <span style="background-color: #ef4444; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap;">Failed</span>
+                @elseif($status === 'stale')
+                  <span style="background-color: #6b7280; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap;">Stale</span>
+                @else
+                  <span style="background-color: #9ca3af; color: white; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 800; text-transform: uppercase; white-space: nowrap;">Pending</span>
+                @endif
+              @endif
+            </div>
             <p class="card-copy">{{ data_get($it, 'description', data_get($meta, 'entry_copy', 'Open this entry to view the detailed report or next evaluation level.')) }}</p>
             <span class="card-link">Open entry &rarr;</span>
           </a>
@@ -714,8 +741,33 @@
       @endphp
       <div class="column {{ $columnClass }}">
         @foreach($columnItems as $it)
-          <div class="item" data-label="{{ strtoupper($it['label']) }}">
-            <a href="{{ $it['url'] }}">{{ $it['label'] }}</a>
+          @php
+            $status = $it['status'] ?? null;
+            $hasStatus = !is_null($status);
+            $isAdmin = auth()->check() && auth()->user()->is_admin;
+          @endphp
+          <div class="item" 
+               data-label="{{ strtoupper($it['label']) }}"
+               @if($hasStatus)
+                 data-status="{{ $status }}"
+                 data-is-admin="{{ $isAdmin ? 'true' : 'false' }}"
+               @endif>
+            <a href="{{ $it['url'] }}" onclick="return handleEvaluationClick(event, this)">
+              {{ $it['label'] }}
+              @if($hasStatus)
+                @if($status === 'ready')
+                  <span style="background-color: #10b981; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-left: 5px; display: inline-block; vertical-align: middle;">Ready</span>
+                @elseif($status === 'building')
+                  <span style="background-color: #f59e0b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-left: 5px; display: inline-block; vertical-align: middle;">Preparing</span>
+                @elseif($status === 'failed')
+                  <span style="background-color: #ef4444; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-left: 5px; display: inline-block; vertical-align: middle;">Failed</span>
+                @elseif($status === 'stale')
+                  <span style="background-color: #6b7280; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-left: 5px; display: inline-block; vertical-align: middle;">Stale</span>
+                @else
+                  <span style="background-color: #9ca3af; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; margin-left: 5px; display: inline-block; vertical-align: middle;">Pending</span>
+                @endif
+              @endif
+            </a>
           </div>
         @endforeach
       </div>
@@ -798,6 +850,78 @@
       });
     });
   });
+
+  function showToast(message, type = 'info') {
+    var toast = document.createElement('div');
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '99999';
+    toast.style.padding = '14px 24px';
+    toast.style.borderRadius = '12px';
+    toast.style.color = 'white';
+    toast.style.fontWeight = 'bold';
+    toast.style.fontSize = '14px';
+    toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.15)';
+    toast.style.transition = 'all 0.3s ease';
+    toast.style.transform = 'translateY(-20px)';
+    toast.style.opacity = '0';
+
+    if (type === 'error') {
+      toast.style.backgroundColor = '#ef4444';
+    } else if (type === 'warning') {
+      toast.style.backgroundColor = '#f59e0b';
+    } else {
+      toast.style.backgroundColor = '#2563eb';
+    }
+
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    setTimeout(function() {
+      toast.style.transform = 'translateY(0)';
+      toast.style.opacity = '1';
+    }, 10);
+
+    setTimeout(function() {
+      toast.style.transform = 'translateY(-20px)';
+      toast.style.opacity = '0';
+      setTimeout(function() {
+        toast.remove();
+      }, 300);
+    }, 4000);
+  }
+
+  function handleEvaluationClick(event, element) {
+    var target = element.closest('[data-status]');
+    if (!target) return true;
+
+    var status = target.getAttribute('data-status');
+    var isAdmin = target.getAttribute('data-is-admin') === 'true';
+
+    if (status === 'ready') {
+      return true;
+    }
+
+    event.preventDefault();
+
+    if (status === 'building' || status === 'pending' || status === 'stale') {
+      showToast('Report is being prepared. Please wait...', 'warning');
+      return false;
+    }
+
+    if (status === 'failed') {
+      if (isAdmin) {
+        window.location.href = element.href || target.href || target.querySelector('a').href;
+        return true;
+      } else {
+        showToast('Report preparation failed. Please contact admin.', 'error');
+        return false;
+      }
+    }
+
+    return true;
+  }
 </script>
 </body>
 </html>

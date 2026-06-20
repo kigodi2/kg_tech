@@ -112,6 +112,8 @@ Route::get('/evaluations/psle/regionalwise/{region}/evaluation/{evaluation}', [P
     ->name('evaluations.psle.regionalwise.region.evaluation');
 Route::get('/evaluations/psle/regionalwise/{region}/evaluation/{evaluation}/export/{format}', [PsleEvaluationsController::class, 'regionalwiseEvaluationExport'])
     ->name('evaluations.psle.regionalwise.region.evaluation.export');
+Route::post('/evaluations/psle/rebuild', [PsleEvaluationsController::class, 'rebuildCache'])
+    ->name('evaluations.psle.rebuild');
 
 // Forced password change on first login
 Route::get('/password/change-required', [PasswordChangeController::class, 'showChangeRequired'])->name('password.change-required')->middleware('auth');

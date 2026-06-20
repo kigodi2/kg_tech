@@ -1003,6 +1003,9 @@ class AdminPsleResultsController extends Controller
 
         $this->logAuditAction("psle_results_published", "Published PSLE snapshot version {$snapshot->version} for year {$examYear->year_label}.");
 
+        // Dispatch background precalculation job
+        \App\Jobs\PrecalculatePsleEvaluationsJob::dispatch((int) $examYear->year_label, 'all', null, null, true);
+
         return response()->json([
             'success' => true,
             'message' => "PSLE Results Snapshot version {$snapshot->version} successfully published to portals."
@@ -1054,6 +1057,14 @@ class AdminPsleResultsController extends Controller
                     ->where('snapshot_id', $snapshot->id)
                     ->update([
                         'status' => 'rolled_back',
+                        'updated_at' => now(),
+                    ]);
+
+                // Set precalculated evaluations cache status to stale/pending
+                DB::table('psle_precalculated_evaluations')
+                    ->where('snapshot_id', $snapshot->id)
+                    ->update([
+                        'status' => 'stale',
                         'updated_at' => now(),
                     ]);
             }

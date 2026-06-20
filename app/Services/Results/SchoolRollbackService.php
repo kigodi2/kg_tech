@@ -88,6 +88,14 @@ class SchoolRollbackService
                     'correction_batch_id' => $batch->id,
                 ]);
 
+            // Set precalculated evaluations cache status to stale/pending
+            DB::table('psle_precalculated_evaluations')
+                ->where('snapshot_id', $activeSnapshot->id)
+                ->update([
+                    'status' => 'stale',
+                    'updated_at' => now(),
+                ]);
+
             // 7. Log audit event
             $this->logAuditAction(
                 $userId,
@@ -311,6 +319,9 @@ class SchoolRollbackService
                 "Republished results snapshot version {$snapshot->version} for exam year {$batch->exam_year} after correction."
             );
 
+            // Dispatch background precalculation job to rebuild cache
+            \App\Jobs\PrecalculatePsleEvaluationsJob::dispatch((int) $examYearModel->year_label, 'all', null, null, true);
+
             return $batch;
         });
     }
@@ -363,6 +374,15 @@ class SchoolRollbackService
                     ->where('snapshot_id', $staleSnapshot->id)
                     ->update([
                         'status' => 'published',
+                        'updated_at' => now(),
+                    ]);
+
+                // Restore precalculated evaluations cache status from stale to ready
+                DB::table('psle_precalculated_evaluations')
+                    ->where('snapshot_id', $staleSnapshot->id)
+                    ->where('status', 'stale')
+                    ->update([
+                        'status' => 'ready',
                         'updated_at' => now(),
                     ]);
             }
