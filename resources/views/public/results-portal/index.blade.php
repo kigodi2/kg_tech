@@ -944,6 +944,18 @@
 
     return true;
   }
+
+  @if(session('error'))
+    document.addEventListener('DOMContentLoaded', function() {
+      showToast("{{ session('error') }}", 'error');
+    });
+  @endif
+
+  @if(session('success'))
+    document.addEventListener('DOMContentLoaded', function() {
+      showToast("{{ session('success') }}", 'success');
+    });
+  @endif
 </script>
 </body>
 </html>
