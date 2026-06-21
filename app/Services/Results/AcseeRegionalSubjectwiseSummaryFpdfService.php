@@ -188,7 +188,7 @@ class AcseeRegionalSubjectwiseSummaryFpdfService
     private function renderTable(\FPDF $pdf, array $rows): void
     {
         $startX = 10;
-        $widths = [14, 74, 12, 12, 12, 12, 12, 12, 12, 18, 22, 67];
+        $widths = [12, 74, 12, 12, 12, 12, 12, 12, 12, 18, 22, 67];
         $headers = ['CODE', 'SUBJECT NAME', 'A', 'B', 'C', 'D', 'E', 'S', 'F', 'TOTAL', 'GPA', 'COMPETENCY LEVEL'];
 
         $pdf->SetFont('Helvetica', 'B', 8);

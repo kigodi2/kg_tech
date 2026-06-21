@@ -192,7 +192,7 @@ class PsleRegionalSubjectwiseFpdfService
 
     private function renderTable(\FPDF $pdf, array $rows, string $reportLabel): void
     {
-        $widths = ['code'=>12,'name'=>78,'reg'=>14,'sat'=>14,'abs'=>14,'m'=>12,'ac'=>15,'ad'=>15,'avg'=>16,'grd'=>12,'comp'=>54];
+        $widths = ['code'=>8,'name'=>88,'reg'=>12,'sat'=>12,'abs'=>12,'m'=>10,'ac'=>13,'ad'=>13,'avg'=>11,'grd'=>8,'comp'=>54];
         $pdf->SetFillColor(0, 51, 102);
         $pdf->SetTextColor(255, 255, 255);
         $pdf->SetFont('Helvetica', 'B', 8.5);
