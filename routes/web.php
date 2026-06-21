@@ -16,6 +16,7 @@ use App\Http\Controllers\BackupRestoreController;
 use App\Http\Controllers\PublicPsleResultsController;
 use App\Http\Controllers\PsleEvaluationsController;
 use App\Http\Controllers\PsleRegionalResultBookController;
+use App\Http\Controllers\PsleZonalResultBookController;
 use App\Http\Controllers\Results\AcseeResultsController;
 use App\Http\Controllers\PublicResultsController;
 use App\Http\Controllers\PublicResultsPortalController;
@@ -117,6 +118,10 @@ Route::get('/evaluations/psle/regionalwise/{id}/result-book', [PsleRegionalResul
     ->name('evaluations.psle.regionalwise.result-book');
 Route::get('/evaluations/psle/regionalwise/{id}/result-book/pdf', [PsleRegionalResultBookController::class, 'pdf'])
     ->name('evaluations.psle.regionalwise.result-book.pdf');
+Route::get('/evaluations/psle/zonalwise/result-book', [PsleZonalResultBookController::class, 'show'])
+    ->name('evaluations.psle.zonalwise.result-book');
+Route::get('/evaluations/psle/zonalwise/result-book/pdf', [PsleZonalResultBookController::class, 'pdf'])
+    ->name('evaluations.psle.zonalwise.result-book.pdf');
 Route::post('/evaluations/psle/rebuild', [PsleEvaluationsController::class, 'rebuildCache'])
     ->name('evaluations.psle.rebuild');
 

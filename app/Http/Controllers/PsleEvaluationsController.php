@@ -70,10 +70,66 @@ class PsleEvaluationsController extends Controller
         $precalcService = app(\App\Services\Results\PslePrecalculationService::class);
         $statusesMap = $precalcService->getStatusesMap($examYearValue, 'zonal', null);
 
+        $snapshotId = $precalcService->getActiveSnapshotId($examYearValue);
+        $hasPayloads = false;
+        if ($snapshotId) {
+            $hasPayloads = \App\Models\PslePrecalculatedEvaluation::where('exam_year', $examYearValue)
+                ->where('exam_type', 'PSLE')
+                ->where('scope_type', 'zonal')
+                ->where('scope_id', null)
+                ->where('snapshot_id', $snapshotId)
+                ->where('status', \App\Models\PslePrecalculatedEvaluation::STATUS_READY)
+                ->exists();
+        }
+        $isReady = $snapshotId && $hasPayloads;
+
+        $extraButtons = [];
+        if ($isReady) {
+            $extraButtons[] = [
+                'label' => 'View Result Book',
+                'url' => route('evaluations.psle.zonalwise.result-book'),
+                'class' => 'top-btn secondary',
+                'style' => 'border-color: #2563eb; color: #2563eb;',
+                'disabled' => false,
+            ];
+            $extraButtons[] = [
+                'label' => 'Download Result Book PDF',
+                'url' => route('evaluations.psle.zonalwise.result-book.pdf'),
+                'class' => 'top-btn primary',
+                'disabled' => false,
+            ];
+        } else {
+            $extraButtons[] = [
+                'label' => 'View Result Book',
+                'url' => '#',
+                'class' => 'top-btn secondary',
+                'style' => 'opacity: 0.5; cursor: not-allowed; border-color: #cbd5e1; color: #94a3b8;',
+                'disabled' => true,
+                'disabled_msg' => 'Kitabu cha Matokeo hakiwezi kuzalishwa kwa sasa kwa sababu matokeo ya Kanda hayajakamilika kuchakatwa au hayajafungwa/kuchapishwa rasmi.',
+            ];
+            $extraButtons[] = [
+                'label' => 'Download Result Book PDF',
+                'url' => '#',
+                'class' => 'top-btn primary',
+                'style' => 'opacity: 0.5; cursor: not-allowed; background: #64748b; color: #cbd5e1;',
+                'disabled' => true,
+                'disabled_msg' => 'Kitabu cha Matokeo hakiwezi kuzalishwa kwa sasa kwa sababu matokeo ya Kanda hayajakamilika kuchakatwa au hayajafungwa/kuchapishwa rasmi.',
+            ];
+        }
+
         $entries = $this->zonalEvaluationEntries()->map(fn (array $evaluation) => [
             'label' => $evaluation['label'],
             'url' => route('evaluations.psle.zonalwise.evaluation', ['evaluation' => $evaluation['key']]),
             'status' => $statusesMap->get($evaluation['key'], \App\Models\PslePrecalculatedEvaluation::STATUS_PENDING),
+        ]);
+
+        $entries = $entries->concat([
+            [
+                'label' => 'ZONAL RESULT BOOK / KITABU CHA MATOKEO',
+                'url' => route('evaluations.psle.zonalwise.result-book'),
+                'status' => $isReady ? 'ready' : 'pending',
+                'description' => 'Tathmini ya jumla ya uendeshaji, usajili, mahudhurio, madaraja, na mchanganuo wa ufaulu kikanda.',
+            ]
         ]);
 
         $meta = $this->baseMeta([
@@ -90,6 +146,7 @@ class PsleEvaluationsController extends Controller
             'back_label' => 'Back to PSLE Evaluations',
             'primary_action_url' => route('evaluations.psle.regionalwise'),
             'primary_action_label' => 'Open Regionalwise',
+            'extra_buttons' => $extraButtons,
         ]);
 
         return view('public.results-portal.index', [
