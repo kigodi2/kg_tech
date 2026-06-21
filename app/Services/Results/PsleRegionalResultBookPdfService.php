@@ -94,7 +94,7 @@ class PsleRegionalResultBookPdfService
                 $this->Ln(1);
                 $this->SetTextColor(100, 116, 139);
                 $this->SetFont($this->primaryFont, '', 7.5);
-                $this->Cell(100, 5, $this->pdfText("Mfumo wa IRMS - Ofisi ya Rais - TAMISEMI"), 0, 0, 'L');
+                $this->Cell(100, 5, $this->pdfText("Mfumo wa IRMS - Ofisi ya Waziri Mkuu - TAMISEMI"), 0, 0, 'L');
                 $this->Cell(0, 5, $this->pdfText("Ukurasa " . $this->PageNo() . " / {nb}"), 0, 0, 'R');
             }
 
@@ -158,7 +158,7 @@ class PsleRegionalResultBookPdfService
         $pdf->SetY(25);
         $pdf->SetTextColor(8, 39, 109);
         $pdf->SetFont($pdf->primaryFont, 'B', 14);
-        $pdf->Cell(0, 6, $pdf->pdfText("OFISI YA RAIS"), 0, 1, 'C');
+        $pdf->Cell(0, 6, $pdf->pdfText("OFISI YA WAZIRI MKUU"), 0, 1, 'C');
         $pdf->SetFont($pdf->primaryFont, 'B', 12);
         $pdf->Cell(0, 6, $pdf->pdfText("TAWALA ZA MIKOA NA SERIKALI ZA MITAA"), 0, 1, 'C');
         $pdf->Cell(0, 6, $pdf->pdfText("OFISI YA MKUU WA MKOA WA " . strtoupper($pdf->regionName)), 0, 1, 'C');
@@ -229,8 +229,55 @@ class PsleRegionalResultBookPdfService
 
         $pdf->Line(20, $pdf->GetY() + 4, 190, $pdf->GetY() + 4);
 
-        // NARRATIVES SECTION
+        // YALIYOMO (TABLE OF CONTENTS)
         $pdf->isCoverPage = false;
+        $pdf->addPortraitPage();
+        
+        $pdf->SetFont($pdf->primaryFont, 'B', 14);
+        $pdf->SetTextColor(15, 23, 42);
+        $pdf->Cell(0, 10, $pdf->pdfText("YALIYOMO (TABLE OF CONTENTS)"), 0, 1, 'C');
+        $pdf->Ln(5);
+        
+        $tocItems = [
+            "1. Muhtasari wa Kitendaji",
+            "2. Utangulizi",
+            "3. Maandalizi ya Mtihani",
+            "4. Utungaji na Moderation",
+            "5. Uzalishaji na Usambazaji",
+            "6. Ufanyikaji na Usimamizi wa Mtihani",
+            "7. Usahihishaji na Uingizaji wa Alama",
+            "8. Takwimu za Usajili na Mahudhurio",
+            "9. Tathmini ya Jumla ya Mkoa",
+            "10. Tathmini ya Matokeo Ki-Halmashauri",
+            "11. Shule Bora Kumi Kimkoa",
+            "12. Shule za Mwisho Kumi Kimkoa",
+            "13. Tathmini ya Ufaulu kwa Masomo",
+            "14. Tathmini ya Ufaulu kwa Umiliki wa Shule",
+            "15. Uhakiki wa Ubora wa Data",
+            "16. Changamoto Zilizobainika",
+            "17. Mapendekezo",
+            "18. Hitimisho",
+            "19. Uidhinishaji"
+        ];
+        
+        $pdf->SetFont($pdf->primaryFont, 'B', 10);
+        foreach ($tocItems as $item) {
+            $pdf->SetTextColor(15, 23, 42);
+            $pdf->Cell(120, 7.5, $pdf->pdfText($item), 0, 0, 'L');
+            $pdf->SetTextColor(100, 116, 139);
+            $pdf->SetFont($pdf->primaryFont, 'I', 9);
+            $pdf->Cell(0, 7.5, $pdf->pdfText("Sehemu ya Ripoti"), 0, 1, 'R');
+            $pdf->SetFont($pdf->primaryFont, 'B', 10);
+            
+            // Draw a dashed/thin underline for TOC items
+            $currY = $pdf->GetY();
+            $pdf->SetDrawColor(226, 232, 240);
+            $pdf->SetLineWidth(0.2);
+            $pdf->Line($pdf->getLMargin(), $currY, $pdf->getPageWidth() - $pdf->getRMargin(), $currY);
+        }
+        $pdf->Ln(10);
+
+        // NARRATIVES SECTION
         $pdf->addPortraitPage();
 
         // Helper closures
@@ -290,39 +337,44 @@ class PsleRegionalResultBookPdfService
             $pdf->Ln(2);
         };
 
-        // 1. UTANGULIZI
-        $chapterHeader("1", "Utangulizi");
+        // 1. MUHTASARI WA KITENDAJI
+        $chapterHeader("1", "Muhtasari wa Kitendaji");
+        $renderParagraph($narrative->getExecutiveSummary($data));
+        $pdf->Ln(4);
+
+        // 2. UTANGULIZI
+        $chapterHeader("2", "Utangulizi");
         $renderParagraph($narrative->getIntroduction($data));
         $pdf->Ln(4);
 
-        // 2. MAANDALIZI
-        $chapterHeader("2", "Maandalizi ya Mtihani");
+        // 3. MAANDALIZI
+        $chapterHeader("3", "Maandalizi ya Mtihani");
         $renderParagraph($narrative->getPreparations($data));
         $pdf->Ln(4);
 
-        // 3. UTUNGAJI NA MODERATION
-        $chapterHeader("3", "Utungaji na Moderation");
+        // 4. UTUNGAJI NA MODERATION
+        $chapterHeader("4", "Utungaji na Moderation");
         $renderParagraph($narrative->getModeration($data));
         $pdf->Ln(4);
 
-        // 4. UZALISHAJI NA USAMBAZAJI
-        $chapterHeader("4", "Uzalishaji na Usambazaji");
+        // 5. UZALISHAJI NA USAMBAZAJI
+        $chapterHeader("5", "Uzalishaji na Usambazaji");
         $renderBullets($narrative->getProduction($data));
         $pdf->Ln(4);
 
-        // 5. UFANYIKAJI NA RATIBA
-        $chapterHeader("5", "Ufanyikaji na Uratibu wa Mtihani");
+        // 6. UFANYIKAJI NA USIMAMIZI WA MTIHANI
+        $chapterHeader("6", "Ufanyikaji na Usimamizi wa Mtihani");
         $renderParagraph($narrative->getExecution($data));
         $pdf->Ln(4);
 
-        // 6. USAHIHISHAJI NA UINGIZAJI ALAMA
-        $chapterHeader("6", "Usahihishaji na Uingizaji Alama");
+        // 7. USAHIHISHAJI NA UINGIZAJI WA ALAMA
+        $chapterHeader("7", "Usahihishaji na Uingizaji wa Alama");
         $renderBullets($narrative->getMarking($data));
         $pdf->Ln(4);
 
-        // 7. TAKWIMU ZA USAJILI NA MAHUDHURIO
+        // 8. TAKWIMU ZA USAJILI NA MAHUDHURIO
         $pdf->addPortraitPage();
-        $chapterHeader("7", "Takwimu za Usajili na Mahudhurio");
+        $chapterHeader("8", "Takwimu za Usajili na Mahudhurio");
         $renderParagraph("Jedwali lifuatalo linaonesha mchanganuo wa watahiniwa waliosajiliwa, waliofanya mtihani, na wasiofanya mtihani kwa kila Halmashauri katika Mkoa wetu:");
 
         // Table 1 (Landscape)
@@ -371,10 +423,10 @@ class PsleRegionalResultBookPdfService
         $this->renderTable($pdf, $t1Headers, $t1Widths, $t1Aligns, $t1Rows, $t1Total, true);
         $pdf->Ln(6);
 
-        // 8. TATHMINI YA UTENDAJI NA MATOKEO
+        // 9. TATHMINI YA JUMLA YA MKOA
         $pdf->addPortraitPage();
-        $chapterHeader("8", "Tathmini ya Utenda Kazi na Matokeo (Statistical Performance Overview)");
-        $renderParagraph("Sehemu hii inatoa muhtasari wa matokeo yaliyochakatwa na mfumo wa IRMS, ikionesha mgawanyo wa madaraja ya ufaulu, GPA, na kulinganisha ufaulu ki-halmashauri, ki-shule, na ki-masomo.");
+        $chapterHeader("9", "Tathmini ya Jumla ya Mkoa");
+        $renderParagraph("Sehemu hii inatoa muhtasari wa matokeo yaliyochakatwa na mfumo wa IRMS, ikionesha mgawanyo wa madaraja ya ufaulu na wastani wa alama kimkoa.");
 
         // Table 2 & 3 (Landscape)
         $pdf->addLandscapePage();
@@ -413,16 +465,16 @@ class PsleRegionalResultBookPdfService
         $this->renderTable($pdf, $t2Headers, $t2Widths, $t2Aligns, $t2Rows, $t2Total);
         $pdf->Ln(8);
 
-        // B. Councilwise Evaluation (Landscape page break for clean formatting)
+        // 10. TATHMINI YA MATOKEO KI-HALMASHAURI
         $pdf->addLandscapePage();
-        $chapterSubHeader("B", "Tathmini ya Matokeo Ki-Halmashauri (Councilwise Performance)");
+        $chapterHeader("10", "Tathmini ya Matokeo Ki-Halmashauri");
         
         $pdf->SetFont($pdf->primaryFont, '', 9.5);
         $pdf->SetTextColor(30, 41, 59);
-        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mlinganisho wa ufaulu na GPA kati ya Halmashauri zote zinazounda Mkoa, zilizopangwa kwa kufuata wastani wa GPA (Halmashauri zenye ufaulu bora zaidi zinaanza):"), 0, 'J');
+        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mlinganisho wa ufaulu na wastani wa alama kati ya Halmashauri zote zinazounda Mkoa, zilizopangwa kwa kufuata wastani wa alama (Halmashauri zenye ufaulu bora zaidi zinaanza):"), 0, 'J');
         $pdf->Ln(2);
 
-        $t3Headers = ['Nafasi', 'Halmashauri', 'Waliofanya', 'Waliofaulu (A-C)', 'Waliofaulu (D)', 'Waliofeli (E)', 'Wastani GPA', 'Daraja'];
+        $t3Headers = ['Nafasi', 'Halmashauri', 'Waliofanya', 'Waliofaulu (A-C)', 'Waliofaulu (D)', 'Waliofeli (E)', 'Wastani', 'Daraja'];
         $t3Widths = [20, 75, 32, 35, 32, 30, 33, 20];
         $t3Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'C'];
         
@@ -435,7 +487,7 @@ class PsleRegionalResultBookPdfService
                 number_format($cRow['pass_ac']),
                 number_format($cRow['pass_d']),
                 number_format($cRow['fail']),
-                number_format($cRow['gpa'], 4),
+                number_format($cRow['average_marks'], 2),
                 $cRow['grade']
             ];
         }
@@ -443,23 +495,18 @@ class PsleRegionalResultBookPdfService
         $this->renderTable($pdf, $t3Headers, $t3Widths, $t3Aligns, $t3Rows);
         $pdf->Ln(6);
 
-        // C. Schoolwise Evaluation (Top 10) (Landscape)
+        // 11. SHULE BORA KUMI KIMKOA
         $pdf->addLandscapePage();
-        $chapterSubHeader("C", "Tathmini ya Matokeo Ki-Shule (Schoolwise Performance)");
+        $chapterHeader("11", "Shule Bora Kumi Kimkoa");
         
         $pdf->SetFont($pdf->primaryFont, '', 9.5);
         $pdf->SetTextColor(30, 41, 59);
-        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mchanganuo huu unaonesha shule kumi (10) bora zilizoongoza kitaaluma na shule kumi (10) za mwisho katika Mkoa wetu:"), 0, 'J');
+        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mchanganuo huu unaonesha shule kumi (10) bora zilizoongoza kitaaluma katika Mkoa wetu:"), 0, 'J');
         $pdf->Ln(2);
 
-        $t4Headers = ['Nafasi', 'Jina la Shule', 'Halmashauri', 'Umiliki', 'Watahiniwa', 'GPA Wastani', 'Daraja'];
+        $t4Headers = ['Nafasi', 'Jina la Shule', 'Halmashauri', 'Umiliki', 'Watahiniwa', 'Wastani', 'Daraja'];
         $t4Widths = [20, 85, 50, 40, 22, 35, 25];
         $t4Aligns = ['C', 'L', 'L', 'L', 'R', 'R', 'C'];
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 8.5);
-        $pdf->SetTextColor(15, 23, 42);
-        $pdf->Cell(0, 6, $pdf->pdfText("1) Shule Bora Kumi (Top 10 Schools) Kimkoa"), 0, 1, 'L');
-        $pdf->Ln(1);
         
         $t4Rows = [];
         foreach ($data['performance']['top_schools'] as $sRow) {
@@ -469,18 +516,20 @@ class PsleRegionalResultBookPdfService
                 $sRow['council'],
                 $sRow['ownership'],
                 number_format($sRow['sat']),
-                number_format($sRow['gpa'], 4),
+                number_format($sRow['average_marks'], 2),
                 $sRow['grade']
             ];
         }
         $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t4Rows);
         
-        // Bottom 10 Schools (Landscape)
+        // 12. SHULE ZA MWISHO KUMI KIMKOA
         $pdf->addLandscapePage();
-        $pdf->SetFont($pdf->primaryFont, 'B', 8.5);
-        $pdf->SetTextColor(15, 23, 42);
-        $pdf->Cell(0, 6, $pdf->pdfText("2) Shule za Mwisho Kumi (Bottom 10 Schools) Kimkoa"), 0, 1, 'L');
-        $pdf->Ln(1);
+        $chapterHeader("12", "Shule za Mwisho Kumi Kimkoa");
+        
+        $pdf->SetFont($pdf->primaryFont, '', 9.5);
+        $pdf->SetTextColor(30, 41, 59);
+        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mchanganuo huu unaonesha shule kumi (10) za mwisho kitaaluma katika Mkoa wetu:"), 0, 'J');
+        $pdf->Ln(2);
 
         $t5Rows = [];
         foreach ($data['performance']['bottom_schools'] as $sRow) {
@@ -490,23 +539,23 @@ class PsleRegionalResultBookPdfService
                 $sRow['council'],
                 $sRow['ownership'],
                 number_format($sRow['sat']),
-                number_format($sRow['gpa'], 4),
+                number_format($sRow['average_marks'], 2),
                 $sRow['grade']
             ];
         }
         $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t5Rows);
         $pdf->Ln(6);
 
-        // D. Subjectwise Performance (Landscape)
+        // 13. TATHMINI YA UFAULU KWA MASOMO
         $pdf->addLandscapePage();
-        $chapterSubHeader("D", "Tathmini ya Matokeo Ki-Masomo (Subjectwise Performance)");
+        $chapterHeader("13", "Tathmini ya Ufaulu kwa Masomo");
         
         $pdf->SetFont($pdf->primaryFont, '', 9.5);
         $pdf->SetTextColor(30, 41, 59);
         $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mchanganuo wa ufaulu kwa kila somo kwa kuzingatia idadi ya waliotahiniwa, kiwango cha ufaulu, na nafasi ya somo kitaaluma kimkoa:"), 0, 'J');
         $pdf->Ln(2);
 
-        $t6Headers = ['Nafasi', 'Somo', 'Waliotahiniwa', 'Waliofaulu', 'Waliofeli', 'Asilimia (%)', 'Wastani GPA', 'Daraja'];
+        $t6Headers = ['Nafasi', 'Somo', 'Waliotahiniwa', 'Waliofaulu', 'Waliofeli', 'Asilimia (%)', 'Wastani', 'Daraja'];
         $t6Widths = [20, 75, 32, 32, 30, 33, 35, 20];
         $t6Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'C'];
         
@@ -519,23 +568,23 @@ class PsleRegionalResultBookPdfService
                 number_format($subRow['pass']),
                 number_format($subRow['fail']),
                 number_format($subRow['pass_rate'], 2) . '%',
-                number_format($subRow['gpa'], 2),
+                number_format($subRow['average_marks'], 2),
                 $subRow['grade']
             ];
         }
         $this->renderTable($pdf, $t6Headers, $t6Widths, $t6Aligns, $t6Rows);
         $pdf->Ln(6);
 
-        // E. Ownership Result Evaluation (Landscape)
+        // 14. TATHMINI YA UFAULU KWA UMILIKI WA SHULE
         $pdf->addLandscapePage();
-        $chapterSubHeader("E", "Tathmini ya Ufaulu kwa Umiliki (Ownership Performance)");
+        $chapterHeader("14", "Tathmini ya Ufaulu kwa Umiliki wa Shule");
         
         $pdf->SetFont($pdf->primaryFont, '', 9.5);
         $pdf->SetTextColor(30, 41, 59);
         $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mchanganuo unaolinganisha utendaji na ufaulu kati ya shule za Serikali (Government) na shule za Binafsi/Zisizo za Serikali (Non-Government):"), 0, 'J');
         $pdf->Ln(2);
 
-        $t7Headers = ['Umiliki', 'Idadi ya Shule', 'Waliosajiliwa', 'Waliofanya', 'Waliofaulu', 'Waliofeli', 'Ufaulu %', 'GPA'];
+        $t7Headers = ['Umiliki', 'Idadi ya Shule', 'Waliosajiliwa', 'Waliofanya', 'Waliofaulu', 'Waliofeli', 'Ufaulu %', 'Wastani'];
         $t7Widths = [75, 32, 32, 32, 32, 30, 24, 20];
         $t7Aligns = ['L', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
         
@@ -549,41 +598,15 @@ class PsleRegionalResultBookPdfService
                 number_format($ownRow['pass']),
                 number_format($ownRow['fail']),
                 number_format($ownRow['pass_rate'], 2) . '%',
-                number_format($ownRow['gpa'], 4)
+                number_format($ownRow['average_marks'], 2)
             ];
         }
         $this->renderTable($pdf, $t7Headers, $t7Widths, $t7Aligns, $t7Rows);
         $pdf->Ln(6);
 
-        // 9. CHANGAMOTO NA MAPENDEKEZO (Return to Portrait)
+        // 15. UHAKIKI WA UBORA WA DATA (Portrait)
         $pdf->addPortraitPage();
-        $chapterHeader("9", "Changamoto na Mapendekezo");
-        
-        $chapterSubHeader("A", "Changamoto Zilizobainika (Identified Challenges)");
-        foreach ($narrative->getChallenges() as $idx => $chal) {
-            $pdf->SetX(20);
-            $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
-            $pdf->Cell(6, 5.2, ($idx + 1) . ".", 0, 0);
-            $pdf->SetFont($pdf->primaryFont, '', 9.5);
-            $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $chal)), 0, 'J');
-            $pdf->Ln(1.5);
-        }
-        $pdf->Ln(4);
-
-        $chapterSubHeader("B", "Mapendekezo na Suluhisho za Kisitemu (Recommendations)");
-        foreach ($narrative->getRecommendations() as $idx => $rec) {
-            $pdf->SetX(20);
-            $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
-            $pdf->Cell(6, 5.2, ($idx + 1) . ".", 0, 0);
-            $pdf->SetFont($pdf->primaryFont, '', 9.5);
-            $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $rec)), 0, 'J');
-            $pdf->Ln(1.5);
-        }
-        $pdf->Ln(6);
-
-        // 10. UHAKIKI WA DATA NA UBORA (Portrait)
-        $pdf->addPortraitPage();
-        $chapterHeader("10", "Uhakiki na Usahihi wa Data (Data Quality Audit)");
+        $chapterHeader("15", "Uhakiki wa Ubora wa Data");
         $renderParagraph($data['data_quality']['summary']);
         
         if (!empty($data['data_quality']['issues'])) {
@@ -609,12 +632,44 @@ class PsleRegionalResultBookPdfService
             $pdf->MultiCell(0, 6, $pdf->pdfText("Hakuna hitilafu yoyote iliyobainika wakati wa uhakiki wa data ya matokeo ya Mkoa."), 1, 'L', true);
             $pdf->SetTextColor(30, 41, 59);
         }
-        $pdf->Ln(10);
+        $pdf->Ln(6);
 
-        // 11. SIGN-OFF (Portrait)
-        if ($pdf->GetY() > 210) {
-            $pdf->addPortraitPage();
+        // 16. CHANGAMOTO ZILIZOBAINIKA (Return to Portrait)
+        $pdf->addPortraitPage();
+        $chapterHeader("16", "Changamoto Zilizobainika");
+        foreach ($narrative->getChallenges() as $idx => $chal) {
+            $pdf->SetX(20);
+            $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
+            $pdf->Cell(6, 5.2, ($idx + 1) . ".", 0, 0);
+            $pdf->SetFont($pdf->primaryFont, '', 9.5);
+            $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $chal)), 0, 'J');
+            $pdf->Ln(1.5);
         }
+        $pdf->Ln(6);
+
+        // 17. MAPENDEKEZO (Portrait)
+        $pdf->addPortraitPage();
+        $chapterHeader("17", "Mapendekezo");
+        foreach ($narrative->getRecommendations() as $idx => $rec) {
+            $pdf->SetX(20);
+            $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
+            $pdf->Cell(6, 5.2, ($idx + 1) . ".", 0, 0);
+            $pdf->SetFont($pdf->primaryFont, '', 9.5);
+            $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $rec)), 0, 'J');
+            $pdf->Ln(1.5);
+        }
+        $pdf->Ln(6);
+
+        // 18. HITIMISHO (Portrait)
+        $pdf->addPortraitPage();
+        $chapterHeader("18", "Hitimisho");
+        $renderParagraph("Kamati ya Mitihani ya Mkoa inatoa shukrani za dhati kwa wadau wote wa elimu walioshiriki kufanikisha mtihani huu wa utamilifu wa Mkoa (PSLE Mock). Matokeo haya yaonyeshe juhudi zinazohitajika katika kipindi kilichobaki kabla ya mtihani wa Taifa wa Darasa la Saba ili kuongeza ufaulu na ubora wa elimu katika mkoa wetu.");
+        $pdf->Ln(6);
+
+        // 19. UIDHINISHAJI (Portrait)
+        $pdf->addPortraitPage();
+        $chapterHeader("19", "Uidhinishaji");
+        $pdf->Ln(4);
 
         $pdf->SetFont($pdf->primaryFont, 'B', 10);
         $pdf->Cell(90, 6, $pdf->pdfText("Imeandaliwa na:"), 0, 0, 'L');

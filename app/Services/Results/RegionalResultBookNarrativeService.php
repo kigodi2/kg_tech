@@ -4,6 +4,36 @@ namespace App\Services\Results;
 
 class RegionalResultBookNarrativeService
 {
+    public function getExecutiveSummary(array $data): string
+    {
+        $meta = $data['meta'];
+        $profile = $data['region_profile'];
+        $att = $data['attendance'];
+        $perf = $data['performance'];
+
+        $totalSchools = number_format($profile['total_schools']);
+        $registered = number_format($att['registered_total']);
+        $satTotal = number_format($att['sat_total']);
+        $attendanceRate = number_format($att['attendance_rate'], 2);
+
+        $passAC = $perf['regional']['pass'] ?? 0;
+        $satVal = $perf['regional']['sat'] ?? 0;
+        $passRate = $satVal > 0 ? number_format(($passAC / $satVal) * 100, 2) : '0.00';
+
+        $topCouncil = isset($perf['councils'][0]) ? $perf['councils'][0]['name'] : 'N/A';
+        $topCouncilAvg = isset($perf['councils'][0]) ? number_format($perf['councils'][0]['average_marks'], 2) : '0.00';
+
+        $topSchool = isset($perf['top_schools'][0]) ? $perf['top_schools'][0]['name'] : 'N/A';
+        $topSchoolAvg = isset($perf['top_schools'][0]) ? number_format($perf['top_schools'][0]['average_marks'], 2) : '0.00';
+
+        return "Ripoti hii inatoa muhtasari wa matokeo ya mtihani wa utamilifu wa Darasa la Saba (PSLE Mock) kwa Mwaka " . $meta['exam_year'] . " katika Mkoa wa **" . $meta['region_name'] . "**. " .
+            "Mtihani huu ulihusisha jumla ya shule **" . $totalSchools . "** na watahiniwa **" . $registered . "** waliosajiliwa. " .
+            "Kati yao, watahiniwa **" . $satTotal . "** walifanya mtihani, ikiwa ni sawa na asilimia **" . $attendanceRate . "%** ya mahudhurio ya jumla. " .
+            "Ufaulu wa jumla wa Mkoa (Daraja A-D) umefikia asilimia **" . $passRate . "%** ya watahiniwa wote waliofanya mtihani. " .
+            "Halmashauri iliyoongoza kitaaluma katika Mkoa ni **" . $topCouncil . "** ikiwa na wastani wa alama **" . $topCouncilAvg . "**, na shule iliyoongoza kimkoa ni **" . $topSchool . "** yenye wastani wa alama **" . $topSchoolAvg . "**. " .
+            "Tathmini ya kina ya takwimu za usajili, mahudhurio, utendaji wa kimasomo, kiutawala na kiumiliki imeainishwa kikamilifu katika kurasa zinazofuata.";
+    }
+
     public function getIntroduction(array $data): string
     {
         $meta = $data['meta'];
@@ -74,7 +104,7 @@ class RegionalResultBookNarrativeService
             "  2. *Sheria na Taratibu za Usahihishaji na Usimamizi:* Iliyowasilishwa na Afisa Taaluma/Mratibu Ndg. **" . $op['rto_name'] . "**.\n" .
             "  3. *Uratibu wa Kituo:* Uliosimamiwa na Ndg. **" . $op['exam_coordinator_name'] . "**.\n" .
             "* **Uendeshaji wa Usahihishaji:** Zoezi la usahihishaji lilifanyika kwa siku **" . $op['marking_days'] . "** na lilihusisha jumla ya wasahihishaji **" . $op['markers_count'] . "** (ikijumuisha walimu na wasaidizi wataalamu " . $op['students_assistants_count'] . "). Usahihishaji ulifanyika kwa makundi ya kimasomo (Subject Panels) kwa kutumia miongozo ya usahihishaji (Marking Schemes) iliyohakikiwa.\n" .
-            "* **Uingizaji Alama kwenye Mfumo (Data Entry):** Baada ya usahihishaji wa kila somo kukamilika na kufanyiwa uhakiki wa kwanza (Audit/Verification), karatasi za alama (Score Sheets) zilikabidhiwa kwa Timu ya TEHAMA (IT Team) ya Mkoa na Halmashauri kwa ajili ya kuingiza alama (Marks Entry) kwenye Mfumo wa Usimamizi wa Matokeo wa IRMS. Mfumo huu ulifanya kazi ya kukokotoa daraja la ufaulu na GPA kwa kila mwanafunzi kiotomatiki kwa usahihi wa hali ya juu.";
+            "* **Uingizaji Alama kwenye Mfumo (Data Entry):** Baada ya usahihishaji wa kila somo kukamilika na kufanyiwa uhakiki wa kwanza (Audit/Verification), karatasi za alama (Score Sheets) zilikabidhiwa kwa Timu ya TEHAMA (IT Team) ya Mkoa na Halmashauri kwa ajili ya kuingiza alama (Marks Entry) kwenye Mfumo wa Usimamizi wa Matokeo wa IRMS. Mfumo huu ulifanya kazi ya kukokotoa daraja la ufaulu na wastani wa alama kwa kila mwanafunzi kiotomatiki kwa usahihi wa hali ya juu.";
     }
 
     public function getChallenges(): array

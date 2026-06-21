@@ -589,7 +589,7 @@
             <!-- Page 1: COVER -->
             <div class="document-page cover-page">
                 <div class="cover-header">
-                    <h1>OFISI YA RAIS</h1>
+                    <h1>OFISI YA WAZIRI MKUU</h1>
                     <h2>TAWALA ZA MIKOA NA SERIKALI ZA MITAA</h2>
                     <h2>OFISI YA MKUU WA MKOA WA <span class="sync-region">{{ strtoupper($region->name) }}</span></h2>
                     
@@ -637,11 +637,61 @@
                 </div>
             </div>
             
+            <!-- Page 1.5: Table of Contents -->
+            <div class="document-page">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">YALIYOMO (TABLE OF CONTENTS)</h2>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+                    @php
+                        $tocItems = [
+                            "1. Muhtasari wa Kitendaji",
+                            "2. Utangulizi",
+                            "3. Maandalizi ya Mtihani",
+                            "4. Utungaji na Moderation",
+                            "5. Uzalishaji na Usambazaji",
+                            "6. Ufanyikaji na Usimamizi wa Mtihani",
+                            "7. Usahihishaji na Uingizaji wa Alama",
+                            "8. Takwimu za Usajili na Mahudhurio",
+                            "9. Tathmini ya Jumla ya Mkoa",
+                            "10. Tathmini ya Matokeo Ki-Halmashauri",
+                            "11. Shule Bora Kumi Kimkoa",
+                            "12. Shule za Mwisho Kumi Kimkoa",
+                            "13. Tathmini ya Ufaulu kwa Masomo",
+                            "14. Tathmini ya Ufaulu kwa Umiliki wa Shule",
+                            "15. Uhakiki wa Ubora wa Data",
+                            "16. Changamoto Zilizobainika",
+                            "17. Mapendekezo",
+                            "18. Hitimisho",
+                            "19. Uidhinishaji"
+                        ];
+                    @endphp
+                    @foreach($tocItems as $item)
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 0.95rem; color: #334155; padding: 4px 0; border-bottom: 1px dashed #e2e8f0;">
+                            <span style="font-weight: 600; color: var(--primary);">{{ $item }}</span>
+                            <span style="font-size: 0.85rem; color: #64748b; font-style: italic;">Sehemu ya Ripoti</span>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+            
             <!-- Page 2: NARRATIVES & STATS -->
             <div class="document-page">
                 
                 <!-- Section 1 -->
-                <div class="doc-section-title">1. UTANGULIZI</div>
+                <div class="doc-section-title">1. MUHTASARI WA KITENDAJI</div>
+                <div class="doc-paragraph">
+                    Ripoti hii inatoa muhtasari wa matokeo ya mtihani wa utamilifu wa Darasa la Saba (PSLE Mock) kwa Mwaka {{ $examYear }} katika Mkoa wa <strong>{{ $region->name }}</strong>.
+                    Mtihani huu ulihusisha jumla ya shule <strong>{{ number_format($data['region_profile']['total_schools']) }}</strong> na watahiniwa <strong>{{ number_format($data['attendance']['registered_total']) }}</strong> waliosajiliwa.
+                    Kati yao, watahiniwa <strong>{{ number_format($data['attendance']['sat_total']) }}</strong> walifanya mtihani, ikiwa ni sawa na asilimia <strong>{{ number_format($data['attendance']['attendance_rate'], 2) }}%</strong> ya mahudhurio ya jumla.
+                    Ufaulu wa jumla wa Mkoa (Daraja A-D) umefikia asilimia <strong>{{ number_format(($data['performance']['regional']['pass'] / max(1, $data['performance']['regional']['sat'])) * 100, 2) }}%</strong> ya watahiniwa wote waliofanya mtihani.
+                    Halmashauri iliyoongoza kitaaluma katika Mkoa ni <strong>{{ $data['performance']['councils'][0]['name'] ?? 'N/A' }}</strong> ikiwa na wastani wa alama <strong>{{ number_format($data['performance']['councils'][0]['average_marks'] ?? 0, 2) }}</strong>, na shule iliyoongoza kimkoa ni <strong>{{ $data['performance']['top_schools'][0]['name'] ?? 'N/A' }}</strong> yenye wastani wa alama <strong>{{ number_format($data['performance']['top_schools'][0]['average_marks'] ?? 0, 2) }}</strong>.
+                    Tathmini ya kina ya takwimu za usajili, mahudhurio, utendaji wa kimasomo, kiutawala na kiumiliki imeainishwa kikamilifu katika kurasa zinazofuata.
+                </div>
+
+                <!-- Section 2 -->
+                <div class="doc-section-title">2. UTANGULIZI</div>
                 <div class="doc-paragraph">
                     Mkoa wa <strong>{{ $region->name }}</strong> una jumla ya shule za Msingi <strong>{{ number_format($data['region_profile']['total_schools']) }}</strong> ambapo shule za Serikali ni <strong>{{ number_format($data['region_profile']['government_schools']) }}</strong> na shule za Binafsi/Zisizo za Serikali ni <strong>{{ number_format($data['region_profile']['private_schools']) }}</strong>. Kiutawala, Mkoa una jumla ya Halmashauri/Wilaya <strong>{{ number_format($data['region_profile']['councils_count']) }}</strong> ambazo ni:
                 </div>
@@ -664,8 +714,8 @@
                     Kati ya watahiniwa waliosajiliwa, jumla ya watahiniwa <strong>{{ number_format($data['attendance']['sat_total']) }}</strong> walifanya mtihani huo, ikijumuisha Wavulana <strong>{{ number_format($data['attendance']['sat_male']) }}</strong> na Wasichana <strong>{{ number_format($data['attendance']['sat_female']) }}</strong>, ikiwa ni sawa na asilimia <strong>{{ number_format($data['attendance']['attendance_rate'], 2) }}%</strong> ya watahiniwa wote waliosajiliwa. Jumla ya watahiniwa <strong>{{ number_format($data['attendance']['absent_total']) }}</strong> (Wavulana <strong>{{ number_format($data['attendance']['absent_male']) }}</strong>, Wasichana <strong>{{ number_format($data['attendance']['absent_female']) }}</strong>) sawa na asilimia <strong>{{ number_format($data['attendance']['registered_total'] > 0 ? ($data['attendance']['absent_total'] / $data['attendance']['registered_total']) * 100 : 0, 2) }}%</strong> hawakufanya mtihani kutokana na sababu mbalimbali kama vile utoro, ugonjwa na sababu nyingine za kijamii.
                 </div>
                 
-                <!-- Section 2 -->
-                <div class="doc-section-title">2. MAANDALIZI YA MTIHANI</div>
+                <!-- Section 3 -->
+                <div class="doc-section-title">3. MAANDALIZI YA MTIHANI</div>
                 <div class="doc-paragraph">
                     Maandalizi ya mtihani yalianza kwa uratibu na vikao vya pamoja vilivyowashirikisha Maafisa Elimu wa Halmashauri (DEOs), Maafisa Taaluma (DTOs), na Wathibiti Ubora wa Shule katika Mkoa. Vikao hivyo vililenga kukubaliana juu ya miongozo ya uendeshaji, usisimamizi, usahihishaji, na mifumo ya bajeti.
                 </div>
@@ -679,8 +729,8 @@
                     2. <strong>Ushirikiano wa Kimkoa/Kikanda (Zonal Collaboration):</strong> Mtihani huu wa utamilifu uliandaliwa kupitia ushirikiano wa Kanda/Mikoa ya <strong class="preview-collaborating_regions">{{ $inputs['collaborating_regions'] }}</strong>, ambapo mikoa iligawana majukumu ya uandaaji wa rasimu za awali za mitihani ya masomo yote kulingana na mihutasari mipya ya masomo.
                 </div>
                 
-                <!-- Section 3 -->
-                <div class="doc-section-title">3. UTUNGAJI NA MODERATION</div>
+                <!-- Section 4 -->
+                <div class="doc-section-title">4. UTUNGAJI NA MODERATION</div>
                 <div class="doc-paragraph">
                     Mchakato wa utungaji na uthibitishaji wa mitihani ulifanyika kwa kufuata kanuni za kitaaluma na usiri mkubwa:
                 </div>
@@ -689,15 +739,15 @@
                     <li><strong>Mapitio na Uhakiki (Moderation):</strong> Baada ya mitihani kutungwa, zoezi la Moderation lilifanyika kitaifa/kimkoa katika Kituo Teule chini ya Kamati ya Taaluma ya Mkoa wa <strong class="preview-moderation_region">{{ $inputs['moderation_region'] }}</strong> kwa ajili ya kufanya mapitio ya kisarufi, usahihi wa maswali, uwiano wa alama, na kuhakikisha maswali yanapima nyanja zote za utambuzi (cognitive domains).</li>
                 </ul>
                 
-                <!-- Section 4 -->
-                <div class="doc-section-title">4. UZALISHAJI NA USAMBAZAJI</div>
+                <!-- Section 5 -->
+                <div class="doc-section-title">5. UZALISHAJI NA USAMBAZAJI</div>
                 <ul class="doc-list">
                     <li><strong>Uzalishaji (Production):</strong> Mitihani yote ilizalishwa kwa siri na usalama mkubwa chini ya usimamizi wa Kamati ya Mitihani ya Mkoa. Zoezi hili lilifanyika katika Chumba Maalum cha Siri (Strong Room / Kasiki ya Mkoa) kwa muda wa siku <strong class="preview-production_days">{{ $inputs['production_days'] }}</strong> kwa kutumia mashine za chapa haraka za RISSO <strong class="preview-risso_machine_count">{{ $inputs['risso_machine_count'] }}</strong> yenye thamani ya shilingi <strong class="preview-risso_machine_value">{{ number_format((float)$inputs['risso_machine_value']) }}</strong>.</li>
                     <li><strong>Ulinzi na Usambazaji (Distribution):</strong> Baada ya kazi ya uzalishaji, kufungashwa kwa bahasha kulingana na idadi ya watahiniwa wa kila shule kukamilika, mitihani yote ilihifadhiwa kwenye Strong Room. Baadaye ilikabidhiwa kwa Maafisa Elimu wa Halmashauri na Kamati za Mitihani za Wilaya chini ya ulinzi thabiti wa Jeshi la Polisi na Maafisa Usalama wa Wilaya ili kusambazwa kwenye vituo vya mitihani kwa wakati.</li>
                 </ul>
                 
-                <!-- Section 5 -->
-                <div class="doc-section-title">5. UFANYIKAJI NA RATIBA YA MTIHANI</div>
+                <!-- Section 6 -->
+                <div class="doc-section-title">6. UFANYIKAJI NA USIMAMIZI WA MTIHANI</div>
                 <div class="doc-paragraph">
                     Mtihani ulianza rasmi tarehe <strong class="preview-exam_start_date">{{ $inputs['exam_start_date'] }}</strong> na kukamilika tarehe <strong class="preview-exam_end_date">{{ $inputs['exam_end_date'] }}</strong> katika shule zote zilizosajiliwa kama vituo vya mitihani.
                 </div>
@@ -705,8 +755,8 @@
                     Zoezi zima la ufanyikaji wa mitihani lilifanyika kwa kufuata ratiba sanifu iliyotolewa na Kamati ya Mkoa. Baada ya kukamilika kwa mtihani wa mwisho, wasimamizi wakuu wa vituo walikusanya skripti (karatasi za majibu) na kuzikabidhi kwa Maafisa Elimu wa Halmashauri ambao walizisafirisha chini ya ulinzi hadi Kituo Kikuu cha Usahihishaji cha Mkoa kilichopo shule ya <strong class="preview-marking_center">{{ $inputs['marking_center'] }}</strong>.
                 </div>
                 
-                <!-- Section 6 -->
-                <div class="doc-section-title">6. USAHIHISHAJI NA UINGIZAJI ALAMA</div>
+                <!-- Section 7 -->
+                <div class="doc-section-title">7. USAHIHISHAJI NA UINGIZAJI WA ALAMA</div>
                 <ul class="doc-list">
                     <li><strong>Semina na Maelekezo ya Awali:</strong> Kabla ya kuanza kwa usahihishaji, Kamati ya Mitihani ya Mkoa chini ya Mwenyekiti wake (Afisa Elimu wa Mkoa - REO) <strong class="preview-reo_name">{{ $inputs['reo_name'] }}</strong> ilifanya semina ya ulinzi na maadili ya usahihishaji kwa wasahihishaji wote. Mada zilizowasilishwa ni:
                         <ol style="margin-left: 20px; margin-top: 5px;">
@@ -716,15 +766,15 @@
                         </ol>
                     </li>
                     <li><strong>Uendeshaji wa Usahihishaji:</strong> Zoezi la usahihishaji lilifanyika kwa siku <strong class="preview-marking_days">{{ $inputs['marking_days'] }}</strong> na lilihusisha jumla ya wasahihishaji <strong class="preview-markers_count">{{ $inputs['markers_count'] }}</strong> (ikijumuisha walimu na wasaidizi wataalamu <strong class="preview-students_assistants_count">{{ $inputs['students_assistants_count'] }}</strong>). Usahihishaji ulifanyika kwa makundi ya kimasomo (Subject Panels) kwa kutumia miongozo ya usahihishaji (Marking Schemes) iliyohakikiwa.</li>
-                    <li><strong>Uingizaji Alama kwenye Mfumo (Data Entry):</strong> Baada ya usahihishaji wa kila somo kukamilika na kufanyiwa uhakiki wa kwanza (Audit/Verification), karatasi za alama (Score Sheets) zilikabidhiwa kwa Timu ya TEHAMA (IT Team) ya Mkoa na Halmashauri kwa ajili ya kuingiza alama (Marks Entry) kwenye Mfumo wa Usimamizi wa Matokeo wa IRMS. Mfumo huu ulifanya kazi ya kukokotoa daraja la ufaulu na GPA kwa kila mwanafunzi kiotomatiki kwa usahihi wa hali ya juu.</li>
+                    <li><strong>Uingizaji Alama kwenye Mfumo (Data Entry):</strong> Baada ya usahihishaji wa kila somo kukamilika na kufanyiwa uhakiki wa kwanza (Audit/Verification), karatasi za alama (Score Sheets) zilikabidhiwa kwa Timu ya TEHAMA (IT Team) ya Mkoa na Halmashauri kwa ajili ya kuingiza alama (Marks Entry) kwenye Mfumo wa Usimamizi wa Matokeo wa IRMS. Mfumo huu ulifanya kazi ya kukokotoa daraja la ufaulu na wastani wa alama kwa kila mwanafunzi kiotomatiki kwa usahihi wa hali ya juu.</li>
                 </ul>
             </div>
             
             <!-- Page 3: TABLES -->
             <div class="document-page">
                 
-                <!-- Section 7 -->
-                <div class="doc-section-title">7. TAKWIMU ZA USAJILI NA MAHUDHURIO</div>
+                <!-- Section 8 -->
+                <div class="doc-section-title">8. TAKWIMU ZA USAJILI NA MAHUDHURIO</div>
                 <div class="doc-paragraph">
                     Jedwali lifuatalo linaonesha mchanganuo wa watahiniwa waliosajiliwa, waliofanya mtihani, na wasiofanya mtihani kwa kila Halmashauri katika Mkoa wetu:
                 </div>
@@ -788,10 +838,8 @@
                     </table>
                 </div>
                 
-                <!-- Section 8 -->
-                <div class="doc-section-title">8. TATHMINI YA UTENDAJI NA MATOKEO</div>
-                
-                <div class="doc-subsection-title">A. Tathmini ya Jumla ya Mkoa kwa Madaraja (Grade Distribution)</div>
+                <!-- Section 9 -->
+                <div class="doc-section-title">9. TATHMINI YA JUMLA YA MKOA</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -836,44 +884,42 @@
                     </table>
                 </div>
 
-                <div class="doc-subsection-title">B. Tathmini ya Matokeo Ki-Halmashauri (Councilwise Performance)</div>
+                <div class="doc-section-title">10. TATHMINI YA MATOKEO KI-HALMASHAURI</div>
                 <div class="table-responsive">
                     <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th>Nafasi</th>
-                                <th>Halmashauri</th>
-                                <th>Waliofanya</th>
-                                <th>Waliofaulu (A-C)</th>
-                                <th>Waliofaulu (D)</th>
-                                <th>Waliofeli (E)</th>
-                                <th>Wastani GPA</th>
-                                <th>Daraja</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['performance']['councils'] as $cRow)
-                                <tr>
-                                    <td style="text-align: center;">{{ $cRow['position'] }}</td>
-                                    <td>{{ $cRow['name'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($cRow['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($cRow['pass_ac']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($cRow['pass_d']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($cRow['fail']) }}</td>
-                                    <td style="text-align: right; font-weight:600;">{{ number_format($cRow['gpa'], 4) }}</td>
-                                    <td style="text-align: center; font-weight:600;">{{ $cRow['grade'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                         <thead>
+                             <tr>
+                                 <th>Nafasi</th>
+                                 <th>Halmashauri</th>
+                                 <th>Waliofanya</th>
+                                 <th>Waliofaulu (A-C)</th>
+                                 <th>Waliofaulu (D)</th>
+                                 <th>Waliofeli (E)</th>
+                                 <th>Wastani</th>
+                                 <th>Daraja</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                             @foreach($data['performance']['councils'] as $cRow)
+                                 <tr>
+                                     <td style="text-align: center;">{{ $cRow['position'] }}</td>
+                                     <td>{{ $cRow['name'] }}</td>
+                                     <td style="text-align: right;">{{ number_format($cRow['sat']) }}</td>
+                                     <td style="text-align: right;">{{ number_format($cRow['pass_ac']) }}</td>
+                                     <td style="text-align: right;">{{ number_format($cRow['pass_d']) }}</td>
+                                     <td style="text-align: right;">{{ number_format($cRow['fail']) }}</td>
+                                     <td style="text-align: right; font-weight:600;">{{ number_format($cRow['average_marks'], 2) }}</td>
+                                     <td style="text-align: center; font-weight:600;">{{ $cRow['grade'] }}</td>
+                                 </tr>
+                             @endforeach
+                         </tbody>
+                     </table>
                 </div>
             </div>
 
             <!-- Page 4: SCHOOLS & SUBJECTS -->
             <div class="document-page">
-                <div class="doc-subsection-title">C. Tathmini ya Matokeo Ki-Shule (Schoolwise Performance)</div>
-                
-                <h5 style="font-size: 0.9rem; font-weight: 700; margin-top: 10px; margin-bottom: 5px;">1) Shule Bora Kumi (Top 10 Schools) Kimkoa</h5>
+                <div class="doc-section-title">11. SHULE BORA KUMI KIMKOA</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -883,7 +929,7 @@
                                 <th>Halmashauri</th>
                                 <th>Umiliki</th>
                                 <th>Waliofanya</th>
-                                <th>GPA</th>
+                                <th>Wastani</th>
                                 <th>Daraja</th>
                             </tr>
                         </thead>
@@ -895,7 +941,7 @@
                                     <td>{{ $sRow['council'] }}</td>
                                     <td>{{ $sRow['ownership'] }}</td>
                                     <td style="text-align: right;">{{ number_format($sRow['sat']) }}</td>
-                                    <td style="text-align: right; font-weight: 600;">{{ number_format($sRow['gpa'], 4) }}</td>
+                                    <td style="text-align: right; font-weight: 600;">{{ number_format($sRow['average_marks'], 2) }}</td>
                                     <td style="text-align: center; font-weight: 600;">{{ $sRow['grade'] }}</td>
                                 </tr>
                             @endforeach
@@ -903,7 +949,7 @@
                     </table>
                 </div>
 
-                <h5 style="font-size: 0.9rem; font-weight: 700; margin-top: 15px; margin-bottom: 5px;">2) Shule za Mwisho Kumi (Bottom 10 Schools) Kimkoa</h5>
+                <div class="doc-section-title">12. SHULE ZA MWISHO KUMI KIMKOA</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -913,7 +959,7 @@
                                 <th>Halmashauri</th>
                                 <th>Umiliki</th>
                                 <th>Waliofanya</th>
-                                <th>GPA</th>
+                                <th>Wastani</th>
                                 <th>Daraja</th>
                             </tr>
                         </thead>
@@ -925,7 +971,7 @@
                                     <td>{{ $sRow['council'] }}</td>
                                     <td>{{ $sRow['ownership'] }}</td>
                                     <td style="text-align: right;">{{ number_format($sRow['sat']) }}</td>
-                                    <td style="text-align: right; font-weight: 600;">{{ number_format($sRow['gpa'], 4) }}</td>
+                                    <td style="text-align: right; font-weight: 600;">{{ number_format($sRow['average_marks'], 2) }}</td>
                                     <td style="text-align: center; font-weight: 600;">{{ $sRow['grade'] }}</td>
                                 </tr>
                             @endforeach
@@ -933,7 +979,7 @@
                     </table>
                 </div>
 
-                <div class="doc-subsection-title">D. Tathmini ya Matokeo Ki-Masomo (Subjectwise Performance)</div>
+                <div class="doc-section-title">13. TATHMINI YA UFAULU KWA MASOMO</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -944,7 +990,7 @@
                                 <th>Waliofaulu</th>
                                 <th>Waliofeli</th>
                                 <th>Ufaulu %</th>
-                                <th>Wastani GPA</th>
+                                <th>Wastani</th>
                                 <th>Daraja</th>
                             </tr>
                         </thead>
@@ -957,7 +1003,7 @@
                                     <td style="text-align: right;">{{ number_format($subRow['pass']) }}</td>
                                     <td style="text-align: right;">{{ number_format($subRow['fail']) }}</td>
                                     <td style="text-align: right; font-weight:600;">{{ number_format($subRow['pass_rate'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight:600;">{{ number_format($subRow['gpa'], 2) }}</td>
+                                    <td style="text-align: right; font-weight:600;">{{ number_format($subRow['average_marks'], 2) }}</td>
                                     <td style="text-align: center; font-weight:600;">{{ $subRow['grade'] }}</td>
                                 </tr>
                             @endforeach
@@ -968,7 +1014,7 @@
 
             <!-- Page 5: OWNERSHIP & DATA QUALITY -->
             <div class="document-page">
-                <div class="doc-subsection-title">E. Tathmini ya Ufaulu kwa Umiliki (Ownership Performance)</div>
+                <div class="doc-section-title">14. TATHMINI YA UFAULU KWA UMILIKI WA SHULE</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -980,7 +1026,7 @@
                                 <th>Waliofaulu</th>
                                 <th>Waliofeli</th>
                                 <th>Ufaulu %</th>
-                                <th>Wastani GPA</th>
+                                <th>Wastani</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -993,28 +1039,27 @@
                                     <td style="text-align: right;">{{ number_format($ownRow['pass']) }}</td>
                                     <td style="text-align: right;">{{ number_format($ownRow['fail']) }}</td>
                                     <td style="text-align: right; font-weight: 600;">{{ number_format($ownRow['pass_rate'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 600;">{{ number_format($ownRow['gpa'], 4) }}</td>
+                                    <td style="text-align: right; font-weight: 600;">{{ number_format($ownRow['average_marks'], 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                <div class="doc-section-title">9. CHANGAMOTO NA MAPENDEKEZO</div>
-                <div class="doc-subsection-title">A. Changamoto Zilizobainika (Identified Challenges)</div>
+                <div class="doc-section-title">16. CHANGAMOTO ZILIZOBAINIKA</div>
                 <ol class="doc-list" style="margin-left: 20px;">
                     <li><strong>Utofauti wa Taarifa za Bahasha na Skripti:</strong> Kubainika kwa tofauti kati ya idadi ya skripti zilizoandikwa kwenye taarifa ya nje ya bahasha na idadi halisi ya skripti zilizokutikana ndani.</li>
                     <li><strong>Kukosekana kwa ISAL (Individual Subject Attendance Log):</strong> Baadhi ya vituo kukosa fomu rasmi za mahudhurio ya kila somo.</li>
                     <li><strong>Kutojaza Namba na Majina:</strong> Watahiniwa kutoandika namba zao sahihi za usajili.</li>
                 </ol>
 
-                <div class="doc-subsection-title">B. Mapendekezo na Suluhisho za Kisitemu (Recommendations)</div>
+                <div class="doc-section-title">17. MAPENDEKEZO</div>
                 <ol class="doc-list" style="margin-left: 20px;">
                     <li><strong>Utekelezaji wa Mfumo wa ISAL na CAL Kidijitali:</strong> Ni lazima shule zote kupitia mfumo wa IRMS kupakua karatasi rasmi za mahudhurio.</li>
                     <li><strong>Uhakiki wa Namba za Usajili Vituoni:</strong> Wasimamizi wakuu wa vituo lazima wahakiki namba za usajili za kila mtahiniwa.</li>
                 </ol>
 
-                <div class="doc-section-title">10. UHAKIKI WA DATA NA UBORA</div>
+                <div class="doc-section-title">15. UHAKIKI WA UBORA WA DATA</div>
                 @if(count($data['data_quality']['issues']) > 0)
                     <div class="dq-alert">
                         <h4>⚠️ Uhakiki wa Data: Mambo yaliyobainika (Observations)</h4>
@@ -1030,8 +1075,14 @@
                     </div>
                 @endif
 
-                <!-- Section 11 -->
-                <div class="doc-section-title">11. HITIMISHO NA UIDHINISHAJI</div>
+                <!-- Section 18 -->
+                <div class="doc-section-title">18. HITIMISHO</div>
+                <div class="doc-paragraph">
+                    Kamati ya Mitihani ya Mkoa inatoa shukrani za dhati kwa wadau wote wa elimu walioshiriki kufanikisha mtihani huu wa utamilifu wa Mkoa (PSLE Mock). Matokeo haya yaonyeshe juhudi zinazohitajika katika kipindi kilichobaki kabla ya mtihani wa Taifa wa Darasa la Saba ya kuongeza ufaulu na ubora wa elimu katika mkoa wetu.
+                </div>
+
+                <!-- Section 19 -->
+                <div class="doc-section-title">19. UIDHINISHAJI</div>
                 
                 <div class="signoff-container">
                     <div class="signoff-block">

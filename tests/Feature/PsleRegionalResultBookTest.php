@@ -141,6 +141,7 @@ class PsleRegionalResultBookTest extends TestCase
                         'pass_ac' => ['t' => 135],
                         'grades' => ['d' => ['t' => 13], 'e' => ['t' => 5]],
                         'gpa' => 2.45,
+                        'average_marks' => 38.50,
                         'avg_grade' => 'C',
                         'position' => 1,
                     ]
@@ -155,6 +156,7 @@ class PsleRegionalResultBookTest extends TestCase
                         'sat' => ['t' => 153],
                         'pass_ad' => ['t' => 148],
                         'gpa' => 2.45,
+                        'average_marks' => 38.50,
                         'avg_grade' => 'C',
                         'position' => 1,
                     ]
@@ -171,6 +173,7 @@ class PsleRegionalResultBookTest extends TestCase
                         'grade_d' => 13,
                         'grade_e' => 5,
                         'avg_marks' => 38.5,
+                        'average_marks' => 38.5,
                         'grade' => 'C',
                     ]
                 ]
@@ -185,6 +188,7 @@ class PsleRegionalResultBookTest extends TestCase
                         'pass_ad' => ['t' => 148],
                         'grades' => ['e' => ['t' => 5]],
                         'gpa' => 2.45,
+                        'average_marks' => 38.50,
                     ]
                 ]
             ],
@@ -197,6 +201,7 @@ class PsleRegionalResultBookTest extends TestCase
                         'sat' => ['t' => 153],
                         'pass_ad' => ['t' => 148],
                         'gpa' => 2.45,
+                        'average_marks' => 38.50,
                         'avg_grade' => 'C',
                         'position' => 1,
                     ]
@@ -211,6 +216,7 @@ class PsleRegionalResultBookTest extends TestCase
                         'sat' => ['t' => 153],
                         'pass_ad' => ['t' => 148],
                         'gpa' => 2.45,
+                        'average_marks' => 38.50,
                         'avg_grade' => 'C',
                         'position' => 1,
                     ]
@@ -249,6 +255,10 @@ class PsleRegionalResultBookTest extends TestCase
         $response->assertSee('WALIOFANYA');
         $response->assertSee('WASIOFANYA');
         $response->assertSee('Asilimia (%)');
+        $response->assertSee('OFISI YA WAZIRI MKUU');
+        $response->assertSee('YALIYOMO (TABLE OF CONTENTS)');
+        $response->assertSee('Wastani');
+        $response->assertDontSee('GPA Wastani');
     }
 
     public function test_admin_can_download_result_book_pdf(): void

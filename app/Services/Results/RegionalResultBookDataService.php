@@ -198,6 +198,13 @@ class RegionalResultBookDataService
                 $failE = (int) ($row['grades']['e']['t'] ?? 0);
                 $passRate = $satVal > 0 ? round((($passAC + $passD) / $satVal) * 100, 2) : 0.0;
 
+                $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? null;
+                if (is_null($avgMarksVal)) {
+                    $totalMarksSum = (float) ($row['total_marks_sum'] ?? $row['total_marks'] ?? 0.0);
+                    $avgMarksVal = $satVal > 0 ? ($totalMarksSum / $satVal) : 0.0;
+                }
+                $avgMarksVal = round((float) $avgMarksVal, 2);
+
                 $performanceCouncils[] = [
                     'position' => $row['position'] ?? ($index + 1),
                     'name' => $row['council'] ?? 'N/A',
@@ -206,15 +213,15 @@ class RegionalResultBookDataService
                     'pass_d' => $passD,
                     'fail' => $failE,
                     'pass_rate' => $passRate,
-                    'gpa' => $row['gpa'] ?? 0.0,
+                    'average_marks' => $avgMarksVal,
                     'grade' => $row['avg_grade'] ?? 'E',
                 ];
             }
         }
 
-        // Sort by GPA (ascending is best for GPA in IRMS, check)
+        // Sort by average_marks descending (higher is better)
         usort($performanceCouncils, function($a, $b) {
-            return $a['gpa'] <=> $b['gpa'];
+            return $b['average_marks'] <=> $a['average_marks'];
         });
         // re-apply positions based on sorted order
         foreach ($performanceCouncils as $idx => &$row) {
@@ -230,6 +237,13 @@ class RegionalResultBookDataService
                 $passVal = (int) (($row['pass_ad']['t'] ?? ($row['pass_ac']['t'] ?? 0)));
                 $passRate = $satVal > 0 ? round(($passVal / $satVal) * 100, 2) : 0.0;
 
+                $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? null;
+                if (is_null($avgMarksVal)) {
+                    $totalMarksSum = (float) ($row['total_marks_sum'] ?? $row['total_marks'] ?? 0.0);
+                    $avgMarksVal = $satVal > 0 ? ($totalMarksSum / $satVal) : 0.0;
+                }
+                $avgMarksVal = round((float) $avgMarksVal, 2);
+
                 $topSchools[] = [
                     'position' => $row['position'] ?? ($index + 1),
                     'name' => $row['school'] ?? 'N/A',
@@ -238,11 +252,20 @@ class RegionalResultBookDataService
                     'sat' => $satVal,
                     'pass' => $passVal,
                     'pass_rate' => $passRate,
-                    'gpa' => $row['gpa'] ?? 0.0000,
+                    'average_marks' => $avgMarksVal,
                     'grade' => $row['avg_grade'] ?? 'E',
                 ];
             }
         }
+
+        // Sort Top 10 by average_marks descending
+        usort($topSchools, function($a, $b) {
+            return $b['average_marks'] <=> $a['average_marks'];
+        });
+        foreach ($topSchools as $idx => &$row) {
+            $row['position'] = $idx + 1;
+        }
+        unset($row);
 
         $bottomSchools = [];
         if ($leastTenSchools && isset($leastTenSchools['rows'])) {
@@ -250,6 +273,13 @@ class RegionalResultBookDataService
                 $satVal = (int) ($row['sat']['t'] ?? 0);
                 $passVal = (int) (($row['pass_ad']['t'] ?? ($row['pass_ac']['t'] ?? 0)));
                 $passRate = $satVal > 0 ? round(($passVal / $satVal) * 100, 2) : 0.0;
+
+                $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? null;
+                if (is_null($avgMarksVal)) {
+                    $totalMarksSum = (float) ($row['total_marks_sum'] ?? $row['total_marks'] ?? 0.0);
+                    $avgMarksVal = $satVal > 0 ? ($totalMarksSum / $satVal) : 0.0;
+                }
+                $avgMarksVal = round((float) $avgMarksVal, 2);
 
                 $bottomSchools[] = [
                     'position' => $row['position'] ?? ($index + 1),
@@ -259,11 +289,20 @@ class RegionalResultBookDataService
                     'sat' => $satVal,
                     'pass' => $passVal,
                     'pass_rate' => $passRate,
-                    'gpa' => $row['gpa'] ?? 0.0000,
+                    'average_marks' => $avgMarksVal,
                     'grade' => $row['avg_grade'] ?? 'E',
                 ];
             }
         }
+
+        // Sort Bottom 10 by average_marks ascending (lower/weaker is at the top of bottom list)
+        usort($bottomSchools, function($a, $b) {
+            return $a['average_marks'] <=> $b['average_marks'];
+        });
+        foreach ($bottomSchools as $idx => &$row) {
+            $row['position'] = $idx + 1;
+        }
+        unset($row);
 
         // 7. Subjectwise Performance (Table 6)
         $subjectsPerformance = [];
@@ -274,8 +313,8 @@ class RegionalResultBookDataService
                 $failVal = (int) ($row['grade_e'] ?? 0);
                 $passRate = $satVal > 0 ? round(($passVal / $satVal) * 100, 2) : 0.0;
 
-                // For subjectwise GPA, in standard IRMS it might use avg_marks directly
-                $avgMarks = (float) ($row['avg_marks'] ?? 0.0);
+                $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? 0.0;
+                $avgMarksVal = round((float) $avgMarksVal, 2);
 
                 $subjectsPerformance[] = [
                     'position' => $index + 1,
@@ -284,11 +323,20 @@ class RegionalResultBookDataService
                     'pass' => $passVal,
                     'fail' => $failVal,
                     'pass_rate' => $passRate,
-                    'gpa' => $avgMarks, // or custom GPA calculation if available
+                    'average_marks' => $avgMarksVal,
                     'grade' => $row['grade'] ?? 'E',
                 ];
             }
         }
+
+        // Sort subjects by average_marks descending
+        usort($subjectsPerformance, function($a, $b) {
+            return $b['average_marks'] <=> $a['average_marks'];
+        });
+        foreach ($subjectsPerformance as $idx => &$row) {
+            $row['position'] = $idx + 1;
+        }
+        unset($row);
 
         // 8. Ownership Performance (Table 7)
         $ownershipPerformance = [];
@@ -302,6 +350,13 @@ class RegionalResultBookDataService
                 $ownLabel = strtoupper(trim((string) ($row['ownership'] ?? '')));
                 $labelSwahili = $ownLabel === 'GOVERNMENT' ? 'Shule za Serikali' : 'Shule za Binafsi';
 
+                $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? null;
+                if (is_null($avgMarksVal)) {
+                    $totalMarksSum = (float) ($row['total_marks_sum'] ?? $row['total_marks'] ?? 0.0);
+                    $avgMarksVal = $satVal > 0 ? ($totalMarksSum / $satVal) : 0.0;
+                }
+                $avgMarksVal = round((float) $avgMarksVal, 2);
+
                 $ownershipPerformance[] = [
                     'ownership' => $labelSwahili,
                     'schools_count' => $row['schools_count'] ?? 0,
@@ -310,10 +365,15 @@ class RegionalResultBookDataService
                     'pass' => $passVal,
                     'fail' => $failVal,
                     'pass_rate' => $passRate,
-                    'gpa' => $row['gpa'] ?? 0.0,
+                    'average_marks' => $avgMarksVal,
                 ];
             }
         }
+
+        // Sort ownership by average_marks descending
+        usort($ownershipPerformance, function($a, $b) {
+            return $b['average_marks'] <=> $a['average_marks'];
+        });
 
         // 9. Top Candidates
         $topCandidates = [];
@@ -325,7 +385,7 @@ class RegionalResultBookDataService
                     'gender' => strtoupper(trim((string) ($row['gender'] ?? ''))),
                     'school' => $row['school'] ?? 'N/A',
                     'council' => $row['council'] ?? 'N/A',
-                    'gpa' => $row['gpa'] ?? 0.00,
+                    'average_marks' => round((float) ($row['average_marks'] ?? $row['avg_marks'] ?? ($row['total_marks'] / 7) ?? 0.0), 2),
                     'marks' => $row['total_marks'] ?? 0,
                 ];
             }
