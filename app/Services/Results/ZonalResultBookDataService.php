@@ -591,13 +591,15 @@ class ZonalResultBookDataService
         }
 
         // Check G: Schools without coordinates
-        $schoolsWithoutCoords = DB::table('schools')
-            ->whereIn('region_id', $regionIds)
-            ->whereNull('latitude')
-            ->count();
+        if (\Illuminate\Support\Facades\Schema::hasColumn('schools', 'latitude')) {
+            $schoolsWithoutCoords = DB::table('schools')
+                ->whereIn('region_id', $regionIds)
+                ->whereNull('latitude')
+                ->count();
 
-        if ($schoolsWithoutCoords > 0) {
-            $dqIssues[] = "Kuna shule {$schoolsWithoutCoords} zisizokuwa na viwianisho vya kijiografia (Coordinates) katika Kanda yetu.";
+            if ($schoolsWithoutCoords > 0) {
+                $dqIssues[] = "Kuna shule {$schoolsWithoutCoords} zisizokuwa na viwianisho vya kijiografia (Coordinates) katika Kanda yetu.";
+            }
         }
 
         // Check H: Empty or missing snapshot payload sections
