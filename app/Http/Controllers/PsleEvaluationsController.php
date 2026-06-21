@@ -152,6 +152,53 @@ class PsleEvaluationsController extends Controller
         $precalcService = app(\App\Services\Results\PslePrecalculationService::class);
         $statusesMap = $precalcService->getStatusesMap($examYearValue, 'regional', $region->id);
 
+        $snapshotId = $precalcService->getActiveSnapshotId($examYearValue);
+        $hasPayloads = false;
+        if ($snapshotId) {
+            $hasPayloads = \App\Models\PslePrecalculatedEvaluation::where('exam_year', $examYearValue)
+                ->where('exam_type', 'PSLE')
+                ->where('scope_type', 'regional')
+                ->where('scope_id', $region->id)
+                ->where('snapshot_id', $snapshotId)
+                ->where('status', \App\Models\PslePrecalculatedEvaluation::STATUS_READY)
+                ->exists();
+        }
+        $isReady = $snapshotId && $hasPayloads;
+
+        $extraButtons = [];
+        if ($isReady) {
+            $extraButtons[] = [
+                'label' => 'View Result Book',
+                'url' => route('evaluations.psle.regionalwise.result-book', ['id' => $region->id]),
+                'class' => 'top-btn secondary',
+                'style' => 'border-color: #2563eb; color: #2563eb;',
+                'disabled' => false,
+            ];
+            $extraButtons[] = [
+                'label' => 'Download Result Book PDF',
+                'url' => route('evaluations.psle.regionalwise.result-book.pdf', ['id' => $region->id]),
+                'class' => 'top-btn primary',
+                'disabled' => false,
+            ];
+        } else {
+            $extraButtons[] = [
+                'label' => 'View Result Book',
+                'url' => '#',
+                'class' => 'top-btn secondary',
+                'style' => 'opacity: 0.5; cursor: not-allowed; border-color: #cbd5e1; color: #94a3b8;',
+                'disabled' => true,
+                'disabled_msg' => 'Kitabu cha Matokeo hakiwezi kuzalishwa kwa sasa kwa sababu matokeo ya Mkoa hayajakamilika kuchakatwa au hayajafungwa/kuchapishwa rasmi.',
+            ];
+            $extraButtons[] = [
+                'label' => 'Download Result Book PDF',
+                'url' => '#',
+                'class' => 'top-btn primary',
+                'style' => 'opacity: 0.5; cursor: not-allowed; background: #64748b; color: #cbd5e1;',
+                'disabled' => true,
+                'disabled_msg' => 'Kitabu cha Matokeo hakiwezi kuzalishwa kwa sasa kwa sababu matokeo ya Mkoa hayajakamilika kuchakatwa au hayajafungwa/kuchapishwa rasmi.',
+            ];
+        }
+
         $entries = $this->regionalEvaluationEntries()->map(fn (array $evaluation) => [
             'label' => $evaluation['label'],
             'url' => route('evaluations.psle.regionalwise.region.evaluation', [
@@ -159,6 +206,15 @@ class PsleEvaluationsController extends Controller
                 'evaluation' => $evaluation['key'],
             ]),
             'status' => $statusesMap->get($evaluation['key'], \App\Models\PslePrecalculatedEvaluation::STATUS_PENDING),
+        ]);
+
+        $entries = $entries->concat([
+            [
+                'label' => 'KITABU CHA MATOKEO / RESULT BOOK REPORT',
+                'url' => route('evaluations.psle.regionalwise.result-book', ['id' => $region->id]),
+                'status' => $isReady ? 'ready' : 'pending',
+                'description' => 'Tathmini ya jumla ya uendeshaji, usajili, mahudhurio, madaraja, na mchanganuo wa ufaulu kimkoa.',
+            ]
         ]);
 
         $meta = $this->baseMeta([
@@ -175,6 +231,7 @@ class PsleEvaluationsController extends Controller
             'back_label' => 'Back to Regions',
             'primary_action_url' => route('evaluations.psle.regionalwise'),
             'primary_action_label' => 'All Regions',
+            'extra_buttons' => $extraButtons,
         ]);
 
         return view('public.results-portal.index', [

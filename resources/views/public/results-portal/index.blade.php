@@ -538,6 +538,14 @@
         </div>
 
         <div class="top-actions">
+          @if(data_get($meta, 'extra_buttons'))
+            @foreach(data_get($meta, 'extra_buttons') as $btn)
+              <a href="{{ $btn['url'] }}" class="{{ $btn['class'] ?? 'top-btn secondary' }}" style="{{ $btn['style'] ?? '' }}"
+                 @if($btn['disabled'] ?? false) onclick="event.preventDefault(); showToast('{{ $btn['disabled_msg'] }}', 'warning');" @endif>
+                <span>{{ $btn['label'] }}</span>
+              </a>
+            @endforeach
+          @endif
           @if(data_get($meta, 'back_url'))
             <a href="{{ data_get($meta, 'back_url') }}" class="top-btn secondary">
               <span>&larr;</span>
@@ -698,6 +706,20 @@
   </header>
 
   <div class="filters-wrapper">
+    @if(data_get($meta, 'extra_buttons'))
+      <div style="margin-top: 5px; margin-bottom: 10px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+        @foreach(data_get($meta, 'extra_buttons') as $btn)
+          <a href="{{ $btn['url'] }}" 
+             class="{{ $btn['class'] === 'top-btn primary' ? 'alpha-link active' : 'alpha-link' }}" 
+             style="text-decoration: none; padding: 6px 12px; font-size: 13px; display: inline-flex; align-items: center; border-radius: 4px; font-weight: bold; border: 1px solid #000080; cursor: pointer; {{ $btn['style'] ?? '' }}"
+             @if($btn['disabled'] ?? false)
+               onclick="event.preventDefault(); showToast('{{ $btn['disabled_msg'] }}', 'warning');"
+             @endif>
+            {{ $btn['label'] }}
+          </a>
+        @endforeach
+      </div>
+    @endif
     @if(data_get($meta, 'back_url'))
       <div class="back-nav">
         <a href="{{ data_get($meta, 'back_url') }}" class="back-link-btn">
