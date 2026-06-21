@@ -296,4 +296,37 @@ class PsleRegionalResultBookTest extends TestCase
 
         $response->assertStatus(403);
     }
+
+    public function test_pdf_generation_falls_back_to_helvetica_when_poppins_font_files_are_missing(): void
+    {
+        $this->createSnapshotAndPayloads(published: true);
+
+        $fontDir = app_path('Support/Pdf/font');
+        $renamedFiles = [];
+        $filesToRename = ['poppins.php', 'poppinsb.php', 'poppinsi.php', 'poppinsbi.php'];
+
+        foreach ($filesToRename as $file) {
+            $path = $fontDir . '/' . $file;
+            if (file_exists($path)) {
+                $tempPath = $path . '.bak';
+                rename($path, $tempPath);
+                $renamedFiles[$path] = $tempPath;
+            }
+        }
+
+        try {
+            $response = $this->actingAs($this->admin)
+                ->get("/evaluations/psle/regionalwise/{$this->region->id}/result-book/pdf");
+
+            $response->assertStatus(200);
+            $response->assertHeader('content-type', 'application/pdf');
+        } finally {
+            foreach ($renamedFiles as $original => $temp) {
+                if (file_exists($temp)) {
+                    rename($temp, $original);
+                }
+            }
+        }
+    }
 }
+

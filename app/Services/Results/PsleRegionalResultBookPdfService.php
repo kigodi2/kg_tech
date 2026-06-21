@@ -20,6 +20,52 @@ class PsleRegionalResultBookPdfService
             public bool $isCoverPage = true;
             public string $regionName = '';
             public int $examYear = 0;
+            public string $primaryFont = 'Helvetica';
+
+            protected function setupFonts(): void
+            {
+                $fontDir = app_path('Support/Pdf/font');
+
+                $regular = $fontDir . '/poppins.php';
+                $bold = $fontDir . '/poppinsb.php';
+                $italic = $fontDir . '/poppinsi.php';
+                $boldItalic = $fontDir . '/poppinsbi.php';
+
+                if (
+                    file_exists($regular) &&
+                    file_exists($bold) &&
+                    file_exists($italic) &&
+                    file_exists($boldItalic)
+                ) {
+                    $this->AddFont('Poppins', '', 'poppins.php');
+                    $this->AddFont('Poppins', 'B', 'poppinsb.php');
+                    $this->AddFont('Poppins', 'I', 'poppinsi.php');
+                    $this->AddFont('Poppins', 'BI', 'poppinsbi.php');
+
+                    $this->primaryFont = 'Poppins';
+                    return;
+                }
+
+                $this->primaryFont = 'Helvetica';
+            }
+
+            public function initReport(): void
+            {
+                $this->setupFonts();
+                $this->SetFont($this->primaryFont, '', 9.5);
+            }
+
+            public function pdfText(?string $text): string
+            {
+                $text = (string) $text;
+                $converted = @iconv('UTF-8', 'windows-1252//TRANSLIT//IGNORE', $text);
+                return $converted !== false ? $converted : $text;
+            }
+
+            public function usablePageWidth(): float
+            {
+                return $this->w - $this->lMargin - $this->rMargin;
+            }
 
             public function Header(): void
             {
@@ -29,9 +75,9 @@ class PsleRegionalResultBookPdfService
 
                 $this->SetY(8);
                 $this->SetTextColor(100, 116, 139);
-                $this->SetFont('Helvetica', 'I', 7.5);
-                $this->Cell(0, 4, "KITABU CHA MATOKEO MKOA WA " . strtoupper($this->regionName) . " - MWAKA " . $this->examYear, 0, 1, 'R');
-                $this->SetDrawColor(226, 232, 240);
+                $this->SetFont($this->primaryFont, 'I', 7.5);
+                $this->Cell(0, 4, $this->pdfText("KITABU CHA MATOKEO MKOA WA " . strtoupper($this->regionName) . " - MWAKA " . $this->examYear), 0, 1, 'R');
+                $this->SetDrawColor(203, 213, 225);
                 $this->Line($this->lMargin, $this->GetY(), $this->w - $this->rMargin, $this->GetY());
                 $this->Ln(4);
             }
@@ -43,13 +89,13 @@ class PsleRegionalResultBookPdfService
                 }
 
                 $this->SetY(-15);
-                $this->SetDrawColor(226, 232, 240);
+                $this->SetDrawColor(203, 213, 225);
                 $this->Line($this->lMargin, $this->GetY(), $this->w - $this->rMargin, $this->GetY());
                 $this->Ln(1);
                 $this->SetTextColor(100, 116, 139);
-                $this->SetFont('Helvetica', '', 7.5);
-                $this->Cell(100, 5, "Mfumo wa IRMS - Ofisi ya Rais - TAMISEMI", 0, 0, 'L');
-                $this->Cell(0, 5, "Ukurasa " . $this->PageNo() . " / {nb}", 0, 0, 'R');
+                $this->SetFont($this->primaryFont, '', 7.5);
+                $this->Cell(100, 5, $this->pdfText("Mfumo wa IRMS - Ofisi ya Rais - TAMISEMI"), 0, 0, 'L');
+                $this->Cell(0, 5, $this->pdfText("Ukurasa " . $this->PageNo() . " / {nb}"), 0, 0, 'R');
             }
 
             public function addPortraitPage(): void
@@ -100,6 +146,7 @@ class PsleRegionalResultBookPdfService
         $pdf->isCoverPage = true;
         $pdf->regionName = $region->name;
         $pdf->examYear = (int)$data['meta']['exam_year'];
+        $pdf->initReport();
         $pdf->AliasNbPages();
         $pdf->addPortraitPage();
 
@@ -110,11 +157,11 @@ class PsleRegionalResultBookPdfService
 
         $pdf->SetY(25);
         $pdf->SetTextColor(8, 39, 109);
-        $pdf->SetFont('Helvetica', 'B', 14);
-        $pdf->Cell(0, 6, "OFISI YA RAIS", 0, 1, 'C');
-        $pdf->SetFont('Helvetica', 'B', 12);
-        $pdf->Cell(0, 6, "TAWALA ZA MIKOA NA SERIKALI ZA MITAA", 0, 1, 'C');
-        $pdf->Cell(0, 6, "OFISI YA MKUU WA MKOA WA " . strtoupper($pdf->regionName), 0, 1, 'C');
+        $pdf->SetFont($pdf->primaryFont, 'B', 14);
+        $pdf->Cell(0, 6, $pdf->pdfText("OFISI YA RAIS"), 0, 1, 'C');
+        $pdf->SetFont($pdf->primaryFont, 'B', 12);
+        $pdf->Cell(0, 6, $pdf->pdfText("TAWALA ZA MIKOA NA SERIKALI ZA MITAA"), 0, 1, 'C');
+        $pdf->Cell(0, 6, $pdf->pdfText("OFISI YA MKUU WA MKOA WA " . strtoupper($pdf->regionName)), 0, 1, 'C');
         $pdf->Ln(10);
 
         // Emblem
@@ -126,16 +173,16 @@ class PsleRegionalResultBookPdfService
             $pdf->Ln(20);
         }
 
-        $pdf->SetFont('Helvetica', 'B', 18);
-        $pdf->Cell(0, 10, "KITABU CHA MATOKEO", 0, 1, 'C');
-        $pdf->SetFont('Helvetica', 'B', 11);
-        $pdf->Cell(0, 6, "(RESULT BOOK REPORT)", 0, 1, 'C');
+        $pdf->SetFont($pdf->primaryFont, 'B', 16);
+        $pdf->Cell(0, 10, $pdf->pdfText("KITABU CHA MATOKEO"), 0, 1, 'C');
+        $pdf->SetFont($pdf->primaryFont, 'B', 11);
+        $pdf->Cell(0, 6, $pdf->pdfText("(RESULT BOOK REPORT)"), 0, 1, 'C');
         $pdf->Ln(8);
 
-        $pdf->SetFont('Helvetica', 'B', 13);
-        $pdf->MultiCell(0, 6, "TATHMINI YA MTIHANI WA UTAMILIFU WA DARASA LA SABA\n(PSLE MOCK)", 0, 'C');
-        $pdf->SetFont('Helvetica', 'B', 14);
-        $pdf->Cell(0, 10, "MWAKA " . $pdf->examYear, 0, 1, 'C');
+        $pdf->SetFont($pdf->primaryFont, 'B', 13);
+        $pdf->MultiCell(0, 6, $pdf->pdfText("TATHMINI YA MTIHANI WA UTAMILIFU WA DARASA LA SABA\n(PSLE MOCK)"), 0, 'C');
+        $pdf->SetFont($pdf->primaryFont, 'B', 14);
+        $pdf->Cell(0, 10, $pdf->pdfText("MWAKA " . $pdf->examYear), 0, 1, 'C');
 
         // Draw operational info block at the bottom
         $pdf->SetY(195);
@@ -144,41 +191,41 @@ class PsleRegionalResultBookPdfService
         $pdf->Line(20, $pdf->GetY(), 190, $pdf->GetY());
         $pdf->Ln(4);
 
-        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->SetFont($pdf->primaryFont, 'B', 9);
         $pdf->SetX(20);
-        $pdf->Cell(60, 5, "Mkuu wa Mkoa (RC):", 0, 0);
-        $pdf->SetFont('Helvetica', '', 9);
-        $pdf->Cell(0, 5, "Mkuu wa Mkoa wa " . $pdf->regionName, 0, 1);
+        $pdf->Cell(60, 5, $pdf->pdfText("Mkuu wa Mkoa (RC):"), 0, 0);
+        $pdf->SetFont($pdf->primaryFont, '', 9);
+        $pdf->Cell(0, 5, $pdf->pdfText("Mkuu wa Mkoa wa " . $pdf->regionName), 0, 1);
 
-        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->SetFont($pdf->primaryFont, 'B', 9);
         $pdf->SetX(20);
-        $pdf->Cell(60, 5, "Afisa Elimu wa Mkoa (REO):", 0, 0);
-        $pdf->SetFont('Helvetica', '', 9);
-        $pdf->Cell(0, 5, $data['operational']['reo_name'], 0, 1);
+        $pdf->Cell(60, 5, $pdf->pdfText("Afisa Elimu wa Mkoa (REO):"), 0, 0);
+        $pdf->SetFont($pdf->primaryFont, '', 9);
+        $pdf->Cell(0, 5, $pdf->pdfText($data['operational']['reo_name']), 0, 1);
 
-        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->SetFont($pdf->primaryFont, 'B', 9);
         $pdf->SetX(20);
-        $pdf->Cell(60, 5, "Afisa Taaluma wa Mkoa (RTO):", 0, 0);
-        $pdf->SetFont('Helvetica', '', 9);
-        $pdf->Cell(0, 5, $data['operational']['rto_name'], 0, 1);
+        $pdf->Cell(60, 5, $pdf->pdfText("Afisa Taaluma wa Mkoa (RTO):"), 0, 0);
+        $pdf->SetFont($pdf->primaryFont, '', 9);
+        $pdf->Cell(0, 5, $pdf->pdfText($data['operational']['rto_name']), 0, 1);
 
-        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->SetFont($pdf->primaryFont, 'B', 9);
         $pdf->SetX(20);
-        $pdf->Cell(60, 5, "Kituo cha Usahihishaji:", 0, 0);
-        $pdf->SetFont('Helvetica', '', 9);
-        $pdf->Cell(0, 5, $data['operational']['marking_center'], 0, 1);
+        $pdf->Cell(60, 5, $pdf->pdfText("Kituo cha Usahihishaji:"), 0, 0);
+        $pdf->SetFont($pdf->primaryFont, '', 9);
+        $pdf->Cell(0, 5, $pdf->pdfText($data['operational']['marking_center']), 0, 1);
 
-        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->SetFont($pdf->primaryFont, 'B', 9);
         $pdf->SetX(20);
-        $pdf->Cell(60, 5, "Mkoa wa Moderation:", 0, 0);
-        $pdf->SetFont('Helvetica', '', 9);
-        $pdf->Cell(0, 5, $data['operational']['moderation_region'], 0, 1);
+        $pdf->Cell(60, 5, $pdf->pdfText("Mkoa wa Moderation:"), 0, 0);
+        $pdf->SetFont($pdf->primaryFont, '', 9);
+        $pdf->Cell(0, 5, $pdf->pdfText($data['operational']['moderation_region']), 0, 1);
 
-        $pdf->SetFont('Helvetica', 'B', 9);
+        $pdf->SetFont($pdf->primaryFont, 'B', 9);
         $pdf->SetX(20);
-        $pdf->Cell(60, 5, "Tarehe ya Kuzalishwa:", 0, 0);
-        $pdf->SetFont('Helvetica', '', 9);
-        $pdf->Cell(0, 5, $data['meta']['generated_at'], 0, 1);
+        $pdf->Cell(60, 5, $pdf->pdfText("Tarehe ya Kuzalishwa:"), 0, 0);
+        $pdf->SetFont($pdf->primaryFont, '', 9);
+        $pdf->Cell(0, 5, $pdf->pdfText($data['meta']['generated_at']), 0, 1);
 
         $pdf->Line(20, $pdf->GetY() + 4, 190, $pdf->GetY() + 4);
 
@@ -188,27 +235,27 @@ class PsleRegionalResultBookPdfService
 
         // Helper closures
         $chapterHeader = function(string $num, string $title) use ($pdf) {
-            $pdf->SetFont('Helvetica', 'B', 11);
-            $pdf->SetTextColor(8, 39, 109);
-            $pdf->Cell(0, 8, $num . ". " . strtoupper($title), 0, 1, 'L');
-            $pdf->SetDrawColor(8, 39, 109);
+            $pdf->SetFont($pdf->primaryFont, 'B', 12);
+            $pdf->SetTextColor(15, 23, 42);
+            $pdf->Cell(0, 8, $pdf->pdfText($num . ". " . strtoupper($title)), 0, 1, 'L');
+            $pdf->SetDrawColor(203, 213, 225);
             $pdf->SetLineWidth(0.3);
             $pdf->Line($pdf->getLMargin(), $pdf->GetY(), $pdf->getPageWidth() - $pdf->getRMargin(), $pdf->GetY());
             $pdf->Ln(3);
         };
 
         $chapterSubHeader = function(string $char, string $title) use ($pdf) {
-            $pdf->SetFont('Helvetica', 'B', 10);
-            $pdf->SetTextColor(51, 65, 85);
-            $pdf->Cell(0, 7, $char . ". " . $title, 0, 1, 'L');
+            $pdf->SetFont($pdf->primaryFont, 'B', 10.5);
+            $pdf->SetTextColor(30, 41, 59);
+            $pdf->Cell(0, 7, $pdf->pdfText($char . ". " . $title), 0, 1, 'L');
             $pdf->Ln(1);
         };
 
         $renderParagraph = function(string $text) use ($pdf) {
             $clean = str_replace('**', '', $text);
-            $pdf->SetFont('Helvetica', '', 9.5);
+            $pdf->SetFont($pdf->primaryFont, '', 9.5);
             $pdf->SetTextColor(30, 41, 59);
-            $pdf->MultiCell(0, 5.2, $clean, 0, 'J');
+            $pdf->MultiCell(0, 5.2, $pdf->pdfText($clean), 0, 'J');
             $pdf->Ln(3.5);
         };
 
@@ -221,22 +268,22 @@ class PsleRegionalResultBookPdfService
                 if (str_starts_with($line, '*')) {
                     $clean = trim(substr($line, 1));
                     $pdf->SetX(20);
-                    $pdf->SetFont('Helvetica', 'B', 9.5);
+                    $pdf->SetFont($pdf->primaryFont, 'B', 9);
                     $pdf->Cell(4, 5.2, chr(149), 0, 0);
-                    $pdf->SetFont('Helvetica', '', 9.5);
-                    $pdf->MultiCell(0, 5.2, str_replace('**', '', $clean), 0, 'J');
+                    $pdf->SetFont($pdf->primaryFont, '', 9);
+                    $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $clean)), 0, 'J');
                     $pdf->Ln(1.5);
                 } elseif (preg_match('/^\d+\.\s+(.*)/', $line, $matches)) {
                     $clean = trim($matches[1]);
                     $pdf->SetX(20);
-                    $pdf->SetFont('Helvetica', 'B', 9.5);
+                    $pdf->SetFont($pdf->primaryFont, 'B', 9);
                     $pdf->Cell(6, 5.2, $line[0] . '.', 0, 0);
-                    $pdf->SetFont('Helvetica', '', 9.5);
-                    $pdf->MultiCell(0, 5.2, str_replace('**', '', $clean), 0, 'J');
+                    $pdf->SetFont($pdf->primaryFont, '', 9);
+                    $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $clean)), 0, 'J');
                     $pdf->Ln(1.5);
                 } else {
-                    $pdf->SetFont('Helvetica', '', 9.5);
-                    $pdf->MultiCell(0, 5.2, str_replace('**', '', $line), 0, 'J');
+                    $pdf->SetFont($pdf->primaryFont, '', 9);
+                    $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $line)), 0, 'J');
                     $pdf->Ln(3.5);
                 }
             }
@@ -280,8 +327,9 @@ class PsleRegionalResultBookPdfService
 
         // Table 1 (Landscape)
         $pdf->addLandscapePage();
-        $pdf->SetFont('Helvetica', 'B', 10);
-        $pdf->Cell(0, 6, "Jedwali 1: Usajili na Mahudhurio ya Watahiniwa Ki-Halmashauri", 0, 1, 'L');
+        $pdf->SetFont($pdf->primaryFont, 'B', 10.5);
+        $pdf->SetTextColor(15, 23, 42);
+        $pdf->Cell(0, 6, $pdf->pdfText("Jedwali 1: Usajili na Mahudhurio ya Watahiniwa Ki-Halmashauri"), 0, 1, 'L');
         $pdf->Ln(2);
 
         $t1Headers = ['S/N', 'Halmashauri', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Sat ME', 'Sat KE', 'Sat JUMLA', 'Abs ME', 'Abs KE', 'Abs JUMLA', 'Asilimia (%)'];
@@ -369,9 +417,9 @@ class PsleRegionalResultBookPdfService
         $pdf->addLandscapePage();
         $chapterSubHeader("B", "Tathmini ya Matokeo Ki-Halmashauri (Councilwise Performance)");
         
-        $pdf->SetFont('Helvetica', '', 9.5);
+        $pdf->SetFont($pdf->primaryFont, '', 9.5);
         $pdf->SetTextColor(30, 41, 59);
-        $pdf->MultiCell(0, 5.2, "Mlinganisho wa ufaulu na GPA kati ya Halmashauri zote zinazounda Mkoa, zilizopangwa kwa kufuata wastani wa GPA (Halmashauri zenye ufaulu bora zaidi zinaanza):", 0, 'J');
+        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mlinganisho wa ufaulu na GPA kati ya Halmashauri zote zinazounda Mkoa, zilizopangwa kwa kufuata wastani wa GPA (Halmashauri zenye ufaulu bora zaidi zinaanza):"), 0, 'J');
         $pdf->Ln(2);
 
         $t3Headers = ['Nafasi', 'Halmashauri', 'Waliofanya', 'Waliofaulu (A-C)', 'Waliofaulu (D)', 'Waliofeli (E)', 'Wastani GPA', 'Daraja'];
@@ -399,17 +447,18 @@ class PsleRegionalResultBookPdfService
         $pdf->addLandscapePage();
         $chapterSubHeader("C", "Tathmini ya Matokeo Ki-Shule (Schoolwise Performance)");
         
-        $pdf->SetFont('Helvetica', '', 9.5);
+        $pdf->SetFont($pdf->primaryFont, '', 9.5);
         $pdf->SetTextColor(30, 41, 59);
-        $pdf->MultiCell(0, 5.2, "Mchanganuo huu unaonesha shule kumi (10) bora zilizoongoza kitaaluma na shule kumi (10) za mwisho katika Mkoa wetu:", 0, 'J');
+        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mchanganuo huu unaonesha shule kumi (10) bora zilizoongoza kitaaluma na shule kumi (10) za mwisho katika Mkoa wetu:"), 0, 'J');
         $pdf->Ln(2);
 
         $t4Headers = ['Nafasi', 'Jina la Shule', 'Halmashauri', 'Umiliki', 'Watahiniwa', 'GPA Wastani', 'Daraja'];
         $t4Widths = [20, 85, 50, 40, 22, 35, 25];
         $t4Aligns = ['C', 'L', 'L', 'L', 'R', 'R', 'C'];
 
-        $pdf->SetFont('Helvetica', 'B', 8.5);
-        $pdf->Cell(0, 6, "1) Shule Bora Kumi (Top 10 Schools) Kimkoa", 0, 1, 'L');
+        $pdf->SetFont($pdf->primaryFont, 'B', 8.5);
+        $pdf->SetTextColor(15, 23, 42);
+        $pdf->Cell(0, 6, $pdf->pdfText("1) Shule Bora Kumi (Top 10 Schools) Kimkoa"), 0, 1, 'L');
         $pdf->Ln(1);
         
         $t4Rows = [];
@@ -428,8 +477,9 @@ class PsleRegionalResultBookPdfService
         
         // Bottom 10 Schools (Landscape)
         $pdf->addLandscapePage();
-        $pdf->SetFont('Helvetica', 'B', 8.5);
-        $pdf->Cell(0, 6, "2) Shule za Mwisho Kumi (Bottom 10 Schools) Kimkoa", 0, 1, 'L');
+        $pdf->SetFont($pdf->primaryFont, 'B', 8.5);
+        $pdf->SetTextColor(15, 23, 42);
+        $pdf->Cell(0, 6, $pdf->pdfText("2) Shule za Mwisho Kumi (Bottom 10 Schools) Kimkoa"), 0, 1, 'L');
         $pdf->Ln(1);
 
         $t5Rows = [];
@@ -451,9 +501,9 @@ class PsleRegionalResultBookPdfService
         $pdf->addLandscapePage();
         $chapterSubHeader("D", "Tathmini ya Matokeo Ki-Masomo (Subjectwise Performance)");
         
-        $pdf->SetFont('Helvetica', '', 9.5);
+        $pdf->SetFont($pdf->primaryFont, '', 9.5);
         $pdf->SetTextColor(30, 41, 59);
-        $pdf->MultiCell(0, 5.2, "Mchanganuo wa ufaulu kwa kila somo kwa kuzingatia idadi ya waliotahiniwa, kiwango cha ufaulu, na nafasi ya somo kitaaluma kimkoa:", 0, 'J');
+        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mchanganuo wa ufaulu kwa kila somo kwa kuzingatia idadi ya waliotahiniwa, kiwango cha ufaulu, na nafasi ya somo kitaaluma kimkoa:"), 0, 'J');
         $pdf->Ln(2);
 
         $t6Headers = ['Nafasi', 'Somo', 'Waliotahiniwa', 'Waliofaulu', 'Waliofeli', 'Asilimia (%)', 'Wastani GPA', 'Daraja'];
@@ -480,9 +530,9 @@ class PsleRegionalResultBookPdfService
         $pdf->addLandscapePage();
         $chapterSubHeader("E", "Tathmini ya Ufaulu kwa Umiliki (Ownership Performance)");
         
-        $pdf->SetFont('Helvetica', '', 9.5);
+        $pdf->SetFont($pdf->primaryFont, '', 9.5);
         $pdf->SetTextColor(30, 41, 59);
-        $pdf->MultiCell(0, 5.2, "Mchanganuo unaolinganisha utendaji na ufaulu kati ya shule za Serikali (Government) na shule za Binafsi/Zisizo za Serikali (Non-Government):", 0, 'J');
+        $pdf->MultiCell(0, 5.2, $pdf->pdfText("Mchanganuo unaolinganisha utendaji na ufaulu kati ya shule za Serikali (Government) na shule za Binafsi/Zisizo za Serikali (Non-Government):"), 0, 'J');
         $pdf->Ln(2);
 
         $t7Headers = ['Umiliki', 'Idadi ya Shule', 'Waliosajiliwa', 'Waliofanya', 'Waliofaulu', 'Waliofeli', 'Ufaulu %', 'GPA'];
@@ -512,10 +562,10 @@ class PsleRegionalResultBookPdfService
         $chapterSubHeader("A", "Changamoto Zilizobainika (Identified Challenges)");
         foreach ($narrative->getChallenges() as $idx => $chal) {
             $pdf->SetX(20);
-            $pdf->SetFont('Helvetica', 'B', 9.5);
+            $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
             $pdf->Cell(6, 5.2, ($idx + 1) . ".", 0, 0);
-            $pdf->SetFont('Helvetica', '', 9.5);
-            $pdf->MultiCell(0, 5.2, str_replace('**', '', $chal), 0, 'J');
+            $pdf->SetFont($pdf->primaryFont, '', 9.5);
+            $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $chal)), 0, 'J');
             $pdf->Ln(1.5);
         }
         $pdf->Ln(4);
@@ -523,10 +573,10 @@ class PsleRegionalResultBookPdfService
         $chapterSubHeader("B", "Mapendekezo na Suluhisho za Kisitemu (Recommendations)");
         foreach ($narrative->getRecommendations() as $idx => $rec) {
             $pdf->SetX(20);
-            $pdf->SetFont('Helvetica', 'B', 9.5);
+            $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
             $pdf->Cell(6, 5.2, ($idx + 1) . ".", 0, 0);
-            $pdf->SetFont('Helvetica', '', 9.5);
-            $pdf->MultiCell(0, 5.2, str_replace('**', '', $rec), 0, 'J');
+            $pdf->SetFont($pdf->primaryFont, '', 9.5);
+            $pdf->MultiCell(0, 5.2, $pdf->pdfText(str_replace('**', '', $rec)), 0, 'J');
             $pdf->Ln(1.5);
         }
         $pdf->Ln(6);
@@ -537,26 +587,26 @@ class PsleRegionalResultBookPdfService
         $renderParagraph($data['data_quality']['summary']);
         
         if (!empty($data['data_quality']['issues'])) {
-            $pdf->SetTextColor(185, 28, 28); // warning red
-            $pdf->SetFont('Helvetica', 'B', 9);
-            $pdf->Cell(0, 6, "Mambo yaliyobainika wakati wa uhakiki (Observations):", 0, 1);
+            $pdf->SetTextColor(185, 28, 28);
+            $pdf->SetFont($pdf->primaryFont, 'B', 9);
+            $pdf->Cell(0, 6, $pdf->pdfText("Mambo yaliyobainika wakati wa uhakiki (Observations):"), 0, 1);
             $pdf->Ln(2);
             
             foreach ($data['data_quality']['issues'] as $idx => $issue) {
                 $pdf->SetX(20);
-                $pdf->SetFont('Helvetica', 'B', 9);
+                $pdf->SetFont($pdf->primaryFont, 'B', 9);
                 $pdf->Cell(6, 5, ($idx + 1) . ".", 0, 0);
-                $pdf->SetFont('Helvetica', '', 9);
-                $pdf->MultiCell(0, 5, $issue, 0, 'J');
+                $pdf->SetFont($pdf->primaryFont, '', 9);
+                $pdf->MultiCell(0, 5, $pdf->pdfText($issue), 0, 'J');
                 $pdf->Ln(1.5);
             }
             $pdf->SetTextColor(30, 41, 59);
         } else {
-            $pdf->SetFillColor(240, 253, 244); // light green
+            $pdf->SetFillColor(240, 253, 244);
             $pdf->SetDrawColor(187, 247, 208);
             $pdf->SetTextColor(21, 128, 61);
-            $pdf->SetFont('Helvetica', '', 9);
-            $pdf->MultiCell(0, 6, "Hakuna hitilafu yoyote iliyobainika wakati wa uhakiki wa data ya matokeo ya Mkoa.", 1, 'L', true);
+            $pdf->SetFont($pdf->primaryFont, '', 9);
+            $pdf->MultiCell(0, 6, $pdf->pdfText("Hakuna hitilafu yoyote iliyobainika wakati wa uhakiki wa data ya matokeo ya Mkoa."), 1, 'L', true);
             $pdf->SetTextColor(30, 41, 59);
         }
         $pdf->Ln(10);
@@ -566,28 +616,28 @@ class PsleRegionalResultBookPdfService
             $pdf->addPortraitPage();
         }
 
-        $pdf->SetFont('Helvetica', 'B', 10);
-        $pdf->Cell(90, 6, "Imeandaliwa na:", 0, 0, 'L');
-        $pdf->Cell(90, 6, "Imehakikiwa na Kuidhinishwa na:", 0, 1, 'L');
+        $pdf->SetFont($pdf->primaryFont, 'B', 10);
+        $pdf->Cell(90, 6, $pdf->pdfText("Imeandaliwa na:"), 0, 0, 'L');
+        $pdf->Cell(90, 6, $pdf->pdfText("Imehakikiwa na Kuidhinishwa na:"), 0, 1, 'L');
 
-        $pdf->Ln(15); // space for actual signature
+        $pdf->Ln(15);
 
-        $pdf->SetFont('Helvetica', 'B', 9.5);
-        $pdf->Cell(90, 5, "_______________________________________", 0, 0, 'L');
-        $pdf->Cell(90, 5, "_______________________________________", 0, 1, 'L');
+        $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
+        $pdf->Cell(90, 5, $pdf->pdfText("_______________________________________"), 0, 0, 'L');
+        $pdf->Cell(90, 5, $pdf->pdfText("_______________________________________"), 0, 1, 'L');
 
-        $pdf->Cell(90, 5, $data['operational']['rto_name'], 0, 0, 'L');
-        $pdf->Cell(90, 5, $data['operational']['reo_name'], 0, 1, 'L');
+        $pdf->Cell(90, 5, $pdf->pdfText($data['operational']['rto_name']), 0, 0, 'L');
+        $pdf->Cell(90, 5, $pdf->pdfText($data['operational']['reo_name']), 0, 1, 'L');
 
-        $pdf->SetFont('Helvetica', '', 9);
-        $pdf->Cell(90, 4, $data['operational']['prepared_by_title'], 0, 0, 'L');
-        $pdf->Cell(90, 4, $data['operational']['approved_by_title'], 0, 1, 'L');
+        $pdf->SetFont($pdf->primaryFont, '', 9);
+        $pdf->Cell(90, 4, $pdf->pdfText($data['operational']['prepared_by_title']), 0, 0, 'L');
+        $pdf->Cell(90, 4, $pdf->pdfText($data['operational']['approved_by_title']), 0, 1, 'L');
 
-        $pdf->Cell(90, 4, "Mkoa wa " . $pdf->regionName, 0, 0, 'L');
-        $pdf->Cell(90, 4, "Mkoa wa " . $pdf->regionName, 0, 1, 'L');
+        $pdf->Cell(90, 4, $pdf->pdfText("Mkoa wa " . $pdf->regionName), 0, 0, 'L');
+        $pdf->Cell(90, 4, $pdf->pdfText("Mkoa wa " . $pdf->regionName), 0, 1, 'L');
 
-        $pdf->Cell(90, 4, "Tarehe: ___________________", 0, 0, 'L');
-        $pdf->Cell(90, 4, "Tarehe: ___________________", 0, 1, 'L');
+        $pdf->Cell(90, 4, $pdf->pdfText("Tarehe: ___________________"), 0, 0, 'L');
+        $pdf->Cell(90, 4, $pdf->pdfText("Tarehe: ___________________"), 0, 1, 'L');
 
         // Output to file
         $pdf->Output('F', $outputPath);
@@ -600,16 +650,16 @@ class PsleRegionalResultBookPdfService
         $pdf->SetDrawColor(203, 213, 225);
         $pdf->SetLineWidth(0.2);
 
-        $pdf->SetFont('Helvetica', 'B', 8.5);
+        $pdf->SetFont($pdf->primaryFont, 'B', 8);
 
         $hHeight = 6.5;
         foreach ($headers as $colIdx => $header) {
-            $pdf->Cell($widths[$colIdx], $hHeight, $header, 1, 0, 'C', true);
+            $pdf->Cell($widths[$colIdx], $hHeight, $pdf->pdfText($header), 1, 0, 'C', true);
         }
         $pdf->Ln($hHeight);
 
-        $pdf->SetFont('Helvetica', '', 8.5);
-        $pdf->SetTextColor(51, 65, 85);
+        $pdf->SetFont($pdf->primaryFont, '', 7.5);
+        $pdf->SetTextColor(30, 41, 59);
 
         $fill = false;
         foreach ($rows as $row) {
@@ -621,15 +671,15 @@ class PsleRegionalResultBookPdfService
                     $pdf->addPortraitPage();
                 }
                 
-                $pdf->SetFont('Helvetica', 'B', 8.5);
+                $pdf->SetFont($pdf->primaryFont, 'B', 8);
                 $pdf->SetFillColor(241, 245, 249);
                 $pdf->SetTextColor(15, 23, 42);
                 foreach ($headers as $colIdx => $header) {
-                    $pdf->Cell($widths[$colIdx], $hHeight, $header, 1, 0, 'C', true);
+                    $pdf->Cell($widths[$colIdx], $hHeight, $pdf->pdfText($header), 1, 0, 'C', true);
                 }
                 $pdf->Ln($hHeight);
-                $pdf->SetFont('Helvetica', '', 8.5);
-                $pdf->SetTextColor(51, 65, 85);
+                $pdf->SetFont($pdf->primaryFont, '', 7.5);
+                $pdf->SetTextColor(30, 41, 59);
             }
 
             if ($fill) {
@@ -641,7 +691,7 @@ class PsleRegionalResultBookPdfService
             foreach ($widths as $colIdx => $w) {
                 $val = $row[$colIdx] ?? '';
                 $align = $aligns[$colIdx] ?? 'C';
-                $pdf->Cell($w, 6.0, $val, 1, 0, $align, true);
+                $pdf->Cell($w, 6.0, $pdf->pdfText((string)$val), 1, 0, $align, true);
             }
             $pdf->Ln(6.0);
             $fill = !$fill;
@@ -656,13 +706,13 @@ class PsleRegionalResultBookPdfService
                     $pdf->addPortraitPage();
                 }
             }
-            $pdf->SetFont('Helvetica', 'B', 8.5);
+            $pdf->SetFont($pdf->primaryFont, 'B', 8);
             $pdf->SetFillColor(226, 232, 240);
             $pdf->SetTextColor(15, 23, 42);
             foreach ($widths as $colIdx => $w) {
                 $val = $totalRow[$colIdx] ?? '';
                 $align = $aligns[$colIdx] ?? 'C';
-                $pdf->Cell($w, 6.5, $val, 1, 0, $align, true);
+                $pdf->Cell($w, 6.5, $pdf->pdfText((string)$val), 1, 0, $align, true);
             }
             $pdf->Ln(6.5);
         }
