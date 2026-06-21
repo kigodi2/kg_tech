@@ -343,6 +343,7 @@
         .doc-table th, .doc-table td {
             padding: 8px 10px;
             border: 1px solid #cbd5e1;
+            vertical-align: middle;
         }
 
         .doc-table th {
@@ -350,6 +351,20 @@
             font-weight: 700;
             color: var(--primary);
             text-align: center;
+        }
+
+        .attendance-table thead tr:first-child th {
+            text-align: center;
+            vertical-align: middle;
+            background: #eaf0f7;
+            font-weight: 700;
+        }
+
+        .attendance-table thead tr:nth-child(2) th {
+            text-align: center;
+            vertical-align: middle;
+            background: #f8fafc;
+            font-weight: 700;
         }
 
         .doc-table tr:nth-child(even) {
@@ -716,21 +731,26 @@
                 
                 <div class="doc-subsection-title">Jedwali la 1: Takwimu za Usajili na Mahudhurio Ki-Halmashauri</div>
                 <div class="table-responsive">
-                    <table class="doc-table">
+                    <table class="doc-table attendance-table">
                         <thead>
                             <tr>
-                                <th>S/N</th>
-                                <th>Halmashauri</th>
-                                <th>Reg ME</th>
-                                <th>Reg KE</th>
-                                <th>Reg Total</th>
-                                <th>Sat ME</th>
-                                <th>Sat KE</th>
-                                <th>Sat Total</th>
-                                <th>Abs ME</th>
-                                <th>Abs KE</th>
-                                <th>Abs Total</th>
-                                <th>Ufaulu %</th>
+                                <th rowspan="2">S/N</th>
+                                <th rowspan="2">Halmashauri</th>
+                                <th colspan="3">WALIOSAJILIWA</th>
+                                <th colspan="3">WALIOFANYA</th>
+                                <th colspan="3">WASIOFANYA</th>
+                                <th rowspan="2">Asilimia (%)</th>
+                            </tr>
+                            <tr>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JUMLA</th>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JUMLA</th>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JUMLA</th>
                             </tr>
                         </thead>
                         <tbody>

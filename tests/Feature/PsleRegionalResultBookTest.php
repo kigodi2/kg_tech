@@ -245,6 +245,10 @@ class PsleRegionalResultBookTest extends TestCase
         $response->assertSee('KITABU CHA MATOKEO');
         $response->assertSee('TABORA MC');
         $response->assertSee('Raymond Mapunda');
+        $response->assertSee('WALIOSAJILIWA');
+        $response->assertSee('WALIOFANYA');
+        $response->assertSee('WASIOFANYA');
+        $response->assertSee('Asilimia (%)');
     }
 
     public function test_admin_can_download_result_book_pdf(): void

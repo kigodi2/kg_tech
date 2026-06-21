@@ -368,7 +368,7 @@ class PsleRegionalResultBookPdfService
             number_format($data['attendance']['attendance_rate'], 2) . '%'
         ];
         
-        $this->renderTable($pdf, $t1Headers, $t1Widths, $t1Aligns, $t1Rows, $t1Total);
+        $this->renderTable($pdf, $t1Headers, $t1Widths, $t1Aligns, $t1Rows, $t1Total, true);
         $pdf->Ln(6);
 
         // 8. TATHMINI YA UTENDAJI NA MATOKEO
@@ -643,20 +643,44 @@ class PsleRegionalResultBookPdfService
         $pdf->Output('F', $outputPath);
     }
 
-    private function renderTable(\FPDF $pdf, array $headers, array $widths, array $aligns, array $rows, ?array $totalRow = null): void
-    {
+    private function renderTable(
+        \FPDF $pdf,
+        array $headers,
+        array $widths,
+        array $aligns,
+        array $rows,
+        ?array $totalRow = null,
+        bool $isAttendanceTable = false
+    ): void {
         $pdf->SetFillColor(241, 245, 249);
         $pdf->SetTextColor(15, 23, 42);
         $pdf->SetDrawColor(203, 213, 225);
         $pdf->SetLineWidth(0.2);
 
-        $pdf->SetFont($pdf->primaryFont, 'B', 8);
+        $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+        $headerHeight = $isAttendanceTable ? 13.0 : 6.5;
+        $rowHeight = 6.0;
 
-        $hHeight = 6.5;
-        foreach ($headers as $colIdx => $header) {
-            $pdf->Cell($widths[$colIdx], $hHeight, $pdf->pdfText($header), 1, 0, 'C', true);
+        // Check if there is enough space to render the header and at least one row
+        if ($pdf->GetY() + $headerHeight + $rowHeight > $limit) {
+            if ($pdf->getCurOrientation() === 'L') {
+                $pdf->addLandscapePage();
+            } else {
+                $pdf->addPortraitPage();
+            }
+            $limit = $pdf->getPageHeight() - $pdf->getBMargin();
         }
-        $pdf->Ln($hHeight);
+
+        // Render initial header
+        if ($isAttendanceTable) {
+            $this->renderAttendanceGroupedHeader($pdf, $widths);
+        } else {
+            $pdf->SetFont($pdf->primaryFont, 'B', 8);
+            foreach ($headers as $colIdx => $header) {
+                $pdf->Cell($widths[$colIdx], 6.5, $pdf->pdfText($header), 1, 0, 'C', true);
+            }
+            $pdf->Ln(6.5);
+        }
 
         $pdf->SetFont($pdf->primaryFont, '', 7.5);
         $pdf->SetTextColor(30, 41, 59);
@@ -664,20 +688,26 @@ class PsleRegionalResultBookPdfService
         $fill = false;
         foreach ($rows as $row) {
             $limit = $pdf->getPageHeight() - $pdf->getBMargin();
-            if ($pdf->GetY() > ($limit - 8)) {
+            if ($pdf->GetY() + $rowHeight > $limit) {
                 if ($pdf->getCurOrientation() === 'L') {
                     $pdf->addLandscapePage();
                 } else {
                     $pdf->addPortraitPage();
                 }
-                
-                $pdf->SetFont($pdf->primaryFont, 'B', 8);
-                $pdf->SetFillColor(241, 245, 249);
-                $pdf->SetTextColor(15, 23, 42);
-                foreach ($headers as $colIdx => $header) {
-                    $pdf->Cell($widths[$colIdx], $hHeight, $pdf->pdfText($header), 1, 0, 'C', true);
+                $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+
+                if ($isAttendanceTable) {
+                    $this->renderAttendanceGroupedHeader($pdf, $widths);
+                } else {
+                    $pdf->SetFont($pdf->primaryFont, 'B', 8);
+                    $pdf->SetFillColor(241, 245, 249);
+                    $pdf->SetTextColor(15, 23, 42);
+                    foreach ($headers as $colIdx => $header) {
+                        $pdf->Cell($widths[$colIdx], 6.5, $pdf->pdfText($header), 1, 0, 'C', true);
+                    }
+                    $pdf->Ln(6.5);
                 }
-                $pdf->Ln($hHeight);
+
                 $pdf->SetFont($pdf->primaryFont, '', 7.5);
                 $pdf->SetTextColor(30, 41, 59);
             }
@@ -699,7 +729,7 @@ class PsleRegionalResultBookPdfService
 
         if ($totalRow) {
             $limit = $pdf->getPageHeight() - $pdf->getBMargin();
-            if ($pdf->GetY() > ($limit - 8)) {
+            if ($pdf->GetY() + 6.5 > $limit) {
                 if ($pdf->getCurOrientation() === 'L') {
                     $pdf->addLandscapePage();
                 } else {
@@ -717,5 +747,55 @@ class PsleRegionalResultBookPdfService
             $pdf->Ln(6.5);
         }
         $pdf->Ln(4);
+    }
+
+    private function renderAttendanceGroupedHeader(\FPDF $pdf, array $widths): void
+    {
+        $pdf->SetFont($pdf->primaryFont, 'B', 7.5);
+        $pdf->SetTextColor(15, 23, 42);
+        $pdf->SetFillColor(241, 245, 249);
+        $pdf->SetDrawColor(203, 213, 225);
+
+        $x = $pdf->GetX();
+        $y = $pdf->GetY();
+
+        $h1 = 7;
+        $h2 = 6;
+        $fullHeight = $h1 + $h2;
+
+        $wSn = $widths[0];
+        $wCouncil = $widths[1];
+
+        $wRegistered = $widths[2] + $widths[3] + $widths[4];
+        $wSat = $widths[5] + $widths[6] + $widths[7];
+        $wAbsent = $widths[8] + $widths[9] + $widths[10];
+        $wPercent = $widths[11];
+
+        $pdf->Cell($wSn, $fullHeight, $pdf->pdfText('S/N'), 1, 0, 'C', true);
+        $pdf->Cell($wCouncil, $fullHeight, $pdf->pdfText('Halmashauri'), 1, 0, 'C', true);
+
+        $pdf->Cell($wRegistered, $h1, $pdf->pdfText('WALIOSAJILIWA'), 1, 0, 'C', true);
+        $pdf->Cell($wSat, $h1, $pdf->pdfText('WALIOFANYA'), 1, 0, 'C', true);
+        $pdf->Cell($wAbsent, $h1, $pdf->pdfText('WASIOFANYA'), 1, 0, 'C', true);
+
+        $pdf->Cell($wPercent, $fullHeight, $pdf->pdfText('Asilimia (%)'), 1, 1, 'C', true);
+
+        $pdf->SetXY($x + $wSn + $wCouncil, $y + $h1);
+
+        foreach ([
+            [$widths[2], 'ME'],
+            [$widths[3], 'KE'],
+            [$widths[4], 'JUMLA'],
+            [$widths[5], 'ME'],
+            [$widths[6], 'KE'],
+            [$widths[7], 'JUMLA'],
+            [$widths[8], 'ME'],
+            [$widths[9], 'KE'],
+            [$widths[10], 'JUMLA'],
+        ] as [$width, $label]) {
+            $pdf->Cell($width, $h2, $pdf->pdfText($label), 1, 0, 'C', true);
+        }
+
+        $pdf->SetXY($x, $y + $fullHeight);
     }
 }
