@@ -205,12 +205,14 @@
             background: white;
             width: 820px;
             min-height: 1160px;
+            height: auto;
             padding: 50px;
             box-shadow: 0 4px 20px rgba(15,23,42,0.15);
             border-radius: 4px;
             position: relative;
             box-sizing: border-box;
             color: #334155;
+            overflow: visible;
         }
 
         .cover-page {
@@ -848,6 +850,10 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Page 3.1: GENERAL ZONAL EVALUATION -->
+            <div class="document-page">
                 
                 <!-- Section 9 -->
                 <div class="doc-section-title">9. TATHMINI YA JUMLA YA KANDA</div>
@@ -894,6 +900,10 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Page 3.2: REGIONAL RESULTS EVALUATION -->
+            <div class="document-page">
 
                 <!-- Section 10 -->
                 <div class="doc-section-title">10. TATHMINI YA MATOKEO KI-MKOA</div>
@@ -966,7 +976,11 @@
                          </tbody>
                      </table>
                 </div>
+            </div>
 
+            <!-- Page 4.2: TOP COUNCILS -->
+            <div class="document-page">
+                
                 <!-- Section 12 -->
                 <div class="doc-section-title">12. HALMASHAURI BORA KUMI KIKANDA</div>
                 <div class="table-responsive">
@@ -995,7 +1009,11 @@
                          </tbody>
                      </table>
                 </div>
+            </div>
 
+            <!-- Page 4.3: BOTTOM COUNCILS -->
+            <div class="document-page">
+                
                 <!-- Section 13 -->
                 <div class="doc-section-title">13. HALMASHAURI ZA MWISHO KUMI KIKANDA</div>
                 <div class="table-responsive">
@@ -1060,6 +1078,10 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Page 5.2: BOTTOM SCHOOLS -->
+            <div class="document-page">
 
                 <!-- Section 15 -->
                 <div class="doc-section-title">15. SHULE ZA MWISHO KUMI KIKANDA</div>
@@ -1129,6 +1151,10 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+
+            <!-- Page 6.2: OWNERSHIP EVALUATION -->
+            <div class="document-page">
 
                 <!-- Section 17 -->
                 <div class="doc-section-title">17. TATHMINI YA UFAULU KWA UMILIKI WA SHULE</div>
