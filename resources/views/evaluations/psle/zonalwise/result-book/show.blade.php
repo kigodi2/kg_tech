@@ -213,6 +213,7 @@
             box-sizing: border-box;
             color: #334155;
             overflow: visible;
+            flex-shrink: 0;
         }
 
         .cover-page {
@@ -741,6 +742,10 @@
                 <div class="doc-paragraph">
                     2. <strong>Ushirikiano wa Kikanda (Zonal Collaboration):</strong> Mtihani huu wa utamilifu uliandaliwa kupitia ushirikiano wa Kanda ya <strong class="preview-collaborating_regions">{{ $inputs['collaborating_regions'] }}</strong>, ambapo mikoa iligawana majukumu ya uandaaji wa rasimu za awali za mitihani ya masomo yote kulingana na mihutasari mipya ya masomo.
                 </div>
+            </div>
+
+            <!-- Page 2.2: NARRATIVES CONTINUED -->
+            <div class="document-page">
                 
                 <!-- Section 4 -->
                 <div class="doc-section-title">4. UTUNGAJI NA MODERATION</div>
