@@ -294,6 +294,23 @@ class PsleZonalResultBookTest extends TestCase
         );
     }
 
+    public function test_zonal_result_book_displays_non_zero_values_in_section_9(): void
+    {
+        $this->createSnapshotAndPayloads(published: true);
+
+        $response = $this->actingAs($this->admin)
+            ->get("/evaluations/psle/zonalwise/result-book");
+
+        $response->assertStatus(200);
+        $response->assertSee('Wasichana (KE)');
+        $response->assertSee('Wavulana (ME)');
+        $response->assertSee('JUMLA KUU');
+        $response->assertSee('67'); // sat female
+        $response->assertSee('86'); // sat male
+        $response->assertSee('153'); // total sat
+        $response->assertSee('148'); // total pass
+    }
+
     public function test_admin_can_download_zonal_result_book_pdf(): void
     {
         $this->createSnapshotAndPayloads(published: true);

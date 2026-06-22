@@ -155,16 +155,115 @@ class ZonalResultBookDataService
         $totalA = 0; $totalB = 0; $totalC = 0; $totalD = 0; $totalE = 0;
         $totalSat = 0; $totalPass = 0;
 
+        $hasZonalTotal = isset($general['total']['grades']);
+        $femaleData = null;
+        $maleData = null;
+
+        if ($hasZonalTotal) {
+            $femaleData = [
+                'a' => (int) ($general['total']['grades']['a']['f'] ?? 0),
+                'b' => (int) ($general['total']['grades']['b']['f'] ?? 0),
+                'c' => (int) ($general['total']['grades']['c']['f'] ?? 0),
+                'd' => (int) ($general['total']['grades']['d']['f'] ?? 0),
+                'e' => (int) ($general['total']['grades']['e']['f'] ?? 0),
+                'sat' => (int) ($general['total']['sat']['f'] ?? 0),
+                'pass' => (int) ($general['total']['pass_ad']['f'] ?? 0),
+            ];
+            $maleData = [
+                'a' => (int) ($general['total']['grades']['a']['m'] ?? 0),
+                'b' => (int) ($general['total']['grades']['b']['m'] ?? 0),
+                'c' => (int) ($general['total']['grades']['c']['m'] ?? 0),
+                'd' => (int) ($general['total']['grades']['d']['m'] ?? 0),
+                'e' => (int) ($general['total']['grades']['e']['m'] ?? 0),
+                'sat' => (int) ($general['total']['sat']['m'] ?? 0),
+                'pass' => (int) ($general['total']['pass_ad']['m'] ?? 0),
+            ];
+        } else {
+            // Check if zonal general rows have 'FEMALE' / 'MALE'
+            $fRow = collect($general['rows'] ?? [])->first(fn($r) => strtoupper($r['gender'] ?? $r['council'] ?? '') === 'FEMALE');
+            $mRow = collect($general['rows'] ?? [])->first(fn($r) => strtoupper($r['gender'] ?? $r['council'] ?? '') === 'MALE');
+            if ($fRow && $mRow) {
+                $femaleData = [
+                    'a' => (int) ($fRow['grades']['a']['t'] ?? 0),
+                    'b' => (int) ($fRow['grades']['b']['t'] ?? 0),
+                    'c' => (int) ($fRow['grades']['c']['t'] ?? 0),
+                    'd' => (int) ($fRow['grades']['d']['t'] ?? 0),
+                    'e' => (int) ($fRow['grades']['e']['t'] ?? 0),
+                    'sat' => (int) ($fRow['sat']['t'] ?? 0),
+                    'pass' => (int) ($fRow['pass_ad']['t'] ?? 0),
+                ];
+                $maleData = [
+                    'a' => (int) ($mRow['grades']['a']['t'] ?? 0),
+                    'b' => (int) ($mRow['grades']['b']['t'] ?? 0),
+                    'c' => (int) ($mRow['grades']['c']['t'] ?? 0),
+                    'd' => (int) ($mRow['grades']['d']['t'] ?? 0),
+                    'e' => (int) ($mRow['grades']['e']['t'] ?? 0),
+                    'sat' => (int) ($mRow['sat']['t'] ?? 0),
+                    'pass' => (int) ($mRow['pass_ad']['t'] ?? 0),
+                ];
+            } else {
+                // Aggregate from regional general payloads
+                $regionalGenerals = DB::table('psle_precalculated_evaluations')
+                    ->where('exam_year', $examYear)
+                    ->where('scope_type', 'regional')
+                    ->whereIn('scope_id', $regionIds)
+                    ->where('evaluation_key', 'general')
+                    ->where('snapshot_id', $snapshotId)
+                    ->pluck('data');
+
+                if ($regionalGenerals->isNotEmpty()) {
+                    $femaleData = ['a' => 0, 'b' => 0, 'c' => 0, 'd' => 0, 'e' => 0, 'sat' => 0, 'pass' => 0];
+                    $maleData = ['a' => 0, 'b' => 0, 'c' => 0, 'd' => 0, 'e' => 0, 'sat' => 0, 'pass' => 0];
+
+                    foreach ($regionalGenerals as $regGenRaw) {
+                        $regGen = json_decode($regGenRaw, true);
+                        if (!$regGen) continue;
+
+                        $regF = collect($regGen['rows'] ?? [])->first(fn($r) => strtoupper($r['council'] ?? '') === 'FEMALE');
+                        $regM = collect($regGen['rows'] ?? [])->first(fn($r) => strtoupper($r['council'] ?? '') === 'MALE');
+
+                        if ($regF) {
+                            $femaleData['a'] += (int) ($regF['grades']['a']['t'] ?? 0);
+                            $femaleData['b'] += (int) ($regF['grades']['b']['t'] ?? 0);
+                            $femaleData['c'] += (int) ($regF['grades']['c']['t'] ?? 0);
+                            $femaleData['d'] += (int) ($regF['grades']['d']['t'] ?? 0);
+                            $femaleData['e'] += (int) ($regF['grades']['e']['t'] ?? 0);
+                            $femaleData['sat'] += (int) ($regF['sat']['t'] ?? 0);
+                            $femaleData['pass'] += (int) ($regF['pass_ad']['t'] ?? 0);
+                        }
+                        if ($regM) {
+                            $maleData['a'] += (int) ($regM['grades']['a']['t'] ?? 0);
+                            $maleData['b'] += (int) ($regM['grades']['b']['t'] ?? 0);
+                            $maleData['c'] += (int) ($regM['grades']['c']['t'] ?? 0);
+                            $maleData['d'] += (int) ($regM['grades']['d']['t'] ?? 0);
+                            $maleData['e'] += (int) ($regM['grades']['e']['t'] ?? 0);
+                            $maleData['sat'] += (int) ($regM['sat']['t'] ?? 0);
+                            $maleData['pass'] += (int) ($regM['pass_ad']['t'] ?? 0);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Add logging in dev/local mode
+        if (app()->environment('local', 'testing', 'dev')) {
+            Log::debug('Zonal Result Book Grade Distribution Mapping', [
+                'has_zonal_total' => $hasZonalTotal,
+                'female_data' => $femaleData,
+                'male_data' => $maleData,
+            ]);
+        }
+
         foreach (['FEMALE', 'MALE'] as $gender) {
-            $row = collect($general['rows'] ?? [])->first(fn($r) => strtoupper($r['gender'] ?? $r['council'] ?? '') === $gender);
-            if ($row) {
-                $a = (int) ($row['grades']['a']['t'] ?? 0);
-                $b = (int) ($row['grades']['b']['t'] ?? 0);
-                $c = (int) ($row['grades']['c']['t'] ?? 0);
-                $d = (int) ($row['grades']['d']['t'] ?? 0);
-                $e = (int) ($row['grades']['e']['t'] ?? 0);
-                $sat = (int) ($row['sat']['t'] ?? 0);
-                $pass = (int) ($row['pass_ad']['t'] ?? 0); // A-D are passes in PSLE
+            $gData = $gender === 'FEMALE' ? $femaleData : $maleData;
+            if ($gData) {
+                $a = $gData['a'];
+                $b = $gData['b'];
+                $c = $gData['c'];
+                $d = $gData['d'];
+                $e = $gData['e'];
+                $sat = $gData['sat'];
+                $pass = $gData['pass'];
                 $pct = $sat > 0 ? round(($pass / $sat) * 100, 2) : 0.0;
 
                 $genderLabel = $gender === 'FEMALE' ? 'FEMALE' : 'MALE';
