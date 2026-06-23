@@ -309,6 +309,10 @@ class PublicPsleResultsController extends Controller
                 ['path' => request()->url(), 'query' => request()->query()]
             );
 
+            $satGirlsCount = collect($candidates)->where('gender', 'F')->where('status', '!=', 'ABS')->count();
+            $satBoysCount = collect($candidates)->where('gender', 'M')->where('status', '!=', 'ABS')->count();
+            $candidateCount = $satGirlsCount + $satBoysCount;
+
             foreach ($candidates as $candidate) {
                 $gender = strtoupper((string) ($candidate['gender'] ?? ''));
                 if (!isset($sexSummary[$gender])) {
@@ -324,7 +328,6 @@ class PublicPsleResultsController extends Controller
                 }
             }
 
-            $candidateCount = count($candidates);
             $schoolAverage = \App\Services\Results\PsleSchoolAverageService::calculate(
                 (float) collect($candidates)->sum('total_score'),
                 $candidateCount,
@@ -333,12 +336,13 @@ class PublicPsleResultsController extends Controller
             $schoolAverageGrade = $this->gradeFromScaledScore($schoolAverage / 6);
             $schoolAverageMeta = $this->gradeMeta($schoolAverageGrade);
             $passRateAC = $candidateCount > 0
-                ? round((collect($candidates)->whereIn('average_grade', ['A', 'B', 'C'])->count() / $candidateCount) * 100, 2)
+                ? round((collect($candidates)->where('status', '!=', 'ABS')->whereIn('average_grade', ['A', 'B', 'C'])->count() / $candidateCount) * 100, 2)
                 : 0.0;
             $passRateAD = $candidateCount > 0
-                ? round((collect($candidates)->whereIn('average_grade', ['A', 'B', 'C', 'D'])->count() / $candidateCount) * 100, 2)
+                ? round((collect($candidates)->where('status', '!=', 'ABS')->whereIn('average_grade', ['A', 'B', 'C', 'D'])->count() / $candidateCount) * 100, 2)
                 : 0.0;
             $topCandidate = collect($candidates)
+                ->where('status', '!=', 'ABS')
                 ->sortBy([
                     ['total_score', 'desc'],
                     ['candidate_id', 'asc'],
@@ -350,8 +354,8 @@ class PublicPsleResultsController extends Controller
         }
 
         $satByGender = [
-            'F' => array_sum($sexSummary['F']),
-            'M' => array_sum($sexSummary['M']),
+            'F' => $satGirlsCount ?? 0,
+            'M' => $satBoysCount ?? 0,
         ];
 
         return view('public.results.psle.school', [
@@ -392,8 +396,9 @@ class PublicPsleResultsController extends Controller
                 $candidate = $candidateRows->first();
                 $subjectRows = $candidateRows
                     ->map(function ($row) use (&$subjectSummary) {
-                        $score50 = $this->scaledScore50((float) $row->marks_obtained, (float) ($row->max_marks ?: 100));
-                        $grade = $this->gradeFromScaledScore($score50);
+                        $isAbsent = strtoupper((string) ($row->grade ?? '')) === 'ABS' || is_null($row->marks_obtained);
+                        $score50 = $isAbsent ? null : $this->scaledScore50((float) $row->marks_obtained, (float) ($row->max_marks ?: 100));
+                        $grade = $isAbsent ? 'ABS' : $this->gradeFromScaledScore($score50);
                         $subjectLabel = $this->subjectLabel($row->subject_name);
                         $subjectOrderKey = strtoupper(trim((string) $row->subject_name));
 
@@ -417,29 +422,53 @@ class PublicPsleResultsController extends Controller
                         }
 
                         $subjectSummary[$subjectLabel]['registered']++;
-                        $subjectSummary[$subjectLabel]['sat']++;
-                        $subjectSummary[$subjectLabel]['with_results']++;
-                        $subjectSummary[$subjectLabel][$grade]++;
-                        $subjectSummary[$subjectLabel]['passed'] += in_array($grade, ['A', 'B', 'C'], true) ? 1 : 0;
-                        $subjectSummary[$subjectLabel]['a_to_d'] += in_array($grade, ['A', 'B', 'C', 'D'], true) ? 1 : 0;
-                        $subjectSummary[$subjectLabel]['total_score'] += $score50;
+                        if ($isAbsent) {
+                            $subjectSummary[$subjectLabel]['abs']++;
+                        } else {
+                            $subjectSummary[$subjectLabel]['sat']++;
+                            $subjectSummary[$subjectLabel]['with_results']++;
+                            if (isset($subjectSummary[$subjectLabel][$grade])) {
+                                $subjectSummary[$subjectLabel][$grade]++;
+                            }
+                            $subjectSummary[$subjectLabel]['passed'] += in_array($grade, ['A', 'B', 'C'], true) ? 1 : 0;
+                            $subjectSummary[$subjectLabel]['a_to_d'] += in_array($grade, ['A', 'B', 'C', 'D'], true) ? 1 : 0;
+                            $subjectSummary[$subjectLabel]['total_score'] += $score50;
+                        }
 
                         return [
                             'subject' => $subjectLabel,
                             'score_50' => $score50,
                             'grade' => $grade,
                             'order_key' => $subjectOrderKey,
+                            'is_absent' => $isAbsent,
                         ];
                     })
                     ->sortBy(fn (array $item) => $this->subjectOrderIndex($item['order_key']))
                     ->values();
 
-                $subjectCount = $subjectRows->count();
-                $totalScore = round($subjectRows->sum('score_50'), 4);
-                $averageScore = $subjectCount > 0 ? round($totalScore / $subjectCount, 4) : 0.0;
-                $averageGrade = $this->gradeFromScaledScore($averageScore);
-                $aggregatePoints = (int) $subjectRows->sum(fn (array $subject) => $this->gradePointFromGrade((string) ($subject['grade'] ?? 'E')));
-                $gpa = $subjectCount > 0 ? round($aggregatePoints / $subjectCount, 4) : 0.0;
+                $satSubjects = $subjectRows->filter(fn (array $item) => !($item['is_absent'] ?? false));
+                $satCount = $satSubjects->count();
+                $totalScore = $satCount > 0 ? round($satSubjects->sum('score_50'), 4) : 0.0;
+                $averageScore = $satCount > 0 ? round($totalScore / $satCount, 4) : null;
+
+                $status = match (true) {
+                    $satCount === 0 => 'ABS',
+                    $satCount < 6 => 'INC',
+                    default => 'COMPLETE',
+                };
+
+                $averageGrade = match ($status) {
+                    'ABS' => 'ABS',
+                    'INC' => 'INC',
+                    default => (!is_null($averageScore) ? $this->gradeFromScaledScore($averageScore) : 'E'),
+                };
+
+                $aggregatePoints = $status === 'COMPLETE'
+                    ? (int) $satSubjects->sum(fn (array $subject) => $this->gradePointFromGrade((string) ($subject['grade'] ?? 'E')))
+                    : null;
+                $gpa = $status === 'COMPLETE' && $satCount > 0
+                    ? round($aggregatePoints / $satCount, 4)
+                    : null;
 
                 return [
                     'candidate_id' => $candidate->candidate_id,
@@ -448,12 +477,13 @@ class PublicPsleResultsController extends Controller
                     'gender' => strtoupper((string) $candidate->gender),
                     'subject_rows' => $subjectRows->all(),
                     'subject_result_string' => $subjectRows->map(fn (array $subject) => "{$subject['subject']} - {$subject['grade']}")->implode(', '),
-                    'total_score' => $totalScore,
+                    'total_score' => $status === 'COMPLETE' || $status === 'INC' ? $totalScore : null,
                     'average_score' => $averageScore,
                     'average_grade' => $averageGrade,
                     'aggregate_points' => $aggregatePoints,
                     'gpa' => $gpa,
                     'average_meta' => $this->gradeMeta($averageGrade),
+                    'status' => $status,
                 ];
             })
             ->sortBy('candidate_id')
@@ -461,6 +491,7 @@ class PublicPsleResultsController extends Controller
 
         $positionByCandidate = [];
         $sortedForPosition = $candidates
+            ->filter(fn (array $c) => ($c['status'] ?? '') === 'COMPLETE')
             ->sortBy([
                 ['total_score', 'desc'],
                 ['candidate_id', 'asc'],
@@ -480,7 +511,7 @@ class PublicPsleResultsController extends Controller
 
         $candidates = $candidates
             ->map(function (array $candidate) use ($positionByCandidate) {
-                $candidate['position'] = $positionByCandidate[$candidate['candidate_id']] ?? null;
+                $candidate['position'] = $positionByCandidate[$candidate['candidate_id']] ?? '-';
 
                 return $candidate;
             })
@@ -590,7 +621,6 @@ class PublicPsleResultsController extends Controller
             ->whereIn('s.source_system', [
                 NectaPsle2025SchoolSyncService::SOURCE_SYSTEM,
                 'IRMS_PSLE_DEMO',
-                'MOCK',
             ])
             ->where('s.education_level', 'PRIMARY');
     }

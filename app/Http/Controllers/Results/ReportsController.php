@@ -523,7 +523,6 @@ class ReportsController extends Controller
                 ->whereIn('schools.source_system', [
                     NectaPsle2025SchoolSyncService::SOURCE_SYSTEM,
                     'IRMS_PSLE_DEMO',
-                    'MOCK',
                 ])
                 ->when($regionId, fn ($query) => $query->where('districts.region_id', (int) $regionId))
                 ->distinct()
