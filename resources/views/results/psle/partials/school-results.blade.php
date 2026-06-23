@@ -47,7 +47,7 @@
                         <th>Region</th>
                         <th class="text-center">Registered</th>
                         <th class="text-center">Complete</th>
-                        <th class="text-center">School Avg</th>
+                        <th class="text-center">Wastani wa Shule</th>
                         <th class="text-center">Status</th>
                         <th class="text-center">Action</th>
                     </tr>

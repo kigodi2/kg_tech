@@ -197,12 +197,9 @@ class PsleRegionalStudentRankingFpdfService
         $candidateCount = count($rows);
         $femaleCount = count(array_filter($rows, fn ($row) => strtoupper((string) ($row['gender'] ?? '')) === 'F'));
         $maleCount = count(array_filter($rows, fn ($row) => strtoupper((string) ($row['gender'] ?? '')) === 'M'));
-        $totals = array_values(array_filter(array_map(fn ($row) => $row['total_marks'] ?? null, $rows), fn ($v) => !is_null($v)));
-        $gpas = array_values(array_filter(array_map(fn ($row) => $row['gpa'] ?? null, $rows), fn ($v) => !is_null($v)));
-        $averageTotal = !empty($totals) ? (array_sum($totals) / count($totals)) : null;
-        $averageGpa = !empty($gpas) ? (array_sum($gpas) / count($gpas)) : null;
-        $averageTotalBadge = $this->totalAverageBadge($averageTotal);
-        $averageGpaBadge = $this->gpaAverageBadge($averageGpa);
+        $avgMarks = array_values(array_filter(array_map(fn ($row) => $row['avg_marks'] ?? null, $rows), fn ($v) => !is_null($v)));
+        $averageMark = !empty($avgMarks) ? (array_sum($avgMarks) / count($avgMarks)) : null;
+        $averageMarkBadge = $this->averageMarkBadge($averageMark);
         $best = $rows[0] ?? null;
         $least = !empty($rows) ? $rows[array_key_last($rows)] : null;
 
@@ -214,17 +211,11 @@ class PsleRegionalStudentRankingFpdfService
         $pdf->Cell(self::CONTENT_WIDTH, 4.1, 'REGION: ' . strtoupper((string) $region->name), 0, 1, 'L');
         $pdf->Cell(self::CONTENT_WIDTH, 4.1, 'TOTAL CANDIDATES LISTED: ' . $candidateCount . ' (F: ' . $femaleCount . ', M: ' . $maleCount . ')', 0, 1, 'L');
         $pdf->SetX(8);
-        $averageTotalText = 'AVERAGE TOTAL: ' . (is_null($averageTotal) ? '-' : number_format((float) $averageTotal, 2));
-        $pdf->Cell($pdf->GetStringWidth($averageTotalText), 3.9, $averageTotalText, 0, 0, 'L');
+        $averageMarkText = 'WASTANI wa Alama: ' . (is_null($averageMark) ? '-' : number_format((float) $averageMark, 4));
+        $pdf->Cell($pdf->GetStringWidth($averageMarkText), 3.9, $averageMarkText, 0, 0, 'L');
         $pdf->Cell(1.5, 3.9, '', 0, 0);
-        if ($averageTotalBadge) {
-            $this->drawInlineBadge($pdf, $averageTotalBadge);
-        }
-        $averageGpaText = ' | AVERAGE GPA: ' . (is_null($averageGpa) ? '-' : number_format((float) $averageGpa, 4));
-        $pdf->Cell($pdf->GetStringWidth($averageGpaText), 3.9, $averageGpaText, 0, 0, 'L');
-        $pdf->Cell(1.5, 3.9, '', 0, 0);
-        if ($averageGpaBadge) {
-            $this->drawInlineBadge($pdf, $averageGpaBadge);
+        if ($averageMarkBadge) {
+            $this->drawInlineBadge($pdf, $averageMarkBadge);
         }
         $pdf->Ln(3.9);
         if ($best) {
@@ -236,34 +227,17 @@ class PsleRegionalStudentRankingFpdfService
         $pdf->Ln(1.2);
     }
 
-    private function totalAverageBadge(?float $average): ?array
+    private function averageMarkBadge(?float $average): ?array
     {
         if (is_null($average)) {
             return null;
         }
 
         $grade = match (true) {
-            $average >= 246 => 'A',
-            $average >= 186 => 'B',
-            $average >= 126 => 'C',
-            $average >= 66 => 'D',
-            default => 'E',
-        };
-
-        return $this->gradeBadge($grade);
-    }
-
-    private function gpaAverageBadge(?float $averageGpa): ?array
-    {
-        if (is_null($averageGpa)) {
-            return null;
-        }
-
-        $grade = match (true) {
-            $averageGpa <= 1.5 => 'A',
-            $averageGpa <= 2.5 => 'B',
-            $averageGpa <= 3.5 => 'C',
-            $averageGpa <= 4.5 => 'D',
+            $average >= 40.1667 => 'A',
+            $average >= 30.1667 => 'B',
+            $average >= 20.1667 => 'C',
+            $average >= 10.1667 => 'D',
             default => 'E',
         };
 

@@ -250,17 +250,12 @@ class PslePrecalculationService
                             $leftAvg = $left['avg_marks'] ?? INF;
                             $rightAvg = $right['avg_marks'] ?? INF;
                             if ($leftAvg !== $rightAvg) {
-                                    return $leftAvg <=> $rightAvg;
-                            }
-                            $leftGpa = $left['gpa'] ?? INF;
-                            $rightGpa = $right['gpa'] ?? INF;
-                            if ($leftGpa !== $rightGpa) {
-                                    return $rightGpa <=> $leftGpa;
+                                return $leftAvg <=> $rightAvg;
                             }
                             $leftCouncil = strtoupper((string) ($left['council'] ?? ''));
                             $rightCouncil = strtoupper((string) ($right['council'] ?? ''));
                             if ($leftCouncil !== $rightCouncil) {
-                                    return strcmp($leftCouncil, $rightCouncil);
+                                return strcmp($leftCouncil, $rightCouncil);
                             }
                             return strcmp(strtoupper((string) ($left['region'] ?? '')), strtoupper((string) ($right['region'] ?? '')));
                         })->take(10)->values(),
@@ -283,11 +278,6 @@ class PslePrecalculationService
                             $rightAvg = $right['avg_marks'] ?? INF;
                             if ($leftAvg !== $rightAvg) {
                                     return $leftAvg <=> $rightAvg;
-                            }
-                            $leftGpa = $left['gpa'] ?? INF;
-                            $rightGpa = $right['gpa'] ?? INF;
-                            if ($leftGpa !== $rightGpa) {
-                                    return $rightGpa <=> $leftGpa;
                             }
                             $leftSchool = strtoupper((string) ($left['school'] ?? ''));
                             $rightSchool = strtoupper((string) ($right['school'] ?? ''));
@@ -368,11 +358,6 @@ class PslePrecalculationService
                             if ($leftAvg !== $rightAvg) {
                                 return $leftAvg <=> $rightAvg;
                             }
-                            $leftGpa = $left['gpa'] ?? INF;
-                            $rightGpa = $right['gpa'] ?? INF;
-                            if ($leftGpa !== $rightGpa) {
-                                return $rightGpa <=> $leftGpa;
-                            }
                             return strcmp((string) ($left['sort_label'] ?? ''), (string) ($right['sort_label'] ?? ''));
                         })->take(10)->values(),
                         default => $rows,
@@ -404,11 +389,6 @@ class PslePrecalculationService
                             $rightAvg = $right['avg_marks'] ?? INF;
                             if ($leftAvg !== $rightAvg) {
                                 return $leftAvg <=> $rightAvg;
-                            }
-                            $leftGpa = $left['gpa'] ?? INF;
-                            $rightGpa = $right['gpa'] ?? INF;
-                            if ($leftGpa !== $rightGpa) {
-                                return $rightGpa <=> $leftGpa;
                             }
                             return strcmp((string) ($left['sort_label'] ?? ''), (string) ($right['sort_label'] ?? ''));
                         })->take(10)->values(),
@@ -459,8 +439,8 @@ class PslePrecalculationService
                         'evaluationLabel' => $label,
                         'summary' => [
                             'students' => number_format($rows->count()),
-                            'avg_gpa' => number_format((float) ($rows->pluck('gpa')->avg() ?? 0), 2),
-                            'best_gpa' => number_format((float) ($rows->pluck('gpa')->min() ?? 0), 2),
+                            'avg_marks' => number_format((float) ($rows->pluck('avg_marks')->avg() ?? 0), 4),
+                            'best_marks' => number_format((float) ($rows->pluck('avg_marks')->max() ?? 0), 4),
                             'sex' => match ($key) {
                                 'best-ten-girls', 'least-ten-girls' => 'FEMALE',
                                 'best-ten-boys', 'least-ten-boys' => 'MALE',

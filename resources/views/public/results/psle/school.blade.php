@@ -147,7 +147,7 @@
                             (F: {{ $satGirlsCount }}/{{ $registeredGirlsCount }}, M: {{ $satBoysCount }}/{{ $registeredBoysCount }})
                         </div>
                         <div>
-                            SCHOOL AVERAGE : {{ abs($schoolAverage - round($schoolAverage)) < 0.00005 ? number_format($schoolAverage, 0) : number_format($schoolAverage, 4) }}
+                            WASTANI WA ALAMA WA SHULE : {{ abs($schoolAverage - round($schoolAverage)) < 0.00005 ? number_format($schoolAverage, 0) : number_format($schoolAverage, 4) }}
                             <span style="background-color: {{ $schoolAverageMeta['color'] }}; color: #000080; font-weight: bold; padding: 0 0.2rem;">{{ $schoolAverageMeta['label'] }}</span>
                         </div>
                         <div>PASS RATE (A-C): {{ number_format($passRateAC, 2) }}% | PASS RATE (A-D): {{ number_format($passRateAD, 2) }}%</div>
@@ -251,7 +251,8 @@
                                         @php
                                             $subjectLine = collect($candidate['subject_rows'] ?? [])
                                                 ->map(function (array $subject) {
-                                                    $score = number_format((float) ($subject['score_50'] ?? 0), 0);
+                                                    $isNoMark = is_null($subject['score_50']) || in_array($subject['grade'], ['INC', 'ABS'], true);
+                                                    $score = $isNoMark ? 'X' : number_format((float) $subject['score_50'], 0);
                                                     $label = strtoupper((string) ($subject['subject'] ?? ''));
                                                     $label = match ($label) {
                                                         'MAARIFA' => 'SOCIAL',
@@ -267,7 +268,7 @@
                                         <td style="border: 1px solid #999; padding: 0.25rem 0.4rem; width: {{ $premNoColumnWidth }}; min-width: {{ $premNoColumnWidth }}; max-width: {{ $premNoColumnWidth }}; text-align: left; font-weight: bold;">{{ $candidate['prem_no'] ?: '-' }}</td>
                                         <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $sexColumnWidth }}; min-width: {{ $sexColumnWidth }}; max-width: {{ $sexColumnWidth }}; text-align: center; font-weight: bold;">{{ $candidate['gender'] }}</td>
                                         <td style="border: 1px solid #999; padding: 0.25rem;">{{ $subjectLine }}</td>
-                                        <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ number_format($candidate['total_score'], 0) }}</td>
+                                        <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ is_numeric($candidate['total_score']) ? number_format($candidate['total_score'], 0) : $candidate['total_score'] }}</td>
                                         <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ strtoupper($candidate['average_grade']) }}</td>
                                         <td style="border: 1px solid #999; padding: 0.25rem; width: {{ $candidateMetricColumnWidth }}; min-width: {{ $candidateMetricColumnWidth }}; max-width: {{ $candidateMetricColumnWidth }}; text-align: center; font-weight: bold;">{{ $candidate['position'] }}</td>
                                     </tr>
@@ -325,7 +326,7 @@
                                     <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">D</th>
                                     <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">A - D</th>
                                     <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">E</th>
-                                    <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">AVG</th>
+                                    <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">WASTANI</th>
                                     <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $metricColumnWidth }}; min-width: {{ $metricColumnWidth }}; max-width: {{ $metricColumnWidth }}; text-align: center; font-weight: bold; white-space: nowrap;">GRD</th>
                                     <th style="border: 1px solid #999; padding: 0.25rem; width: {{ $competenceColumnWidth }}; min-width: {{ $competenceColumnWidth }}; max-width: {{ $competenceColumnWidth }}; text-align: left; color: #FFFFFF; white-space: nowrap; font-size: 0.90rem; font-weight: bold;">COMPETENCE LEVEL</th>
                                 </tr>

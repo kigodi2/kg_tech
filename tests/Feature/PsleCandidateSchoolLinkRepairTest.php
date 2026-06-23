@@ -12,6 +12,7 @@ use App\Models\ExamYear;
 use App\Models\Region;
 use App\Models\District;
 use App\Models\Subject;
+use App\Models\MarkImportBatch;
 
 class PsleCandidateSchoolLinkRepairTest extends TestCase
 {
@@ -70,6 +71,35 @@ class PsleCandidateSchoolLinkRepairTest extends TestCase
             'district_id' => $district->id,
             'region_id' => $region->id,
             'is_active' => false,
+        ]);
+
+        // Create ExamYear, Subject, and MarkImportBatch to satisfy foreign key constraints for RawMark factory
+        $examYear = ExamYear::create([
+            'id' => 1,
+            'year_label' => '2025',
+            'is_active' => true,
+        ]);
+
+        $subject = Subject::create([
+            'id' => 1,
+            'exam_type_id' => $this->psle->id,
+            'code' => 'KISW',
+            'name' => 'Kiswahili',
+            'max_marks' => 50,
+            'is_active' => true,
+        ]);
+
+        MarkImportBatch::create([
+            'id' => 1,
+            'batch_code' => 'BATCH-1',
+            'exam_year' => 2025,
+            'exam_year_id' => $examYear->id,
+            'exam_type_id' => $this->psle->id,
+            'region_id' => $region->id,
+            'district_id' => $district->id,
+            'school_id' => $this->schoolActiveCurrent->id,
+            'subject_id' => $subject->id,
+            'status' => 'draft',
         ]);
     }
 

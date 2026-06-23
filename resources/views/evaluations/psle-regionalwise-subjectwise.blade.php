@@ -7,7 +7,7 @@
     $summaryMetricWidth = '52px';
     $gradeSummary = $summary['grade_summary'] ?? [];
     $overall = $summary['overall'] ?? [];
-    $gpaInfo = $overall['gpa_info'] ?? null;
+    $averageInfo = $overall['average_info'] ?? null;
     $isSubjectSummary = str_contains(strtoupper((string) ($evaluationLabel ?? '')), 'SUMMARY');
     $barcodePayload = sprintf(
         'PSLE-%s-%s-WEB',
@@ -254,14 +254,14 @@
                             <td style="text-align: left;">{{ $overall['passed'] ?? 0 }}</td>
                         </tr>
                         <tr>
-                            <td style="text-align: left; font-weight: bold;">EXAMINATION CENTRE GPA</td>
-                            <td style="text-align: left;">{{ !empty($overall['gpa']) ? number_format((float) $overall['gpa'], 4) : '-' }}</td>
+                            <td style="text-align: left; font-weight: bold;">EXAMINATION CENTRE WASTANI WA ALAMA</td>
+                            <td style="text-align: left;">{{ !empty($overall['average_score']) ? number_format((float) $overall['average_score'], 4) : '-' }}</td>
                         </tr>
                         <tr>
-                            <td style="text-align: left; font-weight: bold;">GPA COMPETENCE</td>
-                            <td style="text-align: left; background: {{ $gpaInfo['color'] ?? '#fffde7' }}; font-weight: bold;">
-                                @if($gpaInfo)
-                                    Grade {{ $gpaInfo['grade'] ?? '-' }} ({{ $gpaInfo['competence'] ?? '-' }})
+                            <td style="text-align: left; font-weight: bold;">AVERAGE COMPETENCE</td>
+                            <td style="text-align: left; background: {{ $averageInfo['color'] ?? '#fffde7' }}; font-weight: bold;">
+                                @if($averageInfo)
+                                    Grade {{ $averageInfo['grade'] ?? '-' }} ({{ $averageInfo['competence'] ?? '-' }})
                                 @else
                                     -
                                 @endif
@@ -309,7 +309,7 @@
                             <th>D</th>
                             <th>A - D</th>
                             <th>E</th>
-                            <th>AVG</th>
+                            <th>WASTANI</th>
                             <th>GRD</th>
                             <th style="text-align: left;">COMPETENCY LEVEL</th>
                         </tr>

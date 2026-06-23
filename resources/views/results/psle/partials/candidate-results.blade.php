@@ -61,7 +61,7 @@
                         <th class="text-center">CIV</th>
                         <th class="text-center">SOC</th>
                         <th class="text-center">Total</th>
-                        <th class="text-center">Average</th>
+                        <th class="text-center">WASTANI wa Alama</th>
                         <th class="text-center">Grade</th>
                     </tr>
                 </thead>

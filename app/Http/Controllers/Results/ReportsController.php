@@ -520,10 +520,7 @@ class ReportsController extends Controller
             return District::query()
                 ->select('districts.id', 'districts.region_id', 'districts.name')
                 ->join('schools', 'schools.district_id', '=', 'districts.id')
-                ->whereIn('schools.source_system', [
-                    NectaPsle2025SchoolSyncService::SOURCE_SYSTEM,
-                    'IRMS_PSLE_DEMO',
-                ])
+                ->where('schools.education_level', 'PRIMARY')
                 ->when($regionId, fn ($query) => $query->where('districts.region_id', (int) $regionId))
                 ->distinct()
                 ->orderBy('districts.name')

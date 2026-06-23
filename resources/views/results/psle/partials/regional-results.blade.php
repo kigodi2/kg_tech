@@ -13,7 +13,7 @@
                         <th class="text-center">Councils / Districts</th>
                         <th class="text-center">Primary Schools</th>
                         <th class="text-center">Total Candidates</th>
-                        <th class="text-center">Region Average</th>
+                        <th class="text-center">Wastani wa Alama (Mkoa)</th>
                         <th class="text-center">Action</th>
                     </tr>
                 </thead>

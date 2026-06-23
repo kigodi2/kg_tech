@@ -461,7 +461,7 @@
                     <i class="fa-solid fa-wand-magic-sparkles" style="color: {{ $isDraftRunDone ? 'var(--tz-green)' : 'inherit' }}; font-size: 1.2rem; margin-right: 4px; flex-shrink: 0;"></i>
                     <span class="action-card-btn-text" style="flex: 1;">
                         <span class="action-card-btn-title">3. Execute Draft Processing Run</span>
-                        <span class="action-card-btn-desc">Compile tentative GPAs, ranks, and performance averages.</span>
+                        <span class="action-card-btn-desc">Compile tentative performance averages, grades, and rankings.</span>
                     </span>
                     @if($isDraftRunDone)
                         <span class="badge badge-green" style="font-size: 0.65rem;"><i class="fa-solid fa-check"></i> Compiled</span>
@@ -569,7 +569,7 @@
                 <div class="compliance-item">
                     <i class="fa-solid fa-circle-check"></i>
                     <span class="compliance-item-text">
-                        Candidate calculations leverage <strong>GPA division</strong> mapping logic based on regional configurations.
+                        Candidate calculations leverage <strong>average marks</strong> mapping logic based on regional configurations.
                     </span>
                 </div>
                 <div class="compliance-item">
@@ -875,7 +875,7 @@
         $('#btnDraftRun').click(function() {
             Swal.fire({
                 title: 'Draft Computation',
-                text: 'This will run draft GPA standing tables and rankings for all primary candidates. Continue?',
+                text: 'This will run draft standing tables and rankings for all primary candidates. Continue?',
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Run Draft',

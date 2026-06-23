@@ -172,7 +172,7 @@ class PsleRegionalSubjectwiseFpdfService
         $pdf->SetFont('Helvetica', 'B', 8.0);
         $pdf->Cell(self::CONTENT_WIDTH, 4.1, 'REGION: ' . strtoupper((string) $region->name), 0, 1, 'L');
         $pdf->Cell(self::CONTENT_WIDTH, 4.1, 'TOTAL SUBJECTS: ' . ($summary['subjects'] ?? 0) . ' | TOTAL PASSED CANDIDATES (A - C): ' . ($overall['passed'] ?? 0), 0, 1, 'L');
-        $pdf->Cell(self::CONTENT_WIDTH, 4.1, 'EXAMINATION CENTRE GPA: ' . (!empty($overall['gpa']) ? number_format((float) $overall['gpa'], 4) : '-'), 0, 1, 'L');
+        $pdf->Cell(self::CONTENT_WIDTH, 4.1, 'EXAMINATION CENTRE WASTANI WA ALAMA: ' . (!empty($overall['average_score']) ? number_format((float) $overall['average_score'], 4) : '-'), 0, 1, 'L');
         $pdf->Cell(self::CONTENT_WIDTH, 4.1, 'GRADE SUMMARY (T): REGIST ' . data_get($gradeSummary, 'T.REGIST', 0) . ' | SAT ' . data_get($gradeSummary, 'T.SAT', 0) . ' | A ' . data_get($gradeSummary, 'T.A', 0) . ' | B ' . data_get($gradeSummary, 'T.B', 0) . ' | C ' . data_get($gradeSummary, 'T.C', 0) . ' | D ' . data_get($gradeSummary, 'T.D', 0) . ' | E ' . data_get($gradeSummary, 'T.E', 0), 0, 1, 'L');
         $pdf->Ln(1.2);
     }
@@ -205,7 +205,7 @@ class PsleRegionalSubjectwiseFpdfService
             ['CODE',$widths['code'],'C'],['SUBJECT NAME',$widths['name'],'L'],['REGIST',$widths['reg'],'C'],
             ['SAT',$widths['sat'],'C'],['ABS',$widths['abs'],'C'],['A',$widths['m'],'C'],['B',$widths['m'],'C'],
             ['C',$widths['m'],'C'],['A - C',$widths['ac'],'C'],['D',$widths['m'],'C'],['A - D',$widths['ad'],'C'],
-            ['E',$widths['m'],'C'],['AVG',$widths['avg'],'C'],['GRD',$widths['grd'],'C'],['COMPETENCY LEVEL',$widths['comp'],'L']
+            ['E',$widths['m'],'C'],['WASTANI',$widths['avg'],'C'],['GRD',$widths['grd'],'C'],['COMPETENCY LEVEL',$widths['comp'],'L']
         ] as [$label,$w,$align]) {
             $pdf->Cell($w,4.6,$label,1,0,$align,true);
         }

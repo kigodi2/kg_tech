@@ -827,10 +827,7 @@ class ExamTypeController extends Controller
 
                 // 2. Synced primary schools query
                 $schoolsQuery = \App\Models\School::query()
-                    ->where(function ($q) {
-                        $q->where('source_system', \App\Services\Schools\NectaPsle2025SchoolSyncService::SOURCE_SYSTEM)
-                          ->orWhereIn('school_type', ['PRIMARY', 'BOTH']);
-                    });
+                    ->where('education_level', 'PRIMARY');
 
                 PsleUserScope::applyToSchools($schoolsQuery, $user);
 

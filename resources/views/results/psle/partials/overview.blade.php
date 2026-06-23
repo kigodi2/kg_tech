@@ -2,7 +2,7 @@
     <!-- Regional table card -->
     <div class="adm-card">
         <div class="adm-card-head">
-            <h3 class="adm-card-title"><i class="fa-solid fa-map-location-dot"></i> Regional Completion Averages</h3>
+            <h3 class="adm-card-title"><i class="fa-solid fa-map-location-dot"></i> Regional Completion Standings</h3>
         </div>
         <div class="adm-card-body" style="padding: 0;">
             <div class="table-responsive">

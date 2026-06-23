@@ -2433,10 +2433,10 @@ class PsleEvaluationsController extends Controller
                 }
 
                 $bucket['school_totals'][$schoolId]['registered']++;
-                if (($candidate['status'] ?? '') !== 'ABS') {
+                if (($candidate['status'] ?? '') === 'COMPLETE') {
                     $bucket['school_totals'][$schoolId]['sat']++;
+                    $bucket['school_totals'][$schoolId]['total_marks_sum'] += (float) ($candidate['total_marks'] ?? 0);
                 }
-                $bucket['school_totals'][$schoolId]['total_marks_sum'] += (float) ($candidate['total_marks'] ?? 0);
             }
 
             if ($mode === 'ownership') {
@@ -2476,10 +2476,6 @@ class PsleEvaluationsController extends Controller
                 $bucket['pass_ad'][$genderKey]++;
                 $bucket['pass_ad']['t']++;
             }
-            if (!is_null($candidate['gpa'] ?? null)) {
-                $bucket['gpa_sum'] += (float) $candidate['gpa'];
-                $bucket['gpa_count']++;
-            }
             $bucket['total_marks_sum'] += (float) ($candidate['total_marks'] ?? 0);
 
             unset($bucket);
@@ -2493,17 +2489,16 @@ class PsleEvaluationsController extends Controller
             $row['sat']['pct'] = $registeredTotal > 0 ? ($row['sat']['t'] / $registeredTotal) * 100 : 0.0;
             $row['inc']['pct'] = $registeredTotal > 0 ? ($row['inc']['t'] / $registeredTotal) * 100 : 0.0;
             $row['clean']['pct'] = $registeredTotal > 0 ? ($row['clean']['t'] / $registeredTotal) * 100 : 0.0;
-            $row['pass_ac']['pct'] = $satTotal > 0 ? ($row['pass_ac']['t'] / $satTotal) * 100 : 0.0;
-            $row['pass_ad']['pct'] = $satTotal > 0 ? ($row['pass_ad']['t'] / $satTotal) * 100 : 0.0;
-            ['avg_marks' => $row['avg_marks'], 'avg_grade' => $row['avg_grade']] = $this->groupedAverageStats($row, $satTotal, $mode);
-            $row['gpa'] = $row['gpa_count'] > 0 ? round($row['gpa_sum'] / $row['gpa_count'], 4) : null;
+            $row['pass_ac']['pct'] = $row['clean']['t'] > 0 ? ($row['pass_ac']['t'] / $row['clean']['t']) * 100 : 0.0;
+            $row['pass_ad']['pct'] = $row['clean']['t'] > 0 ? ($row['pass_ad']['t'] / $row['clean']['t']) * 100 : 0.0;
+            ['avg_marks' => $row['avg_marks'], 'avg_grade' => $row['avg_grade']] = $this->groupedAverageStats($row, (int) $row['clean']['t'], $mode);
 
             if ($mode === 'ownership') {
                 $row['schools_count'] = count($row['school_ids']);
                 unset($row['school_ids']);
             }
 
-            unset($row['gpa_sum'], $row['gpa_count'], $row['total_marks_sum'], $row['school_totals']);
+            unset($row['total_marks_sum'], $row['school_totals']);
 
             return $row;
         })->sort(function (array $left, array $right) {
@@ -2511,12 +2506,6 @@ class PsleEvaluationsController extends Controller
             $rightAvg = $right['avg_marks'] ?? -INF;
             if ($leftAvg !== $rightAvg) {
                 return $rightAvg <=> $leftAvg;
-            }
-
-            $leftGpa = $left['gpa'] ?? INF;
-            $rightGpa = $right['gpa'] ?? INF;
-            if ($leftGpa !== $rightGpa) {
-                return $leftGpa <=> $rightGpa;
             }
 
             $leftPass = $left['pass_ac']['t'] ?? 0;
@@ -2539,7 +2528,7 @@ class PsleEvaluationsController extends Controller
     public function buildStudentRankingRows(Collection $candidateRows, string $evaluation): Collection
     {
         $rows = $candidateRows
-            ->filter(fn ($row) => ($row['status'] ?? '') === 'COMPLETE' && !is_null($row['gpa'] ?? null));
+            ->filter(fn ($row) => ($row['status'] ?? '') === 'COMPLETE' && !is_null($row['total_marks'] ?? null));
 
         if (in_array($evaluation, ['best-ten-girls', 'least-ten-girls'], true)) {
             $rows = $rows->filter(fn ($row) => strtoupper((string) ($row['gender'] ?? '')) === 'F');
@@ -2551,12 +2540,6 @@ class PsleEvaluationsController extends Controller
 
         $isBest = in_array($evaluation, ['best-ten-girls', 'best-ten-boys', 'overall-best-ten-students'], true);
         $rows = $rows->sort(function (array $left, array $right) use ($isBest) {
-            $leftGpa = (float) ($left['gpa'] ?? INF);
-            $rightGpa = (float) ($right['gpa'] ?? INF);
-            if ($leftGpa !== $rightGpa) {
-                return $isBest ? ($leftGpa <=> $rightGpa) : ($rightGpa <=> $leftGpa);
-            }
-
             $leftTotal = (float) ($left['total_marks'] ?? 0);
             $rightTotal = (float) ($right['total_marks'] ?? 0);
             if ($leftTotal !== $rightTotal) {
@@ -2686,7 +2669,7 @@ class PsleEvaluationsController extends Controller
         }
 
         $completeRows = $candidateRows->filter(fn ($row) => ($row['status'] ?? '') === 'COMPLETE')->values();
-        $overallGpa = round((float) ($completeRows->pluck('gpa')->filter(fn ($v) => $v !== null)->avg() ?? 0), 4);
+        $overallAverage = round((float) ($completeRows->pluck('avg_marks')->filter(fn ($v) => $v !== null)->avg() ?? 0), 4);
 
         return [
             'subjects' => number_format($this->subjectCatalog()->count()),
@@ -2694,8 +2677,8 @@ class PsleEvaluationsController extends Controller
             'overall' => [
                 'region' => strtoupper((string) $region->name),
                 'passed' => $summary['T']['A'] + $summary['T']['B'] + $summary['T']['C'],
-                'gpa' => $overallGpa,
-                'gpa_info' => $overallGpa > 0 ? $this->gpaCompetence($overallGpa) : null,
+                'average_score' => $overallAverage,
+                'average_info' => $overallAverage > 0 ? $this->averageMarksCompetence($overallAverage) : null,
             ],
         ];
     }
@@ -3069,9 +3052,6 @@ class PsleEvaluationsController extends Controller
             'total_marks_sum' => 0.0,
             'avg_marks' => null,
             'avg_grade' => null,
-            'gpa_sum' => 0.0,
-            'gpa_count' => 0,
-            'gpa' => null,
             'school_ids' => [],
             'schools_count' => 0,
             'school_totals' => [],
@@ -3214,6 +3194,24 @@ class PsleEvaluationsController extends Controller
         }
 
         return $this->gradeMeta('E');
+    }
+
+    private function averageMarksGrade(float $avgScore): string
+    {
+        if ($avgScore >= 40.1667) return 'A';
+        if ($avgScore >= 30.1667) return 'B';
+        if ($avgScore >= 20.1667) return 'C';
+        if ($avgScore >= 10.1667) return 'D';
+        return 'E';
+    }
+
+    private function averageMarksCompetence(float $avgScore): ?array
+    {
+        if ($avgScore <= 0) {
+            return null;
+        }
+        $grade = $this->averageMarksGrade($avgScore);
+        return $this->gradeMeta($grade);
     }
 
     private function psleCompetenceLabels(): array
@@ -3464,8 +3462,8 @@ class PsleEvaluationsController extends Controller
             'M' => ['REGIST' => 0, 'SAT' => 0, 'WITHHELD' => 0, 'CLEAN' => 0, 'A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0, 'INC' => 0, 'ABS' => 0],
         ];
 
-        $gpaSum = 0.0;
-        $gpaCount = 0;
+        $avgScoreSum = 0.0;
+        $avgScoreCount = 0;
 
         foreach ($candidateStats as $row) {
             $sex = strtoupper((string) ($row->gender ?? ''));
@@ -3504,12 +3502,8 @@ class PsleEvaluationsController extends Controller
 
                 $summary[$sex][$grade]++;
 
-                $aggtSum = $row->aggt_sum !== null ? (float) $row->aggt_sum : null;
-                if ($aggtSum !== null) {
-                    $gpa = round($aggtSum / $subjectCount, 4);
-                    $gpaSum += $gpa;
-                    $gpaCount++;
-                }
+                $avgScoreSum += $avgScore;
+                $avgScoreCount++;
             }
         }
 
@@ -3518,7 +3512,7 @@ class PsleEvaluationsController extends Controller
             $summary['T'][$key] = $summary['F'][$key] + $summary['M'][$key];
         }
 
-        $overallGpa = $gpaCount > 0 ? round($gpaSum / $gpaCount, 4) : 0.0;
+        $overallAverage = $avgScoreCount > 0 ? round($avgScoreSum / $avgScoreCount, 4) : 0.0;
 
         return [
             'subjects' => number_format($this->subjectCatalog()->count()),
@@ -3526,8 +3520,8 @@ class PsleEvaluationsController extends Controller
             'overall' => [
                 'region' => strtoupper($regionLabel),
                 'passed' => $summary['T']['A'] + $summary['T']['B'] + $summary['T']['C'],
-                'gpa' => $overallGpa,
-                'gpa_info' => $overallGpa > 0 ? $this->gpaCompetence($overallGpa) : null,
+                'average_score' => $overallAverage,
+                'average_info' => $overallAverage > 0 ? $this->averageMarksCompetence($overallAverage) : null,
             ],
         ];
     }
@@ -3580,16 +3574,7 @@ class PsleEvaluationsController extends Controller
                 's.ownership',
                 DB::raw("COUNT(CASE WHEN sm.grade != 'ABS' AND sm.marks_obtained IS NOT NULL THEN 1 END) as subject_count"),
                 DB::raw("SUM(CASE WHEN sm.grade != 'ABS' AND sm.marks_obtained IS NOT NULL THEN ROUND((sm.marks_obtained / COALESCE(sm.max_marks, 100)) * 50, 4) END) as total_marks"),
-                DB::raw("AVG(CASE WHEN sm.grade != 'ABS' AND sm.marks_obtained IS NOT NULL THEN ROUND((sm.marks_obtained / COALESCE(sm.max_marks, 100)) * 50, 4) END) as avg_marks"),
-                DB::raw("AVG(CASE WHEN sm.grade != 'ABS' AND sm.marks_obtained IS NOT NULL THEN 
-                    CASE 
-                        WHEN ROUND((sm.marks_obtained / COALESCE(sm.max_marks, 100)) * 50, 4) >= 40.1667 THEN 1
-                        WHEN ROUND((sm.marks_obtained / COALESCE(sm.max_marks, 100)) * 50, 4) >= 30.1667 THEN 2
-                        WHEN ROUND((sm.marks_obtained / COALESCE(sm.max_marks, 100)) * 50, 4) >= 20.1667 THEN 3
-                        WHEN ROUND((sm.marks_obtained / COALESCE(sm.max_marks, 100)) * 50, 4) >= 10.1667 THEN 4
-                        ELSE 5
-                    END
-                END) as gpa")
+                DB::raw("AVG(CASE WHEN sm.grade != 'ABS' AND sm.marks_obtained IS NOT NULL THEN ROUND((sm.marks_obtained / COALESCE(sm.max_marks, 100)) * 50, 4) END) as avg_marks")
             ])
             ->groupBy(
                 'c.id', 'c.candidate_id', 'c.prem_no', 'c.full_name', 'c.gender', 
@@ -3597,25 +3582,25 @@ class PsleEvaluationsController extends Controller
             )
             ->having('subject_count', '=', self::EXPECTED_SUBJECTS);
 
-        if (in_array($evaluation, ['best-ten-girls', 'least-ten-girls'], true)) {
-            $query->where('c.gender', 'F');
-        }
-        if (in_array($evaluation, ['best-ten-boys', 'least-ten-boys'], true)) {
-            $query->where('c.gender', 'M');
-        }
+         if (in_array($evaluation, ['best-ten-girls', 'least-ten-girls'], true)) {
+             $query->where('c.gender', 'F');
+         }
+         if (in_array($evaluation, ['best-ten-boys', 'least-ten-boys'], true)) {
+             $query->where('c.gender', 'M');
+         }
 
-        $isBest = in_array($evaluation, ['best-ten-girls', 'best-ten-boys', 'overall-best-ten-students'], true);
-        if ($isBest) {
-            $query->orderBy('gpa', 'asc')
-                  ->orderBy('total_marks', 'desc')
-                  ->orderBy('index_number', 'asc');
-        } else {
-            $query->orderBy('gpa', 'desc')
-                  ->orderBy('total_marks', 'asc')
-                  ->orderBy('index_number', 'asc');
-        }
+         $isBest = in_array($evaluation, ['best-ten-girls', 'best-ten-boys', 'overall-best-ten-students'], true);
+         if ($isBest) {
+             $query->orderBy('avg_marks', 'desc')
+                   ->orderBy('total_marks', 'desc')
+                   ->orderBy('index_number', 'asc');
+         } else {
+             $query->orderBy('avg_marks', 'asc')
+                   ->orderBy('total_marks', 'asc')
+                   ->orderBy('index_number', 'asc');
+         }
 
-        $candidates = $query->limit(10)->get();
+         $candidates = $query->limit(10)->get();
 
         $candidateIds = $candidates->pluck('candidate_pk')->all();
 
@@ -3656,7 +3641,6 @@ class PsleEvaluationsController extends Controller
                 ->values();
 
             $average = (float) $candidate->avg_marks;
-            $gpa = (float) $candidate->gpa;
 
             return [
                 'position' => $index + 1,
@@ -3686,7 +3670,6 @@ class PsleEvaluationsController extends Controller
                 'total_marks' => round((float) $candidate->total_marks, 0),
                 'avg_marks' => $average,
                 'overall_grade' => $this->gradeFromScaledScore($average),
-                'gpa' => $gpa,
             ];
         });
 

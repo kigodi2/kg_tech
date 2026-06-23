@@ -13,7 +13,7 @@
                         <th>Parent Region</th>
                         <th class="text-center">Primary Schools</th>
                         <th class="text-center">Total Candidates</th>
-                        <th class="text-center">District Average</th>
+                        <th class="text-center">Wastani wa Alama (Wilaya)</th>
                         <th class="text-center">Details</th>
                     </tr>
                 </thead>

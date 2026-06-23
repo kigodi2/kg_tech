@@ -12,7 +12,7 @@
                         <th class="text-center">Candidates Assessed</th>
                         <th class="text-center">Highest Mark</th>
                         <th class="text-center">Lowest Mark</th>
-                        <th class="text-center">Subject Average</th>
+                        <th class="text-center">Wastani wa Alama (Somo)</th>
                         <th class="text-center">A</th>
                         <th class="text-center">B</th>
                         <th class="text-center">C</th>

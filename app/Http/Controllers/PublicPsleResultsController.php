@@ -328,21 +328,22 @@ class PublicPsleResultsController extends Controller
                 }
             }
 
+            $completeCount = collect($candidates)->where('status', 'COMPLETE')->count();
             $schoolAverage = \App\Services\Results\PsleSchoolAverageService::calculate(
-                (float) collect($candidates)->sum('total_score'),
-                $candidateCount,
+                (float) collect($candidates)->where('status', 'COMPLETE')->sum('total_score'),
+                $completeCount,
                 $registeredCandidateCount
             )['average'];
             $schoolAverageGrade = $this->gradeFromScaledScore($schoolAverage / 6);
             $schoolAverageMeta = $this->gradeMeta($schoolAverageGrade);
-            $passRateAC = $candidateCount > 0
-                ? round((collect($candidates)->where('status', '!=', 'ABS')->whereIn('average_grade', ['A', 'B', 'C'])->count() / $candidateCount) * 100, 2)
+            $passRateAC = $completeCount > 0
+                ? round((collect($candidates)->where('status', 'COMPLETE')->whereIn('average_grade', ['A', 'B', 'C'])->count() / $completeCount) * 100, 2)
                 : 0.0;
-            $passRateAD = $candidateCount > 0
-                ? round((collect($candidates)->where('status', '!=', 'ABS')->whereIn('average_grade', ['A', 'B', 'C', 'D'])->count() / $candidateCount) * 100, 2)
+            $passRateAD = $completeCount > 0
+                ? round((collect($candidates)->where('status', 'COMPLETE')->whereIn('average_grade', ['A', 'B', 'C', 'D'])->count() / $completeCount) * 100, 2)
                 : 0.0;
             $topCandidate = collect($candidates)
-                ->where('status', '!=', 'ABS')
+                ->where('status', 'COMPLETE')
                 ->sortBy([
                     ['total_score', 'desc'],
                     ['candidate_id', 'asc'],
@@ -477,8 +478,8 @@ class PublicPsleResultsController extends Controller
                     'gender' => strtoupper((string) $candidate->gender),
                     'subject_rows' => $subjectRows->all(),
                     'subject_result_string' => $subjectRows->map(fn (array $subject) => "{$subject['subject']} - {$subject['grade']}")->implode(', '),
-                    'total_score' => $status === 'COMPLETE' || $status === 'INC' ? $totalScore : null,
-                    'average_score' => $averageScore,
+                    'total_score' => $status === 'COMPLETE' ? $totalScore : $status,
+                    'average_score' => $status === 'COMPLETE' ? $averageScore : null,
                     'average_grade' => $averageGrade,
                     'aggregate_points' => $aggregatePoints,
                     'gpa' => $gpa,
@@ -511,14 +512,23 @@ class PublicPsleResultsController extends Controller
 
         $candidates = $candidates
             ->map(function (array $candidate) use ($positionByCandidate) {
-                $candidate['position'] = $positionByCandidate[$candidate['candidate_id']] ?? '-';
-
+                $candidate['position'] = $positionByCandidate[$candidate['candidate_id']] ?? $candidate['status'];
                 return $candidate;
             })
-            ->sortBy([
-                ['total_score', 'desc'],
-                ['candidate_id', 'asc'],
-            ])
+            ->sort(function ($a, $b) {
+                $statusOrder = ['COMPLETE' => 1, 'INC' => 2, 'ABS' => 3];
+                $orderA = $statusOrder[$a['status'] ?? 'COMPLETE'] ?? 1;
+                $orderB = $statusOrder[$b['status'] ?? 'COMPLETE'] ?? 1;
+                if ($orderA !== $orderB) {
+                    return $orderA <=> $orderB;
+                }
+                if (($a['status'] ?? '') === 'COMPLETE') {
+                    if ((float) $a['total_score'] !== (float) $b['total_score']) {
+                        return $b['total_score'] <=> $a['total_score'];
+                    }
+                }
+                return strcmp($a['candidate_id'], $b['candidate_id']);
+            })
             ->values()
             ->all();
 
@@ -618,10 +628,6 @@ class PublicPsleResultsController extends Controller
     private function pslePortalBaseQuery()
     {
         return DB::table('schools as s')
-            ->whereIn('s.source_system', [
-                NectaPsle2025SchoolSyncService::SOURCE_SYSTEM,
-                'IRMS_PSLE_DEMO',
-            ])
             ->where('s.education_level', 'PRIMARY');
     }
 

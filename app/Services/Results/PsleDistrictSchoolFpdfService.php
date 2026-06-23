@@ -199,19 +199,25 @@ class PsleDistrictSchoolFpdfService
         $subjectStats = [];
 
         $candidates = $schoolResults->map(function ($row) use (&$subjectStats) {
+            $dbOverallGrade = strtoupper((string) ($row->overall_grade ?? 'E'));
+            $isComplete = !in_array($dbOverallGrade, ['INC', 'ABS'], true);
+
             $marks = collect($row->subjectMarks ?? [])
                 ->sortBy(fn ($mark) => $this->subjectOrder((string) ($mark->subject?->code ?? '')))
                 ->values();
 
-            $subjectRows = $marks->map(function ($mark) use (&$subjectStats) {
+            $subjectRows = $marks->map(function ($mark) use (&$subjectStats, $dbOverallGrade, $isComplete) {
                 $rawCode = strtoupper((string) ($mark->subject?->code ?? ''));
                 $displayCode = preg_replace('/^PSLE-/', '', $rawCode);
                 $detailLabel = $this->detailedSubjectLabel($rawCode);
                 $fullName = $this->fullSubjectName($rawCode, (string) ($mark->subject?->name ?? $rawCode));
-                $marksObtained = (float) ($mark->marks_obtained ?? 0);
+                
+                $marksObtained = $mark->marks_obtained;
+                $isNumeric = is_numeric($marksObtained) && $marksObtained >= 0;
+                
                 $maxMarks = (float) ($mark->max_marks ?: 100);
-                $score50 = $this->scaledScore50($marksObtained, $maxMarks);
-                $grade = strtoupper((string) ($mark->grade ?? $this->gradeFromScore50($score50)));
+                $score50 = $isNumeric ? $this->scaledScore50((float) $marksObtained, $maxMarks) : null;
+                $grade = strtoupper((string) ($mark->grade ?? ($isNumeric ? $this->gradeFromScore50($score50) : $dbOverallGrade)));
 
                 if (!isset($subjectStats[$rawCode])) {
                     $subjectStats[$rawCode] = [
@@ -226,6 +232,8 @@ class PsleDistrictSchoolFpdfService
                         'C' => 0,
                         'D' => 0,
                         'E' => 0,
+                        'INC' => 0,
+                        'ABS' => 0,
                         'a_to_c' => 0,
                         'a_to_d' => 0,
                         'avg_total' => 0.0,
@@ -233,11 +241,18 @@ class PsleDistrictSchoolFpdfService
                 }
 
                 $subjectStats[$rawCode]['registered']++;
-                $subjectStats[$rawCode]['sat']++;
-                $subjectStats[$rawCode][$grade] = ($subjectStats[$rawCode][$grade] ?? 0) + 1;
-                $subjectStats[$rawCode]['a_to_c'] += in_array($grade, ['A', 'B', 'C'], true) ? 1 : 0;
-                $subjectStats[$rawCode]['a_to_d'] += in_array($grade, ['A', 'B', 'C', 'D'], true) ? 1 : 0;
-                $subjectStats[$rawCode]['avg_total'] += $score50;
+                if (in_array($grade, ['A', 'B', 'C', 'D', 'E'], true)) {
+                    $subjectStats[$rawCode]['sat']++;
+                    $subjectStats[$rawCode][$grade] = ($subjectStats[$rawCode][$grade] ?? 0) + 1;
+                    $subjectStats[$rawCode]['a_to_c'] += in_array($grade, ['A', 'B', 'C'], true) ? 1 : 0;
+                    $subjectStats[$rawCode]['a_to_d'] += in_array($grade, ['A', 'B', 'C', 'D'], true) ? 1 : 0;
+                    $subjectStats[$rawCode]['avg_total'] += $score50;
+                } elseif ($grade === 'ABS') {
+                    $subjectStats[$rawCode]['abs']++;
+                    $subjectStats[$rawCode]['ABS']++;
+                } else {
+                    $subjectStats[$rawCode]['INC']++;
+                }
 
                 return [
                     'detail_label' => $detailLabel,
@@ -248,11 +263,17 @@ class PsleDistrictSchoolFpdfService
             })->values();
 
             $subjectCount = $subjectRows->count();
-            $total = round($subjectRows->sum('score_50'), 4);
-            $avgScore = $subjectCount > 0 ? round($total / $subjectCount, 4) : 0.0;
-            $averageGrade = $this->gradeFromScore50($avgScore);
-            $aggregate = (int) $subjectRows->sum(fn (array $subject) => $this->gradePointFromGrade($subject['grade']));
-            $gpa = $subjectCount > 0 ? round($aggregate / $subjectCount, 4) : 0.0;
+            if ($isComplete) {
+                $total = round($subjectRows->sum('score_50'), 4);
+                $avgScore = $subjectCount > 0 ? round($total / $subjectCount, 4) : 0.0;
+                $averageGrade = $dbOverallGrade;
+                $aggregate = (int) $subjectRows->sum(fn (array $subject) => $this->gradePointFromGrade($subject['grade']));
+            } else {
+                $total = $dbOverallGrade;
+                $avgScore = null;
+                $averageGrade = $dbOverallGrade;
+                $aggregate = null;
+            }
 
             return [
                 'candidate_no' => (string) ($row->candidate?->candidate_id ?? '-'),
@@ -262,30 +283,55 @@ class PsleDistrictSchoolFpdfService
                 'total_score' => $total,
                 'average_grade' => $averageGrade,
                 'aggregate_points' => $aggregate,
-                'gpa' => $gpa,
             ];
-        })->sortBy([
-            ['total_score', 'desc'],
-            ['candidate_no', 'asc'],
-        ])->values();
+        })->values();
 
         $positions = [];
-        foreach ($candidates as $index => $candidate) {
-            $positions[$candidate['candidate_no']] = $index + 1;
+        $currentPos = 0;
+        $lastScore = null;
+        $sortedForPosition = $candidates
+            ->filter(fn (array $c) => !in_array($c['average_grade'], ['INC', 'ABS'], true))
+            ->sortBy([
+                ['total_score', 'desc'],
+                ['candidate_no', 'asc'],
+            ])
+            ->values();
+
+        foreach ($sortedForPosition as $index => $candidate) {
+            if ($lastScore === null || (float) $candidate['total_score'] !== (float) $lastScore) {
+                $currentPos = $index + 1;
+                $lastScore = (float) $candidate['total_score'];
+            }
+            $positions[$candidate['candidate_no']] = $currentPos;
         }
 
         $candidates = $candidates->map(function (array $candidate) use ($positions) {
-            $candidate['position'] = $positions[$candidate['candidate_no']] ?? null;
+            $candidate['position'] = $positions[$candidate['candidate_no']] ?? $candidate['average_grade'];
             $candidate['subject_line'] = collect($candidate['subject_rows'])
                 ->map(fn (array $subject) => sprintf(
                     "%s - %s '%s'",
                     $subject['detail_label'],
-                    number_format((float) $subject['score_50'], 0),
+                    is_null($subject['score_50']) ? 'X' : number_format((float) $subject['score_50'], 0),
                     $subject['grade']
                 ))
                 ->implode(', ');
 
             return $candidate;
+        })->sort(function ($a, $b) {
+            $statusOrder = ['COMPLETE' => 1, 'INC' => 2, 'ABS' => 3];
+            $aStatus = in_array($a['average_grade'], ['INC', 'ABS'], true) ? $a['average_grade'] : 'COMPLETE';
+            $bStatus = in_array($b['average_grade'], ['INC', 'ABS'], true) ? $b['average_grade'] : 'COMPLETE';
+            $orderA = $statusOrder[$aStatus] ?? 1;
+            $orderB = $statusOrder[$bStatus] ?? 1;
+            if ($orderA !== $orderB) {
+                return $orderA <=> $orderB;
+            }
+            if ($aStatus === 'COMPLETE') {
+                if ((float) $a['total_score'] !== (float) $b['total_score']) {
+                    return $b['total_score'] <=> $a['total_score'];
+                }
+            }
+            return strcmp($a['candidate_no'], $b['candidate_no']);
         })->values();
 
         $sexSummary = [
@@ -342,11 +388,19 @@ class PsleDistrictSchoolFpdfService
                 'M' => (int) ($registeredGenderRows['M'] ?? 0),
             ];
         }
-        $schoolAverage = $candidateCount > 0 ? round($candidates->sum('total_score') / $candidateCount, 4) : 0.0;
+        $completeCandidates = $candidates->filter(fn (array $c) => !in_array($c['average_grade'], ['INC', 'ABS'], true));
+        $completeCount = $completeCandidates->count();
+        $schoolAverage = $completeCount > 0
+            ? round($completeCandidates->sum('total_score') / $completeCount, 4)
+            : 0.0;
         $schoolAverageGrade = $this->gradeFromScore50($schoolAverage / 6);
-        $topCandidate = $candidates->first();
-        $passRateAC = $candidateCount > 0 ? round(($candidates->whereIn('average_grade', ['A', 'B', 'C'])->count() / $candidateCount) * 100, 2) : 0.0;
-        $passRateAD = $candidateCount > 0 ? round(($candidates->whereIn('average_grade', ['A', 'B', 'C', 'D'])->count() / $candidateCount) * 100, 2) : 0.0;
+        $topCandidate = $completeCandidates->first();
+        $passRateAC = $completeCount > 0
+            ? round(($completeCandidates->whereIn('average_grade', ['A', 'B', 'C'])->count() / $completeCount) * 100, 2)
+            : 0.0;
+        $passRateAD = $completeCount > 0
+            ? round(($completeCandidates->whereIn('average_grade', ['A', 'B', 'C', 'D'])->count() / $completeCount) * 100, 2)
+            : 0.0;
         [$districtPosition, $districtSchoolsWithResults] = $this->schoolPositionByScope($examYear, 'district', (int) ($school?->district_id ?? 0), (int) ($school?->id ?? 0));
         [$regionalPosition, $regionalSchoolsWithResults] = $this->schoolPositionByScope($examYear, 'region', (int) ($school?->region_id ?? 0), (int) ($school?->id ?? 0));
 
@@ -426,8 +480,8 @@ class PsleDistrictSchoolFpdfService
 
         $schoolAverage = $metrics['school_average'];
         $avgText = abs($schoolAverage - round($schoolAverage)) < 0.00005 ? number_format($schoolAverage, 0) : number_format($schoolAverage, 4);
-        $labelWidth = $pdf->GetStringWidth($this->text('SCHOOL AVERAGE : ' . $avgText)) + 1.5;
-        $pdf->Cell($labelWidth, 6.5, $this->text('SCHOOL AVERAGE : ' . $avgText), 0, 0, 'L');
+        $labelWidth = $pdf->GetStringWidth($this->text('WASTANI WA ALAMA WA SHULE : ' . $avgText)) + 1.5;
+        $pdf->Cell($labelWidth, 6.5, $this->text('WASTANI WA ALAMA WA SHULE : ' . $avgText), 0, 0, 'L');
         $meta = $metrics['school_average_meta'];
         $rgb = $meta['rgb'] ?? [255, 255, 224];
         $pdf->SetFillColor($rgb[0], $rgb[1], $rgb[2]);
@@ -518,7 +572,8 @@ class PsleDistrictSchoolFpdfService
             $pdf->Cell($widths[1], $rowHeight, $this->text($candidate['prem_no'], 20), 1, 0, 'C', true);
             $pdf->Cell($widths[2], $rowHeight, $this->text($candidate['sex'], 2), 1, 0, 'C', true);
             $pdf->Cell($widths[3], $rowHeight, $this->text($candidate['subject_line'], 128), 1, 0, 'L', true);
-            $pdf->Cell($widths[4], $rowHeight, number_format((float) $candidate['total_score'], 0), 1, 0, 'C', true);
+            $totalVal = is_numeric($candidate['total_score']) ? number_format((float) $candidate['total_score'], 0) : $candidate['total_score'];
+            $pdf->Cell($widths[4], $rowHeight, $totalVal, 1, 0, 'C', true);
             $pdf->Cell($widths[5], $rowHeight, strtoupper((string) $candidate['average_grade']), 1, 0, 'C', true);
             $pdf->Cell($widths[6], $rowHeight, (string) $candidate['position'], 1, 1, 'C', true);
         }
@@ -533,7 +588,7 @@ class PsleDistrictSchoolFpdfService
         $pdf->Ln(4);
         $this->ensureSpace($pdf, 18);
         $this->tableTitle($pdf, 'EXAMINATION CENTRE SUBJECTS PERFORMANCE', 15);
-        $columns = ['CODE', 'SUBJECT NAME', 'REGIST', 'SAT', 'ABS', 'A', 'B', 'C', 'A - C', 'D', 'A - D', 'E', 'AVG', 'GRD', 'COMPETENCE LEVEL'];
+        $columns = ['CODE', 'SUBJECT NAME', 'REGIST', 'SAT', 'ABS', 'A', 'B', 'C', 'A - C', 'D', 'A - D', 'E', 'WASTANI', 'GRD', 'COMPETENCE LEVEL'];
         $widths = [13, 76, 12, 12, 12, 11, 11, 11, 12, 11, 12, 11, 11, 11, 59];
         $rowHeight = 6.6;
         $this->tableHeader($pdf, $columns, $widths, $rowHeight);
@@ -797,10 +852,10 @@ class PsleDistrictSchoolFpdfService
             $rules = collect(data_get($profile?->competence_levels, 'rules', []));
             if ($rules->isNotEmpty()) {
                 foreach (['A', 'B', 'C', 'D', 'E'] as $gradeKey) {
-                    $gpa = $this->gradePointFromGrade($gradeKey);
-                    $match = $rules->first(function (array $rule) use ($gpa) {
-                        return (float) ($rule['min_value'] ?? -INF) <= $gpa
-                            && (float) ($rule['max_value'] ?? INF) >= $gpa
+                    $gradePoint = $this->gradePointFromGrade($gradeKey);
+                    $match = $rules->first(function (array $rule) use ($gradePoint) {
+                        return (float) ($rule['min_value'] ?? -INF) <= $gradePoint
+                            && (float) ($rule['max_value'] ?? INF) >= $gradePoint
                             && !($rule['is_disabled'] ?? false);
                     });
 
