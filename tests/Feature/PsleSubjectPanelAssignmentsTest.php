@@ -31,6 +31,13 @@ class PsleSubjectPanelAssignmentsTest extends TestCase
     {
         parent::setUp();
 
+        config([
+            'mark_entry.geofence_enabled' => false,
+            'mark_entry.enable_single_device_restriction' => false,
+        ]);
+
+        $this->seed(\Database\Seeders\SettingsSeeder::class);
+
         Role::firstOrCreate(['code' => 'admin'], ['name' => 'Administrator']);
         Role::firstOrCreate(['code' => 'mark_officer'], ['name' => 'Mark Entry Officer']);
         Role::firstOrCreate(['code' => 'reo'], ['name' => 'Regional Education Officer']);

@@ -122,6 +122,13 @@ class MockPortalHeadteacherController extends Controller
      */
     public function updateOwnership(Request $request)
     {
+        if (\App\Http\Controllers\MockPortalAuthController::mockRegistrationExpired()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration period has expired. This action is no longer available.',
+            ], 403);
+        }
+
         $user = \Illuminate\Support\Facades\Auth::user();
         if ($user->portal_role !== 'mock_headteacher' && !$user->isAdmin()) {
             abort(403);
@@ -147,6 +154,13 @@ class MockPortalHeadteacherController extends Controller
      */
     public function calPdfReport(Request $request)
     {
+        if (\App\Http\Controllers\MockPortalAuthController::mockRegistrationExpired()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration period has expired. This action is no longer available.',
+            ], 403);
+        }
+
         @set_time_limit(120);
         @ini_set('max_execution_time', '120');
         @ini_set('memory_limit', '512M');

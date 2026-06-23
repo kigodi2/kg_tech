@@ -86,7 +86,10 @@ class PsleUserManagementTest extends TestCase
             'is_active' => true,
         ]);
 
-        \App\Helpers\MarkEntrySettings::setGeofenceEnabled(false);
+        config([
+            'mark_entry.geofence_enabled' => false,
+            'mark_entry.enable_single_device_restriction' => false,
+        ]);
     }
 
     public function test_admin_can_view_user_management_page(): void

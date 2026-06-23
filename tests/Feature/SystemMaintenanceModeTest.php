@@ -12,6 +12,7 @@ class SystemMaintenanceModeTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed();
 
         Route::middleware('web')->get('/maintenance-probe', fn () => response('available'));
         Route::middleware('api')->get('/api/maintenance-probe', fn () => response()->json(['ok' => true]));

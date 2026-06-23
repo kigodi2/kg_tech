@@ -186,7 +186,7 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
      */
     public function isActive()
     {
-        return $this->status === self::STATUS_ACTIVE;
+        return ($this->status ?? self::STATUS_ACTIVE) === self::STATUS_ACTIVE;
     }
 
     public function isSuspended()

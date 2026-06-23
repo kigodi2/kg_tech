@@ -623,19 +623,44 @@ class CseeRegistrationPdfImportService
         }
 
         $parsed = $this->parseLayoutText($text);
-        $visualSubjectRows = $this->extractSubjectRowsFromRenderedPdf($file->getRealPath(), $text);
+        
+        $pageTexts = preg_split("/\f/", $text) ?: [];
+        $visualSubjectRowsPerPage = $this->extractSubjectRowsFromRenderedPdf($file->getRealPath(), $pageTexts);
 
-        if (!empty($visualSubjectRows)) {
-            $limit = min(count($visualSubjectRows), count($parsed['rows']));
-            for ($index = 0; $index < $limit; $index++) {
-                $parsed['rows'][$index]['subject_codes'] = $visualSubjectRows[$index]['subject_codes'] ?? $parsed['rows'][$index]['subject_codes'];
+        $candidates = $parsed['rows'];
+        $offset = 0;
+        $mergedRows = [];
+
+        foreach ($pageTexts as $pageIndex => $pageText) {
+            $candidateCount = $this->countCandidateRowsInPageText($pageText);
+            if ($candidateCount === 0) {
+                continue;
+            }
+
+            $pageCandidates = array_slice($candidates, $offset, $candidateCount);
+            $offset += $candidateCount;
+
+            $visualRows = $visualSubjectRowsPerPage[$pageIndex] ?? [];
+            if (!empty($visualRows) && count($visualRows) === count($pageCandidates)) {
+                foreach ($pageCandidates as $idx => $candidate) {
+                    $visualCodes = $visualRows[$idx]['subject_codes'] ?? [];
+                    if (!empty($visualCodes)) {
+                        $pageCandidates[$idx]['subject_codes'] = $visualCodes;
+                    }
+                }
+            }
+
+            foreach ($pageCandidates as $candidate) {
+                $mergedRows[] = $candidate;
             }
         }
+
+        $parsed['rows'] = $mergedRows;
 
         return $parsed;
     }
 
-    private function extractSubjectRowsFromRenderedPdf(string $pdfPath, string $layoutText): array
+    private function extractSubjectRowsFromRenderedPdf(string $pdfPath, array $pageTexts): array
     {
         if (!function_exists('imagecreatefrompng')) {
             return [];
@@ -664,8 +689,7 @@ class CseeRegistrationPdfImportService
             $pageImages = glob($prefix . '-*.png') ?: [];
             sort($pageImages, SORT_NATURAL);
 
-            $pageTexts = preg_split("/\f/", $layoutText) ?: [];
-            $rows = [];
+            $result = [];
 
             foreach ($pageImages as $pageIndex => $imagePath) {
                 $pageText = $pageTexts[$pageIndex] ?? '';
@@ -673,13 +697,14 @@ class CseeRegistrationPdfImportService
                 $candidateCount = $this->countCandidateRowsInPageText($pageText);
 
                 if (empty($codes) || $candidateCount === 0) {
+                    $result[$pageIndex] = [];
                     continue;
                 }
 
-                $rows = array_merge($rows, $this->extractSubjectRowsFromRenderedPage($imagePath, $codes, $candidateCount));
+                $result[$pageIndex] = $this->extractSubjectRowsFromRenderedPage($imagePath, $codes, $candidateCount);
             }
 
-            return $rows;
+            return $result;
         } finally {
             foreach (glob($tempDir . '/*') ?: [] as $path) {
                 @unlink($path);
@@ -723,7 +748,7 @@ class CseeRegistrationPdfImportService
             $width = imagesx($image);
             $height = imagesy($image);
 
-            $xLines = $this->detectVerticalGridLines($image, $width, $height);
+            $xLines = $this->detectVerticalGridLines($image, $width, $height, $candidateCount);
             $yLines = $this->detectHorizontalGridLines($image, $width, $height);
 
             if (count($xLines) < count($subjectCodes) + 1 || count($yLines) < $candidateCount + 2) {
@@ -768,9 +793,10 @@ class CseeRegistrationPdfImportService
         }
     }
 
-    private function detectVerticalGridLines($image, int $width, int $height): array
+    private function detectVerticalGridLines($image, int $width, int $height, int $candidateCount): array
     {
         $hits = [];
+        $threshold = max(50, min(300, $candidateCount * 12));
         for ($x = 0; $x < $width; $x++) {
             $dark = 0;
             for ($y = 250; $y < min($height, 1100); $y++) {
@@ -778,7 +804,7 @@ class CseeRegistrationPdfImportService
                     $dark++;
                 }
             }
-            if ($dark > 300) {
+            if ($dark > $threshold) {
                 $hits[] = $x;
             }
         }

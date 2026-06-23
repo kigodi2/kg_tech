@@ -260,7 +260,8 @@
 @php
     $total = $viewData['readiness']->total ?? 0;
     $complete = $viewData['readiness']->complete ?? 0;
-    $readyPercent = $total > 0 ? round(($complete / $total) * 100, 1) : 0;
+    $readyPercentRaw = $total > 0 ? ($complete / $total) * 100 : 0;
+    $readyPercent = $complete === $total ? 100 : min(99.99, round($readyPercentRaw, 2));
     
     $lastRuns = collect($viewData['lastRuns'] ?? []);
 
@@ -343,14 +344,37 @@
     </div>
 </div>
 
+@if($publishedSnapshot && !$isRawMarksLocked)
+<div class="adm-card" style="margin-bottom: 24px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px;">
+    <div class="adm-card-body" style="padding: 16px; display: flex; align-items: center; gap: 16px;">
+        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 1.25rem;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+            <h5 style="margin: 0 0 4px 0; color: #ef4444; font-weight: 700; font-size: 0.92rem;">Warning: Results Published but Raw Marks Not Fully Locked</h5>
+            <p style="margin: 0; font-size: 0.78rem; color: rgba(255, 255, 255, 0.85); line-height: 1.4;">
+                The results for this year are currently published, but raw marks are not fully locked. Please submit and lock the raw marks immediately to secure data integrity.
+            </p>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- Status summary row -->
 <div class="processing-summary-grid">
     <div class="proc-summary-card" style="border-left: 3px solid var(--tz-green);">
         <div class="proc-summary-label">Data Readiness</div>
         <div class="proc-summary-value">{{ $readyPercent }}%</div>
         <div class="proc-summary-sub">
-            <i class="fa-solid fa-circle-check" style="color: var(--tz-green);"></i>
-            <span>{{ number_format($complete) }} of {{ number_format($total) }} Complete</span>
+            <i class="fa-solid fa-{{ $total - $complete > 0 ? 'triangle-exclamation' : 'circle-check' }}" style="color: {{ $total - $complete > 0 ? '#ef4444' : 'var(--tz-green)' }};"></i>
+            <span>
+                {{ number_format($complete) }} of {{ number_format($total) }} candidates complete
+                @if($total - $complete > 0)
+                    <strong style="color: #ef4444;">({{ number_format($total - $complete) }} incomplete)</strong>
+                @else
+                    and 0 incomplete
+                @endif
+            </span>
         </div>
         <i class="fa-solid fa-shield-check proc-summary-icon" style="color: var(--tz-green);"></i>
     </div>
@@ -507,8 +531,13 @@
                     </div>
                     
                     <span style="font-size: 0.82rem; color: var(--tz-text-muted); display: block; line-height: 1.45;">
-                        <i class="fa-solid fa-circle-info" style="color: var(--tz-blue); margin-right: 4px;"></i>
-                        <strong>{{ number_format($complete) }}</strong> of <strong>{{ number_format($total) }}</strong> primary candidates contain 100% complete core marks.
+                        <i class="fa-solid fa-{{ $total - $complete > 0 ? 'triangle-exclamation' : 'circle-info' }}" style="color: {{ $total - $complete > 0 ? '#ef4444' : 'var(--tz-blue)' }}; margin-right: 4px;"></i>
+                        <strong>{{ number_format($complete) }}</strong> of <strong>{{ number_format($total) }}</strong> candidates complete
+                        @if($total - $complete > 0)
+                            and <strong style="color: #ef4444;">{{ number_format($total - $complete) }} candidates incomplete</strong>.
+                        @else
+                            and 0 incomplete.
+                        @endif
                     </span>
                     
                     <div style="display: flex; gap: 12px; margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px;">

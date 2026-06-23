@@ -13,6 +13,18 @@ use Tests\TestCase;
 
 class MockPortalHeadteacherCandidateTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        \Carbon\Carbon::setTestNow(\Carbon\Carbon::parse('2026-04-25'));
+    }
+
+    protected function tearDown(): void
+    {
+        \Carbon\Carbon::setTestNow(null);
+        parent::tearDown();
+    }
+
     public function test_headteacher_can_store_candidate_for_own_school(): void
     {
         $school = School::factory()->create([

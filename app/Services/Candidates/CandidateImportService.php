@@ -496,7 +496,6 @@ class CandidateImportService
                             $existingCandidate = Candidate::where('candidate_id', $record['candidate_id'])->first();
                             $this->updateCandidate($existingCandidate, $record, $examYear, $examType);
                             $updatedCount++;
-                            $importedCount++;
                             continue;
                         } elseif ($mode === 'stop') {
                             throw new \Exception('Import stopped because existing candidate numbers were detected.');

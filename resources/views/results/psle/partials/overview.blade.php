@@ -48,12 +48,19 @@
                 <div style="margin-bottom: 18px;">
                     <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 6px;">
                         <span><strong>{{ $sub->code }}</strong> - {{ $sub->name }}</span>
-                        <span style="color: var(--tz-yellow); font-weight: bold;">{{ number_format($sub->marks_count) }} entered</span>
+                        <span style="color: var(--tz-yellow); font-weight: bold;">
+                            {{ number_format($sub->marks_count) }} entered
+                            @if($metrics['registered'] > $sub->marks_count)
+                                <span style="color: #ef4444; font-size: 0.75rem; font-weight: normal; margin-left: 6px;">
+                                    ({{ number_format($metrics['registered'] - $sub->marks_count) }} missing)
+                                </span>
+                            @endif
+                        </span>
                     </div>
                     <!-- Completeness bar -->
                     <div style="height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;">
                         @php
-                            $percent = $metrics['registered'] > 0 ? min(100, round(($sub->marks_count / $metrics['registered']) * 100, 1)) : 0;
+                            $percent = $sub->marks_count === $metrics['registered'] ? 100 : min(99.9, floor(($sub->marks_count / $metrics['registered']) * 100 * 10) / 10);
                         @endphp
                         <div style="width: {{ $percent }}%; height: 100%; background: linear-gradient(90deg, var(--tz-blue), var(--tz-green)); border-radius: 3px;"></div>
                     </div>

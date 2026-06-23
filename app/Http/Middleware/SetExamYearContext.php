@@ -129,6 +129,10 @@ class SetExamYearContext
      */
     protected function isWriteOperation(Request $request): bool
     {
+        if ($request->is('login', 'logout', 'api/login', 'api/logout', 'mock-portal/*')) {
+            return false;
+        }
+
         return in_array($request->method(), [
             'POST',
             'PUT',

@@ -126,8 +126,8 @@ Route::group(['prefix' => 'results', 'middleware' => ['auth']], function () {
         Route::post('/processing/correction/cancel', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'cancelCorrection'])->name('results.psle.correction.cancel');
     });
 
-    // Main yearly route: /results/{year}/psle
-    Route::get('/{year}/psle', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'index'])
+    // Main yearly route: /results/manage/{year}/psle
+    Route::get('/manage/{year}/psle', [\App\Http\Controllers\Admin\AdminPsleResultsController::class, 'index'])
         ->name('results.psle.dashboard')
         ->where('year', '[0-9]{4}');
 });

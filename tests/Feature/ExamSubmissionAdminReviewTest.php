@@ -44,16 +44,18 @@ class ExamSubmissionAdminReviewTest extends TestCase
 
         $this->assertEquals('pending', $submission->status);
 
+        \Illuminate\Support\Facades\Mail::fake();
+
         $admin = User::create([
             'name' => 'Admin',
             'email' => 'admin@example.com',
             'password' => bcrypt('password'),
             'role_id' => Role::where('code', 'admin')->first()->id ?? Role::create(['name' => 'Admin', 'code' => 'admin'])->id,
+            'is_admin' => true,
+            'portal_role' => 'admin',
             'status' => 'active',
             'password_reset_required' => false,
         ]);
-
-        $this->withoutMiddleware();
 
         $this->actingAs($admin)
             ->post(route('exam-submissions.approve', $submission))

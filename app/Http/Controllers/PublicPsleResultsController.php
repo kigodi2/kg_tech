@@ -325,9 +325,11 @@ class PublicPsleResultsController extends Controller
             }
 
             $candidateCount = count($candidates);
-            $schoolAverage = $candidateCount > 0
-                ? round(collect($candidates)->sum('total_score') / $candidateCount, 4)
-                : 0.0;
+            $schoolAverage = \App\Services\Results\PsleSchoolAverageService::calculate(
+                (float) collect($candidates)->sum('total_score'),
+                $candidateCount,
+                $registeredCandidateCount
+            )['average'];
             $schoolAverageGrade = $this->gradeFromScaledScore($schoolAverage / 6);
             $schoolAverageMeta = $this->gradeMeta($schoolAverageGrade);
             $passRateAC = $candidateCount > 0
@@ -588,6 +590,7 @@ class PublicPsleResultsController extends Controller
             ->whereIn('s.source_system', [
                 NectaPsle2025SchoolSyncService::SOURCE_SYSTEM,
                 'IRMS_PSLE_DEMO',
+                'MOCK',
             ])
             ->where('s.education_level', 'PRIMARY');
     }

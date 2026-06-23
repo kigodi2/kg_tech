@@ -201,7 +201,7 @@ class RegionalResultBookDataService
                 $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? null;
                 if (is_null($avgMarksVal)) {
                     $totalMarksSum = (float) ($row['total_marks_sum'] ?? $row['total_marks'] ?? 0.0);
-                    $avgMarksVal = $satVal > 0 ? ($totalMarksSum / $satVal) : 0.0;
+                    $avgMarksVal = \App\Services\Results\PsleSchoolAverageService::calculate($totalMarksSum, $satVal, 0)['average'];
                 }
                 $avgMarksVal = round((float) $avgMarksVal, 2);
 
@@ -240,7 +240,7 @@ class RegionalResultBookDataService
                 $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? null;
                 if (is_null($avgMarksVal)) {
                     $totalMarksSum = (float) ($row['total_marks_sum'] ?? $row['total_marks'] ?? 0.0);
-                    $avgMarksVal = $satVal > 0 ? ($totalMarksSum / $satVal) : 0.0;
+                    $avgMarksVal = \App\Services\Results\PsleSchoolAverageService::calculate($totalMarksSum, $satVal, 0)['average'];
                 }
                 $avgMarksVal = round((float) $avgMarksVal, 2);
 
@@ -277,7 +277,7 @@ class RegionalResultBookDataService
                 $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? null;
                 if (is_null($avgMarksVal)) {
                     $totalMarksSum = (float) ($row['total_marks_sum'] ?? $row['total_marks'] ?? 0.0);
-                    $avgMarksVal = $satVal > 0 ? ($totalMarksSum / $satVal) : 0.0;
+                    $avgMarksVal = \App\Services\Results\PsleSchoolAverageService::calculate($totalMarksSum, $satVal, 0)['average'];
                 }
                 $avgMarksVal = round((float) $avgMarksVal, 2);
 
@@ -353,7 +353,7 @@ class RegionalResultBookDataService
                 $avgMarksVal = $row['average_marks'] ?? $row['avg_marks'] ?? null;
                 if (is_null($avgMarksVal)) {
                     $totalMarksSum = (float) ($row['total_marks_sum'] ?? $row['total_marks'] ?? 0.0);
-                    $avgMarksVal = $satVal > 0 ? ($totalMarksSum / $satVal) : 0.0;
+                    $avgMarksVal = \App\Services\Results\PsleSchoolAverageService::calculate($totalMarksSum, $satVal, 0)['average'];
                 }
                 $avgMarksVal = round((float) $avgMarksVal, 2);
 

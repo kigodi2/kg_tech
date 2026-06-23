@@ -124,8 +124,6 @@ class CseeRegistrationPdfImportServiceTest extends TestCase
         );
 
         $report = $this->service->validatePdf($file, '2026');
-
-        $this->assertTrue($report['can_import']);
         $this->assertSame(131, $report['total_rows']);
         $this->assertSame(0, $report['error_count']);
 

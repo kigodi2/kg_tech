@@ -17,10 +17,12 @@ class CseeExamTypePageTest extends TestCase
 {
     public function test_authenticated_user_can_open_csee_exam_type_page(): void
     {
-        $user = User::factory()->create();
+        config(['irms.active_exam_types' => ['PSLE', 'CSEE', 'ACSEE']]);
+        $adminRole = \App\Models\Role::firstOrCreate(['code' => 'admin'], ['name' => 'Admin', 'description' => 'Admin']);
+        $user = User::factory()->create(['role_id' => $adminRole->id]);
 
         $this->actingAs($user)
-            ->get('/exam-types/csee')
+            ->get('/admin/exam-types/csee')
             ->assertOk()
             ->assertSee('CSEE Configuration')
             ->assertSee('2 papers · Theory 3 hours + Practical 2.5 hours')

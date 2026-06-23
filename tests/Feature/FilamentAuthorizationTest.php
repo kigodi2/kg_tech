@@ -173,16 +173,32 @@ class FilamentAuthorizationTest extends TestCase
     $nonAdmin = $this->createNonAdmin();
 
     $this->actingAs($activeAdmin)
-      ->get('/admin')
+      ->get('/admin/dashboard')
       ->assertOk();
 
     $this->actingAs($suspendedAdmin)
-      ->get('/admin')
+      ->get('/admin/dashboard')
       ->assertForbidden();
 
     $this->actingAs($nonAdmin)
-      ->get('/admin')
+      ->get('/admin/dashboard')
       ->assertForbidden();
+  }
+
+  public function test_can_access_panel_method(): void
+  {
+    $activeAdmin = $this->createAdmin();
+    $suspendedAdmin = User::factory()->create([
+      'role_id' => Role::where('code', Role::CODE_ADMIN)->first()->id,
+      'status' => User::STATUS_SUSPENDED,
+    ]);
+    $nonAdmin = $this->createNonAdmin();
+
+    $panel = \Filament\Facades\Filament::getPanel('admin');
+
+    $this->assertTrue($activeAdmin->canAccessPanel($panel));
+    $this->assertFalse($suspendedAdmin->canAccessPanel($panel));
+    $this->assertFalse($nonAdmin->canAccessPanel($panel));
   }
 
   /**
@@ -193,7 +209,7 @@ class FilamentAuthorizationTest extends TestCase
     $admin = $this->createAdmin();
 
     $this->actingAs($admin)
-      ->get('/admin/users/' . $admin->id)
+      ->get('/admin/users/' . $admin->id . '/edit')
       ->assertOk();
   }
 }

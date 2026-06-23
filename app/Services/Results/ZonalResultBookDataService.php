@@ -759,10 +759,6 @@ class ZonalResultBookDataService
 
     private function calculateAverageMarks(float|int $totalMarks, int $satCandidates): float
     {
-        if ($satCandidates <= 0) {
-            return 0.0;
-        }
-
-        return round($totalMarks / $satCandidates, 2);
+        return \App\Services\Results\PsleSchoolAverageService::calculate((float) $totalMarks, $satCandidates, 0)['average'];
     }
 }

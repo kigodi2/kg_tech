@@ -17,7 +17,7 @@ class AdminMiddleware
     {
         if (auth()->check()) {
             $user = auth()->user();
-            if ($user->isAdmin()) {
+            if ($user->isAdmin() && $user->isActive()) {
                 return $next($request);
             }
         }

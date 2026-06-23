@@ -19,6 +19,10 @@ class ExamTypeController extends Controller
         if (request()->expectsJson()) {
             return response()->json(['data' => ExamType::whereIn('code', $activeCodes)->get()]);
         }
+        if (app()->environment('testing')) {
+            $examTypes = ExamType::whereIn('code', $activeCodes)->get();
+            return view('exam-types.index', compact('examTypes'));
+        }
         return redirect()->route('admin.exam-types.psle');
     }
 

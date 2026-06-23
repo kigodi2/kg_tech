@@ -2280,7 +2280,7 @@ class PsleEvaluationsController extends Controller
                         'district' => $mode === 'districtwise' ? strtoupper(trim(((string) ($candidate->district_code ?? '')) . ' - ' . ((string) ($candidate->district_name ?? '')))) : '-',
                         'ownership' => strtoupper(trim((string) ($candidate->ownership ?? 'UNKNOWN'))) ?: 'UNKNOWN',
                         'status' => $status,
-                        'total_marks' => $status === 'COMPLETE' && $subjectCount > 0 ? round($total, 0) : null,
+                        'total_marks' => ($status === 'COMPLETE' || $status === 'INC') && $subjectCount > 0 ? round($total, 0) : null,
                         'avg_marks' => $status === 'COMPLETE' ? $average : null,
                         'overall_grade' => $overallGrade,
                         'gpa' => $status === 'COMPLETE' ? $gpa : null,
@@ -2348,7 +2348,7 @@ class PsleEvaluationsController extends Controller
                         $score = number_format((float) $item['score'], 0);
                         return "{$item['subject_short']} - {$score} '{$item['grade']}'";
                     })->implode(', '),
-                    'total_marks' => $status === 'COMPLETE' && $subjectCount > 0 ? round($total, 0) : null,
+                    'total_marks' => ($status === 'COMPLETE' || $status === 'INC') && $subjectCount > 0 ? round($total, 0) : null,
                     'avg_marks' => $status === 'COMPLETE' ? $average : null,
                     'overall_grade' => $overallGrade,
                     'aggt' => $status === 'COMPLETE' ? $aggt : null,
@@ -2427,11 +2427,15 @@ class PsleEvaluationsController extends Controller
                 if (!isset($bucket['school_totals'][$schoolId])) {
                     $bucket['school_totals'][$schoolId] = [
                         'registered' => 0,
+                        'sat' => 0,
                         'total_marks_sum' => 0.0,
                     ];
                 }
 
                 $bucket['school_totals'][$schoolId]['registered']++;
+                if (($candidate['status'] ?? '') !== 'ABS') {
+                    $bucket['school_totals'][$schoolId]['sat']++;
+                }
                 $bucket['school_totals'][$schoolId]['total_marks_sum'] += (float) ($candidate['total_marks'] ?? 0);
             }
 
@@ -2452,6 +2456,7 @@ class PsleEvaluationsController extends Controller
             if (($candidate['status'] ?? '') === 'INC') {
                 $bucket['inc'][$genderKey]++;
                 $bucket['inc']['t']++;
+                $bucket['total_marks_sum'] += (float) ($candidate['total_marks'] ?? 0);
                 unset($bucket);
                 continue;
             }
@@ -2490,7 +2495,7 @@ class PsleEvaluationsController extends Controller
             $row['clean']['pct'] = $registeredTotal > 0 ? ($row['clean']['t'] / $registeredTotal) * 100 : 0.0;
             $row['pass_ac']['pct'] = $satTotal > 0 ? ($row['pass_ac']['t'] / $satTotal) * 100 : 0.0;
             $row['pass_ad']['pct'] = $satTotal > 0 ? ($row['pass_ad']['t'] / $satTotal) * 100 : 0.0;
-            ['avg_marks' => $row['avg_marks'], 'avg_grade' => $row['avg_grade']] = $this->groupedAverageStats($row, $registeredTotal, $mode);
+            ['avg_marks' => $row['avg_marks'], 'avg_grade' => $row['avg_grade']] = $this->groupedAverageStats($row, $satTotal, $mode);
             $row['gpa'] = $row['gpa_count'] > 0 ? round($row['gpa_sum'] / $row['gpa_count'], 4) : null;
 
             if ($mode === 'ownership') {
@@ -2939,17 +2944,25 @@ class PsleEvaluationsController extends Controller
         return is_null($average) ? null : round((float) $average, 2);
     }
 
-    private function groupedAverageStats(array $row, int $registeredTotal, string $mode): array
+    private function groupedAverageStats(array $row, int $satTotal, string $mode): array
     {
         if ($mode === 'schoolwise' || $mode === 'zonal-schoolwise') {
-            $average = $registeredTotal > 0
-                ? round(((float) ($row['total_marks_sum'] ?? 0)) / $registeredTotal, 4)
+            $average = $satTotal > 0
+                ? \App\Services\Results\PsleSchoolAverageService::calculate(
+                    (float) ($row['total_marks_sum'] ?? 0),
+                    $satTotal,
+                    max((int) $row['registered']['t'], 0)
+                )['average']
                 : null;
         } else {
             $schoolAverages = collect($row['school_totals'] ?? [])
-                ->filter(fn ($school) => (int) ($school['registered'] ?? 0) > 0)
+                ->filter(fn ($school) => (int) ($school['sat'] ?? 0) > 0)
                 ->map(function ($school) {
-                    return round(((float) ($school['total_marks_sum'] ?? 0)) / (int) $school['registered'], 4);
+                    return \App\Services\Results\PsleSchoolAverageService::calculate(
+                        (float) ($school['total_marks_sum'] ?? 0),
+                        (int) $school['sat'],
+                        (int) $school['registered']
+                    )['average'];
                 })
                 ->filter(fn ($average) => (float) $average > 0)
                 ->values();

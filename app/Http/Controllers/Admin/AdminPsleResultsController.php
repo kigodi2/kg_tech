@@ -1301,7 +1301,7 @@ class AdminPsleResultsController extends Controller
                                 'subject_code' => $subject->code ?? null,
                                 'error_type' => 'missing_marks',
                                 'error_message' => "Candidate {$candidate->index_number} is missing marks for subject " . ($subject->name ?? 'Unknown') . ".",
-                                'severity' => 'warning',
+                                'severity' => 'critical',
                             ];
                         } elseif ($count > 1) {
                             $err = [

@@ -16,11 +16,13 @@ class RegistrationRegionsRouteTest extends TestCase
             'name' => 'Regions Tester',
             'email' => 'regions-tester@example.com',
             'password' => bcrypt('password'),
+            'is_admin' => true,
+            'portal_role' => 'admin',
             'status' => 'active',
             'password_reset_required' => false,
         ]);
 
-        $response = $this->actingAs($user)->get('/registration/regions');
+        $response = $this->actingAs($user)->get('/admin/registration/regions');
 
         $response->assertOk();
         $response->assertSee('Regions Management');
