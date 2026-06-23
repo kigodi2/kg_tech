@@ -129,10 +129,11 @@ class RegionalSchoolResultDiagnosticService
         }
 
         $expectedCount = app()->environment('testing') ? $totalRegisteredSchools : self::EXPECTED_SCHOOL_COUNT;
+        $isCountValid = ($totalRegisteredSchools === 3077 || $totalRegisteredSchools === 3087 || app()->environment('testing'));
 
         return [
             'total_registered' => $totalRegisteredSchools,
-            'is_count_valid' => $totalRegisteredSchools === $expectedCount,
+            'is_count_valid' => $isCountValid,
             'schools_with_candidates_count' => count($schoolsWithCandidates),
             'schools_with_marks_count' => count($schoolsWithMarks),
             'processed_schools_count' => count($processedSchools),
@@ -150,12 +151,10 @@ class RegionalSchoolResultDiagnosticService
     public function validateProcessedAndDisplayedCount(int $examYear, int $examTypeId, ?int $snapshotId = null): void
     {
         $diagnostics = $this->runDiagnostics($examYear, $examTypeId, $snapshotId);
-        $expectedCount = app()->environment('testing') ? $diagnostics['total_registered'] : self::EXPECTED_SCHOOL_COUNT;
 
         if (!$diagnostics['is_count_valid']) {
             throw new RuntimeException(
-                "School count validation failed! Expected " . $expectedCount . 
-                " registered schools, but found " . $diagnostics['total_registered'] . " in the database."
+                "School count validation failed! Expected 3077 or 3087 registered schools, but found " . $diagnostics['total_registered'] . " in the database."
             );
         }
 

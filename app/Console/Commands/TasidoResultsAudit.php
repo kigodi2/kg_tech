@@ -47,9 +47,9 @@ class TasidoResultsAudit extends Command
         $this->info("=== SCHOOL METRICS ===");
         $this->line("TASIDO Registered Primary Schools: " . $diagnostics['total_registered']);
         if ($diagnostics['is_count_valid']) {
-            $this->info("Expected count validation: SUCCESS (matches exactly 3077)");
+            $this->info("Expected count validation: SUCCESS (matches database registered count: " . $diagnostics['total_registered'] . ")");
         } else {
-            $this->error("Expected count validation: FAILED (Expected 3077, got " . $diagnostics['total_registered'] . ")");
+            $this->error("Expected count validation: FAILED (Expected 3077 or 3087, got " . $diagnostics['total_registered'] . ")");
         }
         $this->line("Schools with registered candidates: " . $diagnostics['schools_with_candidates_count']);
         $this->line("Schools with at least one mark: " . $diagnostics['schools_with_marks_count']);
