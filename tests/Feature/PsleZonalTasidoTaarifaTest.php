@@ -281,7 +281,7 @@ class PsleZonalTasidoTaarifaTest extends TestCase
         $response->assertSee('TAARIFA MOCK DRS VII 2026 TASIDO');
         $response->assertSee('Control Panel');
         $response->assertSee('YALIYOMO (TABLE OF CONTENTS)');
-        $response->assertSee('EXECUTIVE SUMMARY');
+        $response->assertSee('UTANGULIZI NA TAARIFA ZA WATAHINIWA');
 
         $this->assertTrue(
             GovernanceAuditLog::where('action', 'result_book_viewed')

@@ -874,15 +874,6 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('Mahudhurio %'), 1, 1, 'C', true);
 
             $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
-            foreach ([$widths[3], 'ME', $widths[4], 'KE', $widths[5], 'JUMLA', $widths[6], 'ME', $widths[7], 'KE', $widths[8], 'JUMLA'] as $idx => $val) {
-                if ($idx % 2 === 0) {
-                    $pdf->Cell($val, $h2, $pdf->pdfText($val), 0, 0); // dummy check
-                } else {
-                    $pdf->Cell(10, $h2, $pdf->pdfText($val), 1, 0, 'C', true); // will override below
-                }
-            }
-            // Reposition and draw exactly
-            $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
             $pdf->Cell($widths[3], $h2, $pdf->pdfText('WAV'), 1, 0, 'C', true);
             $pdf->Cell($widths[4], $h2, $pdf->pdfText('WAS'), 1, 0, 'C', true);
             $pdf->Cell($widths[5], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
