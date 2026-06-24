@@ -179,11 +179,20 @@ class PsleZonalTasidoTaarifaController extends Controller
     protected function isAdminUser(): bool
     {
         if (!auth()->check()) {
+            \Illuminate\Support\Facades\Log::warning('TASIDO Report Admin check failed: User not logged in.');
             return false;
         }
         $user = auth()->user();
-        return (bool) $user->is_admin
+        $hasAdminAccess = (bool) $user->is_admin
             || (method_exists($user, 'isAdmin') && $user->isAdmin())
             || in_array(strtolower($user->email ?? ''), ['aggreykigodi@gmail.com', 'agreykigodi@gmail.com'], true);
+
+        if (!$hasAdminAccess) {
+            \Illuminate\Support\Facades\Log::warning('TASIDO Report Admin check failed for user: ' . $user->email . ' (ID: ' . $user->id . ', Role: ' . ($user->portal_role ?? 'none') . ', is_admin: ' . ($user->is_admin ? 'true' : 'false') . ')');
+        } else {
+            \Illuminate\Support\Facades\Log::info('TASIDO Report Admin check succeeded for user: ' . $user->email);
+        }
+
+        return $hasAdminAccess;
     }
 }
