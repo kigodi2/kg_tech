@@ -524,16 +524,37 @@
 
 <div id="toast-container"></div>
 
-<div class="workspace">
+@if(!$isAdmin)
+<div class="top-nav-bar" style="max-width: 1680px; margin: 0 auto 20px auto; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 15px 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.6); box-shadow: 0 10px 30px -10px rgba(0,0,0,0.1);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 1.3rem;">📊</span>
+        <span style="font-weight: 700; font-family: 'Outfit', sans-serif; color: #0f172a; font-size: 1.1rem; letter-spacing: 0.5px;">Ripoti ya TASIDO Mock Darasa la Saba 2026</span>
+    </div>
+    <div style="display: flex; gap: 12px; align-items: center;">
+        <a href="/evaluations/psle/zonalwise/taarifa-tasido/pdf" class="btn btn-primary" style="padding: 10px 20px; font-size: 0.88rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px;">
+            📥 Pakua PDF
+        </a>
+        <a href="/evaluations/psle/zonalwise" class="btn btn-secondary" style="padding: 10px 20px; font-size: 0.88rem; border-radius: 12px; display: inline-flex; align-items: center; gap: 8px; background: transparent;">
+            ← Rudi Kwenye Orodha
+        </a>
+        <a href="/login" class="btn" style="padding: 10px 20px; font-size: 0.88rem; border-radius: 12px; background: #0f172a; color: white; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(15,23,42,0.15);">
+            🔐 Ingia kama Admin
+        </a>
+    </div>
+</div>
+@endif
+
+<div class="workspace" style="{{ !$isAdmin ? 'grid-template-columns: 1fr; height: auto;' : '' }}">
     
+    @if($isAdmin)
     <!-- Left Sidebar: Settings overrides -->
     <div class="glass-panel sidebar">
         <div class="panel-header">
             <h2>⚙️ Control Panel</h2>
-            <p>Sanidi ripoti ya TASIDO Mock Std VII 2026</p>
+            <p style="font-size: 0.78rem; color: #22c55e; font-weight: 600; display: flex; align-items: center; gap: 4px; margin-top: 4px;">● Umeingia kama Admin</p>
         </div>
         
-        <form id="settingsForm" method="POST" action="{{ route('evaluations.psle.zonalwise.taarifa-tasido.save-settings') }}" class="panel-body">
+        <form id="settingsForm" method="POST" action="/evaluations/psle/zonalwise/taarifa-tasido/save-settings" class="panel-body">
             @csrf
             
             <div class="section-title">Maelezo ya Jalada (Cover)</div>
@@ -689,11 +710,12 @@
             <button id="downloadPdfBtn" type="button" class="btn btn-primary">
                 📥 Pakua Taarifa (PDF)
             </button>
-            <a href="{{ route('evaluations.psle.zonalwise') }}" class="btn btn-secondary">
+            <a href="/evaluations/psle/zonalwise" class="btn btn-secondary">
                 ← Rudi Zonal Workspace
             </a>
         </div>
     </div>
+    @endif
     
     <!-- Right Preview Area -->
     <div class="glass-panel preview-panel">
@@ -1360,19 +1382,21 @@
         const downloadPdfBtn = document.getElementById('downloadPdfBtn');
         if (downloadPdfBtn) {
             downloadPdfBtn.addEventListener('click', function() {
-                // Submit current settings in form via GET/query params to pdf route
-                const form = document.getElementById('settingsForm');
-                const formData = new FormData(form);
                 const params = new URLSearchParams();
                 
-                for (const pair of formData.entries()) {
-                    // Skip CSRF token
-                    if (pair[0] === '_token') continue;
-                    params.append(pair[0], pair[1]);
+                // Submit current settings in form via GET/query params to pdf route
+                const form = document.getElementById('settingsForm');
+                if (form) {
+                    const formData = new FormData(form);
+                    for (const pair of formData.entries()) {
+                        // Skip CSRF token
+                        if (pair[0] === '_token') continue;
+                        params.append(pair[0], pair[1]);
+                    }
                 }
                 
                 // Redirect to PDF route
-                window.location.href = "{{ route('evaluations.psle.zonalwise.taarifa-tasido.pdf') }}?" + params.toString();
+                window.location.href = "/evaluations/psle/zonalwise/taarifa-tasido/pdf?" + params.toString();
             });
         }
     });

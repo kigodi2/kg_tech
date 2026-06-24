@@ -57,6 +57,7 @@ class PsleZonalTasidoTaarifaController extends Controller
         ]);
 
         if ($request->query('show_settings') === '1') {
+            abort_unless($this->isAdminUser(), 403, 'Unauthorized. Please log in as an administrator.');
             return view('evaluations.psle.zonalwise.taarifa-tasido.settings', [
                 'examYear' => $examYearValue,
                 'settings' => $overrides,
@@ -67,6 +68,7 @@ class PsleZonalTasidoTaarifaController extends Controller
             'examYear' => $examYearValue,
             'data' => $reportData,
             'inputs' => array_merge($reportData['operational'], $overrides),
+            'isAdmin' => $this->isAdminUser(),
         ]);
     }
 
