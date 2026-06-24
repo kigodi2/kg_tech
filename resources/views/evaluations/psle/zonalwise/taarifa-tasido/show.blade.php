@@ -229,7 +229,7 @@
             width: 210mm;
             min-height: 297mm;
             box-sizing: border-box;
-            padding: 25.4mm 31.75mm 25.4mm 31.75mm;
+            padding: 25.4mm 10mm 25.4mm 10mm;
             background: #ffffff;
             box-shadow: 0 10px 30px rgba(15,23,42,0.12);
             border-radius: 6px;
@@ -244,7 +244,7 @@
             width: 297mm;
             min-height: 210mm;
             box-sizing: border-box;
-            padding: 25.4mm 31.75mm 25.4mm 31.75mm;
+            padding: 25.4mm 10mm 25.4mm 10mm;
             background: #ffffff;
             box-shadow: 0 10px 30px rgba(15,23,42,0.12);
             border-radius: 6px;
@@ -831,21 +831,23 @@
                 <!-- Page 2: Table of Contents -->
 
             
-            <!-- Page 2: Utangulizi & Taarifa za Watahiniwa -->
+            <!-- Page 2: Utangulizi & Uchambuzi wa Matokeo -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
                 <div style="text-align: center; margin-bottom: 25px;">
                     <h2 style="font-size: 1.15rem; font-weight: 800; color: #000; text-transform: uppercase; line-height: 1.4; margin: 0;">TAARIFA YA TATHIMINI YA MATOKEO YA MTIHANI WA MOCK DARASA LA VII MWAKA 2026 TASIDO</h2>
                 </div>
                 
-                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">1.0. UTANGULIZI.</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">1.0 UTANGULIZI</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['introduction'])) !!}
                 </div>
-                <div class="doc-paragraph" style="margin-top: 15px;">
+                
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-top: 15px; margin-bottom: 12px; text-transform: uppercase;">2.0 UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA</div>
+                <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['taarifa_za_watahiniwa'])) !!}
                 </div>
 
-                <div class="doc-subsection-title" style="margin-top: 25px;">Jedwali Na. 1: Watahiniwa waliosajiliwa na waliofanya Mtihani</div>
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 1: Watahiniwa waliosajiliwa na waliofanya Mtihani</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -871,36 +873,33 @@
                                 <tr>
                                     <td style="text-align: center;">{{ $row['sn'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['registered_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['registered_f']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['registered_t']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat_f']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['sat_t']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['sat_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['registered_m']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['registered_f']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['registered_t']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat_m']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat_f']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['sat_t']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['sat_pct'], 2) }}%</td>
                                 </tr>
                             @endforeach
                             <tr class="total-row">
                                 <td style="text-align: center;">-</td>
                                 <td>{{ $data['table1_total']['region'] }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table1_total']['schools_count']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table1_total']['registered_m']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table1_total']['registered_f']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table1_total']['registered_t']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table1_total']['sat_m']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table1_total']['sat_f']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table1_total']['sat_t']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table1_total']['sat_pct'], 2) }}%</td>
+                                <td style="text-align: center;">{{ number_format($data['table1_total']['schools_count']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table1_total']['registered_m']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table1_total']['registered_f']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table1_total']['registered_t']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table1_total']['sat_m']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table1_total']['sat_f']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table1_total']['sat_t']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table1_total']['sat_pct'], 2) }}%</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-            </div>
 
-            <!-- Page 4: Jedwali Na. 2 na Sehemu ya Uchambuzi -->
-            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-subsection-title">Jedwali na. 2: Watahiniwa wasiofanya mtihani</div>
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali na. 2: Watahiniwa wasiofanya mtihani</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -926,41 +925,41 @@
                                 <tr>
                                     <td style="text-align: center;">{{ $row['sn'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['registered_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['registered_f']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['registered_t']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['absent_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['absent_f']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['absent_t']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['absent_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['registered_m']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['registered_f']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['registered_t']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['absent_m']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['absent_f']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['absent_t']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['absent_pct'], 2) }}%</td>
                                 </tr>
                             @endforeach
                             <tr class="total-row">
                                 <td style="text-align: center;">-</td>
                                 <td>{{ $data['table2_total']['region'] }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table2_total']['schools_count']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table2_total']['registered_m']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table2_total']['registered_f']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table2_total']['registered_t']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table2_total']['absent_m']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table2_total']['absent_f']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table2_total']['absent_t']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['table2_total']['absent_pct'], 2) }}%</td>
+                                <td style="text-align: center;">{{ number_format($data['table2_total']['schools_count']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table2_total']['registered_m']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table2_total']['registered_f']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table2_total']['registered_t']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table2_total']['absent_m']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table2_total']['absent_f']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table2_total']['absent_t']) }}</td>
+                                <td style="text-align: center;">{{ number_format($data['table2_total']['absent_pct'], 2) }}%</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-
-                <div class="doc-section-title" style="margin-top: 30px;">2. UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA</div>
-                <div class="doc-subsection-title">Hali ya ufaulu ngazi ya Kanda</div>
-                <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['hali_ya_ufaulu_kanda'])) !!}
-                </div>
             </div>
 
-            <!-- Page 5: Jedwali Na. 3a na 3b -->
+            <!-- Page 3: Hali ya ufaulu ngazi ya Kanda na Jedwali 3a, 3b -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">3.0 HALI YA UFAULU KIKANDA NA KWA HALMASHAURI</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #000; margin-bottom: 8px; text-transform: uppercase;">3.1 Hali ya ufaulu ngazi ya Kanda</div>
+                <div class="doc-paragraph" style="margin-bottom: 15px;">
+                    {!! nl2br(e($data['narratives']['hali_ya_ufaulu_kanda'])) !!}
+                </div>
+
                 <div class="doc-subsection-title">Jedwali Na. 3a: Hali ya Ufaulu Kikanda kwa Madaraja - Shule za Serikali na Binafsi kwa Wastani wa Ufaulu</div>
                 <div class="table-responsive">
                     <table class="doc-table">
@@ -984,14 +983,14 @@
                                 <tr>
                                     <td style="text-align: center;">{{ $row['position'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_de']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
                                     <td style="text-align: center; font-weight: 700;">{{ $row['position'] }}</td>
                                 </tr>
                             @endforeach
@@ -1022,14 +1021,14 @@
                                 <tr>
                                     <td style="text-align: center;">{{ $row['position'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_de']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
                                     <td style="text-align: center; font-weight: 700;">{{ $row['position'] }}</td>
                                 </tr>
                             @endforeach
@@ -1066,17 +1065,17 @@
                                 <tr>
                                     <td style="text-align: center;">{{ $row['sn'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right;">{{ number_format($row['d']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['e']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
                                     <td style="text-align: center;">{{ $row['competence'] }}</td>
                                 </tr>
                             @endforeach
@@ -1110,17 +1109,17 @@
                                 <tr>
                                     <td style="text-align: center;">{{ $row['sn'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right;">{{ number_format($row['d']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['e']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
                                     <td style="text-align: center;">{{ $row['competence'] }}</td>
                                 </tr>
                             @endforeach
@@ -1131,7 +1130,7 @@
 
             <!-- Page 7: Hali ya Ufaulu wa Halmashauri -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title">3. HALI YA UFAULU WA HALMASHAURI KWA MADARAJA</div>
+                <div style="font-size: 0.95rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">3.2 Hali ya ufaulu wa Halmashauri kwa madaraja</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['hali_ya_ufaulu_halmashauri'])) !!}
                 </div>
@@ -1161,14 +1160,14 @@
                                     <td style="text-align: center;">{{ $row['sn'] }}</td>
                                     <td>{{ $row['region'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['council'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right;">{{ number_format($row['d_e']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['d_e']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
                                     <td style="text-align: center; font-weight: 700;">{{ $row['sn'] }}</td>
                                 </tr>
                             @endforeach
@@ -1179,12 +1178,12 @@
 
             <!-- Page 8: Shule Bora za Serikali & Bora Kikanda (Jedwali 7 & 8) -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title">4. HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI)</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">4.0 HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_halmashauri_masomo_madaraja_gov'])) !!}
                 </div>
 
-                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja</div>
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -1212,15 +1211,15 @@
                                     <td>{{ $row['region'] }}</td>
                                     <td>{{ $row['council'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['school'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['registered']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
-                                    <td>{{ $row['competence'] }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['registered']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ $row['competence'] }}</td>
                                     <td style="text-align: center; font-weight: 700;">{{ $row['sn'] }}</td>
                                 </tr>
                             @endforeach
@@ -1228,12 +1227,12 @@
                     </table>
                 </div>
 
-                <div class="doc-section-title" style="margin-top: 30px;">5. HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (SHULE ZA SERIKALI NA BINAFSI)</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-top: 30px; margin-bottom: 12px; text-transform: uppercase;">5.0 HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (SHULE ZA SERIKALI NA BINAFSI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_shule_10_bora'])) !!}
                 </div>
 
-                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 8: Msambao wa Ufaulu wa Shule Kumi Bora zisizo za Serikali na Zisizo za Serikali kwa Madaraja</div>
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na 8: Msambao wa Ufaulu wa Shule Kumi Bora zisizo za Serikali na Zisizo za Serikali kwa Madaraja</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -1261,15 +1260,15 @@
                                     <td>{{ $row['region'] }}</td>
                                     <td>{{ $row['council'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['school'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['registered']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
-                                    <td>{{ $row['competence'] }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['registered']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ $row['competence'] }}</td>
                                     <td style="text-align: center; font-weight: 700;">{{ $row['sn'] }}</td>
                                 </tr>
                             @endforeach
@@ -1280,12 +1279,12 @@
 
             <!-- Page 9: Shule Kumi Duni (Jedwali 9 & 10) -->
             <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title">6. HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI NA BINAFSI)</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">6.0 HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI NA BINAFSI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_shule_10_duni'])) !!}
                 </div>
 
-                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 9: Msambao wa Ufaulu wa Shule Kumi Duni kwa Masomo na Madaraja Kikanda</div>
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na 9: Msambao wa Ufaulu wa Shule Kumi Duni kwa Masomo na Madaraja Kikanda</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -1321,29 +1320,29 @@
                                     <td>{{ $row['council'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['school'] }}</td>
                                     <td>{{ $row['ownership'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat_f']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat_m']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat_f']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
                 </div>
 
-                <div class="doc-section-title" style="margin-top: 30px;">7. HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI)</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-top: 30px; margin-bottom: 12px; text-transform: uppercase;">7.0 HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_shule_10_duni_gov'])) !!}
                 </div>
 
-                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 10: Msambao wa Ufaulu wa Shule Kumi Duni za Serikali kwa Masomo na Madaraja Kikanda</div>
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na 10: Msambao wa Ufaulu wa Shule Kumi Duni za Serikali kwa Masomo na Madaraja Kikanda</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
@@ -1387,18 +1386,18 @@
                                     <td>{{ $row['region'] }}</td>
                                     <td>{{ $row['council'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['school'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat_f']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($passM) }}</td>
-                                    <td style="text-align: right;">{{ number_format($passF) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($passAC) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right;">{{ number_format($failM) }}</td>
-                                    <td style="text-align: right;">{{ number_format($failF) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($failDE) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_pct'] ?? 0.0, 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat_m']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat_f']) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($passM) }}</td>
+                                    <td style="text-align: center;">{{ number_format($passF) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($passAC) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($failM) }}</td>
+                                    <td style="text-align: center;">{{ number_format($failF) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($failDE) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_pct'] ?? 0.0, 2) }}%</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -1408,7 +1407,7 @@
 
             <!-- Page 10: Subjectwise Performance (Jedwali 11) -->
             <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title">8. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI)</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">8.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_masomo'])) !!}
                 </div>
@@ -1439,20 +1438,20 @@
                             @foreach($data['table11'] as $row)
                                 <tr style="{{ $row['gender'] === 'JUMLA' ? 'background:#e2e8f0; font-weight:700;' : '' }}">
                                     <td style="{{ $row['gender'] === 'JUMLA' ? 'font-weight:800;' : '' }}">{{ $row['subject'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
                                     <td style="text-align: center; font-weight:700;">{{ $row['gender'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['registered']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['absent']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['absent_pct'], 2) }}%</td>
-                                    <td style="text-align: right;">{{ number_format($row['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['d']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['e']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['pass']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['registered']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['absent']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['absent_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass']) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -1462,7 +1461,7 @@
 
             <!-- Page 11: Shule Binafsi na Masomo (Jedwali 12) -->
             <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title">9. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">9.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_masomo_binafsi'])) !!}
                 </div>
@@ -1493,17 +1492,17 @@
                                 <tr>
                                     <td style="text-align: center;">{{ $row['sn'] }}</td>
                                     <td style="font-weight: 700;">{{ $row['subject'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['d']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['e']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_de']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
                                     <td style="text-align: center; font-weight:700;">{{ $row['competence'] }}</td>
                                 </tr>
                             @endforeach
@@ -1521,21 +1520,21 @@
                     @endforeach
                 </ul>
 
-                <div class="doc-section-title" style="margin-top: 25px;">11. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI</div>
+                <div class="doc-section-title" style="margin-top: 25px;">11. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI WA UTAMILIFU KANDA YA TASIDO</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['changamoto'] as $item)
                         <li>{{ $item }}</li>
                     @endforeach
                 </ul>
 
-                <div class="doc-section-title" style="margin-top: 25px;">12. UTATUZI WA CHANGAMOTO</div>
+                <div class="doc-subsection-title" style="margin-top: 25px;">11.1 Utatuzi wa changamoto</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['utatuzi'] as $item)
                         <li>{{ $item }}</li>
                     @endforeach
                 </ul>
 
-                <div class="doc-section-title" style="margin-top: 25px;">13. MAONI NA MAPENDEKEZO</div>
+                <div class="doc-section-title" style="margin-top: 25px;">12. MAONI NA MAPENDEKEZO</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['maoni_mapendekezo'] as $item)
                         <li>{{ $item }}</li>
@@ -1545,12 +1544,12 @@
 
             <!-- Page 13: Hitimisho & Uidhinishaji -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title">14. HITIMISHO</div>
+                <div class="doc-section-title">13. HITIMISHO</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['hitimisho'])) !!}
                 </div>
 
-                <div class="doc-section-title" style="margin-top: 40px;">15. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)</div>
+                <div class="doc-section-title" style="margin-top: 40px;">14. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)</div>
                 <div class="signoff-container">
                     <div class="signoff-block">
                         <h5>Imeandaliwa na (Prepared By):</h5>

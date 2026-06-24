@@ -105,8 +105,8 @@ class PsleZonalTasidoTaarifaPdfService
             public function addPortraitPage(
                 float $marginTop = 25.4,
                 float $marginBottom = 25.4,
-                float $marginLeft = 31.75,
-                float $marginRight = 31.75
+                float $marginLeft = 10.0,
+                float $marginRight = 10.0
             ): void {
                 $this->AddPage('P', 'A4');
                 $this->SetMargins($marginLeft, $marginTop, $marginRight);
@@ -117,8 +117,8 @@ class PsleZonalTasidoTaarifaPdfService
             public function addLandscapePage(
                 float $marginTop = 25.4,
                 float $marginBottom = 25.4,
-                float $marginLeft = 31.75,
-                float $marginRight = 31.75
+                float $marginLeft = 10.0,
+                float $marginRight = 10.0
             ): void {
                 $this->AddPage('L', 'A4');
                 $this->SetMargins($marginLeft, $marginTop, $marginRight);
@@ -262,10 +262,10 @@ class PsleZonalTasidoTaarifaPdfService
         $chapterHeader = function(string $num, string $title) use ($pdf) {
             $pdf->SetFont($pdf->primaryFont, 'B', 11);
             $pdf->SetTextColor(15, 23, 42);
-            $pdf->Cell(0, 8, $pdf->pdfText($num . ". " . strtoupper($title)), 0, 1, 'L');
+            $pdf->Cell(0, 8, $pdf->pdfText($num . ".0 " . strtoupper($title)), 0, 1, 'L');
             $pdf->SetDrawColor(15, 23, 42);
             $pdf->SetLineWidth(0.4);
-            $pdf->Line(10, $pdf->GetY(), 200, $pdf->GetY());
+            $pdf->Line($pdf->getLMargin(), $pdf->GetY(), $pdf->getPageWidth() - $pdf->getRMargin(), $pdf->GetY());
             $pdf->Ln(3);
         };
 
@@ -296,6 +296,13 @@ class PsleZonalTasidoTaarifaPdfService
         };
 
         // ------------------ SECTION 1 (PAGE 2) ------------------
+        $renderCompactParagraph = function(string $text) use ($pdf) {
+            $pdf->SetFont($pdf->primaryFont, '', 9.0);
+            $pdf->SetTextColor(30, 41, 59);
+            $pdf->MultiCell(0, 4.2, $pdf->pdfText($text), 0, 'J');
+            $pdf->Ln(2.5);
+        };
+
         $pdf->isCoverPage = false;
         $pdf->addPortraitPage(
             $data['meta']['margin_top'],
@@ -308,19 +315,25 @@ class PsleZonalTasidoTaarifaPdfService
         $pdf->SetTextColor(0, 0, 0);
         $pdf->SetFont($pdf->primaryFont, 'B', 11);
         $pdf->MultiCell(0, 6, $pdf->pdfText("TAARIFA YA TATHIMINI YA MATOKEO YA MTIHANI WA MOCK DARASA LA VII MWAKA 2026 TASIDO"), 0, 'C');
-        $pdf->Ln(6);
+        $pdf->Ln(4);
         
         $pdf->SetFont($pdf->primaryFont, 'B', 10);
-        $pdf->Cell(0, 6, $pdf->pdfText("1.0. UTANGULIZI."), 0, 1, 'L');
-        $pdf->Ln(2);
-        $renderParagraph($data['narratives']['introduction']);
-        $renderParagraph($data['narratives']['taarifa_za_watahiniwa']);
+        $pdf->Cell(0, 6, $pdf->pdfText("1.0 UTANGULIZI"), 0, 1, 'L');
+        $pdf->Ln(1);
+        $renderCompactParagraph($data['narratives']['introduction']);
         
-        $sectionHeader("Jedwali Na. 1: Watahiniwa waliosajiliwa na waliofanya Mtihani");
+        $pdf->SetFont($pdf->primaryFont, 'B', 10);
+        $pdf->Cell(0, 6, $pdf->pdfText("2.0 UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA"), 0, 1, 'L');
+        $pdf->Ln(1);
+        $renderCompactParagraph($data['narratives']['taarifa_za_watahiniwa']);
+        
+        $pdf->SetFont($pdf->primaryFont, 'B', 8.5);
+        $pdf->Cell(0, 5, $pdf->pdfText("Jedwali Na. 1: Watahiniwa waliosajiliwa na waliofanya Mtihani"), 0, 1, 'L');
+        $pdf->Ln(1);
         
         $t1Headers = ['S/N', 'Mkoa', 'Idadi ya Shule', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Sat ME', 'Sat KE', 'Sat JUMLA', 'Mahudhurio %'];
-        $t1Widths = [8, 22, 16, 12, 12, 15, 12, 12, 15, 16];
-        $t1Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
+        $t1Widths = [10, 30, 24, 16, 16, 22, 16, 16, 22, 18];
+        $t1Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t1Rows = [];
         foreach ($data['table1'] as $row) {
             $t1Rows[] = [
@@ -348,20 +361,16 @@ class PsleZonalTasidoTaarifaPdfService
             number_format($data['table1_total']['sat_t']),
             number_format($data['table1_total']['sat_pct'], 2) . '%'
         ];
-        $this->renderTable($pdf, $t1Headers, $t1Widths, $t1Aligns, $t1Rows, $t1Total, true, 'attendance');
+        $this->renderTable($pdf, $t1Headers, $t1Widths, $t1Aligns, $t1Rows, $t1Total, true, 'attendance', 4.5, 7.0);
+        $pdf->Ln(1);
 
-        // ------------------ SECTION 2 (Table 2 & Section 2 text) ------------------
-        $pdf->addPortraitPage(
-            $data['meta']['margin_top'],
-            $data['meta']['margin_bottom'],
-            $data['meta']['margin_left'],
-            $data['meta']['margin_right']
-        );
-        $sectionHeader("Jedwali na. 2: Watahiniwa wasiofanya mtihani");
+        $pdf->SetFont($pdf->primaryFont, 'B', 8.5);
+        $pdf->Cell(0, 5, $pdf->pdfText("Jedwali na. 2: Watahiniwa wasiofanya mtihani"), 0, 1, 'L');
+        $pdf->Ln(1);
         
         $t2Headers = ['S/N', 'Mkoa', 'Idadi ya Shule', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Abs ME', 'Abs KE', 'Abs JUMLA', 'Asilimia (%)'];
-        $t2Widths = [8, 22, 16, 12, 12, 15, 12, 12, 15, 16];
-        $t2Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
+        $t2Widths = [10, 30, 24, 16, 16, 22, 16, 16, 22, 18];
+        $t2Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t2Rows = [];
         foreach ($data['table2'] as $row) {
             $t2Rows[] = [
@@ -389,12 +398,7 @@ class PsleZonalTasidoTaarifaPdfService
             number_format($data['table2_total']['absent_t']),
             number_format($data['table2_total']['absent_pct'], 2) . '%'
         ];
-        $this->renderTable($pdf, $t2Headers, $t2Widths, $t2Aligns, $t2Rows, $t2Total, true, 'absenteeism');
-        $pdf->Ln(5);
-
-        $chapterHeader("2", "UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA");
-        $sectionHeader("Hali ya ufaulu ngazi ya Kanda");
-        $renderParagraph($data['narratives']['hali_ya_ufaulu_kanda']);
+        $this->renderTable($pdf, $t2Headers, $t2Widths, $t2Aligns, $t2Rows, $t2Total, true, 'absenteeism', 4.5, 7.0);
 
         // ------------------ SECTION 3 (Tables 3a, 3b, 4, 5) ------------------
         $pdf->addPortraitPage(
@@ -403,11 +407,15 @@ class PsleZonalTasidoTaarifaPdfService
             $data['meta']['margin_left'],
             $data['meta']['margin_right']
         );
+        $chapterHeader("3", "HALI YA UFAULU KIKANDA NA KWA HALMASHAURI");
+        $sectionHeader("3.1 Hali ya ufaulu ngazi ya Kanda");
+        $renderParagraph($data['narratives']['hali_ya_ufaulu_kanda']);
+
         $sectionHeader("Jedwali Na. 3a: Hali ya Ufaulu Kikanda kwa Madaraja - Shule za Serikali na Binafsi kwa Wastani wa Ufaulu");
         
         $t3aHeaders = ['NA', 'Mkoa', 'Daraja A', 'Daraja B', 'Daraja C', 'Ufaulu A-C', 'Ufaulu %', 'D-E', 'Feli %', 'Wastani /300', 'Nafasi'];
-        $t3aWidths = [6, 20, 12, 12, 12, 13, 13, 12, 13, 15, 8];
-        $t3aAligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C'];
+        $t3aWidths = [10, 35, 15, 15, 15, 18, 18, 18, 18, 24, 14];
+        $t3aAligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t3aRows = [];
         foreach ($data['table3a'] as $row) {
             $t3aRows[] = [
@@ -455,8 +463,8 @@ class PsleZonalTasidoTaarifaPdfService
         $sectionHeader("Jedwali Na. 4: Ufaulu Kikanda kwa Madaraja - Shule za Serikali");
         
         $t4Headers = ['S/N', 'Mkoa', 'Idadi Shule', 'A', 'B', 'C', 'A-C JML', 'A-C %', 'D', 'E', 'D-E JML', 'D-E %', 'Wastani', 'Umahiri'];
-        $t4Widths = [6, 16, 12, 8, 8, 8, 10, 10, 8, 8, 10, 10, 12, 12];
-        $t4Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C'];
+        $t4Widths = [10, 24, 18, 10, 10, 10, 14, 14, 10, 10, 14, 14, 16, 16];
+        $t4Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t4Rows = [];
         foreach ($data['table4'] as $row) {
             $t4Rows[] = [
@@ -508,14 +516,14 @@ class PsleZonalTasidoTaarifaPdfService
             $data['meta']['margin_left'],
             $data['meta']['margin_right']
         );
-        $chapterHeader("3", "HALI YA UFAULU WA HALMASHAURI KWA MADARAJA");
+        $sectionHeader("3.2 Hali ya ufaulu wa Halmashauri kwa madaraja");
         $renderParagraph($data['narratives']['hali_ya_ufaulu_halmashauri']);
 
         $sectionHeader("Jedwali Na: 6: Hali ya ufaulu wa Halmashauri kwa madaraja");
         
         $t6Headers = ['S/N', 'Mkoa', 'Halmashauri', 'A', 'B', 'C', 'A-C JML', 'A-C %', 'D-E JML', 'D-E %', 'Wastani', 'Nafasi'];
-        $t6Widths = [6, 15, 24, 8, 8, 8, 11, 11, 11, 11, 14, 8];
-        $t6Aligns = ['C', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C'];
+        $t6Widths = [10, 22, 38, 12, 12, 12, 16, 16, 16, 16, 12, 8];
+        $t6Aligns = ['C', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t6Rows = [];
         foreach ($data['table6'] as $row) {
             $t6Rows[] = [
@@ -548,8 +556,8 @@ class PsleZonalTasidoTaarifaPdfService
         $sectionHeader("Jedwali Na. 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja");
         
         $t7Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'Reg', 'Fanya', 'A', 'B', 'C', 'A-C', 'A-C %', 'Wastani', 'Umahiri', 'Nafasi'];
-        $t7Widths = [6, 15, 18, 24, 8, 8, 8, 8, 8, 10, 10, 12, 10, 8];
-        $t7Aligns = ['C', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C', 'C'];
+        $t7Widths = [8, 20, 24, 38, 12, 12, 10, 10, 10, 12, 12, 12, 12, 8];
+        $t7Aligns = ['C', 'L', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t7Rows = [];
         foreach ($data['table7'] as $row) {
             $t7Rows[] = [
@@ -617,7 +625,7 @@ class PsleZonalTasidoTaarifaPdfService
         
         $t9Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'Umiliki', 'ME', 'KE', 'JML', 'A', 'B', 'C', 'A-C', 'A-C %', 'D-E', 'D-E %', 'Wastani'];
         $t9Widths = [10, 24, 24, 38, 18, 11, 11, 13, 10, 10, 10, 12, 12, 12, 12, 16];
-        $t9Aligns = ['C', 'L', 'L', 'L', 'C', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
+        $t9Aligns = ['C', 'L', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t9Rows = [];
         foreach ($data['table9'] as $row) {
             $t9Rows[] = [
@@ -655,7 +663,7 @@ class PsleZonalTasidoTaarifaPdfService
         
         $t10Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'ME', 'KE', 'JML', 'ME', 'KE', 'JML', '%', 'ME', 'KE', 'JML', '%', 'Wastani'];
         $t10Widths = [10, 22, 22, 36, 11, 11, 12, 11, 11, 12, 12, 11, 11, 12, 12, 16];
-        $t10Aligns = ['C', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
+        $t10Aligns = ['C', 'L', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t10Rows = [];
         foreach ($data['table10'] as $row) {
             $passAC = $row['pass_ac'];
@@ -701,7 +709,7 @@ class PsleZonalTasidoTaarifaPdfService
         
         $t11Headers = ['Somo', 'Shule', 'Jinsi', 'Reg', 'Abs', 'Abs %', 'Fanya', 'A', 'B', 'C', 'D', 'E', 'Pass', 'Pass %', 'Wastani'];
         $t11Widths = [43, 15, 12, 13, 12, 13, 13, 11, 11, 11, 11, 11, 14, 14, 22];
-        $t11Aligns = ['L', 'R', 'C', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
+        $t11Aligns = ['L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t11Rows = [];
         foreach ($data['table11'] as $row) {
             $t11Rows[] = [
@@ -738,7 +746,7 @@ class PsleZonalTasidoTaarifaPdfService
         
         $t12Headers = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'Pass', 'Pass %', 'Fail', 'Fail %', 'Wastani', 'Umahiri'];
         $t12Widths = [10, 40, 15, 13, 13, 13, 13, 13, 17, 17, 17, 17, 19, 16];
-        $t12Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C'];
+        $t12Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t12Rows = [];
         foreach ($data['table12'] as $row) {
             $t12Rows[] = [
@@ -772,11 +780,11 @@ class PsleZonalTasidoTaarifaPdfService
         $renderBullets($data['narratives']['mafanikio']);
         $pdf->Ln(5);
 
-        $chapterHeader("11", "CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI");
+        $chapterHeader("11", "CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI WA UTAMILIFU KANDA YA TASIDO");
         $renderBullets($data['narratives']['changamoto']);
         $pdf->Ln(5);
 
-        $chapterHeader("12", "UTATUZI WA CHANGAMOTO");
+        $sectionHeader("11.1 Utatuzi wa changamoto");
         $renderBullets($data['narratives']['utatuzi']);
 
         $pdf->addPortraitPage(
@@ -785,16 +793,16 @@ class PsleZonalTasidoTaarifaPdfService
             $data['meta']['margin_left'],
             $data['meta']['margin_right']
         );
-        $chapterHeader("13", "MAONI NA MAPENDEKEZO");
+        $chapterHeader("12", "MAONI NA MAPENDEKEZO");
         $renderBullets($data['narratives']['maoni_mapendekezo']);
         $pdf->Ln(5);
 
-        $chapterHeader("14", "HITIMISHO");
+        $chapterHeader("13", "HITIMISHO");
         $renderParagraph($data['narratives']['hitimisho']);
         $pdf->Ln(10);
 
         // ------------------ APPROVAL SHEET ------------------
-        $chapterHeader("15", "KARATASI YA UIDHINISHAJI (APPROVAL PAGE)");
+        $chapterHeader("14", "KARATASI YA UIDHINISHAJI (APPROVAL PAGE)");
         $pdf->Ln(5);
 
         $renderParagraph("Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka 2026 katika Kanda ya Academic Zone ya TASIDO imejadiliwa, kuhakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.");
@@ -835,7 +843,9 @@ class PsleZonalTasidoTaarifaPdfService
         array $rows,
         ?array $totalRow = null,
         bool $isDoubleHeader = false,
-        string $doubleHeaderType = ''
+        string $doubleHeaderType = '',
+        float $rowHeight = 6.0,
+        float $fontSize = 7.5
     ): void {
         $pdf->SetFillColor(241, 245, 249);
         $pdf->SetTextColor(15, 23, 42);
@@ -844,7 +854,6 @@ class PsleZonalTasidoTaarifaPdfService
 
         $limit = $pdf->getPageHeight() - $pdf->getBMargin();
         $headerHeight = $isDoubleHeader ? 13.0 : 6.5;
-        $rowHeight = 6.0;
 
         if ($pdf->GetY() + $headerHeight + $rowHeight > $limit) {
             if ($pdf->getCurOrientation() === 'L') {
@@ -865,7 +874,7 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Ln(6.5);
         }
 
-        $pdf->SetFont($pdf->primaryFont, '', 7.5);
+        $pdf->SetFont($pdf->primaryFont, '', $fontSize);
         $pdf->SetTextColor(30, 41, 59);
 
         $fill = false;
@@ -891,7 +900,7 @@ class PsleZonalTasidoTaarifaPdfService
                     $pdf->Ln(6.5);
                 }
 
-                $pdf->SetFont($pdf->primaryFont, '', 7.5);
+                $pdf->SetFont($pdf->primaryFont, '', $fontSize);
                 $pdf->SetTextColor(30, 41, 59);
             }
 
@@ -900,9 +909,9 @@ class PsleZonalTasidoTaarifaPdfService
             foreach ($widths as $colIdx => $w) {
                 $val = $row[$colIdx] ?? '';
                 $align = $aligns[$colIdx] ?? 'C';
-                $pdf->Cell($w, 6.0, $pdf->pdfText((string)$val), 1, 0, $align, true);
+                $pdf->Cell($w, $rowHeight, $pdf->pdfText((string)$val), 1, 0, $align, true);
             }
-            $pdf->Ln(6.0);
+            $pdf->Ln($rowHeight);
             $fill = !$fill;
         }
 
