@@ -564,7 +564,7 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t6Headers, $t6Widths, $t6Aligns, $t6Rows);
 
         // ------------------ SECTION 5 (Table 7 & Section 4 text) ------------------
-        $pdf->addPortraitPage(
+        $pdf->addLandscapePage(
             $data['meta']['margin_top'],
             $data['meta']['margin_bottom'],
             $data['meta']['margin_left'],
@@ -597,10 +597,10 @@ class PsleZonalTasidoTaarifaPdfService
                 $row['sn']
             ];
         }
-        $this->renderTable($pdf, $t7Headers, $t7Widths, $t7Aligns, $t7Rows);
+        $this->renderTable($pdf, $t7Headers, $t7Widths, $t7Aligns, $t7Rows, null, true, 'ranking_schools');
 
         // ------------------ SECTION 6 (Table 8 & Section 5 text) ------------------
-        $pdf->addPortraitPage(
+        $pdf->addLandscapePage(
             $data['meta']['margin_top'],
             $data['meta']['margin_bottom'],
             $data['meta']['margin_left'],
@@ -629,7 +629,7 @@ class PsleZonalTasidoTaarifaPdfService
                 $row['sn']
             ];
         }
-        $this->renderTable($pdf, $t7Headers, $t7Widths, $t7Aligns, $t8Rows);
+        $this->renderTable($pdf, $t7Headers, $t7Widths, $t7Aligns, $t8Rows, null, true, 'ranking_schools');
 
         // ------------------ SECTION 7 (Table 9 & Section 6 text) ------------------
         $pdf->addLandscapePage(
@@ -1117,6 +1117,31 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[12], $h2, $pdf->pdfText('WAS'), 1, 0, 'C', true);
             $pdf->Cell($widths[13], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
             $pdf->Cell($widths[14], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+
+            $pdf->SetXY($x, $y + $fullHeight);
+        } elseif ($type === 'ranking_schools') {
+            $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('NA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('MKOA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('HALMASHAURI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[3], $fullHeight, $pdf->pdfText('JINA LA SHULE'), 1, 0, 'C', true);
+            
+            $pdf->Cell($widths[4], $h1, $pdf->pdfText('USAJILI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[5], $h1, $pdf->pdfText('WALIOFANYA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[6] + $widths[7] + $widths[8], $h1, $pdf->pdfText('MADARAJA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[9] + $widths[10], $h1, $pdf->pdfText('UFAULU'), 1, 0, 'C', true);
+            $pdf->Cell($widths[11] + $widths[12] + $widths[13], $h1, $pdf->pdfText('MATOKEO'), 1, 1, 'C', true);
+
+            $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2] + $widths[3], $y + $h1);
+            $pdf->Cell($widths[4], $h2, $pdf->pdfText('REG'), 1, 0, 'C', true);
+            $pdf->Cell($widths[5], $h2, $pdf->pdfText('FANYA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[6], $h2, $pdf->pdfText('A'), 1, 0, 'C', true);
+            $pdf->Cell($widths[7], $h2, $pdf->pdfText('B'), 1, 0, 'C', true);
+            $pdf->Cell($widths[8], $h2, $pdf->pdfText('C'), 1, 0, 'C', true);
+            $pdf->Cell($widths[9], $h2, $pdf->pdfText('A-C'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10], $h2, $pdf->pdfText('A-C %'), 1, 0, 'C', true);
+            $pdf->Cell($widths[11], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[12], $h2, $pdf->pdfText('UMAHIRI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[13], $h2, $pdf->pdfText('NAFASI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x, $y + $fullHeight);
         }
