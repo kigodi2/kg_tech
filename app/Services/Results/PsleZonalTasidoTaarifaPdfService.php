@@ -20,6 +20,10 @@ class PsleZonalTasidoTaarifaPdfService
             public int $examYear = 2026;
             public string $primaryFont = 'Helvetica';
             public string $footerOffice = 'Ofisi ya Waziri Mkuu - TAMISEMI';
+            public float $defMarginTop = 25.4;
+            public float $defMarginBottom = 25.4;
+            public float $defMarginLeft = 10.0;
+            public float $defMarginRight = 10.0;
 
             public function setupCustomFonts(string $fontFamily): void
             {
@@ -70,7 +74,7 @@ class PsleZonalTasidoTaarifaPdfService
                 if ($this->suppressHeaderFooter) {
                     return;
                 }
-                if ($this->isCoverPage) {
+                if ($this->isCoverPage || $this->PageNo() == 1) {
                     return;
                 }
 
@@ -88,7 +92,7 @@ class PsleZonalTasidoTaarifaPdfService
                 if ($this->suppressHeaderFooter) {
                     return;
                 }
-                if ($this->isCoverPage) {
+                if ($this->isCoverPage || $this->PageNo() == 1) {
                     return;
                 }
 
@@ -103,11 +107,16 @@ class PsleZonalTasidoTaarifaPdfService
             }
 
             public function addPortraitPage(
-                float $marginTop = 25.4,
-                float $marginBottom = 25.4,
-                float $marginLeft = 10.0,
-                float $marginRight = 10.0
+                ?float $marginTop = null,
+                ?float $marginBottom = null,
+                ?float $marginLeft = null,
+                ?float $marginRight = null
             ): void {
+                $marginTop ??= $this->defMarginTop;
+                $marginBottom ??= $this->defMarginBottom;
+                $marginLeft ??= $this->defMarginLeft;
+                $marginRight ??= $this->defMarginRight;
+
                 $this->AddPage('P', 'A4');
                 $this->SetMargins($marginLeft, $marginTop, $marginRight);
                 $this->SetAutoPageBreak(true, $marginBottom);
@@ -115,11 +124,16 @@ class PsleZonalTasidoTaarifaPdfService
             }
 
             public function addLandscapePage(
-                float $marginTop = 25.4,
-                float $marginBottom = 25.4,
-                float $marginLeft = 10.0,
-                float $marginRight = 10.0
+                ?float $marginTop = null,
+                ?float $marginBottom = null,
+                ?float $marginLeft = null,
+                ?float $marginRight = null
             ): void {
+                $marginTop ??= $this->defMarginTop;
+                $marginBottom ??= $this->defMarginBottom;
+                $marginLeft ??= $this->defMarginLeft;
+                $marginRight ??= $this->defMarginRight;
+
                 $this->AddPage('L', 'A4');
                 $this->SetMargins($marginLeft, $marginTop, $marginRight);
                 $this->SetAutoPageBreak(true, $marginBottom);
@@ -249,6 +263,12 @@ class PsleZonalTasidoTaarifaPdfService
         $pdf->zoneName = 'TASIDO';
         $pdf->examYear = (int)$data['meta']['exam_year'];
         $pdf->footerOffice = str_replace("\n", " - ", $data['meta']['office_heading']);
+        
+        $pdf->defMarginTop = (float)($data['meta']['margin_top'] ?? 25.4);
+        $pdf->defMarginBottom = (float)($data['meta']['margin_bottom'] ?? 25.4);
+        $pdf->defMarginLeft = (float)($data['meta']['margin_left'] ?? 10.0);
+        $pdf->defMarginRight = (float)($data['meta']['margin_right'] ?? 10.0);
+
         $pdf->initReport($data['meta']['font_family']);
         $pdf->AliasNbPages();
         
@@ -287,7 +307,7 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->SetFont($pdf->primaryFont, '', 9.5);
             $pdf->SetTextColor(30, 41, 59);
             foreach ($items as $index => $item) {
-                $pdf->SetX(15);
+                $pdf->SetX($pdf->getLMargin() + 5);
                 $pdf->Cell(6, 5.2, $pdf->pdfText(($index + 1) . "."), 0, 0);
                 $pdf->MultiCell(0, 5.2, $pdf->pdfText($item), 0, 'J');
                 $pdf->Ln(2);
@@ -808,28 +828,30 @@ class PsleZonalTasidoTaarifaPdfService
         $renderParagraph("Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka 2026 katika Kanda ya Academic Zone ya TASIDO imejadiliwa, kuhakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.");
         $pdf->Ln(10);
 
+        $halfWidth = $pdf->usablePageWidth() / 2;
+
         $pdf->SetFont($pdf->primaryFont, 'B', 10);
-        $pdf->Cell(95, 6, $pdf->pdfText("Imeandaliwa na (Prepared By):"), 0, 0, 'L');
-        $pdf->Cell(95, 6, $pdf->pdfText("Imehakikiwa na Kuidhinishwa na (Approved By):"), 0, 1, 'L');
+        $pdf->Cell($halfWidth, 6, $pdf->pdfText("Imeandaliwa na (Prepared By):"), 0, 0, 'L');
+        $pdf->Cell($halfWidth, 6, $pdf->pdfText("Imehakikiwa na Kuidhinishwa na (Approved By):"), 0, 1, 'L');
 
         $pdf->Ln(15);
 
         $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
-        $pdf->Cell(95, 5, $pdf->pdfText("_______________________________________"), 0, 0, 'L');
-        $pdf->Cell(95, 5, $pdf->pdfText("_______________________________________"), 0, 1, 'L');
+        $pdf->Cell($halfWidth, 5, $pdf->pdfText("_______________________________________"), 0, 0, 'L');
+        $pdf->Cell($halfWidth, 5, $pdf->pdfText("_______________________________________"), 0, 1, 'L');
 
-        $pdf->Cell(95, 5, $pdf->pdfText($data['operational']['rto_name']), 0, 0, 'L');
-        $pdf->Cell(95, 5, $pdf->pdfText($data['operational']['reo_name']), 0, 1, 'L');
+        $pdf->Cell($halfWidth, 5, $pdf->pdfText($data['operational']['rto_name']), 0, 0, 'L');
+        $pdf->Cell($halfWidth, 5, $pdf->pdfText($data['operational']['reo_name']), 0, 1, 'L');
 
         $pdf->SetFont($pdf->primaryFont, '', 9);
-        $pdf->Cell(95, 4, $pdf->pdfText($data['operational']['prepared_by_title']), 0, 0, 'L');
-        $pdf->Cell(95, 4, $pdf->pdfText($data['operational']['approved_by_title']), 0, 1, 'L');
+        $pdf->Cell($halfWidth, 4, $pdf->pdfText($data['operational']['prepared_by_title']), 0, 0, 'L');
+        $pdf->Cell($halfWidth, 4, $pdf->pdfText($data['operational']['approved_by_title']), 0, 1, 'L');
 
-        $pdf->Cell(95, 4, $pdf->pdfText("Kanda ya Taaluma: " . $pdf->zoneName), 0, 0, 'L');
-        $pdf->Cell(95, 4, $pdf->pdfText("Kanda ya Taaluma: " . $pdf->zoneName), 0, 1, 'L');
+        $pdf->Cell($halfWidth, 4, $pdf->pdfText("Kanda ya Taaluma: " . $pdf->zoneName), 0, 0, 'L');
+        $pdf->Cell($halfWidth, 4, $pdf->pdfText("Kanda ya Taaluma: " . $pdf->zoneName), 0, 1, 'L');
 
-        $pdf->Cell(95, 4, $pdf->pdfText("Tarehe: ___________________"), 0, 0, 'L');
-        $pdf->Cell(95, 4, $pdf->pdfText("Tarehe: ___________________"), 0, 1, 'L');
+        $pdf->Cell($halfWidth, 4, $pdf->pdfText("Tarehe: ___________________"), 0, 0, 'L');
+        $pdf->Cell($halfWidth, 4, $pdf->pdfText("Tarehe: ___________________"), 0, 1, 'L');
 
         // Output to the physical path
         $pdf->Output('F', $outputPath);
@@ -847,6 +869,20 @@ class PsleZonalTasidoTaarifaPdfService
         float $rowHeight = 6.0,
         float $fontSize = 7.5
     ): void {
+        // Dynamically scale columns to span exactly the usable page width
+        $usableWidth = $pdf->usablePageWidth();
+        $originalSum = array_sum($widths);
+        if ($originalSum > 0) {
+            $scale = $usableWidth / $originalSum;
+            $sum = 0;
+            $count = count($widths);
+            for ($i = 0; $i < $count - 1; $i++) {
+                $widths[$i] = round($widths[$i] * $scale, 4);
+                $sum += $widths[$i];
+            }
+            $widths[$count - 1] = round($usableWidth - $sum, 4);
+        }
+
         $pdf->SetFillColor(241, 245, 249);
         $pdf->SetTextColor(15, 23, 42);
         $pdf->SetDrawColor(203, 213, 225);
