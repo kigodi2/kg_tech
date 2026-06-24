@@ -102,18 +102,63 @@ class PsleZonalTasidoTaarifaPdfService
                 $this->Cell(0, 5, $this->pdfText("Ukurasa " . $this->PageNo() . " / {nb}"), 0, 0, 'R');
             }
 
-            public function addPortraitPage(int $marginTop = 15, int $marginBottom = 18, int $marginLeft = 10, int $marginRight = 10): void
-            {
+            public function addPortraitPage(
+                float $marginTop = 25.4,
+                float $marginBottom = 25.4,
+                float $marginLeft = 31.75,
+                float $marginRight = 31.75
+            ): void {
                 $this->AddPage('P', 'A4');
                 $this->SetMargins($marginLeft, $marginTop, $marginRight);
                 $this->SetAutoPageBreak(true, $marginBottom);
+                $this->SetXY($marginLeft, $marginTop);
             }
 
-            public function addLandscapePage(int $marginTop = 12, int $marginBottom = 15, int $marginLeft = 10, int $marginRight = 10): void
-            {
+            public function addLandscapePage(
+                float $marginTop = 25.4,
+                float $marginBottom = 25.4,
+                float $marginLeft = 31.75,
+                float $marginRight = 31.75
+            ): void {
                 $this->AddPage('L', 'A4');
                 $this->SetMargins($marginLeft, $marginTop, $marginRight);
                 $this->SetAutoPageBreak(true, $marginBottom);
+                $this->SetXY($marginLeft, $marginTop);
+            }
+
+            public function drawTanzaniaFlagCoverBorder(): void
+            {
+                // A4 portrait size in mm
+                $pageWidth = 210;
+                $pageHeight = 297;
+
+                $borders = [
+                    ['rgb' => [30, 135, 63],  'inset' => 8.0,  'width' => 0.35], // Green
+                    ['rgb' => [252, 209, 22], 'inset' => 9.2,  'width' => 0.25], // Yellow
+                    ['rgb' => [0, 0, 0],      'inset' => 10.4, 'width' => 0.25], // Black
+                    ['rgb' => [252, 209, 22], 'inset' => 11.6, 'width' => 0.25], // Yellow
+                    ['rgb' => [0, 163, 224],  'inset' => 12.8, 'width' => 0.35], // Blue
+                ];
+
+                foreach ($borders as $border) {
+                    [$r, $g, $b] = $border['rgb'];
+
+                    $this->SetDrawColor($r, $g, $b);
+                    $this->SetLineWidth($border['width']);
+
+                    $inset = $border['inset'];
+
+                    $this->Rect(
+                        $inset,
+                        $inset,
+                        $pageWidth - ($inset * 2),
+                        $pageHeight - ($inset * 2)
+                    );
+                }
+
+                // Reset drawing color and line width
+                $this->SetDrawColor(0, 0, 0);
+                $this->SetLineWidth(0.2);
             }
 
             public function addCoverPage(array $settings): void
@@ -122,6 +167,8 @@ class PsleZonalTasidoTaarifaPdfService
 
                 $this->AddPage('P', 'A4');
                 $this->SetAutoPageBreak(false);
+
+                $this->drawTanzaniaFlagCoverBorder();
 
                 $emblemPath = $settings['emblem_path'] ?? null;
 
@@ -250,7 +297,12 @@ class PsleZonalTasidoTaarifaPdfService
 
         // ------------------ SECTION 1 (PAGE 2) ------------------
         $pdf->isCoverPage = false;
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
 
         // Report body heading on Page 2
         $pdf->SetTextColor(0, 0, 0);
@@ -267,7 +319,7 @@ class PsleZonalTasidoTaarifaPdfService
         $sectionHeader("Jedwali Na. 1: Watahiniwa waliosajiliwa na waliofanya Mtihani");
         
         $t1Headers = ['S/N', 'Mkoa', 'Idadi ya Shule', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Sat ME', 'Sat KE', 'Sat JUMLA', 'Mahudhurio %'];
-        $t1Widths = [10, 32, 20, 17, 17, 20, 17, 17, 20, 20];
+        $t1Widths = [8, 22, 16, 12, 12, 15, 12, 12, 15, 16];
         $t1Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
         $t1Rows = [];
         foreach ($data['table1'] as $row) {
@@ -299,11 +351,16 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t1Headers, $t1Widths, $t1Aligns, $t1Rows, $t1Total, true, 'attendance');
 
         // ------------------ SECTION 2 (Table 2 & Section 2 text) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $sectionHeader("Jedwali na. 2: Watahiniwa wasiofanya mtihani");
         
         $t2Headers = ['S/N', 'Mkoa', 'Idadi ya Shule', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Abs ME', 'Abs KE', 'Abs JUMLA', 'Asilimia (%)'];
-        $t2Widths = [10, 32, 20, 17, 17, 20, 17, 17, 20, 20];
+        $t2Widths = [8, 22, 16, 12, 12, 15, 12, 12, 15, 16];
         $t2Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
         $t2Rows = [];
         foreach ($data['table2'] as $row) {
@@ -340,11 +397,16 @@ class PsleZonalTasidoTaarifaPdfService
         $renderParagraph($data['narratives']['hali_ya_ufaulu_kanda']);
 
         // ------------------ SECTION 3 (Tables 3a, 3b, 4, 5) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $sectionHeader("Jedwali Na. 3a: Hali ya Ufaulu Kikanda kwa Madaraja - Shule za Serikali na Binafsi kwa Wastani wa Ufaulu");
         
         $t3aHeaders = ['NA', 'Mkoa', 'Daraja A', 'Daraja B', 'Daraja C', 'Ufaulu A-C', 'Ufaulu %', 'D-E', 'Feli %', 'Wastani /300', 'Nafasi'];
-        $t3aWidths = [8, 35, 16, 16, 16, 18, 18, 16, 18, 21, 8];
+        $t3aWidths = [6, 20, 12, 12, 12, 13, 13, 12, 13, 15, 8];
         $t3aAligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C'];
         $t3aRows = [];
         foreach ($data['table3a'] as $row) {
@@ -384,11 +446,16 @@ class PsleZonalTasidoTaarifaPdfService
         }
         $this->renderTable($pdf, $t3aHeaders, $t3aWidths, $t3aAligns, $t3bRows);
 
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $sectionHeader("Jedwali Na. 4: Ufaulu Kikanda kwa Madaraja - Shule za Serikali");
         
         $t4Headers = ['S/N', 'Mkoa', 'Idadi Shule', 'A', 'B', 'C', 'A-C JML', 'A-C %', 'D', 'E', 'D-E JML', 'D-E %', 'Wastani', 'Umahiri'];
-        $t4Widths = [8, 26, 16, 11, 11, 11, 14, 14, 11, 11, 14, 14, 15, 14];
+        $t4Widths = [6, 16, 12, 8, 8, 8, 10, 10, 8, 8, 10, 10, 12, 12];
         $t4Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C'];
         $t4Rows = [];
         foreach ($data['table4'] as $row) {
@@ -435,14 +502,19 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t5Rows);
 
         // ------------------ SECTION 4 (Table 6 & Section 3 text) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $chapterHeader("3", "HALI YA UFAULU WA HALMASHAURI KWA MADARAJA");
         $renderParagraph($data['narratives']['hali_ya_ufaulu_halmashauri']);
 
         $sectionHeader("Jedwali Na: 6: Hali ya ufaulu wa Halmashauri kwa madaraja");
         
         $t6Headers = ['S/N', 'Mkoa', 'Halmashauri', 'A', 'B', 'C', 'A-C JML', 'A-C %', 'D-E JML', 'D-E %', 'Wastani', 'Nafasi'];
-        $t6Widths = [8, 22, 32, 11, 11, 11, 15, 15, 15, 15, 17, 8];
+        $t6Widths = [6, 15, 24, 8, 8, 8, 11, 11, 11, 11, 14, 8];
         $t6Aligns = ['C', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C'];
         $t6Rows = [];
         foreach ($data['table6'] as $row) {
@@ -464,14 +536,19 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t6Headers, $t6Widths, $t6Aligns, $t6Rows);
 
         // ------------------ SECTION 5 (Table 7 & Section 4 text) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $chapterHeader("4", "HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI)");
         $renderParagraph($data['narratives']['ufaulu_halmashauri_masomo_madaraja_gov']);
 
         $sectionHeader("Jedwali Na. 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja");
         
         $t7Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'Reg', 'Fanya', 'A', 'B', 'C', 'A-C', 'A-C %', 'Wastani', 'Umahiri', 'Nafasi'];
-        $t7Widths = [8, 20, 25, 35, 10, 10, 9, 9, 9, 11, 11, 13, 12, 8];
+        $t7Widths = [6, 15, 18, 24, 8, 8, 8, 8, 8, 10, 10, 12, 10, 8];
         $t7Aligns = ['C', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C', 'C'];
         $t7Rows = [];
         foreach ($data['table7'] as $row) {
@@ -495,7 +572,12 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t7Headers, $t7Widths, $t7Aligns, $t7Rows);
 
         // ------------------ SECTION 6 (Table 8 & Section 5 text) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $chapterHeader("5", "HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (SHULE ZA SERIKALI NA BINAFSI)");
         $renderParagraph($data['narratives']['ufaulu_shule_10_bora']);
 
@@ -522,14 +604,19 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t7Headers, $t7Widths, $t7Aligns, $t8Rows);
 
         // ------------------ SECTION 7 (Table 9 & Section 6 text) ------------------
-        $pdf->addLandscapePage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addLandscapePage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $chapterHeader("6", "HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI NA BINAFSI)");
         $renderParagraph($data['narratives']['ufaulu_shule_10_duni']);
 
         $sectionHeader("Jedwali Na. 9: Msambao wa Ufaulu wa Shule Kumi Duni kwa Masomo na Madaraja Kikanda");
         
         $t9Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'Umiliki', 'ME', 'KE', 'JML', 'A', 'B', 'C', 'A-C', 'A-C %', 'D-E', 'D-E %', 'Wastani'];
-        $t9Widths = [8, 20, 20, 32, 16, 9, 9, 11, 8, 8, 8, 10, 10, 10, 10, 11];
+        $t9Widths = [10, 24, 24, 38, 18, 11, 11, 13, 10, 10, 10, 12, 12, 12, 12, 16];
         $t9Aligns = ['C', 'L', 'L', 'L', 'C', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
         $t9Rows = [];
         foreach ($data['table9'] as $row) {
@@ -555,14 +642,19 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t9Headers, $t9Widths, $t9Aligns, $t9Rows, null, true, 'bottom_schools');
 
         // ------------------ SECTION 8 (Table 10 & Section 7 text) ------------------
-        $pdf->addLandscapePage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addLandscapePage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $chapterHeader("7", "HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI)");
         $renderParagraph($data['narratives']['ufaulu_shule_10_duni_gov']);
 
         $sectionHeader("Jedwali Na. 10: Msambao wa Ufaulu wa Shule Kumi Duni za Serikali kwa Masomo na Madaraja Kikanda");
         
         $t10Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'ME', 'KE', 'JML', 'ME', 'KE', 'JML', '%', 'ME', 'KE', 'JML', '%', 'Wastani'];
-        $t10Widths = [8, 18, 18, 30, 9, 9, 10, 9, 9, 10, 10, 9, 9, 10, 10, 12];
+        $t10Widths = [10, 22, 22, 36, 11, 11, 12, 11, 11, 12, 12, 11, 11, 12, 12, 16];
         $t10Aligns = ['C', 'L', 'L', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
         $t10Rows = [];
         foreach ($data['table10'] as $row) {
@@ -596,14 +688,19 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t10Headers, $t10Widths, $t10Aligns, $t10Rows, null, true, 'bottom_gov_schools');
 
         // ------------------ SECTION 9 (Table 11 & Section 8 text) ------------------
-        $pdf->addLandscapePage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addLandscapePage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $chapterHeader("8", "HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI)");
         $renderParagraph($data['narratives']['ufaulu_masomo']);
 
         $sectionHeader("Jedwali na. 11: Msambao wa Ufaulu wa Masomo kwa Madaraja Kikanda");
         
         $t11Headers = ['Somo', 'Shule', 'Jinsi', 'Reg', 'Abs', 'Abs %', 'Fanya', 'A', 'B', 'C', 'D', 'E', 'Pass', 'Pass %', 'Wastani'];
-        $t11Widths = [28, 12, 10, 11, 10, 11, 11, 9, 9, 9, 9, 9, 12, 12, 18];
+        $t11Widths = [43, 15, 12, 13, 12, 13, 13, 11, 11, 11, 11, 11, 14, 14, 22];
         $t11Aligns = ['L', 'R', 'C', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R'];
         $t11Rows = [];
         foreach ($data['table11'] as $row) {
@@ -628,14 +725,19 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t11Headers, $t11Widths, $t11Aligns, $t11Rows);
 
         // ------------------ SECTION 10 (Table 12 & Section 9 text) ------------------
-        $pdf->addLandscapePage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addLandscapePage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $chapterHeader("9", "HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)");
         $renderParagraph($data['narratives']['ufaulu_masomo_binafsi']);
 
         $sectionHeader("Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za binafsi)");
         
         $t12Headers = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'Pass', 'Pass %', 'Fail', 'Fail %', 'Wastani', 'Umahiri'];
-        $t12Widths = [8, 32, 12, 11, 11, 11, 11, 11, 14, 14, 14, 14, 15, 12];
+        $t12Widths = [10, 40, 15, 13, 13, 13, 13, 13, 17, 17, 17, 17, 19, 16];
         $t12Aligns = ['C', 'L', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'R', 'C'];
         $t12Rows = [];
         foreach ($data['table12'] as $row) {
@@ -659,7 +761,12 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t12Headers, $t12Widths, $t12Aligns, $t12Rows);
 
         // ------------------ BULLETS & CONCLUSION ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         
         $chapterHeader("10", "MAFANIKIO");
         $renderBullets($data['narratives']['mafanikio']);
@@ -672,7 +779,12 @@ class PsleZonalTasidoTaarifaPdfService
         $chapterHeader("12", "UTATUZI WA CHANGAMOTO");
         $renderBullets($data['narratives']['utatuzi']);
 
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addPortraitPage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
         $chapterHeader("13", "MAONI NA MAPENDEKEZO");
         $renderBullets($data['narratives']['maoni_mapendekezo']);
         $pdf->Ln(5);

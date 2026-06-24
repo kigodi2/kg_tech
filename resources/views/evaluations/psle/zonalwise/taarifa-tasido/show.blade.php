@@ -226,18 +226,33 @@
 
         /* Standardized PDF Page dimensions in preview */
         .document-page {
-            background: white;
-            width: 820px;
-            min-height: 1160px;
-            height: auto;
-            padding: 50px;
+            width: 210mm;
+            min-height: 297mm;
+            box-sizing: border-box;
+            padding: 25.4mm 31.75mm 25.4mm 31.75mm;
+            background: #ffffff;
             box-shadow: 0 10px 30px rgba(15,23,42,0.12);
             border-radius: 6px;
             position: relative;
-            box-sizing: border-box;
             color: #1e293b;
             overflow: visible;
             flex-shrink: 0;
+            margin-bottom: 30px;
+        }
+
+        .document-page.landscape {
+            width: 297mm;
+            min-height: 210mm;
+            box-sizing: border-box;
+            padding: 25.4mm 31.75mm 25.4mm 31.75mm;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(15,23,42,0.12);
+            border-radius: 6px;
+            position: relative;
+            color: #1e293b;
+            overflow: visible;
+            flex-shrink: 0;
+            margin-bottom: 30px;
         }
 
         .preview-page-wrapper {
@@ -762,6 +777,15 @@
             <!-- Page 1: COVER -->
             <div class="preview-page-wrapper">
                 <section class="taarifa-cover-page">
+                    <!-- Tanzania Flag Border SVG -->
+                    <svg class="cover-flag-border" width="100%" height="100%" viewBox="0 0 210 297" preserveAspectRatio="none" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+                        <rect x="8.0" y="8.0" width="194.0" height="281.0" fill="none" stroke="rgb(30, 135, 63)" stroke-width="0.35" />
+                        <rect x="9.2" y="9.2" width="191.6" height="278.6" fill="none" stroke="rgb(252, 209, 22)" stroke-width="0.25" />
+                        <rect x="10.4" y="10.4" width="189.2" height="276.2" fill="none" stroke="rgb(0, 0, 0)" stroke-width="0.25" />
+                        <rect x="11.6" y="11.6" width="186.8" height="273.8" fill="none" stroke="rgb(252, 209, 22)" stroke-width="0.25" />
+                        <rect x="12.8" y="12.8" width="184.4" height="271.4" fill="none" stroke="rgb(0, 163, 224)" stroke-width="0.35" />
+                    </svg>
+
                     @if(!empty($emblemUrl))
                         <div class="cover-emblem">
                             <img src="{{ $emblemUrl }}" alt="Government Emblem">
@@ -1255,7 +1279,7 @@
             </div>
 
             <!-- Page 9: Shule Kumi Duni (Jedwali 9 & 10) -->
-            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+            <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
                 <div class="doc-section-title">6. HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI NA BINAFSI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_shule_10_duni'])) !!}
@@ -1383,7 +1407,7 @@
             </div>
 
             <!-- Page 10: Subjectwise Performance (Jedwali 11) -->
-            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+            <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
                 <div class="doc-section-title">8. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_masomo'])) !!}
@@ -1436,8 +1460,8 @@
                 </div>
             </div>
 
-            <!-- Page 11: Shule Binafsi na Masomo, Mafanikio & Changamoto -->
-            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+            <!-- Page 11: Shule Binafsi na Masomo (Jedwali 12) -->
+            <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
                 <div class="doc-section-title">9. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['ufaulu_masomo_binafsi'])) !!}
@@ -1486,8 +1510,11 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
 
-                <div class="doc-section-title" style="margin-top: 30px;">10. MAFANIKIO</div>
+            <!-- Page 12: Mafanikio, Changamoto & Utatuzi -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-section-title" style="margin-top: 0px;">10. MAFANIKIO</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['mafanikio'] as $item)
                         <li>{{ $item }}</li>
@@ -1516,7 +1543,7 @@
                 </ul>
             </div>
 
-            <!-- Page 12: Hitimisho & Uidhinishaji -->
+            <!-- Page 13: Hitimisho & Uidhinishaji -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
                 <div class="doc-section-title">14. HITIMISHO</div>
                 <div class="doc-paragraph">
