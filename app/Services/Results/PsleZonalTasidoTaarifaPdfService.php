@@ -576,7 +576,7 @@ class PsleZonalTasidoTaarifaPdfService
         $sectionHeader("Jedwali Na. 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja");
         
         $t7Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'Reg', 'Fanya', 'A', 'B', 'C', 'A-C', 'A-C %', 'Wastani', 'Umahiri', 'Nafasi'];
-        $t7Widths = [8, 20, 24, 38, 12, 12, 10, 10, 10, 12, 12, 12, 12, 8];
+        $t7Widths = [8, 20, 24, 56, 10, 10, 8, 8, 8, 10, 10, 10, 10, 8];
         $t7Aligns = ['C', 'L', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t7Rows = [];
         foreach ($data['table7'] as $row) {
@@ -644,16 +644,23 @@ class PsleZonalTasidoTaarifaPdfService
         $sectionHeader("Jedwali Na. 9: Msambao wa Ufaulu wa Shule Kumi Duni kwa Masomo na Madaraja Kikanda");
         
         $t9Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'Umiliki', 'ME', 'KE', 'JML', 'A', 'B', 'C', 'A-C', 'A-C %', 'D-E', 'D-E %', 'Wastani'];
-        $t9Widths = [10, 24, 24, 38, 18, 11, 11, 13, 10, 10, 10, 12, 12, 12, 12, 16];
+        $t9Widths = [10, 24, 24, 52, 18, 9, 9, 13, 8, 8, 8, 10, 12, 10, 12, 16];
         $t9Aligns = ['C', 'L', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t9Rows = [];
+        $translateOwnership = function(?string $ownership): string {
+            return match (strtoupper(trim((string)$ownership))) {
+                'GOVERNMENT' => 'SERIKALI',
+                'NON-GOVERNMENT' => 'BINAFSI',
+                default => (string)$ownership,
+            };
+        };
         foreach ($data['table9'] as $row) {
             $t9Rows[] = [
                 $row['sn'],
                 $row['region'],
                 $row['council'],
                 $row['school'],
-                $row['ownership'],
+                $translateOwnership($row['ownership']),
                 number_format($row['sat_m']),
                 number_format($row['sat_f']),
                 number_format($row['sat']),
@@ -682,7 +689,7 @@ class PsleZonalTasidoTaarifaPdfService
         $sectionHeader("Jedwali Na. 10: Msambao wa Ufaulu wa Shule Kumi Duni za Serikali kwa Masomo na Madaraja Kikanda");
         
         $t10Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'ME', 'KE', 'JML', 'ME', 'KE', 'JML', '%', 'ME', 'KE', 'JML', '%', 'Wastani'];
-        $t10Widths = [10, 22, 22, 36, 11, 11, 12, 11, 11, 12, 12, 11, 11, 12, 12, 16];
+        $t10Widths = [10, 22, 22, 48, 9, 9, 12, 9, 9, 12, 12, 9, 9, 12, 12, 16];
         $t10Aligns = ['C', 'L', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t10Rows = [];
         foreach ($data['table10'] as $row) {
@@ -905,7 +912,7 @@ class PsleZonalTasidoTaarifaPdfService
         } else {
             $pdf->SetFont($pdf->primaryFont, 'B', 8);
             foreach ($headers as $colIdx => $header) {
-                $pdf->Cell($widths[$colIdx], 6.5, $pdf->pdfText($header), 1, 0, 'C', true);
+                $pdf->Cell($widths[$colIdx], 6.5, $pdf->pdfText(mb_strtoupper($header, 'UTF-8')), 1, 0, 'C', true);
             }
             $pdf->Ln(6.5);
         }
@@ -931,7 +938,7 @@ class PsleZonalTasidoTaarifaPdfService
                     $pdf->SetFillColor(241, 245, 249);
                     $pdf->SetTextColor(15, 23, 42);
                     foreach ($headers as $colIdx => $header) {
-                        $pdf->Cell($widths[$colIdx], 6.5, $pdf->pdfText($header), 1, 0, 'C', true);
+                        $pdf->Cell($widths[$colIdx], 6.5, $pdf->pdfText(mb_strtoupper($header, 'UTF-8')), 1, 0, 'C', true);
                     }
                     $pdf->Ln(6.5);
                 }
@@ -945,6 +952,27 @@ class PsleZonalTasidoTaarifaPdfService
             foreach ($widths as $colIdx => $w) {
                 $val = $row[$colIdx] ?? '';
                 $align = $aligns[$colIdx] ?? 'C';
+
+                $headerUpper = mb_strtoupper($headers[$colIdx] ?? '', 'UTF-8');
+                if (($headerUpper === 'JINA LA SHULE' || $headerUpper === 'SHULE') && !is_numeric($val)) {
+                    // Prevent wrapping and overflow by safely truncating
+                    $valStr = (string)$val;
+                    $availWidth = $w - 2.0;
+                    if ($pdf->GetStringWidth($valStr) > $availWidth) {
+                        $ellipsis = '...';
+                        $ellipsisWidth = $pdf->GetStringWidth($ellipsis);
+                        $len = mb_strlen($valStr, 'UTF-8');
+                        while ($len > 0) {
+                            $valStr = mb_substr($valStr, 0, $len - 1, 'UTF-8');
+                            if ($pdf->GetStringWidth($valStr) + $ellipsisWidth <= $availWidth) {
+                                $val = $valStr . $ellipsis;
+                                break;
+                            }
+                            $len--;
+                        }
+                    }
+                }
+
                 $pdf->Cell($w, $rowHeight, $pdf->pdfText((string)$val), 1, 0, $align, true);
             }
             $pdf->Ln($rowHeight);
@@ -966,6 +994,26 @@ class PsleZonalTasidoTaarifaPdfService
             foreach ($widths as $colIdx => $w) {
                 $val = $totalRow[$colIdx] ?? '';
                 $align = $aligns[$colIdx] ?? 'C';
+
+                $headerUpper = mb_strtoupper($headers[$colIdx] ?? '', 'UTF-8');
+                if (($headerUpper === 'JINA LA SHULE' || $headerUpper === 'SHULE') && !is_numeric($val)) {
+                    $valStr = (string)$val;
+                    $availWidth = $w - 2.0;
+                    if ($pdf->GetStringWidth($valStr) > $availWidth) {
+                        $ellipsis = '...';
+                        $ellipsisWidth = $pdf->GetStringWidth($ellipsis);
+                        $len = mb_strlen($valStr, 'UTF-8');
+                        while ($len > 0) {
+                            $valStr = mb_substr($valStr, 0, $len - 1, 'UTF-8');
+                            if ($pdf->GetStringWidth($valStr) + $ellipsisWidth <= $availWidth) {
+                                $val = $valStr . $ellipsis;
+                                break;
+                            }
+                            $len--;
+                        }
+                    }
+                }
+
                 $pdf->Cell($w, 6.5, $pdf->pdfText((string)$val), 1, 0, $align, true);
             }
             $pdf->Ln(6.5);
@@ -989,11 +1037,11 @@ class PsleZonalTasidoTaarifaPdfService
 
         if ($type === 'attendance') {
             $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('S/N'), 1, 0, 'C', true);
-            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('Mkoa'), 1, 0, 'C', true);
-            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('Shule'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('MKOA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('SHULE'), 1, 0, 'C', true);
             $pdf->Cell($widths[3] + $widths[4] + $widths[5], $h1, $pdf->pdfText('WALIOSAJILIWA'), 1, 0, 'C', true);
             $pdf->Cell($widths[6] + $widths[7] + $widths[8], $h1, $pdf->pdfText('WALIOFANYA'), 1, 0, 'C', true);
-            $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('Mahudhurio %'), 1, 1, 'C', true);
+            $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('MAHUDHURIO %'), 1, 1, 'C', true);
 
             $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
             $pdf->Cell($widths[3], $h2, $pdf->pdfText('WAV'), 1, 0, 'C', true);
@@ -1006,11 +1054,11 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->SetXY($x, $y + $fullHeight);
         } elseif ($type === 'absenteeism') {
             $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('S/N'), 1, 0, 'C', true);
-            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('Mkoa'), 1, 0, 'C', true);
-            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('Shule'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('MKOA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('SHULE'), 1, 0, 'C', true);
             $pdf->Cell($widths[3] + $widths[4] + $widths[5], $h1, $pdf->pdfText('WALIOSAJILIWA'), 1, 0, 'C', true);
             $pdf->Cell($widths[6] + $widths[7] + $widths[8], $h1, $pdf->pdfText('WASIOFANYA'), 1, 0, 'C', true);
-            $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('Asilimia %'), 1, 1, 'C', true);
+            $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('ASILIMIA %'), 1, 1, 'C', true);
 
             $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
             $pdf->Cell($widths[3], $h2, $pdf->pdfText('WAV'), 1, 0, 'C', true);
@@ -1023,17 +1071,17 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->SetXY($x, $y + $fullHeight);
         } elseif ($type === 'bottom_schools') {
             $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('NA'), 1, 0, 'C', true);
-            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('Mkoa'), 1, 0, 'C', true);
-            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('Halmashauri'), 1, 0, 'C', true);
-            $pdf->Cell($widths[3], $fullHeight, $pdf->pdfText('Jina la Shule'), 1, 0, 'C', true);
-            $pdf->Cell($widths[4], $fullHeight, $pdf->pdfText('Umiliki'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('MKOA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('HALMASHAURI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[3], $fullHeight, $pdf->pdfText('JINA LA SHULE'), 1, 0, 'C', true);
+            $pdf->Cell($widths[4], $fullHeight, $pdf->pdfText('UMILIKI'), 1, 0, 'C', true);
             $pdf->Cell($widths[5] + $widths[6] + $widths[7], $h1, $pdf->pdfText('WALIOFANYA'), 1, 0, 'C', true);
             $pdf->Cell($widths[8], $fullHeight, $pdf->pdfText('A'), 1, 0, 'C', true);
             $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('B'), 1, 0, 'C', true);
             $pdf->Cell($widths[10], $fullHeight, $pdf->pdfText('C'), 1, 0, 'C', true);
             $pdf->Cell($widths[11] + $widths[12], $h1, $pdf->pdfText('A-C'), 1, 0, 'C', true);
             $pdf->Cell($widths[13] + $widths[14], $h1, $pdf->pdfText('D-E'), 1, 0, 'C', true);
-            $pdf->Cell($widths[15], $fullHeight, $pdf->pdfText('Wastani'), 1, 1, 'C', true);
+            $pdf->Cell($widths[15], $fullHeight, $pdf->pdfText('WASTANI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2] + $widths[3] + $widths[4], $y + $h1);
             $pdf->Cell($widths[5], $h2, $pdf->pdfText('WAV'), 1, 0, 'C', true);
@@ -1049,13 +1097,13 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->SetXY($x, $y + $fullHeight);
         } elseif ($type === 'bottom_gov_schools') {
             $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('NA'), 1, 0, 'C', true);
-            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('Mkoa'), 1, 0, 'C', true);
-            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('Halmashauri'), 1, 0, 'C', true);
-            $pdf->Cell($widths[3], $fullHeight, $pdf->pdfText('Jina la Shule'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('MKOA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('HALMASHAURI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[3], $fullHeight, $pdf->pdfText('JINA LA SHULE'), 1, 0, 'C', true);
             $pdf->Cell($widths[4] + $widths[5] + $widths[6], $h1, $pdf->pdfText('WALIOFANYA'), 1, 0, 'C', true);
             $pdf->Cell($widths[7] + $widths[8] + $widths[9] + $widths[10], $h1, $pdf->pdfText('WALIOFAULU A-C'), 1, 0, 'C', true);
             $pdf->Cell($widths[11] + $widths[12] + $widths[13] + $widths[14], $h1, $pdf->pdfText('WASIOFAULU D-E'), 1, 0, 'C', true);
-            $pdf->Cell($widths[15], $fullHeight, $pdf->pdfText('Wastani'), 1, 1, 'C', true);
+            $pdf->Cell($widths[15], $fullHeight, $pdf->pdfText('WASTANI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2] + $widths[3], $y + $h1);
             $pdf->Cell($widths[4], $h2, $pdf->pdfText('WAV'), 1, 0, 'C', true);
