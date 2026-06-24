@@ -129,6 +129,12 @@ class PsleEvaluationsController extends Controller
                 'url' => route('evaluations.psle.zonalwise.result-book'),
                 'status' => $isReady ? 'ready' : 'pending',
                 'description' => 'Tathmini ya jumla ya uendeshaji, usajili, mahudhurio, madaraja, na mchanganuo wa ufaulu kikanda.',
+            ],
+            [
+                'label' => 'TAARIFA MOCK DRS VII 2026 TASIDO',
+                'url' => route('evaluations.psle.zonalwise.taarifa-tasido'),
+                'status' => $isReady ? 'ready' : 'pending',
+                'description' => 'Ripoti rasmi ya tathmini ya mtihani wa utamilifu (Zonal Mock) darasa la saba kwa Kanda ya TASIDO.',
             ]
         ]);
 

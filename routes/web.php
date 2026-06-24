@@ -17,6 +17,7 @@ use App\Http\Controllers\PublicPsleResultsController;
 use App\Http\Controllers\PsleEvaluationsController;
 use App\Http\Controllers\PsleRegionalResultBookController;
 use App\Http\Controllers\PsleZonalResultBookController;
+use App\Http\Controllers\PsleZonalTasidoTaarifaController;
 use App\Http\Controllers\Results\AcseeResultsController;
 use App\Http\Controllers\PublicResultsController;
 use App\Http\Controllers\PublicResultsPortalController;
@@ -122,6 +123,15 @@ Route::get('/evaluations/psle/zonalwise/result-book', [PsleZonalResultBookContro
     ->name('evaluations.psle.zonalwise.result-book');
 Route::get('/evaluations/psle/zonalwise/result-book/pdf', [PsleZonalResultBookController::class, 'pdf'])
     ->name('evaluations.psle.zonalwise.result-book.pdf');
+
+// TASIDO Mock Taarifa Routes
+Route::get('/evaluations/psle/zonalwise/taarifa-tasido', [PsleZonalTasidoTaarifaController::class, 'show'])
+    ->name('evaluations.psle.zonalwise.taarifa-tasido');
+Route::post('/evaluations/psle/zonalwise/taarifa-tasido/save-settings', [PsleZonalTasidoTaarifaController::class, 'saveSettings'])
+    ->name('evaluations.psle.zonalwise.taarifa-tasido.save-settings');
+Route::get('/evaluations/psle/zonalwise/taarifa-tasido/pdf', [PsleZonalTasidoTaarifaController::class, 'pdf'])
+    ->name('evaluations.psle.zonalwise.taarifa-tasido.pdf');
+
 Route::post('/evaluations/psle/rebuild', [PsleEvaluationsController::class, 'rebuildCache'])
     ->name('evaluations.psle.rebuild');
 
