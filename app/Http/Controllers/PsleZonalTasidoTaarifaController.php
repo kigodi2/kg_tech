@@ -40,6 +40,16 @@ class PsleZonalTasidoTaarifaController extends Controller
             'prepared_by_title', 'approved_by_title'
         ]));
 
+        $emblemUrl = $this->resolveSystemEmblemUrl();
+        $emblemPath = $this->resolveSystemEmblemPath();
+
+        $overrides['emblem_path'] = $emblemPath;
+
+        $warnings = [];
+        if (!$emblemUrl || !$emblemPath) {
+            $warnings[] = 'Government/system emblem was not found. The report cover page cannot be considered complete until the official emblem path is configured.';
+        }
+
         try {
             $reportData = $this->dataService->getReportData($examYearValue, $overrides);
         } catch (\Exception $e) {
@@ -69,6 +79,8 @@ class PsleZonalTasidoTaarifaController extends Controller
             'data' => $reportData,
             'inputs' => array_merge($reportData['operational'], $overrides),
             'isAdmin' => $this->isAdminUser(),
+            'emblemUrl' => $emblemUrl,
+            'warnings' => $warnings,
         ]);
     }
 
@@ -128,6 +140,9 @@ class PsleZonalTasidoTaarifaController extends Controller
             'exam_start_date', 'exam_end_date', 'collaborating_regions',
             'prepared_by_title', 'approved_by_title'
         ]));
+
+        $emblemPath = $this->resolveSystemEmblemPath();
+        $overrides['emblem_path'] = $emblemPath;
 
         try {
             $reportData = $this->dataService->getReportData($examYearValue, $overrides);
@@ -206,5 +221,43 @@ class PsleZonalTasidoTaarifaController extends Controller
         }
 
         return $hasAdminAccess;
+    }
+
+    private function resolveSystemEmblemUrl(): ?string
+    {
+        $candidates = [
+            'images/emblem.png',
+            'images/tanzania-emblem.png',
+            'assets/images/emblem.png',
+            'assets/img/emblem.png',
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (file_exists(public_path($candidate))) {
+                return asset($candidate);
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveSystemEmblemPath(): ?string
+    {
+        $candidates = [
+            'images/emblem.png',
+            'images/tanzania-emblem.png',
+            'assets/images/emblem.png',
+            'assets/img/emblem.png',
+        ];
+
+        foreach ($candidates as $candidate) {
+            $path = public_path($candidate);
+
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mipangilio ya Taarifa Mock TASIDO 2026</title>
+    <title>TAARIFA MOCK DRS VII 2026 TASIDO - SETTINGS</title>
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -212,7 +212,7 @@
 <div class="container">
     <div class="glass-panel">
         <div class="panel-header">
-            <h1>⚙️ Mipangilio ya Taarifa ya TASIDO Mock 2026</h1>
+            <h1>⚙️ TAARIFA MOCK DRS VII 2026 TASIDO - SETTINGS</h1>
             <p>Hariri mipangilio na vigezo vya kuzalisha ripoti ya kitaifa ya darasa la saba TASIDO</p>
         </div>
         
@@ -257,10 +257,10 @@
                 <div class="form-group">
                     <label for="font_family">Font Family</label>
                     <select id="font_family" name="font_family" class="form-control">
-                        <option value="Helvetica" {{ ($settings['font_family'] ?? 'Helvetica') === 'Helvetica' ? 'selected' : '' }}>Helvetica</option>
-                        <option value="Arial" {{ ($settings['font_family'] ?? '') === 'Arial' ? 'selected' : '' }}>Arial</option>
-                        <option value="Times" {{ ($settings['font_family'] ?? '') === 'Times' ? 'selected' : '' }}>Times New Roman</option>
-                        <option value="Courier" {{ ($settings['font_family'] ?? '') === 'Courier' ? 'selected' : '' }}>Courier</option>
+                        <option value="default" {{ ($settings['font_family'] ?? 'default') === 'default' ? 'selected' : '' }}>Default</option>
+                        <option value="times new roman" {{ ($settings['font_family'] ?? '') === 'times new roman' ? 'selected' : '' }}>Times New Roman</option>
+                        <option value="arial narrow" {{ ($settings['font_family'] ?? '') === 'arial narrow' ? 'selected' : '' }}>Arial Narrow</option>
+                        <option value="maiandra gd" {{ ($settings['font_family'] ?? '') === 'maiandra gd' ? 'selected' : '' }}>Maiandra GD</option>
                     </select>
                 </div>
                 <div class="form-group">

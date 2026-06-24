@@ -85,6 +85,7 @@ class TasidoMockTaarifaDataService
             'exam_year' => $examYear,
             'snapshot_id' => $snapshotId,
             'councils_count' => $councilsCount,
+            'emblem_path' => $overrides['emblem_path'] ?? null,
         ];
 
         // 2. Operational parameters (defaults for the narratives)
@@ -1091,7 +1092,7 @@ class TasidoMockTaarifaDataService
         $failRate = number_format(100 - (float) $passRate, 2);
 
         // 1. UTANGULIZI & TAARIFA ZA WATAHINIWA
-        $intro = "Mtihani wa Utamilifu (Mock) kanda ya TASIDO ulifanyika tarehe {$meta['exam_dates']}. Mtihani huo uliandaliwa kwa kuzingatia muundo mpya wa utunzi uliotolewa na Baraza la mitihani la Tanzania toleo la April 2024. Mtihani uliendeshwa kwa kufuata taratibu za mitihani na kusambazwa katika Mikoa sita na Halmashauri zote {$profile['councils_count']} na kupokelewa na Maafisa Elimu wa Halmashauri. Ufanyikaji wa Mtihani katika Kanda ya TASIDO ulihusisha jumla ya shule za Msingi {$totalSchools}, kati ya shule hizo, shule {$govSchools} ni za serikali na {$privSchools} siyo za Serikali. Mtihani ulihusisha Mikoa minne ya Kanda ya TASIDO ambayo ni Tabora, Singida, Iringa na Dodoma.";
+        $intro = "Mtihani wa Utamilifu (Mock) kanda ya TASIDO ulifanyika tarehe {$meta['exam_dates']}. Mtihani huo uliandaliwa kwa kuzingatia muundo mpya wa utunzi uliotolewa na Baraza la mitihani la Tanzania toleo la April 2024. Mtihani uliendeshwa kwa kufuata taratibu za mitihani na kusambazwa katika Mikoa minne na Halmashauri zote {$profile['councils_count']} na kupokelewa na Maafisa Elimu wa Halmashauri. Ufanyikaji wa Mtihani katika Kanda ya TASIDO ulihusisha jumla ya shule za Msingi {$totalSchools}, kati ya shule hizo, shule {$govSchools} ni za serikali na {$privSchools} siyo za Serikali. Mtihani ulihusisha Mikoa minne ya Kanda ya TASIDO ambayo ni Tabora, Singida, Iringa na Dodoma.";
         
         $taarifa_za_watahiniwa = "Jumla ya wanafunzi waliosajiliwa kufanya mtihani ni {$registered} (Wav {$registeredM} na Was {$registeredF}). Wanafunzi waliofanya mtihani ni {$satTotal} kati yao Wav {$satM} na Was {$satF} sawa na asilimia {$attendanceRate}% ya wanafunzi waliosajiliwa kufanya mtihani huo. Aidha, wanafunzi {$absTotal} sawa na asilimia {$absenceRate}% ya wanafunzi wote waliosajiliwa kufanya Mtihani huo hawakufanya kutokana na sababu mbali mbali zikiwemo Utoro, Vifo na Ugonjwa. Jedwali namba 1 na 2 linaonesha";
 

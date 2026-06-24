@@ -15,6 +15,7 @@ class PsleZonalTasidoTaarifaPdfService
 
         $pdf = new class('P', 'mm', 'A4') extends \FPDF {
             public bool $isCoverPage = true;
+            public bool $suppressHeaderFooter = false;
             public string $zoneName = 'TASIDO';
             public int $examYear = 2026;
             public string $primaryFont = 'Helvetica';
@@ -35,7 +36,11 @@ class PsleZonalTasidoTaarifaPdfService
                 $fontSetting = strtolower(trim($fontFamily));
                 if ($fontSetting === 'times new roman') {
                     $this->primaryFont = 'Times';
-                } elseif ($fontSetting === 'poppins' && $poppinsLoaded) {
+                } elseif ($fontSetting === 'arial narrow') {
+                    $this->primaryFont = 'Helvetica';
+                } elseif ($fontSetting === 'maiandra gd') {
+                    $this->primaryFont = 'Helvetica';
+                } elseif (($fontSetting === 'default' || $fontSetting === 'poppins') && $poppinsLoaded) {
                     $this->primaryFont = 'Poppins';
                 } else {
                     $this->primaryFont = 'Helvetica'; // default fallback
@@ -62,6 +67,9 @@ class PsleZonalTasidoTaarifaPdfService
 
             public function Header(): void
             {
+                if ($this->suppressHeaderFooter) {
+                    return;
+                }
                 if ($this->isCoverPage) {
                     return;
                 }
@@ -77,6 +85,9 @@ class PsleZonalTasidoTaarifaPdfService
 
             public function Footer(): void
             {
+                if ($this->suppressHeaderFooter) {
+                    return;
+                }
                 if ($this->isCoverPage) {
                     return;
                 }
@@ -105,6 +116,79 @@ class PsleZonalTasidoTaarifaPdfService
                 $this->SetAutoPageBreak(true, $marginBottom);
             }
 
+            public function addCoverPage(array $settings): void
+            {
+                $this->suppressHeaderFooter = true;
+
+                $this->AddPage('P', 'A4');
+                $this->SetAutoPageBreak(false);
+
+                $emblemPath = $settings['emblem_path'] ?? null;
+
+                if ($emblemPath && file_exists($emblemPath)) {
+                    $emblemWidth = 28;
+                    $x = (210 - $emblemWidth) / 2;
+                    $this->Image($emblemPath, $x, 32, $emblemWidth);
+                } else {
+                    $this->SetTextColor(185, 28, 28);
+                    $this->SetFont($this->primaryFont, 'B', 8);
+                    $this->SetXY(20, 32);
+                    $this->Cell(170, 5, $this->pdfText('GOVERNMENT EMBLEM NOT CONFIGURED'), 0, 0, 'C');
+                    $this->SetTextColor(0, 0, 0);
+                }
+
+                $this->SetTextColor(0, 0, 0);
+                $this->SetFont($this->primaryFont, 'B', 11);
+                $this->SetXY(20, 70);
+                $this->MultiCell(
+                    170,
+                    5,
+                    $this->pdfText("JAMHURI YA MUUNGANO WA TANZANIA\nOFISI YA WAZIRI MKUU\nTAWALA ZA MIKOA NA SERIKALI ZA MITAA"),
+                    0,
+                    'C'
+                );
+
+                $this->SetDrawColor(31, 95, 209);
+                $this->SetLineWidth(0.2);
+                $this->Line(30, 127, 180, 127);
+
+                $this->SetTextColor(0, 0, 0);
+                $this->SetFont($this->primaryFont, 'B', 11);
+                $this->SetXY(25, 143);
+                $this->MultiCell(
+                    160,
+                    5,
+                    $this->pdfText("TAARIFA YA MTIHANI WA UTAMILIFU DARASA LA SABA\nMWAKA 2026 TASIDO"),
+                    0,
+                    'C'
+                );
+
+                $this->SetXY(25, 164);
+                $this->MultiCell(
+                    160,
+                    5,
+                    $this->pdfText("(TABORA, SINGIDA, IRINGA NA DODOMA)"),
+                    0,
+                    'C'
+                );
+
+                $this->SetFont($this->primaryFont, 'B', 9);
+                $this->SetXY(32, 252);
+                $this->MultiCell(
+                    70,
+                    4,
+                    $this->pdfText("SEKRETARIETI YA KANDA,\nTASIDO\nDODOMA"),
+                    0,
+                    'L'
+                );
+
+                $this->SetXY(125, 252);
+                $this->Cell(55, 4, $this->pdfText("JUNI, 2026"), 0, 0, 'R');
+
+                $this->SetAutoPageBreak(true, 15);
+                $this->suppressHeaderFooter = false;
+            }
+
             public function getLMargin(): float { return $this->lMargin; }
             public function getRMargin(): float { return $this->rMargin; }
             public function getBMargin(): float { return $this->bMargin; }
@@ -121,140 +205,11 @@ class PsleZonalTasidoTaarifaPdfService
         $pdf->initReport($data['meta']['font_family']);
         $pdf->AliasNbPages();
         
-        // Custom margins from settings
-        $pdf->addPortraitPage(
-            $data['meta']['margin_top'],
-            $data['meta']['margin_bottom'],
-            $data['meta']['margin_left'],
-            $data['meta']['margin_right']
-        );
-
         // ------------------ COVER PAGE ------------------
-        // Draw top aesthetic colored band
-        $pdf->SetFillColor(8, 39, 109);
-        $pdf->Rect(0, 0, 210, 15, 'F');
+        $pdf->addCoverPage($data['meta']);
 
-        $pdf->SetY(25);
-        $pdf->SetTextColor(8, 39, 109);
-        $pdf->SetFont($pdf->primaryFont, 'B', 12);
-        
-        // Office Heading
-        $pdf->MultiCell(0, 6, $pdf->pdfText($data['meta']['office_heading']), 0, 'C');
-        $pdf->Ln(2);
-        $pdf->SetFont($pdf->primaryFont, 'B', 11);
-        $pdf->Cell(0, 6, $pdf->pdfText("ACADEMIC ZONE: " . strtoupper($data['meta']['subtitle'])), 0, 1, 'C');
-        $pdf->Ln(8);
 
-        // Government Emblem
-        if ($data['meta']['show_logo']) {
-            $emblem = public_path('images/emblem.png');
-            if (is_file($emblem)) {
-                $pdf->Image($emblem, (210 - 32) / 2, $pdf->GetY(), 32, 32);
-                $pdf->Ln(38);
-            } else {
-                $pdf->Ln(20);
-            }
-        } else {
-            $pdf->Ln(20);
-        }
 
-        // Titles
-        $pdf->SetFont($pdf->primaryFont, 'B', 15);
-        $pdf->MultiCell(0, 7, $pdf->pdfText($data['meta']['cover_title']), 0, 'C');
-        $pdf->Ln(10);
-
-        // Draw operational info block at the bottom
-        $pdf->SetY(190);
-        $pdf->SetDrawColor(8, 39, 109);
-        $pdf->SetLineWidth(0.5);
-        $pdf->Line(20, $pdf->GetY(), 190, $pdf->GetY());
-        $pdf->Ln(4);
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 9);
-        $pdf->SetX(20);
-        $pdf->Cell(60, 5, $pdf->pdfText("Kanda ya Taaluma:"), 0, 0);
-        $pdf->SetFont($pdf->primaryFont, '', 9);
-        $pdf->Cell(0, 5, $pdf->pdfText($pdf->zoneName), 0, 1);
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 9);
-        $pdf->SetX(20);
-        $pdf->Cell(60, 5, $pdf->pdfText("Mratibu wa Kanda (REO):"), 0, 0);
-        $pdf->SetFont($pdf->primaryFont, '', 9);
-        $pdf->Cell(0, 5, $pdf->pdfText($data['operational']['reo_name']), 0, 1);
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 9);
-        $pdf->SetX(20);
-        $pdf->Cell(60, 5, $pdf->pdfText("Mratibu Taaluma Kanda (RTO):"), 0, 0);
-        $pdf->SetFont($pdf->primaryFont, '', 9);
-        $pdf->Cell(0, 5, $pdf->pdfText($data['operational']['rto_name']), 0, 1);
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 9);
-        $pdf->SetX(20);
-        $pdf->Cell(60, 5, $pdf->pdfText("Kituo cha Usahihishaji:"), 0, 0);
-        $pdf->SetFont($pdf->primaryFont, '', 9);
-        $pdf->Cell(0, 5, $pdf->pdfText($data['operational']['marking_center']), 0, 1);
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 9);
-        $pdf->SetX(20);
-        $pdf->Cell(60, 5, $pdf->pdfText("Tarehe za Mtihani:"), 0, 0);
-        $pdf->SetFont($pdf->primaryFont, '', 9);
-        $pdf->Cell(0, 5, $pdf->pdfText($data['meta']['exam_dates']), 0, 1);
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 9);
-        $pdf->SetX(20);
-        $pdf->Cell(60, 5, $pdf->pdfText("Mahali / Mahudhurio:"), 0, 0);
-        $pdf->SetFont($pdf->primaryFont, '', 9);
-        $pdf->Cell(0, 5, $pdf->pdfText(str_replace("\n", " ", $data['meta']['secretariat'])), 0, 1);
-
-        $pdf->Line(20, $pdf->GetY() + 4, 190, $pdf->GetY() + 4);
-
-        // ------------------ TABLE OF CONTENTS ------------------
-        $pdf->isCoverPage = false;
-        $pdf->addPortraitPage(
-            $data['meta']['margin_top'],
-            $data['meta']['margin_bottom'],
-            10,
-            10
-        );
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 14);
-        $pdf->SetTextColor(15, 23, 42);
-        $pdf->Cell(0, 10, $pdf->pdfText("YALIYOMO (TABLE OF CONTENTS)"), 0, 1, 'C');
-        $pdf->Ln(5);
-
-        $tocItems = [
-            "1. UTANGULIZI NA TAARIFA ZA WATAHINIWA (Jedwali Na. 1 na 2)",
-            "2. UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA (Jedwali Na. 3a, 3b, 4 na 5)",
-            "3. HALI YA UFAULU WA HALMASHAURI KWA MADARAJA (Jedwali Na. 6)",
-            "4. HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI) (Jedwali Na. 7)",
-            "5. HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (Jedwali Na. 8)",
-            "6. HALI YA UFAULU KWA SHULE KUMI DUNI (Jedwali Na. 9)",
-            "7. HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI) (Jedwali Na. 10)",
-            "8. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI) (Jedwali Na. 11)",
-            "9. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI) (Jedwali Na. 12)",
-            "10. MAFANIKIO",
-            "11. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI",
-            "12. UTATUZI WA CHANGAMOTO",
-            "13. MAONI NA MAPENDEKEZO",
-            "14. HITIMISHO",
-            "15. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)"
-        ];
-
-        $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
-        foreach ($tocItems as $item) {
-            $pdf->SetTextColor(15, 23, 42);
-            $pdf->Cell(140, 7.0, $pdf->pdfText($item), 0, 0, 'L');
-            $pdf->SetTextColor(100, 116, 139);
-            $pdf->SetFont($pdf->primaryFont, 'I', 8.5);
-            $pdf->Cell(0, 7.0, $pdf->pdfText("Ukurasa wa Ripoti"), 0, 1, 'R');
-            $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
-
-            $currY = $pdf->GetY();
-            $pdf->SetDrawColor(226, 232, 240);
-            $pdf->SetLineWidth(0.2);
-            $pdf->Line(10, $currY, 200, $currY);
-        }
-        $pdf->Ln(10);
 
         // Helper closures for formatting chapters
         $chapterHeader = function(string $num, string $title) use ($pdf) {
@@ -293,9 +248,19 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Ln(2);
         };
 
-        // ------------------ SECTION 1 ------------------
+        // ------------------ SECTION 1 (PAGE 2) ------------------
+        $pdf->isCoverPage = false;
         $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
-        $chapterHeader("1", "UTANGULIZI NA TAARIFA ZA WATAHINIWA");
+
+        // Report body heading on Page 2
+        $pdf->SetTextColor(0, 0, 0);
+        $pdf->SetFont($pdf->primaryFont, 'B', 11);
+        $pdf->MultiCell(0, 6, $pdf->pdfText("TAARIFA YA TATHIMINI YA MATOKEO YA MTIHANI WA MOCK DARASA LA VII MWAKA 2026 TASIDO"), 0, 'C');
+        $pdf->Ln(6);
+        
+        $pdf->SetFont($pdf->primaryFont, 'B', 10);
+        $pdf->Cell(0, 6, $pdf->pdfText("1.0. UTANGULIZI."), 0, 1, 'L');
+        $pdf->Ln(2);
         $renderParagraph($data['narratives']['introduction']);
         $renderParagraph($data['narratives']['taarifa_za_watahiniwa']);
         
@@ -557,7 +522,7 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t7Headers, $t7Widths, $t7Aligns, $t8Rows);
 
         // ------------------ SECTION 7 (Table 9 & Section 6 text) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addLandscapePage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
         $chapterHeader("6", "HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI NA BINAFSI)");
         $renderParagraph($data['narratives']['ufaulu_shule_10_duni']);
 
@@ -590,7 +555,7 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t9Headers, $t9Widths, $t9Aligns, $t9Rows, null, true, 'bottom_schools');
 
         // ------------------ SECTION 8 (Table 10 & Section 7 text) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addLandscapePage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
         $chapterHeader("7", "HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI)");
         $renderParagraph($data['narratives']['ufaulu_shule_10_duni_gov']);
 
@@ -631,7 +596,7 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t10Headers, $t10Widths, $t10Aligns, $t10Rows, null, true, 'bottom_gov_schools');
 
         // ------------------ SECTION 9 (Table 11 & Section 8 text) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addLandscapePage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
         $chapterHeader("8", "HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI)");
         $renderParagraph($data['narratives']['ufaulu_masomo']);
 
@@ -663,7 +628,7 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable($pdf, $t11Headers, $t11Widths, $t11Aligns, $t11Rows);
 
         // ------------------ SECTION 10 (Table 12 & Section 9 text) ------------------
-        $pdf->addPortraitPage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
+        $pdf->addLandscapePage($data['meta']['margin_top'], $data['meta']['margin_bottom'], 10, 10);
         $chapterHeader("9", "HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)");
         $renderParagraph($data['narratives']['ufaulu_masomo_binafsi']);
 

@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.cdnfonts.com/css/maiandra-gd" rel="stylesheet">
     
     <style>
         :root {
@@ -239,103 +240,123 @@
             flex-shrink: 0;
         }
 
-        .cover-page {
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            align-items: center;
+        .preview-page-wrapper {
+            width: 210mm;
+            height: 297mm;
+            background: #ffffff;
+            box-shadow: 0 10px 30px rgba(15,23,42,0.12);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+        }
+
+        .taarifa-cover-page {
+            position: relative;
+            width: 210mm;
+            height: 297mm;
+            background: #ffffff;
+            color: #000000;
+            font-family: var(--taarifa-font, 'Times New Roman', Times, serif);
+            page-break-after: always;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .cover-emblem {
+            position: absolute;
+            top: 32mm;
+            left: 0;
+            right: 0;
             text-align: center;
-            font-family: 'Times New Roman', Times, serif;
         }
 
-        .cover-header {
-            width: 100%;
-            margin-top: 10px;
+        .cover-emblem img {
+            width: 28mm;
+            height: auto;
         }
 
-        .cover-header h1 {
-            font-size: 1.35rem;
-            font-weight: 800;
-            color: #000;
-            letter-spacing: 0.5px;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-        }
-
-        .cover-header h2 {
-            font-size: 0.95rem;
+        .cover-emblem-missing {
+            position: absolute;
+            top: 32mm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
             font-weight: 700;
-            color: #111;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            margin-top: 4px;
-            line-height: 1.4;
+            color: #b91c1c;
         }
 
-        .emblem-img {
-            height: 130px;
-            margin: 40px auto;
-            display: block;
-        }
-
-        .cover-title {
-            margin: 30px 0;
-            width: 100%;
-        }
-
-        .cover-title h3 {
-            font-size: 2.1rem;
-            font-weight: 800;
-            color: #000;
-            letter-spacing: 1px;
-            line-height: 1.3;
-            text-transform: uppercase;
-        }
-
-        .cover-title h4 {
-            font-size: 1.15rem;
+        .cover-government-heading {
+            position: absolute;
+            top: 70mm;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 11pt;
             font-weight: 700;
-            color: #334155;
+            line-height: 1.25;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 10px;
-            margin-bottom: 25px;
+            color: #000000;
         }
 
-        .cover-title p {
-            font-size: 1.25rem;
+        .cover-blue-line {
+            position: absolute;
+            top: 127mm;
+            left: 30mm;
+            right: 30mm;
+            border-top: 1px solid #1f5fd1;
+        }
+
+        .cover-report-title {
+            position: absolute;
+            top: 143mm;
+            left: 25mm;
+            right: 25mm;
+            text-align: center;
+            font-size: 11pt;
             font-weight: 700;
-            color: #334155;
-            line-height: 1.5;
+            line-height: 1.25;
             text-transform: uppercase;
+            color: #000000;
         }
 
-        .cover-footer {
-            border-top: 2px solid #000;
-            padding-top: 24px;
-            margin-top: 40px;
+        .cover-subtitle {
+            position: absolute;
+            top: 164mm;
+            left: 25mm;
+            right: 25mm;
+            text-align: center;
+            font-size: 11pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #000000;
+        }
+
+        .cover-footer-left {
+            position: absolute;
+            left: 32mm;
+            bottom: 45mm;
+            font-size: 9pt;
+            font-weight: 700;
+            line-height: 1.25;
+            text-transform: uppercase;
+            color: #000000;
             text-align: left;
-            max-width: 580px;
-            margin-left: auto;
-            margin-right: auto;
-            width: 100%;
         }
 
-        .cover-footer table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .cover-footer table td {
-            padding: 6px 0;
-            font-size: 0.95rem;
-            color: #000;
-        }
-
-        .cover-footer table td.label {
+        .cover-footer-right {
+            position: absolute;
+            right: 35mm;
+            bottom: 45mm;
+            font-size: 9pt;
             font-weight: 700;
-            width: 260px;
+            text-transform: uppercase;
+            color: #000000;
+            text-align: right;
         }
+
 
         /* Document Typography */
         .doc-section-title {
@@ -595,10 +616,10 @@
                 <div class="form-group">
                     <label for="font_family">Font Family</label>
                     <select id="font_family" name="font_family" class="form-control">
-                        <option value="Helvetica" {{ ($inputs['font_family'] ?? 'Helvetica') === 'Helvetica' ? 'selected' : '' }}>Helvetica</option>
-                        <option value="Arial" {{ ($inputs['font_family'] ?? '') === 'Arial' ? 'selected' : '' }}>Arial</option>
-                        <option value="Times" {{ ($inputs['font_family'] ?? '') === 'Times' ? 'selected' : '' }}>Times New Roman</option>
-                        <option value="Courier" {{ ($inputs['font_family'] ?? '') === 'Courier' ? 'selected' : '' }}>Courier</option>
+                        <option value="default" {{ ($inputs['font_family'] ?? 'default') === 'default' ? 'selected' : '' }}>Default</option>
+                        <option value="times new roman" {{ ($inputs['font_family'] ?? '') === 'times new roman' ? 'selected' : '' }}>Times New Roman</option>
+                        <option value="arial narrow" {{ ($inputs['font_family'] ?? '') === 'arial narrow' ? 'selected' : '' }}>Arial Narrow</option>
+                        <option value="maiandra gd" {{ ($inputs['font_family'] ?? '') === 'maiandra gd' ? 'selected' : '' }}>Maiandra GD</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -725,93 +746,74 @@
         </div>
         
         <div class="preview-body" id="preview-container">
+            @if(!empty($warnings))
+                <div style="width: 210mm; margin: 0 auto 20px auto; padding: 15px 20px; background-color: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; color: #991b1b; font-family: 'Outfit', sans-serif; box-sizing: border-box; font-size: 0.9rem;">
+                    <h4 style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                        <span>⚠️</span> Taarifa Muhimu (Important Notices / Readiness Warning)
+                    </h4>
+                    <ul style="margin: 0; padding-left: 20px; line-height: 1.5;">
+                        @foreach($warnings as $warning)
+                            <li>{{ $warning }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             
             <!-- Page 1: COVER -->
-            <div class="document-page cover-page">
-                <div class="cover-header">
-                    <h1 class="preview-office_heading">{{ $inputs['office_heading'] ?? '' }}</h1>
-                    <h2 class="preview-subtitle">{{ $inputs['subtitle'] ?? '' }}</h2>
-                    
-                    @if(file_exists(public_path('images/emblem.png')))
-                        <img src="{{ asset('images/emblem.png') }}" class="emblem-img" id="preview-logo-img" alt="Coat of Arms">
-                    @else
-                        <div id="preview-logo-placeholder" style="height: 120px; display:flex; align-items:center; justify-content:center; border:2px dashed #cbd5e1; margin: 30px auto; max-width:120px; border-radius:50%; font-size:0.75rem; color:#94a3b8;">Emblem</div>
-                    @endif
-                </div>
-                
-                <div class="cover-title">
-                    <h3 class="preview-cover_title">{{ $inputs['cover_title'] ?? '' }}</h3>
-                    <h4>(TASIDO ACADEMIC ZONE)</h4>
-                    <p>TAARIFA YA TATHMINI YA MTIHANI WA UTAMILIFU WA DARASA LA SABA</p>
-                    <p style="margin-top: 10px; font-size: 1.4rem;">JUNI, 2026</p>
-                </div>
-                
-                <div class="cover-footer">
-                    <table>
-                        <tr>
-                            <td class="label">Kanda ya Taaluma:</td>
-                            <td>TASIDO Academic Zone</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Afisa Elimu Mkoa (REO):</td>
-                            <td class="preview-reo_name">{{ $inputs['reo_name'] ?? '' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Afisa Taaluma Mkoa (RTO):</td>
-                            <td class="preview-rto_name">{{ $inputs['rto_name'] ?? '' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Kituo cha Usahihishaji:</td>
-                            <td class="preview-marking_center">{{ $inputs['marking_center'] ?? '' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Mkoa wa Moderation:</td>
-                            <td class="preview-moderation_region">{{ $inputs['moderation_region'] ?? '' }}</td>
-                        </tr>
-                        <tr>
-                            <td class="label">Tarehe ya Mtihani:</td>
-                            <td class="preview-exam_dates">{{ $inputs['exam_dates'] ?? '' }}</td>
-                        </tr>
-                    </table>
-                </div>
-                <!-- Page 2: Table of Contents -->
-            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h2 style="font-size: 1.5rem; font-weight: 800; color: #000; text-transform: uppercase;">YALIYOMO (TABLE OF CONTENTS)</h2>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
-                    @php
-                        $tocItems = [
-                            "1. UTANGULIZI NA TAARIFA ZA WATAHINIWA (Jedwali Na. 1 na 2)",
-                            "2. UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA (Jedwali Na. 3a, 3b, 4 na 5)",
-                            "3. HALI YA UFAULU WA HALMASHAURI KWA MADARAJA (Jedwali Na. 6)",
-                            "4. HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI) (Jedwali Na. 7)",
-                            "5. HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (Jedwali Na. 8)",
-                            "6. HALI YA UFAULU KWA SHULE KUMI DUNI (Jedwali Na. 9)",
-                            "7. HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI) (Jedwali Na. 10)",
-                            "8. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI) (Jedwali Na. 11)",
-                            "9. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI) (Jedwali Na. 12)",
-                            "10. MAFANIKIO",
-                            "11. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI",
-                            "12. UTATUZI WA CHANGAMOTO",
-                            "13. MAONI NA MAPENDEKEZO",
-                            "14. HITIMISHO",
-                            "15. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)"
-                        ];
-                    @endphp
-                    @foreach($tocItems as $item)
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 0.95rem; color: #000; padding: 4px 0; border-bottom: 1px dashed #94a3b8;">
-                            <span style="font-weight: 700;">{{ $item }}</span>
-                            <span style="font-size: 0.85rem; color: #475569; font-style: italic;">Ukurasa wa Ripoti</span>
+            <div class="preview-page-wrapper">
+                <section class="taarifa-cover-page">
+                    @if(!empty($emblemUrl))
+                        <div class="cover-emblem">
+                            <img src="{{ $emblemUrl }}" alt="Government Emblem">
                         </div>
-                    @endforeach
-                </div>
+                    @else
+                        <div class="cover-emblem-missing">
+                            GOVERNMENT EMBLEM NOT CONFIGURED
+                        </div>
+                    @endif
+
+                    <div class="cover-government-heading">
+                        <div>JAMHURI YA MUUNGANO WA TANZANIA</div>
+                        <div>OFISI YA WAZIRI MKUU</div>
+                        <div>TAWALA ZA MIKOA NA SERIKALI ZA MITAA</div>
+                    </div>
+
+                    <div class="cover-blue-line"></div>
+
+                    <div class="cover-report-title">
+                        <div>TAARIFA YA MTIHANI WA UTAMILIFU DARASA LA SABA</div>
+                        <div>MWAKA 2026 TASIDO</div>
+                    </div>
+
+                    <div class="cover-subtitle">
+                        (TABORA, SINGIDA, IRINGA NA DODOMA)
+                    </div>
+
+                    <div class="cover-footer-left">
+                        <div>SEKRETARIETI YA KANDA,</div>
+                        <div>TASIDO</div>
+                        <div>DODOMA</div>
+                    </div>
+
+                    <div class="cover-footer-right">
+                        JUNI, 2026
+                    </div>
+                </section>
             </div>
+
+
+                
+
+                <!-- Page 2: Table of Contents -->
+
             
-            <!-- Page 3: Utangulizi & Taarifa za Watahiniwa -->
+            <!-- Page 2: Utangulizi & Taarifa za Watahiniwa -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title">1. UTANGULIZI NA TAARIFA ZA WATAHINIWA</div>
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <h2 style="font-size: 1.15rem; font-weight: 800; color: #000; text-transform: uppercase; line-height: 1.4; margin: 0;">TAARIFA YA TATHIMINI YA MATOKEO YA MTIHANI WA MOCK DARASA LA VII MWAKA 2026 TASIDO</h2>
+                </div>
+                
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">1.0. UTANGULIZI.</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['introduction'])) !!}
                 </div>
@@ -1597,13 +1599,13 @@
         if (fontFamilySelect) {
             fontFamilySelect.addEventListener('change', function() {
                 const pages = document.querySelectorAll('.document-page');
-                let fontCss = 'Times New Roman, Times, serif';
-                if (this.value === 'Helvetica') {
-                    fontCss = 'Helvetica, Arial, sans-serif';
-                } else if (this.value === 'Arial') {
-                    fontCss = 'Arial, sans-serif';
-                } else if (this.value === 'Courier') {
-                    fontCss = 'Courier New, Courier, monospace';
+                let fontCss = 'inherit';
+                if (this.value === 'times new roman') {
+                    fontCss = 'Times New Roman, Times, serif';
+                } else if (this.value === 'arial narrow') {
+                    fontCss = 'Arial Narrow, Arial, sans-serif';
+                } else if (this.value === 'maiandra gd') {
+                    fontCss = 'Maiandra GD, sans-serif';
                 }
                 
                 pages.forEach(p => {
