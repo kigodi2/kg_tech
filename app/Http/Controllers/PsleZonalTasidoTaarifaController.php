@@ -74,8 +74,18 @@ class PsleZonalTasidoTaarifaController extends Controller
     {
         $examYearValue = $this->activeYear();
         
-        // Ensure admin or authorized user
-        abort_unless($this->isAdminUser(), 403, 'Unauthorized');
+        if (!auth()->check()) {
+            abort(403, 'Auth Check Failed: Not Logged In. Please make sure you are logged in to the system.');
+        }
+
+        $user = auth()->user();
+        $isAdmin = (bool) $user->is_admin
+            || (method_exists($user, 'isAdmin') && $user->isAdmin())
+            || in_array(strtolower($user->email ?? ''), ['aggreykigodi@gmail.com', 'agreykigodi@gmail.com'], true);
+
+        if (!$isAdmin) {
+            abort(403, 'Auth Check Failed: Logged in as "' . $user->email . '" but this account is not recognized as an administrator.');
+        }
 
         $settings = $request->only([
             'report_title', 'cover_title', 'subtitle', 'office_heading',
