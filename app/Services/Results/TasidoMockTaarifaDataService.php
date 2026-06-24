@@ -802,26 +802,25 @@ class TasidoMockTaarifaDataService
         $totalSat = 0; $totalPass = 0;
         $gradeDistribution = [];
 
-        $fRow = collect($general['rows'] ?? [])->first(fn($r) => strtoupper($r['gender'] ?? $r['council'] ?? '') === 'FEMALE');
-        $mRow = collect($general['rows'] ?? [])->first(fn($r) => strtoupper($r['gender'] ?? $r['council'] ?? '') === 'MALE');
+        $totalRow = $general['total'] ?? null;
 
         $femaleData = [
-            'a' => (int) ($fRow['grades']['a']['t'] ?? 0),
-            'b' => (int) ($fRow['grades']['b']['t'] ?? 0),
-            'c' => (int) ($fRow['grades']['c']['t'] ?? 0),
-            'd' => (int) ($fRow['grades']['d']['t'] ?? 0),
-            'e' => (int) ($fRow['grades']['e']['t'] ?? 0),
-            'sat' => (int) ($fRow['sat']['t'] ?? 0),
-            'pass' => (int) ($fRow['pass_ad']['t'] ?? 0),
+            'a' => (int) ($totalRow['grades']['a']['f'] ?? 0),
+            'b' => (int) ($totalRow['grades']['b']['f'] ?? 0),
+            'c' => (int) ($totalRow['grades']['c']['f'] ?? 0),
+            'd' => (int) ($totalRow['grades']['d']['f'] ?? 0),
+            'e' => (int) ($totalRow['grades']['e']['f'] ?? 0),
+            'sat' => (int) ($totalRow['sat']['f'] ?? 0),
+            'pass' => (int) (($totalRow['grades']['a']['f'] ?? 0) + ($totalRow['grades']['b']['f'] ?? 0) + ($totalRow['grades']['c']['f'] ?? 0)),
         ];
         $maleData = [
-            'a' => (int) ($mRow['grades']['a']['t'] ?? 0),
-            'b' => (int) ($mRow['grades']['b']['t'] ?? 0),
-            'c' => (int) ($mRow['grades']['c']['t'] ?? 0),
-            'd' => (int) ($mRow['grades']['d']['t'] ?? 0),
-            'e' => (int) ($mRow['grades']['e']['t'] ?? 0),
-            'sat' => (int) ($mRow['sat']['t'] ?? 0),
-            'pass' => (int) ($mRow['pass_ad']['t'] ?? 0),
+            'a' => (int) ($totalRow['grades']['a']['m'] ?? 0),
+            'b' => (int) ($totalRow['grades']['b']['m'] ?? 0),
+            'c' => (int) ($totalRow['grades']['c']['m'] ?? 0),
+            'd' => (int) ($totalRow['grades']['d']['m'] ?? 0),
+            'e' => (int) ($totalRow['grades']['e']['m'] ?? 0),
+            'sat' => (int) ($totalRow['sat']['m'] ?? 0),
+            'pass' => (int) (($totalRow['grades']['a']['m'] ?? 0) + ($totalRow['grades']['b']['m'] ?? 0) + ($totalRow['grades']['c']['m'] ?? 0)),
         ];
 
         foreach (['FEMALE', 'MALE'] as $gender) {
@@ -1058,8 +1057,10 @@ class TasidoMockTaarifaDataService
         $att = $data['attendance'];
         $t3a = $data['table3a'];
         $t6 = $data['table6'];
+        $t7 = $data['table7'];
         $t8 = $data['table8'];
         $t9 = $data['table9'];
+        $t10 = $data['table10'];
         $t12 = $data['table12'];
 
         $totalSchools = number_format($profile['total_schools']);
@@ -1081,19 +1082,6 @@ class TasidoMockTaarifaDataService
         $attendanceRate = number_format($att['attendance_rate'], 2);
         $absenceRate = number_format($att['absence_rate'], 2);
 
-        $bestRegion = isset($t3a[0]) ? $t3a[0]['region'] : 'Data sio tayari';
-        $worstRegion = isset($t3a[count($t3a)-1]) ? $t3a[count($t3a)-1]['region'] : 'Data sio tayari';
-
-        $bestCouncil = isset($t6[0]) ? $t6[0]['council'] : 'Data sio tayari';
-        $worstCouncil = isset($t6[count($t6)-1]) ? $t6[count($t6)-1]['council'] : 'Data sio tayari';
-
-        $bestSchool = isset($t8[0]) ? $t8[0]['school'] : 'Data sio tayari';
-        $tenthSchool = isset($t8[9]) ? $t8[9]['school'] : 'Data sio tayari';
-        $worstSchool = isset($t9[0]) ? $t9[0]['school'] : 'Data sio tayari';
-
-        $bestSubject = isset($t12[0]) ? $t12[0]['subject'] : 'Data sio tayari';
-        $worstSubject = isset($t12[count($t12)-1]) ? $t12[count($t12)-1]['subject'] : 'Data sio tayari';
-
         // Calculate pass details out of A-C for Kanda (Table 3a has the regional rows)
         $passAC = 0;
         foreach ($t3a as $row) {
@@ -1102,30 +1090,147 @@ class TasidoMockTaarifaDataService
         $passRate = $att['sat_total'] > 0 ? number_format(($passAC / $att['sat_total']) * 100, 2) : '0.00';
         $failRate = number_format(100 - (float) $passRate, 2);
 
-        // Intro
-        $intro = "Kanda ya Academic Zone ya **TASIDO** ina jumla ya shule za Msingi **" . $totalSchools . "** ambapo shule za Serikali ni **" . $govSchools . "** na shule za Binafsi/Zisizo za Serikali ni **" . $privSchools . "**. Kiutawala, Kanda hii inajumuisha Mikoa minne (4) ambayo ni Tabora, Singida, Iringa na Dodoma. Kanda yetu ina jumla ya Halmashauri/Wilaya **" . number_format($profile['councils_count']) . "**.\n\n" .
-            "Jumla ya shule **" . $totalSchools . "** zenye watahiniwa wa Darasa la Saba wa mwaka **" . $meta['exam_year'] . "** zilifanya Mtihani wa Utamilifu wa Kanda (Mock).\n\n" .
-            "Jumla ya watahiniwa **" . $registered . "** walisajiliwa kufanya mtihani huu, ikijumuisha Wavulana **" . $registeredM . "** na Wasichana **" . $registeredF . "**.\n\n" .
-            "Kati ya watahiniwa waliosajiliwa, jumla ya watahiniwa **" . $satTotal . "** walifanya mtihani huo, ikijumuisha Wavulana **" . $satM . "** na Wasichana **" . $satF . "**, ikiwa ni sawa na asilimia **" . $attendanceRate . "%** ya watahiniwa wote waliosajiliwa. Jumla ya watahiniwa **" . $absTotal . "** (Wavulana **" . $absM . "**, Wasichana **" . $absF . "**) sawa na asilimia **" . $absenceRate . "%** hawakufanya mtihani kutokana na sababu mbalimbali kama vile utoro, ugonjwa na sababu nyingine za kijamii.";
+        // 1. UTANGULIZI & TAARIFA ZA WATAHINIWA
+        $intro = "Mtihani wa Utamilifu (Mock) kanda ya TASIDO ulifanyika tarehe {$meta['exam_dates']}. Mtihani huo uliandaliwa kwa kuzingatia muundo mpya wa utunzi uliotolewa na Baraza la mitihani la Tanzania toleo la April 2024. Mtihani uliendeshwa kwa kufuata taratibu za mitihani na kusambazwa katika Mikoa sita na Halmashauri zote {$profile['councils_count']} na kupokelewa na Maafisa Elimu wa Halmashauri. Ufanyikaji wa Mtihani katika Kanda ya TASIDO ulihusisha jumla ya shule za Msingi {$totalSchools}, kati ya shule hizo, shule {$govSchools} ni za serikali na {$privSchools} siyo za Serikali. Mtihani ulihusisha Mikoa minne ya Kanda ya TASIDO ambayo ni Tabora, Singida, Iringa na Dodoma.";
+        
+        $taarifa_za_watahiniwa = "Jumla ya wanafunzi waliosajiliwa kufanya mtihani ni {$registered} (Wav {$registeredM} na Was {$registeredF}). Wanafunzi waliofanya mtihani ni {$satTotal} kati yao Wav {$satM} na Was {$satF} sawa na asilimia {$attendanceRate}% ya wanafunzi waliosajiliwa kufanya mtihani huo. Aidha, wanafunzi {$absTotal} sawa na asilimia {$absenceRate}% ya wanafunzi wote waliosajiliwa kufanya Mtihani huo hawakufanya kutokana na sababu mbali mbali zikiwemo Utoro, Vifo na Ugonjwa. Jedwali namba 1 na 2 linaonesha";
 
-        // Executive Summary
-        $execSummary = "Taarifa hii inatoa muhtasari wa matokeo ya mtihani wa utamilifu wa Darasa la Saba (PSLE Mock) kwa Mwaka " . $meta['exam_year'] . " katika Kanda ya Academic Zone ya **TASIDO** (inayojumuisha Mikoa minne ya Tabora, Singida, Iringa na Dodoma). " .
-            "Mtihani huu ulihusisha jumla ya shule **" . $totalSchools . "** na watahiniwa **" . $registered . "** waliosajiliwa. " .
-            "Kati yao, watahiniwa **" . $satTotal . "** walifanya mtihani, ikiwa ni sawa na asilimia **" . $attendanceRate . "%** ya mahudhurio ya jumla. " .
-            "Ufaulu wa jumla wa Kanda (Daraja A-C) umefikia asilimia **" . $passRate . "%** ya watahiniwa wote waliofanya mtihani. " .
-            "Mkoa ulioongoza kitaaluma katika Kanda ni **" . $bestRegion . "**, na shule iliyoongoza kikanda ni **" . $bestSchool . "**. " .
-            "Tathmini ya kina ya takwimu za usajili, mahudhurio, utendaji wa kimasomo, kiutawala na kiumiliki imeainishwa kikamilifu katika kurasa zinazofuata.";
+        // 2. UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA
+        // Hali ya ufaulu ngazi ya Kanda
+        $hali_ya_ufaulu_kanda = "Katika mtihani huu watahiniwa wamepimwa katika masomo sita wanayofundishwa ambayo ni Hisabati, Kiingereza, Kiswahili, Sayansi na Teknolojia, Maarifa ya jamii na Stadi za Kazi na Uraia na Maadili. Uchambuzi wa matokeo unaonesha kuwa, wanafunzi " . number_format($passAC) . " sawa na asilimia {$passRate}% ya watahiniwa waliofanya Mtihani wamefaulu kwa kupata Daraja A hadi C na wanafunzi " . number_format($att['sat_total'] - $passAC) . " sawa na asilimia {$failRate}% ya watahiniwa hao hawakufaulu Mtihani kwa kupata Daraja D na E kama inavyoonesha katika jedwali namba 3a, 3b, 4 na 5";
 
-        // Analysis
-        $analysis = "Uchambuzi wa matokeo unaonesha kuwa kiwango cha ufaulu wa jumla katika Kanda yetu ya TASIDO umefikia asilimia **" . $passRate . "%** ambapo watahiniwa waliofaulu ni wengi ikilinganishwa na wasiofaulu ambao ni asilimia **" . $failRate . "%**. " .
-            "Mkoa ulioshika nafasi ya kwanza kikanda ni **" . $bestRegion . "** na mkoa ulioshika nafasi ya mwisho ni **" . $worstRegion . "**. " .
-            "Katika ngazi ya Halmashauri, Halmashauri ya **" . $bestCouncil . "** imeongoza kiufanisi kitaaluma, huku Halmashauri ya **" . $worstCouncil . "** ikiwa mkiani. " .
-            "Upande wa kimasomo, somo la **" . $bestSubject . "** limeongoza kwa kuwa na wastani mzuri wa ufaulu kikanda wakati somo la **" . $worstSubject . "** likihitaji mikakati madhubuti ya kurekebisha ufaulu kwa kuwa na wastani wa chini.";
+        // Hali ya ufaulu wa Halmashauri kwa madaraja
+        $bestCouncil = isset($t6[0]) ? $t6[0]['council'] : 'N/A';
+        $bestCouncilRegion = isset($t6[0]) ? $t6[0]['region'] : 'N/A';
+        $bestCouncilPct = isset($t6[0]) ? number_format($t6[0]['pass_pct'], 2) : '0.00';
+        $bestCouncilAvg = isset($t6[0]) ? number_format($t6[0]['average_marks'], 2) : '0.00';
+
+        $worstCouncil = isset($t6[count($t6)-1]) ? $t6[count($t6)-1]['council'] : 'N/A';
+        $worstCouncilPct = isset($t6[count($t6)-1]) ? number_format($t6[count($t6)-1]['pass_pct'], 2) : '0.00';
+        $worstCouncilAvg = isset($t6[count($t6)-1]) ? number_format($t6[count($t6)-1]['average_marks'], 2) : '0.00';
+
+        $hali_ya_ufaulu_halmashauri = "Katika mtihani wa Utamilifu wa Darasa la saba mwaka {$meta['exam_year']}, jumla ya Halmashauri {$profile['councils_count']} kutoka kwenye Mikoa minne ya Kanda ya TASIDO, zilifanya Mtihani huo. Halmashauri ya Wilaya ya {$bestCouncil} iliyopo Mkoa wa {$bestCouncilRegion} imekuwa ya kwanza kwa ufaulu wa asilimia {$bestCouncilPct}% na wastani wa {$bestCouncilAvg}. Halmashauri ya mwisho ikiwa ni {$worstCouncil} yenye ufaulu wa asilimia {$worstCouncilPct}% na wastani wa {$worstCouncilAvg}. Mtawanyo wa ufaulu kwa kila Halmashauri umeoneshwa kwenye jedwali namba Jedwali Na:6: Hali ya ufaulu wa Halmashauri kwa madaraja";
+
+        // HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI)
+        $bestGovSchool = isset($t7[0]) ? $t7[0]['school'] : 'N/A';
+        $bestGovSchoolCouncil = isset($t7[0]) ? $t7[0]['council'] : 'N/A';
+        $bestGovSchoolRegion = isset($t7[0]) ? $t7[0]['region'] : 'N/A';
+
+        $tenthGovSchool = isset($t7[9]) ? $t7[9]['school'] : 'N/A';
+        $tenthGovSchoolCouncil = isset($t7[9]) ? $t7[9]['council'] : 'N/A';
+        $tenthGovSchoolRegion = isset($t7[9]) ? $t7[9]['region'] : 'N/A';
+
+        $ufaulu_halmashauri_masomo_madaraja_gov = "Matokeo ya Mtihani wa Utamilifu wa Darasa la Saba yanaonesha uwepo wa Shule za Serikali zilizopata ufaulu wa jumla wa Daraja A kwa shule. Shule ya kwanza kwenye matokeo haya kati ya shule 10 zilizofanya vizuri ni {$bestGovSchool} iliyopo Halmashauri ya {$bestGovSchoolCouncil} katika Mkoa wa {$bestGovSchoolRegion} na ya kumi ikiwa ni {$tenthGovSchool} iliyopo Halmashauri ya Wilaya ya {$tenthGovSchoolCouncil} katika Mkoa wa {$tenthGovSchoolRegion} kama inavyoonesha kwenye jedwali Jedwali Na. 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja";
+
+        // HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (SHULE ZA SERIKALI NA BINAFSI)
+        $privInTop10 = collect($t8)->filter(fn($s) => strtoupper(trim((string)($s['ownership'] ?? ''))) === 'NON-GOVERNMENT' || str_contains(strtoupper($s['ownership'] ?? ''), 'BINAFSI'))->count();
+
+        $bestSchool = isset($t8[0]) ? $t8[0]['school'] : 'N/A';
+        $bestSchoolCouncil = isset($t8[0]) ? $t8[0]['council'] : 'N/A';
+        $bestSchoolRegion = isset($t8[0]) ? $t8[0]['region'] : 'N/A';
+
+        $tenthSchool = isset($t8[9]) ? $t8[9]['school'] : 'N/A';
+        $tenthSchoolCouncil = isset($t8[9]) ? $t8[9]['council'] : 'N/A';
+        $tenthSchoolRegion = isset($t8[9]) ? $t8[9]['region'] : 'N/A';
+
+        $ufaulu_shule_10_bora = "Matokeo ya Mtihani huu wa Kanda unaonesha pia kuwa shule zisizo za Serikali zimefanya vizuri katika ufaulu ambapo shule {$privInTop10} zimetoka katika shule zisizo za Serikali. Shule ya kwanza katika kundi hili ni {$bestSchool} iliyopo Halmashauri ya Wilaya ya {$bestSchoolCouncil} katika Mkoa wa {$bestSchoolRegion} na shule ya kumi ikiwa ni {$tenthSchool} iliyopo Halmashauri ya Wilaya ya {$tenthSchoolCouncil} katika Mkoa wa {$tenthSchoolRegion}. Jedwali linafafanua Jedwali Na. 8: Msambao wa Ufaulu wa Shule Kumi Bora zisizo za Serikali na Zisizo za Serikali kwa Madaraja";
+
+        // HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI NA BINAFSI)
+        $worstSchool = isset($t9[0]) ? $t9[0]['school'] : 'N/A';
+        $worstSchoolCouncil = isset($t9[0]) ? $t9[0]['council'] : 'N/A';
+
+        $tenthWorstSchool = isset($t9[9]) ? $t9[9]['school'] : 'N/A';
+        $tenthWorstSchoolCouncil = isset($t9[9]) ? $t9[9]['council'] : 'N/A';
+
+        $ufaulu_shule_10_duni = "Katika Mtihani huu wa Utamilifu wa Darasa la Saba 2026, matokeo yameonesha uwepo wa shule kumi duni kwa Kanda ambapo shule ya {$worstSchool} iliyopo Halmashauri ya Wilaya ya {$worstSchoolCouncil} imefanya vibaya katika matokeo hayo na kuwa ya mwisho Kikanda. Matokeo haya ni kiashiria cha kuwepo kwa changamoto ama za ufundishaji na upimaji kwa kuzingatia fomati mpya ya Mitihani idara ya Baraza la Mitihani la Tanzania Aprili, 2024. Aidha, shule ya msingi ya {$tenthWorstSchool} iliyopo Halmashauri ya Wilaya ya {$tenthWorstSchoolCouncil} ni ya kumi kati ya shule kumi zilizopo kwenye kundi la shule zilizo na ufaulu duni. Hata hivyo, ni matarajio kuwa shule, Halmashauri na Mikoa itatumia matokeo haya kufanya marekebisho katika ufundishaji na kuwaandaa wanafunzi ili kuweza kufanya vizuri zaidi katika mtihani wao wa Kitaifa. Jedwali linafafanua Jedwali Na. 9: Msambao wa Ufaulu wa Shule Kumi Duni kwa Masomo na Madaraja Kikanda";
+
+        // HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI)
+        $worstGovList = array_slice($t10, 0, 3);
+        $worstGovNames = [];
+        foreach ($worstGovList as $wgs) {
+            $worstGovNames[] = "{$wgs['school']} iliyopo Halmashauri ya Wilaya ya {$wgs['council']}";
+        }
+        $worstGovText = implode(', ', $worstGovNames);
+
+        $failPcts = collect($t10)->pluck('fail_pct')->toArray();
+        $minFail = !empty($failPcts) ? min($failPcts) : 0.0;
+        $maxFail = !empty($failPcts) ? max($failPcts) : 0.0;
+
+        $ufaulu_shule_10_duni_gov = "Uchambuzi wa matokeo ya mtihani wa Utamilifu wa Darasa la saba mwaka {$meta['exam_year']} umebaini uwepo wa shule za serikali zilizo na ufaulu mbaya usioridhisha. Katika jedwali utaona hakuna shule iliyo na mwanafunzi hata mmoja mwenye ufaulu wa A. Pia shule za {$worstGovText} hazina mtahiniwa hata mmoja aliyepata Daraja A hadi C. Asilimia 100 (KAMA ZIPO) ya watahiniwa walifeli Mtihani. Aidha, wanafunzi wamefeli kwenye shule hizi kwa asilimia kuanzia " . number_format($minFail, 2) . "% hadi " . number_format($maxFail, 2) . "% kama jedwali limeonesha. Jedwali Na. 10: Msambao wa Ufaulu wa Shule Kumi Duni za Serikali kwa Masomo na Madaraja Kikanda";
+
+        // HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI)
+        $subSorted = $data['performance']['subjects']; // already sorted descending by average_marks
+        $bestSub = $subSorted[0] ?? ['name' => 'N/A', 'sat' => 0, 'pass' => 0, 'pass_rate' => 0];
+        $secBest = $subSorted[1] ?? ['name' => 'N/A', 'sat' => 0, 'pass' => 0, 'pass_rate' => 0];
+        $thirdBest = $subSorted[2] ?? ['name' => 'N/A', 'sat' => 0, 'pass' => 0, 'pass_rate' => 0];
+        $fourthBest = $subSorted[3] ?? ['name' => 'N/A', 'sat' => 0, 'pass' => 0, 'pass_rate' => 0];
+        $secWorst = $subSorted[count($subSorted)-2] ?? ['name' => 'N/A', 'sat' => 0, 'pass' => 0, 'pass_rate' => 0];
+        $worstSub = $subSorted[count($subSorted)-1] ?? ['name' => 'N/A', 'sat' => 0, 'pass' => 0, 'pass_rate' => 0];
+
+        $worstSubFailPct = number_format(100 - (float) ($worstSub['pass_rate'] ?? 0), 2);
+        $secWorstFailPct = number_format(100 - (float) ($secWorst['pass_rate'] ?? 0), 2);
+
+        $ufaulu_masomo = "Katika mtihani huu watahiniwa wamepimwa katika masomo sita ambayo wanafundishwa kulingana na Mtaala mpya ulioboreshwa. Masomo yaliyotahiniwa katika mtihani huu ni Hisabati, Kiingereza, Kiswahili, Sayansi na Teknolojia, Maarifa ya jamii na Stadi za Kazi na Uraia na Maadili. Uchambuzi wa matokeo unaonesha kuwa, watahiniwa wamefanya vibaya katika masomo ya {$worstSub['name']} na {$secWorst['name']}. Jumla ya watahiniwa " . number_format($worstSub['sat']) . " waliofanya mtihani sawa na asilimia {$worstSubFailPct}% ya waliofanya mtihani wa somo la {$worstSub['name']} hawakufaulu. Katika somo la {$secWorst['name']} jumla ya wanafunzi " . number_format($secWorst['sat']) . " ya waliofanya mtihani sawa na asilimia {$secWorstFailPct}% hawakufaulu. Somo ambalo watahiniwa wamefaulu vizuri ni {$bestSub['name']}, ambapo jumla ya watahiniwa " . number_format($bestSub['sat']) . " ya waliofanya mtihani sawa na asilimia " . number_format($bestSub['pass_rate'], 2) . "% wamefaulu somo hili, likifuatiwa na somo la {$secBest['name']} ambalo jumla ya watahiniwa " . number_format($secBest['sat']) . " sawa na asilimia " . number_format($secBest['pass_rate'], 2) . "% ya wanafunzi waliofanya wamefaulu mtihani huo. Aidha katika Somo la {$thirdBest['name']} jumla ya watahiniwa " . number_format($thirdBest['sat']) . " sawa na asilimia " . number_format($thirdBest['pass_rate'], 2) . "% ya watahiniwa waliofanya mtihani huo wamefaulu. Somo la {$fourthBest['name']} jumla ya wanafunzi " . number_format($fourthBest['sat']) . " waliofanya mtihani huo sawa na " . number_format($fourthBest['pass_rate'], 2) . "% wamefaulu Mtihani huo. Jedwali na. 11: Msambao wa Ufaulu wa Masomo kwa Madaraja Kikanda";
+
+        // HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)
+        $worstPrivSub = $t12[count($t12)-1] ?? ['subject' => 'N/A', 'fail_pct' => 0.0];
+        $socialStudiesRow = collect($t12)->first(fn($r) => str_contains(strtoupper($r['subject']), 'MAARIFA') || str_contains(strtoupper($r['subject']), 'SOCIAL'));
+        $socialStudiesFailPct = $socialStudiesRow ? number_format($socialStudiesRow['fail_pct'], 2) : '0.00';
+        $worstPrivSubFailPct = number_format($worstPrivSub['fail_pct'], 2);
+
+        $ufaulu_masomo_binafsi = "Hali ya ufaulu kwa shule zisizo za Serikali pia hairidhishi kama ilivyo kwa shule za Serikali hususan kwa somo la {$worstPrivSub['subject']}. Katika Mtihani wa Utamilifu uliofanyika, watahiniwa katika shule zisizo za Serikali wamefeli somo hilo kwa {$worstPrivSubFailPct}% na somo la maarifa ya jamii kwa asilimia {$socialStudiesFailPct}% kama inavyoonesha kwenye jedwali. Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za binafsi)";
+
+        // 3. MAFANIKIO
+        $mafanikio = [
+            "Kupata uelewa wa pamoja na kujua maeneo ya kitaaluma na mahiri ambazo wanafunzi wamezikosa/ hawajazielewa ili kuongeza jitihada katika kuwajengea uwezo katika kujiandaa na mitihani yao ya mwisho ya Kitaifa.",
+            "Kuwepo ushirikiano na kujengeana uwezo baina Mikoa, Halmashauri na shule, namna nzuri ya utungaji wa Mitihani kwa kutumia Mtaala ulioboreshwa.",
+            "Walimu kuweza kujitathmini kuhusu ufundishaji na kubaini maeneo yenye changamoto ili kuyarekebisha kabla ya wanafunzi kufanya mtihani wa Taifa wa kumaliza Darasa la Saba mwaka {$meta['exam_year']}."
+        ];
+
+        // 4. CHANGAMOTO
+        $changamoto = [
+            "Kuwepo kwa wanafunzi wasiofanya mtihani huu wa majaribio ambapo kutokana na utoro wa rejareja, ambao wakati wa mitihani ya Kitaifa hufika kufanya mitihani."
+        ];
+
+        // 5. UTATUZI
+        $utatuzi = [
+            "Kusimamia mahudhurio ya wanafunzi.",
+            "Kuhakikisha wanafunzi wote waliopata ufaulu wa D-E wanasaidiwa katika ujifunzaji.",
+            "Fanya mitihani ya majaribio ya mara kwa mara kwa lengo la kuboresha ufaulu sambamba na kuhimiza uwajibikaji unaotokana na matokeo ya mitihani hiyo.",
+            "Maafisa Elimu Kata kwa kushirikiana na Walimu Wakuu, Kamati za Maendeleo za kata (WDC) na Wazazi kusimamia na kufuta kabisa utoro wa wanafunzi shuleni."
+        ];
+
+        // 6. MAONI NA MAPENDEKEZO
+        $maoni_mapendekezo = [
+            "Kuhimiza mahudhurio ya wanafunzi wa darasa la Saba kwa siku zote zilizobaki za masomo.",
+            "Walimu wa masomo wafanye masahihisho kikamilifu kwa kila somo.",
+            "Kamati za taaluma za shule, kata, Halmashauri zifuatilie utekelezaji wa ufanyikaji wa masahihisho hayo na kutoa taarifa.",
+            "Walimu na Walimu Wakuu wa shule waendelee kuwapatia mitihani ya ndani watahiniwa hawa kuelekea Mtihani wao wa mwisho mwezi Septemba, {$meta['exam_year']}.",
+            "Walimu waimarishe ufundishaji na ujifunzaji mapema tangu darasa la kwanza kwa kuwajengea uwezo wanafunzi kumudu Stadi za KKK, badala ya kusubiri wanafunzi wafike madarasa ya mitihani.",
+            "Wakurugenzi wa Mamlaka za Serikali za Mitaa kusimamia utoaji wa chakula cha mchana kwa wanafunzi wote shuleni ambayo pia itasaidia kupunguza utoro wa wanafunzi shuleni.",
+            "Wathibiti ubora wa shule wakague shule kwa wakati ili kubaini mapungufu yaliyopo na kuyapatia ufumbuzi mapema.",
+            "Shule zote zilizokuwa za mwisho kwa kila Halmashauri zikaguliwe hali ya ufundishaji."
+        ];
+
+        // 7. HITIMISHO
+        $hitimisho = "Kwa ujumla ufaulu wa watahiniwa katika Mtihani wa Utimilifu kanda ya TASIDO {$meta['exam_year']} ni wa wastani sawa na {$passRate}% chini ya wastani wa Kitaifa wa 85%. Jitihada za makusudi katika ufundishaji na ujifunzaji zichukuliwe na Mkoa, Halmashauri, Kata na shule husika. Aidha, uongozi wa Mikoa yote iliyoshiriki katika Mitihani hii, unatoa shukrani kwa wadau wote; Walimu, Maafisa TEHAMA, wanafunzi na viongozi mbalimbali walioshiriki katika kuhakikisha kwamba zoezi linafanyika kwa utulivu na Amani. Shukrani za pekee ziwaendee Wakurugenzi wote wa Halmashauri kwa ushirikiano mkubwa walioutoa kwa muda wote wa maandalizi hadi kukamilika kwa zoezi hili muhimu la usahihishaji. Majedwali yameambatishwa kuonesha hali halisi ya matokeo ya Mtihani wa Utamilifu kwa Mikoa yote 4.";
 
         return [
             'introduction' => $intro,
-            'executive_summary' => $execSummary,
-            'analysis' => $analysis,
+            'taarifa_za_watahiniwa' => $taarifa_za_watahiniwa,
+            'hali_ya_ufaulu_kanda' => $hali_ya_ufaulu_kanda,
+            'hali_ya_ufaulu_halmashauri' => $hali_ya_ufaulu_halmashauri,
+            'ufaulu_halmashauri_masomo_madaraja_gov' => $ufaulu_halmashauri_masomo_madaraja_gov,
+            'ufaulu_shule_10_bora' => $ufaulu_shule_10_bora,
+            'ufaulu_shule_10_duni' => $ufaulu_shule_10_duni,
+            'ufaulu_shule_10_duni_gov' => $ufaulu_shule_10_duni_gov,
+            'ufaulu_masomo' => $ufaulu_masomo,
+            'ufaulu_masomo_binafsi' => $ufaulu_masomo_binafsi,
+            'mafanikio' => $mafanikio,
+            'changamoto' => $changamoto,
+            'utatuzi' => $utatuzi,
+            'maoni_mapendekezo' => $maoni_mapendekezo,
+            'hitimisho' => $hitimisho,
         ];
     }
 }

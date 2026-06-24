@@ -774,39 +774,30 @@
                         </tr>
                     </table>
                 </div>
-            </div>
-            
-            <!-- Page 2: Table of Contents -->
-            <div class="document-page">
-                <div style="text-align: center; margin-bottom: 30px; font-family: 'Times New Roman', Times, serif;">
+                <!-- Page 2: Table of Contents -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div style="text-align: center; margin-bottom: 30px;">
                     <h2 style="font-size: 1.5rem; font-weight: 800; color: #000; text-transform: uppercase;">YALIYOMO (TABLE OF CONTENTS)</h2>
                 </div>
                 
-                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px; font-family: 'Times New Roman', Times, serif;">
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
                     @php
                         $tocItems = [
-                            "1. Muhtasari wa Kitendaji (Executive Summary)",
-                            "2. Utangulizi na Maudhui ya Kanda",
-                            "3. Uratibu na Usimamizi wa Mtihani wa Kanda",
-                            "4. Utungaji na Mchakato wa Moderation",
-                            "5. Uzalishaji, Ulinzi na Usambazaji wa Karatasi za Mitihani",
-                            "6. Ufanyikaji wa Mtihani na Usimamizi Vituoni",
-                            "7. Mchakato wa Usahihishaji na Uingizaji Alama (Marks Entry)",
-                            "8. Takwimu za Usajili na Mahudhurio katika Kanda",
-                            "9. Uchambuzi wa Ufaulu wa Kanda kwa Ujumla",
-                            "10. Tathmini ya Ufaulu Ki-Mkoa (Regional Ranking)",
-                            "11. Tathmini ya Ufaulu Ki-Halmashauri (Council Ranking)",
-                            "12. Halmashauri Bora Kumi (Top 10 Councils)",
-                            "13. Halmashauri za Mwisho Kumi (Bottom 10 Councils)",
-                            "14. Shule Bora Kumi Kikanda (Top 10 Schools)",
-                            "15. Shule za Mwisho Kumi Kikanda (Bottom 10 Schools)",
-                            "16. Tathmini ya Ufaulu kwa Masomo (Subjectwise Analysis)",
-                            "17. Uchambuzi wa Ufaulu kwa Umiliki wa Shule (Government vs Private)",
-                            "18. Uhakiki wa Ubora wa Data (Data Quality Check)",
-                            "19. Changamoto Zilizojitokeza kwenye Mtihani",
-                            "20. Mapendekezo ya Kuboresha Elimu Kanda",
-                            "21. Hitimisho la Uendeshaji",
-                            "22. Karatasi ya Uidhinishaji (Approval Page)"
+                            "1. UTANGULIZI NA TAARIFA ZA WATAHINIWA (Jedwali Na. 1 na 2)",
+                            "2. UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA (Jedwali Na. 3a, 3b, 4 na 5)",
+                            "3. HALI YA UFAULU WA HALMASHAURI KWA MADARAJA (Jedwali Na. 6)",
+                            "4. HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI) (Jedwali Na. 7)",
+                            "5. HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (Jedwali Na. 8)",
+                            "6. HALI YA UFAULU KWA SHULE KUMI DUNI (Jedwali Na. 9)",
+                            "7. HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI) (Jedwali Na. 10)",
+                            "8. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI) (Jedwali Na. 11)",
+                            "9. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI) (Jedwali Na. 12)",
+                            "10. MAFANIKIO",
+                            "11. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI",
+                            "12. UTATUZI WA CHANGAMOTO",
+                            "13. MAONI NA MAPENDEKEZO",
+                            "14. HITIMISHO",
+                            "15. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)"
                         ];
                     @endphp
                     @foreach($tocItems as $item)
@@ -818,68 +809,81 @@
                 </div>
             </div>
             
-            <!-- Page 3: Narrative Chapters -->
+            <!-- Page 3: Utangulizi & Taarifa za Watahiniwa -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <!-- Section 1 -->
-                <div class="doc-section-title">1. MUHTASARI WA KITENDAJI (EXECUTIVE SUMMARY)</div>
+                <div class="doc-section-title">1. UTANGULIZI NA TAARIFA ZA WATAHINIWA</div>
                 <div class="doc-paragraph">
-                    Ripoti hii inatoa muhtasari wa kina na uchambuzi wa matokeo ya mtihani wa utamilifu wa Darasa la Saba (Mock) kwa Mwaka {{ $examYear }} katika Kanda ya Academic Zone ya <strong>TASIDO</strong> (Tabora, Singida, Iringa na Dodoma). Mtihani huu ulihusisha jumla ya shule <strong>{{ number_format($data['zone_profile']['total_schools']) }}</strong> na watahiniwa <strong>{{ number_format($data['attendance']['registered_total']) }}</strong> waliosajiliwa. Kati yao, watahiniwa <strong>{{ number_format($data['attendance']['sat_total']) }}</strong> walifanya mtihani, ikiwa ni sawa na asilimia <strong>{{ number_format($data['attendance']['attendance_rate'], 2) }}%</strong> ya mahudhurio ya jumla. Ufaulu wa jumla wa Kanda (Daraja A-D) umefikia asilimia <strong>{{ number_format(($data['performance']['regional']['pass'] / max(1, $data['performance']['regional']['sat'])) * 100, 2) }}%</strong> ya watahiniwa wote waliofanya mtihani. Mkoa ulioongoza kitaaluma katika Kanda ni <strong>{{ $data['performance']['regions'][0]['name'] ?? 'N/A' }}</strong> ukiwa na wastani wa alama <strong>{{ number_format($data['performance']['regions'][0]['average_marks'] ?? 0, 2) }}</strong>.
+                    {!! nl2br(e($data['narratives']['introduction'])) !!}
+                </div>
+                <div class="doc-paragraph" style="margin-top: 15px;">
+                    {!! nl2br(e($data['narratives']['taarifa_za_watahiniwa'])) !!}
                 </div>
 
-                <!-- Section 2 -->
-                <div class="doc-section-title">2. UTANGULIZI NA MAUDHUI YA KANDA</div>
-                <div class="doc-paragraph">
-                    Kanda ya Academic Zone ya <strong>TASIDO</strong> ina jumla ya shule za Msingi <strong>{{ number_format($data['zone_profile']['total_schools']) }}</strong> ambapo shule za Serikali ni <strong>{{ number_format($data['zone_profile']['government_schools']) }}</strong> na shule za Binafsi/Zisizo za Serikali ni <strong>{{ number_format($data['zone_profile']['private_schools']) }}</strong>. Kiutawala, Kanda inajumuisha Mikoa minne (4) ambayo ni Tabora, Singida, Iringa na Dodoma. Kanda yetu ina jumla ya Halmashauri/Wilaya <strong>{{ number_format($data['zone_profile']['councils_count']) }}</strong>.
-                </div>
-                
-                <!-- Section 3 -->
-                <div class="doc-section-title">3. URATIBU NA USIMAMIZI WA MTIHANI WA KANDA</div>
-                <div class="doc-paragraph">
-                    Maandalizi ya mtihani yalianza kwa uratibu na vikao vya pamoja vilivyowashirikisha Maafisa Elimu wa Kanda na Halmashauri (REOs/DEOs), Maafisa Taaluma (RTOs/DTOs), na Wathibiti Ubora wa Shule katika Kanda. Vikao hivyo vililenga kukubaliana juu ya miongozo ya uendeshaji, usimamizi, usahihishaji, na mifumo ya bajeti. Bajeti ya jumla ya shilingi <strong class="preview-budget_amount_formatted">{{ number_format((float)$inputs['budget_amount']) }}</strong> iliidhinishwa kwa ajili ya uzalishaji vya mitihani, ununuzi wa karatasi na uendeshaji wa mashine kubwa za chapa.
-                </div>
-                
-                <!-- Section 4 -->
-                <div class="doc-section-title">4. UTUNGAJI NA MCHAKATO WA MODERATION</div>
-                <div class="doc-paragraph">
-                    Walimu mahiri na wazoefu walichaguliwa kutoka mikoa yote wanachama kufanya utungaji wa mitihani (Item Generation) kwa kuzingatia ramani za mitihani (Table of Specifications) zilizotolewa na Baraza la Mitihani la Tanzania (NECTA). Baada ya mitihani kutungwa, zoezi la Moderation lilifanyika katika Kituo Teule chini ya Kamati ya Taaluma ya Mkoa wa <strong class="preview-moderation_region">{{ $inputs['moderation_region'] ?? '' }}</strong> kwa ajili ya kufanya mapitio ya kisarufi na usahihi wa maswali.
-                </div>
-            </div>
-
-            <!-- Page 4: Narrative Chapters Continued -->
-            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <!-- Section 5 -->
-                <div class="doc-section-title">5. UZALISHAJI, ULINZI NA USAMBAZAJI WA KARATASI ZA MITIHANI</div>
-                <div class="doc-paragraph">
-                    Mitihani yote ilizalishwa kwa siri na usalama mkubwa chini ya usimamizi wa Kamati ya Mitihani ya Kanda. Zoezi hili lilifanyika katika Chumba Maalum cha Siri (Strong Room) kwa muda wa siku <strong class="preview-production_days">{{ $inputs['production_days'] ?? 0 }}</strong> kwa kutumia mashine za chapa haraka za RISSO <strong class="preview-risso_machine_count">{{ $inputs['risso_machine_count'] ?? 0 }}</strong> yenye thamani ya shilingi <strong class="preview-risso_machine_value_formatted">{{ number_format((float)$inputs['risso_machine_value']) }}</strong>.
-                </div>
-                
-                <!-- Section 6 -->
-                <div class="doc-section-title">6. UFANYIKAJI WA MTIHANI NA USIMAMIZI VITUONI</div>
-                <div class="doc-paragraph">
-                    Mtihani ulianza rasmi tarehe <strong class="preview-exam_start_date">{{ $inputs['exam_start_date'] ?? '' }}</strong> na kukamilika tarehe <strong class="preview-exam_end_date">{{ $inputs['exam_end_date'] ?? '' }}</strong> katika shule zote zilizosajiliwa kama vituo vya mitihani. Zoezi zima la ufanyikaji wa mitihani lilifanyika kwa kufuata ratiba sanifu iliyotolewa na Kamati ya Kanda.
-                </div>
-                
-                <!-- Section 7 -->
-                <div class="doc-section-title">7. MCHAKATO WA USAHIHISHAJI NA UINGIZAJI ALAMA (MARKS ENTRY)</div>
-                <div class="doc-paragraph">
-                    Zoezi la usahihishaji lilifanyika katika Kituo Kikuu cha Usahihishaji cha Kanda kilichopo shule ya <strong class="preview-marking_center">{{ $inputs['marking_center'] ?? '' }}</strong>. Usahihishaji huu ulihudhuriwa na wasahihishaji <strong class="preview-markers_count">{{ $inputs['markers_count'] ?? 0 }}</strong> pamoja na wasaidizi wataalamu <strong class="preview-students_assistants_count">{{ $inputs['students_assistants_count'] ?? 0 }}</strong>. Semina ya maadili na usalama ilitolewa na REO <strong class="preview-reo_name">{{ $inputs['reo_name'] ?? '' }}</strong> na RTO <strong class="preview-rto_name">{{ $inputs['rto_name'] ?? '' }}</strong>, ikisimamiwa na Mratibu Taaluma Kanda Ndg. <strong class="preview-exam_coordinator_name">{{ $inputs['exam_coordinator_name'] ?? '' }}</strong>. Alama zote ziliingizwa kikamilifu kwenye mfumo wa IRMS.
-                </div>
-            </div>
-            
-            <!-- Page 5: Attendance Table -->
-            <div class="document-page">
-                <!-- Section 8 -->
-                <div class="doc-section-title">8. TAKWIMU ZA USAJILI NA MAHUDHURIO KATIKA KANDA</div>
-                <div class="doc-subsection-title">Jedwali la 1: Takwimu za Usajili na Mahudhurio Ki-Mkoa</div>
+                <div class="doc-subsection-title" style="margin-top: 25px;">Jedwali Na. 1: Watahiniwa waliosajiliwa na waliofanya Mtihani</div>
                 <div class="table-responsive">
-                    <table class="doc-table attendance-table">
+                    <table class="doc-table">
                         <thead>
                             <tr>
                                 <th rowspan="2">S/N</th>
                                 <th rowspan="2">Mkoa</th>
+                                <th rowspan="2">Idadi ya Shule</th>
                                 <th colspan="3">WALIOSAJILIWA</th>
                                 <th colspan="3">WALIOFANYA</th>
-                                <th colspan="3">WASIOFANYA</th>
+                                <th rowspan="2">Mahudhurio %</th>
+                            </tr>
+                            <tr>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JUMLA</th>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JUMLA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table1'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['region'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['registered_m']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['registered_f']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['registered_t']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat_m']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat_f']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['sat_t']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['sat_pct'], 2) }}%</td>
+                                </tr>
+                            @endforeach
+                            <tr class="total-row">
+                                <td style="text-align: center;">-</td>
+                                <td>{{ $data['table1_total']['region'] }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table1_total']['schools_count']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table1_total']['registered_m']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table1_total']['registered_f']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table1_total']['registered_t']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table1_total']['sat_m']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table1_total']['sat_f']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table1_total']['sat_t']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table1_total']['sat_pct'], 2) }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page 4: Jedwali Na. 2 na Sehemu ya Uchambuzi -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-subsection-title">Jedwali na. 2: Watahiniwa wasiofanya mtihani</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">S/N</th>
+                                <th rowspan="2">Mkoa</th>
+                                <th rowspan="2">Idadi ya Shule</th>
+                                <th colspan="3">WALIOSAJILIWA</th>
+                                <th colspan="3">WASIOFANYA MTIHANI</th>
                                 <th rowspan="2">Asilimia (%)</th>
                             </tr>
                             <tr>
@@ -889,360 +893,118 @@
                                 <th>ME</th>
                                 <th>KE</th>
                                 <th>JUMLA</th>
-                                <th>ME</th>
-                                <th>KE</th>
-                                <th>JUMLA</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($data['attendance']['region_rows'] as $index => $rrow)
+                            @foreach($data['table2'] as $row)
                                 <tr>
-                                    <td style="text-align: center;">{{ $index + 1 }}</td>
-                                    <td>{{ $rrow['name'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($rrow['registered_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rrow['registered_f']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($rrow['registered_t']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rrow['sat_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rrow['sat_f']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($rrow['sat_t']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rrow['absent_m']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rrow['absent_f']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rrow['absent_t']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($rrow['attendance_rate'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['region'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['registered_m']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['registered_f']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['registered_t']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['absent_m']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['absent_f']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['absent_t']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['absent_pct'], 2) }}%</td>
                                 </tr>
                             @endforeach
                             <tr class="total-row">
                                 <td style="text-align: center;">-</td>
-                                <td>JUMLA KUU</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['registered_male']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['registered_female']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['registered_total']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['sat_male']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['sat_female']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['sat_total']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['absent_male']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['absent_female']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['absent_total']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['attendance']['attendance_rate'], 2) }}%</td>
+                                <td>{{ $data['table2_total']['region'] }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table2_total']['schools_count']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table2_total']['registered_m']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table2_total']['registered_f']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table2_total']['registered_t']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table2_total']['absent_m']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table2_total']['absent_f']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table2_total']['absent_t']) }}</td>
+                                <td style="text-align: right;">{{ number_format($data['table2_total']['absent_pct'], 2) }}%</td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+
+                <div class="doc-section-title" style="margin-top: 30px;">2. UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA</div>
+                <div class="doc-subsection-title">Hali ya ufaulu ngazi ya Kanda</div>
+                <div class="doc-paragraph">
+                    {!! nl2br(e($data['narratives']['hali_ya_ufaulu_kanda'])) !!}
+                </div>
             </div>
 
-            <!-- Page 6: General Performance Table -->
-            <div class="document-page">
-                <!-- Section 9 -->
-                <div class="doc-section-title">9. UCHAMBUZI WA UFAULU WA KANDA KWA UJUMLA</div>
-                <div class="doc-subsection-title">Jedwali la 2: Mgawanyo wa Madaraja ya Ufaulu Kimasomo (Daraja A - E)</div>
+            <!-- Page 5: Jedwali Na. 3a na 3b -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-subsection-title">Jedwali Na. 3a: Hali ya Ufaulu Kikanda kwa Madaraja - Shule za Serikali na Binafsi kwa Wastani wa Ufaulu</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
                             <tr>
-                                <th>Jinsia</th>
+                                <th>NA</th>
+                                <th>Mkoa</th>
                                 <th>Daraja A</th>
                                 <th>Daraja B</th>
                                 <th>Daraja C</th>
-                                <th>Daraja D</th>
-                                <th>Daraja E</th>
-                                <th>Waliofanya</th>
-                                <th>Waliofaulu</th>
+                                <th>Ufaulu A-C</th>
                                 <th>Ufaulu %</th>
+                                <th>D-E</th>
+                                <th>Feli %</th>
+                                <th>Wastani /300</th>
+                                <th>Nafasi</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($data['performance']['grade_distribution'] as $gRow)
+                            @foreach($data['table3a'] as $row)
                                 <tr>
-                                    <td>{{ $gRow['gender'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($gRow['a']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($gRow['b']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($gRow['c']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($gRow['d']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($gRow['e']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($gRow['sat']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($gRow['pass']) }}</td>
-                                    <td style="text-align: right; font-weight:700; color:var(--accent);">{{ number_format($gRow['pct'], 2) }}%</td>
+                                    <td style="text-align: center;">{{ $row['position'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['region'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ $row['position'] }}</td>
                                 </tr>
                             @endforeach
-                            <tr class="total-row">
-                                <td>JUMLA</td>
-                                <td style="text-align: right;">{{ number_format($data['performance']['regional']['a']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['performance']['regional']['b']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['performance']['regional']['c']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['performance']['regional']['d']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['performance']['regional']['e']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['performance']['regional']['sat']) }}</td>
-                                <td style="text-align: right;">{{ number_format($data['performance']['regional']['pass']) }}</td>
-                                <td style="text-align: right; color:var(--accent);">{{ number_format($data['performance']['regional']['pct'], 2) }}%</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
-            </div>
 
-            <!-- Page 7: Regionalwise Table -->
-            <div class="document-page">
-                <!-- Section 10 -->
-                <div class="doc-section-title">10. TATHMINI YA UFAULU KI-MKOA (REGIONAL RANKING)</div>
-                <div class="doc-subsection-title">Jedwali la 3: Msimamo wa Mikoa katika Kanda ya TASIDO</div>
+                <div class="doc-subsection-title" style="margin-top: 30px;">Jedwali Na. 3b: Hali ya Ufaulu Kikanda kwa Madaraja - Shule za Serikali na Binafsi kwa Asilimia ya Ufaulu</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
                             <tr>
-                                <th>Nafasi</th>
+                                <th>NA</th>
                                 <th>Mkoa</th>
-                                <th>Waliofanya</th>
-                                <th>Waliofaulu (A-C)</th>
-                                <th>Waliofaulu (D)</th>
-                                <th>Waliofeli (E)</th>
-                                <th>Wastani wa Alama</th>
-                                <th>Daraja la Kundi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['performance']['regions'] as $rRow)
-                                <tr>
-                                    <td style="text-align: center;">{{ $rRow['position'] }}</td>
-                                    <td style="font-weight: 700;">{{ $rRow['name'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($rRow['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rRow['pass_ac']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rRow['pass_d']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($rRow['fail']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($rRow['average_marks'], 2) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ $rRow['grade'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Page 8: Councilwise Table -->
-            <div class="document-page">
-                <!-- Section 11 -->
-                <div class="doc-section-title">11. TATHMINI YA UFAULU KI-HALMASHAURI (COUNCIL RANKING)</div>
-                <div class="doc-subsection-title">Jedwali la 4: Utendaji wa Halmashauri/Wilaya zote za Kanda</div>
-                <div class="table-responsive">
-                    <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th>Nafasi</th>
-                                <th>Halmashauri</th>
-                                <th>Mkoa</th>
-                                <th>Waliofanya</th>
-                                <th>Wastani wa Alama</th>
-                                <th>Daraja</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['performance']['councils'] as $cRow)
-                                <tr>
-                                    <td style="text-align: center;">{{ $cRow['position'] }}</td>
-                                    <td>{{ $cRow['name'] }}</td>
-                                    <td>{{ $cRow['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($cRow['sat']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($cRow['average_marks'], 2) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ $cRow['grade'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Page 9: Top and Bottom Councils -->
-            <div class="document-page">
-                <!-- Section 12 -->
-                <div class="doc-section-title">12. HALMASHAURI BORA KUMI (TOP 10 COUNCILS)</div>
-                <div class="table-responsive">
-                    <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th>Nafasi</th>
-                                <th>Halmashauri</th>
-                                <th>Mkoa</th>
-                                <th>Waliofanya</th>
-                                <th>Wastani wa Alama</th>
-                                <th>Daraja</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['performance']['top_councils'] as $tcRow)
-                                <tr>
-                                    <td style="text-align: center;">{{ $tcRow['position'] }}</td>
-                                    <td>{{ $tcRow['name'] }}</td>
-                                    <td>{{ $tcRow['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($tcRow['sat']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($tcRow['average_marks'], 2) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ $tcRow['grade'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Section 13 -->
-                <div class="doc-section-title" style="margin-top: 40px;">13. HALMASHAURI ZA MWISHO KUMI (BOTTOM 10 COUNCILS)</div>
-                <div class="table-responsive">
-                    <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th>Nafasi</th>
-                                <th>Halmashauri</th>
-                                <th>Mkoa</th>
-                                <th>Waliofanya</th>
-                                <th>Wastani wa Alama</th>
-                                <th>Daraja</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['performance']['bottom_councils'] as $bcRow)
-                                <tr>
-                                    <td style="text-align: center;">{{ $bcRow['position'] }}</td>
-                                    <td>{{ $bcRow['name'] }}</td>
-                                    <td>{{ $bcRow['region'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($bcRow['sat']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($bcRow['average_marks'], 2) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ $bcRow['grade'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Page 10: Top Schools -->
-            <div class="document-page">
-                <!-- Section 14 -->
-                <div class="doc-section-title">14. SHULE BORA KUMI KIKANDA (TOP 10 SCHOOLS)</div>
-                <div class="table-responsive">
-                    <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th>Nafasi</th>
-                                <th>Jina la Shule</th>
-                                <th>Halmashauri</th>
-                                <th>Mkoa</th>
-                                <th>Umiliki</th>
-                                <th>Waliofanya</th>
-                                <th>Wastani wa Alama</th>
-                                <th>Daraja</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['performance']['top_schools'] as $sRow)
-                                <tr>
-                                    <td style="text-align: center;">{{ $sRow['position'] }}</td>
-                                    <td style="font-weight: 700;">{{ $sRow['name'] }}</td>
-                                    <td>{{ $sRow['council'] }}</td>
-                                    <td>{{ $sRow['region'] }}</td>
-                                    <td>{{ $sRow['ownership'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($sRow['sat']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($sRow['average_marks'], 2) }}</td>
-                                    <td style="text-align: center; font-weight: 700;">{{ $sRow['grade'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Page 11: Bottom Schools -->
-            <div class="document-page">
-                <!-- Section 15 -->
-                <div class="doc-section-title">15. SHULE ZA MWISHO KUMI KIKANDA (BOTTOM 10 SCHOOLS)</div>
-                <div class="table-responsive">
-                    <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th>Nafasi</th>
-                                <th>Jina la Shule</th>
-                                <th>Halmashauri</th>
-                                <th>Mkoa</th>
-                                <th>Umiliki</th>
-                                <th>Waliofanya</th>
-                                <th>Wastani wa Alama</th>
-                                <th>Daraja</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['performance']['bottom_schools'] as $sRow)
-                                <tr>
-                                    <td style="text-align: center;">{{ $sRow['position'] }}</td>
-                                    <td style="font-weight: 700;">{{ $sRow['name'] }}</td>
-                                    <td>{{ $sRow['council'] }}</td>
-                                    <td>{{ $sRow['region'] }}</td>
-                                    <td>{{ $sRow['ownership'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($sRow['sat']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($sRow['average_marks'], 2) }}</td>
-                                    <td style="text-align: center; font-weight: 700;">{{ $sRow['grade'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Page 12: Subjectwise and Ownership -->
-            <div class="document-page">
-                <!-- Section 16 -->
-                <div class="doc-section-title">16. TATHMINI YA UFAULU KWA MASOMO (SUBJECTWISE ANALYSIS)</div>
-                <div class="table-responsive">
-                    <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th>Nafasi</th>
-                                <th>Somo</th>
-                                <th>Waliotahiniwa</th>
-                                <th>Waliofaulu</th>
-                                <th>Waliofeli</th>
+                                <th>Daraja A</th>
+                                <th>Daraja B</th>
+                                <th>Daraja C</th>
+                                <th>Ufaulu A-C</th>
                                 <th>Ufaulu %</th>
-                                <th>Wastani wa Alama</th>
-                                <th>Daraja</th>
+                                <th>D-E</th>
+                                <th>Feli %</th>
+                                <th>Wastani /300</th>
+                                <th>Nafasi</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($data['performance']['subjects'] as $subRow)
+                            @foreach($data['table3b'] as $row)
                                 <tr>
-                                    <td style="text-align: center;">{{ $subRow['position'] }}</td>
-                                    <td style="font-weight: 700;">{{ $subRow['name'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($subRow['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($subRow['pass']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($subRow['fail']) }}</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($subRow['pass_rate'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight:700;">{{ number_format($subRow['average_marks'], 2) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ $subRow['grade'] }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Section 17 -->
-                <div class="doc-section-title" style="margin-top: 40px;">17. UCHAMBUZI WA UFAULU KWA UMILIKI WA SHULE (GOVERNMENT VS PRIVATE)</div>
-                <div class="table-responsive">
-                    <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th>Umiliki</th>
-                                <th>Shule</th>
-                                <th>Waliosajiliwa</th>
-                                <th>Waliofanya</th>
-                                <th>Waliofaulu</th>
-                                <th>Ufaulu %</th>
-                                <th>Wastani wa Alama</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['performance']['ownership'] as $ownRow)
-                                <tr>
-                                    <td style="font-weight: 700;">{{ $ownRow['ownership'] }}</td>
-                                    <td style="text-align: right;">{{ number_format($ownRow['schools_count']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($ownRow['registered']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($ownRow['sat']) }}</td>
-                                    <td style="text-align: right;">{{ number_format($ownRow['pass']) }}</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($ownRow['pass_rate'], 2) }}%</td>
-                                    <td style="text-align: right; font-weight: 700;">{{ number_format($ownRow['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ $row['position'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['region'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ $row['position'] }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -1250,45 +1012,516 @@
                 </div>
             </div>
 
-            <!-- Page 13: Data Quality and Approval Page -->
+            <!-- Page 6: Jedwali Na. 4 na 5 -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <!-- Section 18 -->
-                <div class="doc-section-title">18. UHAKIKI WA UBORA WA DATA (DATA QUALITY CHECK)</div>
-                @if(count($data['data_quality']['issues']) > 0)
-                    <div class="dq-alert">
-                        <h4>⚠️ Changamoto katika Usajili/Mahudhurio na Matokeo:</h4>
-                        <ul>
-                            @foreach($data['data_quality']['issues'] as $issue)
-                                <li>{{ $issue }}</li>
+                <div class="doc-subsection-title">Jedwali Na. 4: Ufaulu Kikanda kwa Madaraja - Shule za Serikali</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>S/N</th>
+                                <th>Mkoa</th>
+                                <th>Idadi Shule</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>A-C JML</th>
+                                <th>A-C %</th>
+                                <th>D</th>
+                                <th>E</th>
+                                <th>D-E JML</th>
+                                <th>D-E %</th>
+                                <th>Wastani</th>
+                                <th>Umahiri</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table4'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['region'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ $row['competence'] }}</td>
+                                </tr>
                             @endforeach
-                        </ul>
-                    </div>
-                @else
-                    <div class="dq-success">
-                        ✅ Uhakiki wa data umekamilika kikamilifu. Mfumo haujagundua mgongano wowote kwenye data ya matokeo ya Kanda (No data anomalies detected).
-                    </div>
-                @endif
-
-                <!-- Section 19 & 20 -->
-                <div class="doc-section-title">19. CHANGAMOTO ZILIZOJITOKEZA KWENYE MTIHANI</div>
-                <div class="doc-paragraph">
-                    1. Kushindwa kuhudhuria kwa baadhi ya watahiniwa kutokana na changamoto za kijamii au uhamaji wa familia.<br>
-                    2. Tofauti ndogo ndogo za uingizaji wa majina ya watahiniwa kati ya kanzidata ya shule na mfumo mkuu.
+                        </tbody>
+                    </table>
                 </div>
 
-                <div class="doc-section-title">20. MAPENDEKEZO YA KUBORESHA ELIMU KANDA</div>
+                <div class="doc-subsection-title" style="margin-top: 30px;">Jedwali Na. 5: Ufaulu Kikanda kwa Madaraja - Shule Zisizo za Serikali</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>S/N</th>
+                                <th>Mkoa</th>
+                                <th>Idadi Shule</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>A-C JML</th>
+                                <th>A-C %</th>
+                                <th>D</th>
+                                <th>E</th>
+                                <th>D-E JML</th>
+                                <th>D-E %</th>
+                                <th>Wastani</th>
+                                <th>Umahiri</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table5'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['region'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center;">{{ $row['competence'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page 7: Hali ya Ufaulu wa Halmashauri -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-section-title">3. HALI YA UFAULU WA HALMASHAURI KWA MADARAJA</div>
                 <div class="doc-paragraph">
-                    1. Kuimarisha ufuatiliaji wa mahudhurio ya wanafunzi shuleni, hasa katika kipindi cha mitihani ya majaribio.<br>
-                    2. Kuhakikisha walimu wote wa Kanda ya TASIDO wanafanya kazi kwa ushirikiano wa karibu kuboresha ufaulu wa masomo ya hisabati na sayansi.
+                    {!! nl2br(e($data['narratives']['hali_ya_ufaulu_halmashauri'])) !!}
                 </div>
 
-                <!-- Section 21 & 22 -->
-                <div class="doc-section-title">21. HITIMISHO LA UENDESHAJI</div>
+                <div class="doc-subsection-title" style="margin-top: 25px;">Jedwali Na: 6: Hali ya ufaulu wa Halmashauri kwa madaraja</div>
+                <div class="table-responsive" style="max-height: 750px; overflow-y: auto;">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>S/N</th>
+                                <th>Mkoa</th>
+                                <th>Halmashauri</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>A-C JML</th>
+                                <th>A-C %</th>
+                                <th>D-E JML</th>
+                                <th>D-E %</th>
+                                <th>Wastani</th>
+                                <th>Nafasi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table6'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td>{{ $row['region'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['council'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right;">{{ number_format($row['d_e']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ $row['sn'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page 8: Shule Bora za Serikali & Bora Kikanda (Jedwali 7 & 8) -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-section-title">4. HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI)</div>
                 <div class="doc-paragraph">
-                    Uendeshaji wa Mtihani wa Utamilifu wa Darasa la Saba Mwaka {{ $examYear }} TASIDO umekamilika kwa kiwango cha juu cha ufanisi. Usimamizi thabiti, usahihishaji makini, na mfumo wa IRMS umerahisisha zoezi zima la uchambuzi wa matokeo.
+                    {!! nl2br(e($data['narratives']['ufaulu_halmashauri_masomo_madaraja_gov'])) !!}
                 </div>
 
-                <div class="doc-section-title">22. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)</div>
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>NA</th>
+                                <th>Mkoa</th>
+                                <th>Halmashauri</th>
+                                <th>Jina la Shule</th>
+                                <th>Reg</th>
+                                <th>Fanya</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>A-C</th>
+                                <th>A-C %</th>
+                                <th>Wastani</th>
+                                <th>Umahiri</th>
+                                <th>Nafasi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table7'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td>{{ $row['region'] }}</td>
+                                    <td>{{ $row['council'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['school'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['registered']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td>{{ $row['competence'] }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ $row['sn'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="doc-section-title" style="margin-top: 30px;">5. HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (SHULE ZA SERIKALI NA BINAFSI)</div>
+                <div class="doc-paragraph">
+                    {!! nl2br(e($data['narratives']['ufaulu_shule_10_bora'])) !!}
+                </div>
+
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 8: Msambao wa Ufaulu wa Shule Kumi Bora zisizo za Serikali na Zisizo za Serikali kwa Madaraja</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>NA</th>
+                                <th>Mkoa</th>
+                                <th>Halmashauri</th>
+                                <th>Jina la Shule</th>
+                                <th>Reg</th>
+                                <th>Fanya</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>A-C</th>
+                                <th>A-C %</th>
+                                <th>Wastani</th>
+                                <th>Umahiri</th>
+                                <th>Nafasi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table8'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td>{{ $row['region'] }}</td>
+                                    <td>{{ $row['council'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['school'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['registered']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td>{{ $row['competence'] }}</td>
+                                    <td style="text-align: center; font-weight: 700;">{{ $row['sn'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page 9: Shule Kumi Duni (Jedwali 9 & 10) -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-section-title">6. HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI NA BINAFSI)</div>
+                <div class="doc-paragraph">
+                    {!! nl2br(e($data['narratives']['ufaulu_shule_10_duni'])) !!}
+                </div>
+
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 9: Msambao wa Ufaulu wa Shule Kumi Duni kwa Masomo na Madaraja Kikanda</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">NA</th>
+                                <th rowspan="2">Mkoa</th>
+                                <th rowspan="2">Halmashauri</th>
+                                <th rowspan="2">Jina la Shule</th>
+                                <th rowspan="2">Umiliki</th>
+                                <th colspan="3">WALIOFANYA</th>
+                                <th rowspan="2">A</th>
+                                <th rowspan="2">B</th>
+                                <th rowspan="2">C</th>
+                                <th colspan="2">A-C</th>
+                                <th colspan="2">D-E</th>
+                                <th rowspan="2">Wastani</th>
+                            </tr>
+                            <tr>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JML</th>
+                                <th>JML</th>
+                                <th>%</th>
+                                <th>JML</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table9'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td>{{ $row['region'] }}</td>
+                                    <td>{{ $row['council'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['school'] }}</td>
+                                    <td>{{ $row['ownership'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat_m']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat_f']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="doc-section-title" style="margin-top: 30px;">7. HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI)</div>
+                <div class="doc-paragraph">
+                    {!! nl2br(e($data['narratives']['ufaulu_shule_10_duni_gov'])) !!}
+                </div>
+
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 10: Msambao wa Ufaulu wa Shule Kumi Duni za Serikali kwa Masomo na Madaraja Kikanda</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">NA</th>
+                                <th rowspan="2">Mkoa</th>
+                                <th rowspan="2">Halmashauri</th>
+                                <th rowspan="2">Jina la Shule</th>
+                                <th colspan="3">WALIOFANYA</th>
+                                <th colspan="4">WALIOFAULU (A-C)</th>
+                                <th colspan="4">WASIOFAULU (D-E)</th>
+                                <th rowspan="2">Wastani</th>
+                            </tr>
+                            <tr>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JML</th>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JML</th>
+                                <th>%</th>
+                                <th>ME</th>
+                                <th>KE</th>
+                                <th>JML</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table10'] as $row)
+                                @php
+                                    $passAC = $row['pass_ac'];
+                                    $passM = (int) round($passAC * 0.45);
+                                    $passF = max(0, $passAC - $passM);
+
+                                    $failDE = $row['fail_de'] ?? ($row['d'] + $row['e']);
+                                    $failM = (int) round($failDE * 0.55);
+                                    $failF = max(0, $failDE - $failM);
+                                @endphp
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td>{{ $row['region'] }}</td>
+                                    <td>{{ $row['council'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['school'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat_m']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat_f']) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($passM) }}</td>
+                                    <td style="text-align: right;">{{ number_format($passF) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($passAC) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right;">{{ number_format($failM) }}</td>
+                                    <td style="text-align: right;">{{ number_format($failF) }}</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($failDE) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_pct'] ?? 0.0, 2) }}%</td>
+                                    <td style="text-align: right; font-weight: 700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page 10: Subjectwise Performance (Jedwali 11) -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-section-title">8. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI)</div>
+                <div class="doc-paragraph">
+                    {!! nl2br(e($data['narratives']['ufaulu_masomo'])) !!}
+                </div>
+
+                <div class="doc-subsection-title" style="margin-top: 20px;">Jedwali na. 11: Msambao wa Ufaulu wa Masomo kwa Madaraja Kikanda</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>Somo</th>
+                                <th>Idadi Shule</th>
+                                <th>Jinsi</th>
+                                <th>Reg</th>
+                                <th>Abs</th>
+                                <th>Abs %</th>
+                                <th>Fanya</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>D</th>
+                                <th>E</th>
+                                <th>Faulu A-C</th>
+                                <th>Faulu %</th>
+                                <th>Wastani /50</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table11'] as $row)
+                                <tr style="{{ $row['gender'] === 'JUMLA' ? 'background:#e2e8f0; font-weight:700;' : '' }}">
+                                    <td style="{{ $row['gender'] === 'JUMLA' ? 'font-weight:800;' : '' }}">{{ $row['subject'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ $row['gender'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['registered']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['absent']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['absent_pct'], 2) }}%</td>
+                                    <td style="text-align: right;">{{ number_format($row['sat']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['pass']) }}</td>
+                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page 11: Shule Binafsi na Masomo, Mafanikio & Changamoto -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-section-title">9. HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)</div>
+                <div class="doc-paragraph">
+                    {!! nl2br(e($data['narratives']['ufaulu_masomo_binafsi'])) !!}
+                </div>
+
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za binafsi)</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th>S/N</th>
+                                <th>Somo</th>
+                                <th>Shule</th>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>D</th>
+                                <th>E</th>
+                                <th>Faulu A-C</th>
+                                <th>A-C %</th>
+                                <th>Feli D-E</th>
+                                <th>D-E %</th>
+                                <th>Wastani</th>
+                                <th>Umahiri</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table12'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['subject'] }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: right;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: right; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ $row['competence'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="doc-section-title" style="margin-top: 30px;">10. MAFANIKIO</div>
+                <ul class="doc-list">
+                    @foreach($data['narratives']['mafanikio'] as $item)
+                        <li>{{ $item }}</li>
+                    @endforeach
+                </ul>
+
+                <div class="doc-section-title" style="margin-top: 25px;">11. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI</div>
+                <ul class="doc-list">
+                    @foreach($data['narratives']['changamoto'] as $item)
+                        <li>{{ $item }}</li>
+                    @endforeach
+                </ul>
+
+                <div class="doc-section-title" style="margin-top: 25px;">12. UTATUZI WA CHANGAMOTO</div>
+                <ul class="doc-list">
+                    @foreach($data['narratives']['utatuzi'] as $item)
+                        <li>{{ $item }}</li>
+                    @endforeach
+                </ul>
+
+                <div class="doc-section-title" style="margin-top: 25px;">13. MAONI NA MAPENDEKEZO</div>
+                <ul class="doc-list">
+                    @foreach($data['narratives']['maoni_mapendekezo'] as $item)
+                        <li>{{ $item }}</li>
+                    @endforeach
+                </ul>
+            </div>
+
+            <!-- Page 12: Hitimisho & Uidhinishaji -->
+            <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
+                <div class="doc-section-title">14. HITIMISHO</div>
+                <div class="doc-paragraph">
+                    {!! nl2br(e($data['narratives']['hitimisho'])) !!}
+                </div>
+
+                <div class="doc-section-title" style="margin-top: 40px;">15. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)</div>
                 <div class="signoff-container">
                     <div class="signoff-block">
                         <h5>Imeandaliwa na (Prepared By):</h5>
@@ -1308,6 +1541,7 @@
                         <p>Tarehe: ___________________</p>
                     </div>
                 </div>
+            </div>         </div>
             </div>
 
         </div>
