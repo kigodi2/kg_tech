@@ -233,7 +233,16 @@ class PsleZonalTasidoTaarifaController extends Controller
         ];
 
         foreach ($candidates as $candidate) {
+            // Check in standard Laravel public folder
             if (file_exists(public_path($candidate))) {
+                return asset($candidate);
+            }
+            // Check in base path (in case of custom document root configuration like cPanel public_html)
+            if (file_exists(base_path($candidate))) {
+                return asset($candidate);
+            }
+            // Check explicitly in public subfolder
+            if (file_exists(base_path('public/' . $candidate))) {
                 return asset($candidate);
             }
         }
@@ -251,8 +260,18 @@ class PsleZonalTasidoTaarifaController extends Controller
         ];
 
         foreach ($candidates as $candidate) {
+            // Check in standard Laravel public folder
             $path = public_path($candidate);
-
+            if (file_exists($path)) {
+                return $path;
+            }
+            // Check in base path
+            $path = base_path($candidate);
+            if (file_exists($path)) {
+                return $path;
+            }
+            // Check explicitly in public subfolder
+            $path = base_path('public/' . $candidate);
             if (file_exists($path)) {
                 return $path;
             }
