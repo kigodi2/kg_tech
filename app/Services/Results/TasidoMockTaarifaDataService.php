@@ -733,6 +733,8 @@ class TasidoMockTaarifaDataService
         foreach ($table12Rows as $idx => &$row) {
             $row['sn'] = $idx + 1;
         }
+        unset($row);
+
         // Table 12 Gov: Subject performance for Government schools
         $table12GovRows = [];
         if ($subjectwise && isset($subjectwise['rows'])) {
@@ -1054,6 +1056,16 @@ class TasidoMockTaarifaDataService
         $ownershipList[] = $calcOwnTotal($table4Rows, 'Shule za Serikali');
         $ownershipList[] = $calcOwnTotal($table5Rows, 'Shule za Binafsi');
 
+        $table12Rows = collect($table12Rows)
+            ->map(fn ($row) => $this->normalizeSubjectPerformanceRow($row))
+            ->values()
+            ->all();
+
+        $table12GovRows = collect($table12GovRows)
+            ->map(fn ($row) => $this->normalizeSubjectPerformanceRow($row))
+            ->values()
+            ->all();
+
         // Compile all findings
         $data = [
             'meta' => $meta,
@@ -1337,5 +1349,91 @@ class TasidoMockTaarifaDataService
             'maoni_mapendekezo' => $maoni_mapendekezo,
             'hitimisho' => $hitimisho,
         ];
+    }
+
+    private function translateSubjectName(?string $subject): string
+    {
+        $value = trim((string) $subject);
+        $key = strtoupper($value);
+
+        return match ($key) {
+            'CIVIC AND MORAL EDUCATION' => 'URAIA NA MAADILI',
+            'KISWAHILI' => 'KISWAHILI',
+            'SOCIAL STUDIES AND VOCATIONAL SKILLS' => 'MAARIFA YA JAMII NA STADI ZA KAZI',
+            'SCIENCE AND TECHNOLOGY' => 'SAYANSI NA TEKNOLOJIA',
+            'ENGLISH LANGUAGE' => 'ENGLISH LANGUAGE',
+            'MATHEMATICS' => 'HISABATI',
+            default => $value,
+        };
+    }
+
+    private function subjectProficiencyFromAverage(mixed $average): string
+    {
+        if ($average === null || $average === '') {
+            return '';
+        }
+
+        $val = floatval($average);
+        if ($val >= 40.17) {
+            return 'Daraja A (Bora)';
+        } elseif ($val >= 30.17) {
+            return 'Daraja B (Nzuri Sana)';
+        } elseif ($val >= 20.17) {
+            return 'Daraja C (Nzuri)';
+        } elseif ($val >= 10.17) {
+            return 'Daraja D (Inaridhisha)';
+        } else {
+            return 'Daraja E (Hafifu)';
+        }
+    }
+
+    private function normalizeSubjectPerformanceRow(array $row): array
+    {
+        $passCount = (int) ($row['pass_count'] ?? $row['pass'] ?? $row['pass_ac'] ?? 0);
+        $failCount = (int) ($row['fail_count'] ?? $row['fail'] ?? $row['fail_de'] ?? 0);
+
+        $total = $passCount + $failCount;
+
+        $passPct = array_key_exists('pass_pct', $row)
+            ? (float) $row['pass_pct']
+            : ($total > 0 ? ($passCount / $total) * 100 : 0);
+
+        $failPct = array_key_exists('fail_pct', $row)
+            ? (float) $row['fail_pct']
+            : ($total > 0 ? ($failCount / $total) * 100 : 0);
+
+        $average = (float) ($row['average'] ?? $row['wastani'] ?? $row['average_marks'] ?? $row['avg_marks'] ?? 0);
+
+        $subject = $row['subject'] ?? '';
+        $subjectLabel = $this->translateSubjectName($subject);
+        $schools = (int) ($row['schools'] ?? $row['schools_count'] ?? 0);
+
+        $proficiencyLabel = $row['proficiency_label']
+            ?? $row['competence']
+            ?? $this->subjectProficiencyFromAverage($average);
+
+        return array_merge($row, [
+            'subject' => $subject,
+            'subject_label' => $subjectLabel,
+            'schools' => $schools,
+            'a' => (int) ($row['a'] ?? $row['grade_a'] ?? 0),
+            'b' => (int) ($row['b'] ?? $row['grade_b'] ?? 0),
+            'c' => (int) ($row['c'] ?? $row['grade_c'] ?? 0),
+            'd' => (int) ($row['d'] ?? $row['grade_d'] ?? 0),
+            'e' => (int) ($row['e'] ?? $row['grade_e'] ?? 0),
+            'pass_count' => $passCount,
+            'pass_pct' => round($passPct, 2),
+            'fail_count' => $failCount,
+            'fail_pct' => round($failPct, 2),
+            'average' => $average,
+            'proficiency_label' => $proficiencyLabel,
+            
+            // Backward compatibility aliases
+            'schools_count' => $schools,
+            'pass_ac' => $passCount,
+            'fail_de' => $failCount,
+            'average_marks' => $average,
+            'competence' => $proficiencyLabel,
+        ]);
     }
 }

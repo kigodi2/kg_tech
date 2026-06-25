@@ -1459,32 +1459,94 @@
                 </div>
             </div>
 
-            <!-- Page 11: Shule Binafsi na Masomo (Jedwali 12) -->
+            <!-- Page 11: Shule za Serikali na Masomo (Jedwali 12) -->
             <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
-                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">9.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)</div>
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">9.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI)</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['ufaulu_masomo_binafsi'])) !!}
+                    {!! nl2br(e($data['narratives']['ufaulu_masomo_serikali'])) !!}
                 </div>
 
-                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za binafsi)</div>
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za serikali)</div>
                 <div class="table-responsive">
                     <table class="doc-table">
                         <thead>
                             <tr>
-                                <th>S/N</th>
-                                <th>Somo</th>
-                                <th>Shule</th>
+                                <th rowspan="2">S/N</th>
+                                <th rowspan="2">Somo</th>
+                                <th rowspan="2">Shule</th>
+                                <th colspan="5">MADARAJA</th>
+                                <th colspan="2">UFAULU (A-C)</th>
+                                <th colspan="2">UFAULU (D-E)</th>
+                                <th rowspan="2">Wastani</th>
+                                <th rowspan="2">Umahiri</th>
+                            </tr>
+                            <tr>
                                 <th>A</th>
                                 <th>B</th>
                                 <th>C</th>
                                 <th>D</th>
                                 <th>E</th>
-                                <th>Faulu A-C</th>
-                                <th>A-C %</th>
-                                <th>Feli D-E</th>
-                                <th>D-E %</th>
-                                <th>Wastani</th>
-                                <th>Umahiri</th>
+                                <th>JML</th>
+                                <th>%</th>
+                                <th>JML</th>
+                                <th>%</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($data['table12_gov'] as $row)
+                                <tr>
+                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                    <td style="font-weight: 700;">{{ $row['subject'] }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['d']) }}</td>
+                                    <td style="text-align: center;">{{ number_format($row['e']) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_ac']) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format((float) ($row['pass_pct'] ?? 0), 2) }}%</td>
+                                    <td style="text-align: center;">{{ number_format($row['fail_de']) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format((float) ($row['fail_pct'] ?? 0), 2) }}%</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                    <td style="text-align: center; font-weight:700;">{{ $row['competence'] }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Page 12: Shule Binafsi na Masomo (Jedwali 13) -->
+            <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
+                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">10.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)</div>
+                <div class="doc-paragraph">
+                    {!! nl2br(e($data['narratives']['ufaulu_masomo_binafsi'])) !!}
+                </div>
+
+                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 13: Ufaulu Kikanda kwa Masomo (shule za binafsi)</div>
+                <div class="table-responsive">
+                    <table class="doc-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">S/N</th>
+                                <th rowspan="2">Somo</th>
+                                <th rowspan="2">Shule</th>
+                                <th colspan="5">MADARAJA</th>
+                                <th colspan="2">UFAULU (A-C)</th>
+                                <th colspan="2">UFAULU (D-E)</th>
+                                <th rowspan="2">Wastani</th>
+                                <th rowspan="2">Umahiri</th>
+                            </tr>
+                            <tr>
+                                <th>A</th>
+                                <th>B</th>
+                                <th>C</th>
+                                <th>D</th>
+                                <th>E</th>
+                                <th>JML</th>
+                                <th>%</th>
+                                <th>JML</th>
+                                <th>%</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1499,9 +1561,9 @@
                                     <td style="text-align: center;">{{ number_format($row['d']) }}</td>
                                     <td style="text-align: center;">{{ number_format($row['e']) }}</td>
                                     <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format((float) ($row['pass_pct'] ?? 0), 2) }}%</td>
                                     <td style="text-align: center;">{{ number_format($row['fail_de']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['fail_pct'], 2) }}%</td>
+                                    <td style="text-align: center; font-weight:700;">{{ number_format((float) ($row['fail_pct'] ?? 0), 2) }}%</td>
                                     <td style="text-align: center; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
                                     <td style="text-align: center; font-weight:700;">{{ $row['competence'] }}</td>
                                 </tr>
@@ -1511,30 +1573,30 @@
                 </div>
             </div>
 
-            <!-- Page 12: Mafanikio, Changamoto & Utatuzi -->
+            <!-- Page 13: Mafanikio, Changamoto & Utatuzi -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title" style="margin-top: 0px;">10. MAFANIKIO</div>
+                <div class="doc-section-title" style="margin-top: 0px;">11. MAFANIKIO</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['mafanikio'] as $item)
                         <li>{{ $item }}</li>
                     @endforeach
                 </ul>
 
-                <div class="doc-section-title" style="margin-top: 25px;">11. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI WA UTAMILIFU KANDA YA TASIDO</div>
+                <div class="doc-section-title" style="margin-top: 25px;">12. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI WA UTAMILIFU KANDA YA TASIDO</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['changamoto'] as $item)
                         <li>{{ $item }}</li>
                     @endforeach
                 </ul>
 
-                <div class="doc-subsection-title" style="margin-top: 25px;">11.1 Utatuzi wa changamoto</div>
+                <div class="doc-subsection-title" style="margin-top: 25px;">12.1 Utatuzi wa changamoto</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['utatuzi'] as $item)
                         <li>{{ $item }}</li>
                     @endforeach
                 </ul>
 
-                <div class="doc-section-title" style="margin-top: 25px;">12. MAONI NA MAPENDEKEZO</div>
+                <div class="doc-section-title" style="margin-top: 25px;">13. MAONI NA MAPENDEKEZO</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['maoni_mapendekezo'] as $item)
                         <li>{{ $item }}</li>
@@ -1542,14 +1604,14 @@
                 </ul>
             </div>
 
-            <!-- Page 13: Hitimisho & Uidhinishaji -->
+            <!-- Page 14: Hitimisho & Uidhinishaji -->
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
-                <div class="doc-section-title">13. HITIMISHO</div>
+                <div class="doc-section-title">14. HITIMISHO</div>
                 <div class="doc-paragraph">
                     {!! nl2br(e($data['narratives']['hitimisho'])) !!}
                 </div>
 
-                <div class="doc-section-title" style="margin-top: 40px;">14. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)</div>
+                <div class="doc-section-title" style="margin-top: 40px;">15. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)</div>
                 <div class="signoff-container">
                     <div class="signoff-block">
                         <h5>Imeandaliwa na (Prepared By):</h5>
