@@ -482,8 +482,8 @@ class PsleZonalTasidoTaarifaPdfService
         );
         $sectionHeader("Jedwali Na. 4: Ufaulu Kikanda kwa Madaraja - Shule za Serikali");
         
-        $t4Headers = ['S/N', 'Mkoa', 'Idadi Shule', 'A', 'B', 'C', 'D', 'E', 'JML', '%', 'JML', '%', 'Wastani', 'Kundi la Umahiri'];
-        $t4Widths = [4, 13, 10, 4, 4, 4, 4, 4, 6, 6, 6, 6, 9, 20];
+        $t4Headers = ['S/N', 'Mkoa', 'Shule', 'A', 'B', 'C', 'D', 'E', 'JML', '%', 'JML', '%', 'Wastani', 'Kundi la Umahiri'];
+        $t4Widths = [4, 12, 7, 5, 5, 5, 5, 5, 7, 6, 7, 6, 7, 19];
         $t4Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t4Rows = [];
         foreach ($data['table4'] as $row) {
@@ -1167,7 +1167,7 @@ class PsleZonalTasidoTaarifaPdfService
         } elseif ($type === 'regional_summary') {
             $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('S/N'), 1, 0, 'C', true);
             $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('MKOA'), 1, 0, 'C', true);
-            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('IDADI SHULE'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('SHULE'), 1, 0, 'C', true);
             
             $pdf->Cell($widths[3] + $widths[4] + $widths[5] + $widths[6] + $widths[7], $h1, $pdf->pdfText('MADARAJA'), 1, 0, 'C', true);
             $pdf->Cell($widths[8] + $widths[9], $h1, $pdf->pdfText('UFAULU (A-C)'), 1, 0, 'C', true);
