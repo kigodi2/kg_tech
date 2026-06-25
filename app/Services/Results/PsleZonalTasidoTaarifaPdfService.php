@@ -536,8 +536,8 @@ class PsleZonalTasidoTaarifaPdfService
 
         $sectionHeader("Jedwali Na: 6: Hali ya ufaulu wa Halmashauri kwa madaraja");
         
-        $t6Headers = ['S/N', 'Mkoa', 'Halmashauri', 'A', 'B', 'C', 'A-C JML', 'A-C %', 'D-E JML', 'D-E %', 'Wastani', 'Nafasi'];
-        $t6Widths = [10, 22, 38, 12, 12, 12, 16, 16, 16, 16, 12, 8];
+        $t6Headers = ['S/N', 'Mkoa', 'Halmashauri', 'A', 'B', 'C', 'JML', '%', 'JML', '%', 'Wastani', 'Nafasi'];
+        $t6Widths = [5, 12, 21, 6, 6, 6, 8, 7, 8, 7, 8, 6];
         $t6Aligns = ['C', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t6Rows = [];
         foreach ($data['table6'] as $row) {
@@ -556,7 +556,7 @@ class PsleZonalTasidoTaarifaPdfService
                 $row['sn']
             ];
         }
-        $this->renderTable($pdf, $t6Headers, $t6Widths, $t6Aligns, $t6Rows);
+        $this->renderTable($pdf, $t6Headers, $t6Widths, $t6Aligns, $t6Rows, null, true, 'council_summary', 5.2, 7.5);
 
         // ------------------ SECTION 5 (Table 7 & Section 4 text) ------------------
         $pdf->addLandscapePage(
@@ -1018,7 +1018,7 @@ class PsleZonalTasidoTaarifaPdfService
 
     private function renderCustomDoubleHeader(\FPDF $pdf, array $widths, string $type): void
     {
-        if ($type === 'regional_summary') {
+        if ($type === 'regional_summary' || $type === 'council_summary') {
             $pdf->SetFont($pdf->primaryFont, 'B', 7.0);
         } else {
             $pdf->SetFont($pdf->primaryFont, 'B', 7.5);
@@ -1030,8 +1030,8 @@ class PsleZonalTasidoTaarifaPdfService
         $x = $pdf->GetX();
         $y = $pdf->GetY();
 
-        $h1 = ($type === 'regional_summary') ? 5.5 : 7;
-        $h2 = ($type === 'regional_summary') ? 5.0 : 6;
+        $h1 = ($type === 'regional_summary' || $type === 'council_summary') ? 5.5 : 7;
+        $h2 = ($type === 'regional_summary' || $type === 'council_summary') ? 5.0 : 6;
         $fullHeight = $h1 + $h2;
 
         if ($type === 'attendance') {
@@ -1185,6 +1185,28 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[11], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
             $pdf->Cell($widths[12], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
             $pdf->Cell($widths[13], $h2, $pdf->pdfText('KUNDI LA UMAHIRI'), 1, 1, 'C', true);
+
+            $pdf->SetXY($x, $y + $fullHeight);
+        } elseif ($type === 'council_summary') {
+            $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('S/N'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('MKOA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('HALMASHAURI'), 1, 0, 'C', true);
+
+            $pdf->Cell($widths[3] + $widths[4] + $widths[5], $h1, $pdf->pdfText('MADARAJA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[6] + $widths[7], $h1, $pdf->pdfText('UFAULU (A-C)'), 1, 0, 'C', true);
+            $pdf->Cell($widths[8] + $widths[9], $h1, $pdf->pdfText('UFAULU (D-E)'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10] + $widths[11], $h1, $pdf->pdfText('MATOKEO'), 1, 1, 'C', true);
+
+            $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
+            $pdf->Cell($widths[3], $h2, $pdf->pdfText('A'), 1, 0, 'C', true);
+            $pdf->Cell($widths[4], $h2, $pdf->pdfText('B'), 1, 0, 'C', true);
+            $pdf->Cell($widths[5], $h2, $pdf->pdfText('C'), 1, 0, 'C', true);
+            $pdf->Cell($widths[6], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[7], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+            $pdf->Cell($widths[8], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[9], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[11], $h2, $pdf->pdfText('NAFASI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x, $y + $fullHeight);
         }
