@@ -978,12 +978,12 @@
                 
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">1.0 UTANGULIZI</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['introduction'])) !!}
+                    {!! nl2br($data['narratives']['introduction']) !!}
                 </div>
                 
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-top: 15px; margin-bottom: 12px; text-transform: uppercase;">2.0 UCHAMBUZI WA MATOKEO NA TAKWIMU ZA WATAHINIWA</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['taarifa_za_watahiniwa'])) !!}
+                    {!! nl2br($data['narratives']['taarifa_za_watahiniwa']) !!}
                 </div>
 
                 <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 1: Watahiniwa waliosajiliwa na waliofanya Mtihani</div>
@@ -1096,7 +1096,7 @@
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">3.0 HALI YA UFAULU KIKANDA NA KWA HALMASHAURI</div>
                 <div style="font-size: 0.95rem; font-weight: 800; color: #000; margin-bottom: 8px; text-transform: uppercase;">3.1 Hali ya ufaulu ngazi ya Kanda</div>
                 <div class="doc-paragraph" style="margin-bottom: 15px;">
-                    {!! nl2br(e($data['narratives']['hali_ya_ufaulu_kanda'])) !!}
+                    {!! nl2br($data['narratives']['hali_ya_ufaulu_kanda']) !!}
                 </div>
 
                 <div class="doc-subsection-title">Jedwali Na. 3a: Hali ya Ufaulu Kikanda kwa Madaraja - Shule za Serikali na Binafsi kwa Wastani wa Ufaulu</div>
@@ -1271,7 +1271,7 @@
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
                 <div style="font-size: 0.95rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">3.2 Hali ya ufaulu wa Halmashauri kwa madaraja</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['hali_ya_ufaulu_halmashauri'])) !!}
+                    {!! nl2br($data['narratives']['hali_ya_ufaulu_halmashauri']) !!}
                 </div>
 
                 <div class="doc-subsection-title" style="margin-top: 25px;">Jedwali Na: 6: Hali ya ufaulu wa Halmashauri kwa madaraja</div>
@@ -1319,7 +1319,7 @@
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">4.0 HALI YA UFAULU WA HALMASHAURI KWA MASOMO NA MADARAJA (SHULE ZA SERIKALI)</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['ufaulu_halmashauri_masomo_madaraja_gov'])) !!}
+                    {!! nl2br($data['narratives']['ufaulu_halmashauri_masomo_madaraja_gov']) !!}
                 </div>
 
                 <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja</div>
@@ -1368,7 +1368,7 @@
 
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-top: 30px; margin-bottom: 12px; text-transform: uppercase;">5.0 HALI YA UFAULU KWA SHULE KUMI BORA KIKANDA (SHULE ZA SERIKALI NA BINAFSI)</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['ufaulu_shule_10_bora'])) !!}
+                    {!! nl2br($data['narratives']['ufaulu_shule_10_bora']) !!}
                 </div>
 
                 <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na 8: Msambao wa Ufaulu wa Shule Kumi Bora zisizo za Serikali na Zisizo za Serikali kwa Madaraja</div>
@@ -1420,7 +1420,7 @@
             <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">6.0 HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI NA BINAFSI)</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['ufaulu_shule_10_duni'])) !!}
+                    {!! nl2br($data['narratives']['ufaulu_shule_10_duni']) !!}
                 </div>
 
                 <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na 9: Msambao wa Ufaulu wa Shule Kumi Duni kwa Masomo na Madaraja Kikanda</div>
@@ -1478,7 +1478,7 @@
 
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-top: 30px; margin-bottom: 12px; text-transform: uppercase;">7.0 HALI YA UFAULU KWA SHULE KUMI DUNI (SHULE ZA SERIKALI)</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['ufaulu_shule_10_duni_gov'])) !!}
+                    {!! nl2br($data['narratives']['ufaulu_shule_10_duni_gov']) !!}
                 </div>
 
                 <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na 10: Msambao wa Ufaulu wa Shule Kumi Duni za Serikali kwa Masomo na Madaraja Kikanda</div>
@@ -1548,7 +1548,7 @@
             <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">8.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI NA BINAFSI)</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['ufaulu_masomo'])) !!}
+                    {!! nl2br($data['narratives']['ufaulu_masomo']) !!}
                 </div>
 
                 <div class="doc-subsection-title" style="margin-top: 20px;">Jedwali na. 11: Msambao wa Ufaulu wa Masomo kwa Madaraja Kikanda</div>
@@ -1628,7 +1628,7 @@
                 <div class="subject-performance-government-section">
                     <h2 style="font-size: 1.05rem; font-weight: 800; color: #000; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 4px;">9.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI)</h2>
                     <p class="doc-paragraph">
-                        {!! nl2br(e($data['narratives']['ufaulu_masomo_serikali'])) !!}
+                        {!! nl2br($data['narratives']['ufaulu_masomo_serikali']) !!}
                     </p>
 
                     <div class="doc-subsection-title table-title" style="margin-top: 15px;">Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za serikali)</div>
@@ -1686,7 +1686,7 @@
             <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
                 <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">10.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['ufaulu_masomo_binafsi'])) !!}
+                    {!! nl2br($data['narratives']['ufaulu_masomo_binafsi']) !!}
                 </div>
 
                 <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 13: Ufaulu Kikanda kwa Masomo (shule za binafsi)</div>
@@ -1744,21 +1744,21 @@
                 <div class="doc-section-title" style="margin-top: 0px;">11. MAFANIKIO</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['mafanikio'] as $item)
-                        <li>{{ $item }}</li>
+                        <li>{!! $item !!}</li>
                     @endforeach
                 </ul>
 
                 <div class="doc-section-title" style="margin-top: 25px;">12. CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI WA UTAMILIFU KANDA YA TASIDO</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['changamoto'] as $item)
-                        <li>{{ $item }}</li>
+                        <li>{!! $item !!}</li>
                     @endforeach
                 </ul>
 
                 <div class="doc-subsection-title" style="margin-top: 25px;">12.1 Utatuzi wa changamoto</div>
                 <ul class="doc-list">
                     @foreach($data['narratives']['utatuzi'] as $item)
-                        <li>{{ $item }}</li>
+                        <li>{!! $item !!}</li>
                     @endforeach
                 </ul>
 
@@ -1767,7 +1767,7 @@
                     <div class="section-underline"></div>
                     <ol>
                         @foreach($data['narratives']['maoni_mapendekezo'] as $item)
-                            <li>{{ $item }}</li>
+                            <li>{!! $item !!}</li>
                         @endforeach
                     </ol>
                 </div>
@@ -1777,12 +1777,12 @@
             <div class="document-page" style="font-family: 'Times New Roman', Times, serif;">
                 <div class="doc-section-title">14. HITIMISHO</div>
                 <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['hitimisho'])) !!}
+                    {!! nl2br($data['narratives']['hitimisho']) !!}
                 </div>
 
                 <section class="approval-page">
                     <p class="approval-statement">
-                        Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka 2026 katika Kanda ya Academic Zone ya TASIDO imejadiliwa, kuhakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.
+                        Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka <strong>2026</strong> katika Kanda ya Academic Zone ya <strong>TASIDO</strong> imejadiliwa, kuhakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.
                     </p>
 
                     <table class="approval-signatures">

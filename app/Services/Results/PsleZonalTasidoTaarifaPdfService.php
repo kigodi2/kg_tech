@@ -297,31 +297,68 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Ln(2);
         };
 
-        $renderParagraph = function(string $text) use ($pdf) {
-            $pdf->SetFont($pdf->primaryFont, '', 9.5);
+        $renderRichText = function(string $text, float $fontSize, float $lineHeight) use ($pdf) {
             $pdf->SetTextColor(30, 41, 59);
-            $pdf->MultiCell(0, 5.2, $pdf->pdfText($text), 0, 'J');
-            $pdf->Ln(3.5);
+            $text = str_replace(['**', '</strong>'], ['<strong>', '</strong>'], $text);
+            $parts = preg_split('/(<strong>|<\/strong>)/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+            
+            $isBold = false;
+            foreach ($parts as $part) {
+                if ($part === '<strong>') {
+                    $isBold = true;
+                    continue;
+                }
+                if ($part === '</strong>') {
+                    $isBold = false;
+                    continue;
+                }
+                
+                if ($isBold) {
+                    $pdf->SetFont($pdf->primaryFont, 'B', $fontSize);
+                } else {
+                    $pdf->SetFont($pdf->primaryFont, '', $fontSize);
+                }
+                $pdf->Write($lineHeight, $pdf->pdfText($part));
+            }
         };
 
-        $renderBullets = function(array $items) use ($pdf) {
-            $pdf->SetFont($pdf->primaryFont, '', 9.5);
-            $pdf->SetTextColor(30, 41, 59);
+        $renderParagraph = function(string $text) use ($pdf, $renderRichText) {
+            $renderRichText($text, 9.5, 5.2);
+            $pdf->Ln(7.0);
+        };
+
+        $renderBullets = function(array $items) use ($pdf, $renderRichText, $data) {
+            $origMargin = $pdf->getLMargin();
+            $indent = $origMargin + 11;
+            
             foreach ($items as $index => $item) {
-                $pdf->SetX($pdf->getLMargin() + 5);
+                // Check if there is enough space on page, else page break
+                $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+                if ($pdf->GetY() + 12 > $limit) {
+                    $pdf->addPortraitPage(
+                        $data['meta']['margin_top'],
+                        $data['meta']['margin_bottom'],
+                        $data['meta']['margin_left'],
+                        $data['meta']['margin_right']
+                    );
+                }
+
+                $pdf->SetX($origMargin + 5);
+                $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
                 $pdf->Cell(6, 5.2, $pdf->pdfText(($index + 1) . "."), 0, 0);
-                $pdf->MultiCell(0, 5.2, $pdf->pdfText($item), 0, 'J');
-                $pdf->Ln(2);
+                
+                $pdf->SetLeftMargin($indent);
+                $renderRichText($item, 9.5, 5.2);
+                $pdf->SetLeftMargin($origMargin);
+                $pdf->Ln(7.2);
             }
             $pdf->Ln(2);
         };
 
         // ------------------ SECTION 1 (PAGE 2) ------------------
-        $renderCompactParagraph = function(string $text) use ($pdf) {
-            $pdf->SetFont($pdf->primaryFont, '', 9.0);
-            $pdf->SetTextColor(30, 41, 59);
-            $pdf->MultiCell(0, 4.2, $pdf->pdfText($text), 0, 'J');
-            $pdf->Ln(2.5);
+        $renderCompactParagraph = function(string $text) use ($pdf, $renderRichText) {
+            $renderRichText($text, 9.0, 4.2);
+            $pdf->Ln(5.5);
         };
 
         $pdf->isCoverPage = false;
@@ -856,7 +893,7 @@ class PsleZonalTasidoTaarifaPdfService
             );
         }
 
-        $renderParagraph("Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka 2026 katika Kanda ya Kitaaluma ya TASIDO imeandaliwa, imehakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.");
+        $renderParagraph("Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka <strong>2026</strong> katika Kanda ya Kitaaluma ya <strong>TASIDO</strong> imeandaliwa, imehakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.");
         $pdf->Ln(5);
 
         $halfWidth = $pdf->usablePageWidth() / 2;
