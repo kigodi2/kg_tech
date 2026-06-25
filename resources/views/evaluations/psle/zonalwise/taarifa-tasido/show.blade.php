@@ -1788,7 +1788,7 @@
                     <table class="approval-signatures">
                         <tr>
                             <td>
-                                <h5 style="font-weight: 700; margin-bottom: 2px; color: #000;">Imeandaliwa na (Prepared By):</h5>
+                                <h5 style="font-weight: 700; margin-bottom: 2px; color: #000;">Imeandaliwa na:</h5>
                                 <div class="signature-line"></div>
                                 <strong class="preview-rto_name">{{ $inputs['rto_name'] ?? 'Ndg. Catherine J. Minde' }}</strong><br>
                                 <span class="preview-prepared_by_title">{{ $inputs['prepared_by_title'] ?? 'Katibu wa Kamati ya Taaluma ya Kanda' }}</span><br>
@@ -1796,7 +1796,7 @@
                                 Tarehe: <span class="date-line"></span>
                             </td>
                             <td>
-                                <h5 style="font-weight: 700; margin-bottom: 2px; color: #000;">Imehakikiwa na Kuidhinishwa na (Approved By):</h5>
+                                <h5 style="font-weight: 700; margin-bottom: 2px; color: #000;">Imehakikiwa na Kuidhinishwa na:</h5>
                                 <div class="signature-line"></div>
                                 <strong class="preview-reo_name">{{ $inputs['reo_name'] ?? 'Ndg. Raymond Mapunda' }}</strong><br>
                                 <span class="preview-approved_by_title">{{ $inputs['approved_by_title'] ?? 'Mwenyekiti wa Kamati ya Mitihani ya Kanda' }}</span><br>

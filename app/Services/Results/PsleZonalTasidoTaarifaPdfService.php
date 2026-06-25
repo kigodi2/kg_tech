@@ -862,8 +862,8 @@ class PsleZonalTasidoTaarifaPdfService
         $halfWidth = $pdf->usablePageWidth() / 2;
 
         $pdf->SetFont($pdf->primaryFont, 'B', 10);
-        $pdf->Cell($halfWidth, 6, $pdf->pdfText("Imeandaliwa na (Prepared By):"), 0, 0, 'L');
-        $pdf->Cell($halfWidth, 6, $pdf->pdfText("Imehakikiwa na Kuidhinishwa na (Approved By):"), 0, 1, 'L');
+        $pdf->Cell($halfWidth, 6, $pdf->pdfText("Imeandaliwa na:"), 0, 0, 'L');
+        $pdf->Cell($halfWidth, 6, $pdf->pdfText("Imehakikiwa na Kuidhinishwa na:"), 0, 1, 'L');
 
         // Space for signature
         $pdf->Ln(18);
