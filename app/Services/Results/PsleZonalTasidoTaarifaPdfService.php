@@ -1160,21 +1160,7 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[9], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
             $pdf->Cell($widths[10], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
             $pdf->Cell($widths[11], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
-            // Save coordinates at start of index 12 cell
-            $x12 = $pdf->GetX();
-            $y12 = $pdf->GetY();
-            
-            // Draw background and borders for index 12 cell
-            $pdf->Cell($widths[12], $h2, '', 1, 0, 'C', true);
-            
-            // Print wrapped text for KUNDI LA UMAHIRI
-            $pdf->SetXY($x12, $y12 + 0.5);
-            $pdf->Cell($widths[12], 3, $pdf->pdfText('KUNDI LA'), 0, 0, 'C');
-            $pdf->SetXY($x12, $y12 + 3.5);
-            $pdf->Cell($widths[12], 3, $pdf->pdfText('UMAHIRI'), 0, 0, 'C');
-            
-            // Reset position to draw the next cell (NAFASI)
-            $pdf->SetXY($x12 + $widths[12], $y12);
+            $pdf->Cell($widths[12], $h2, $pdf->pdfText('KUNDI LA UMAHIRI'), 1, 0, 'C', true);
             $pdf->Cell($widths[13], $h2, $pdf->pdfText('NAFASI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x, $y + $fullHeight);
