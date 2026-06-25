@@ -728,31 +728,9 @@ class PsleZonalTasidoTaarifaPdfService
         $renderParagraph($data['narratives']['ufaulu_masomo']);
 
         $sectionHeader("Jedwali na. 11: Msambao wa Ufaulu wa Masomo kwa Madaraja Kikanda");
-        
-        $t11Headers = ['Somo', 'Shule', 'Jinsi', 'Reg', 'Abs', 'Abs %', 'Fanya', 'A', 'B', 'C', 'D', 'E', 'Pass', 'Pass %', 'Wastani'];
         $t11Widths = [43, 15, 12, 13, 12, 13, 13, 11, 11, 11, 11, 11, 14, 14, 22];
         $t11Aligns = ['L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
-        $t11Rows = [];
-        foreach ($data['table11'] as $row) {
-            $t11Rows[] = [
-                $row['subject'],
-                number_format($row['schools_count']),
-                $row['gender'],
-                number_format($row['registered']),
-                number_format($row['absent']),
-                number_format($row['absent_pct'], 2) . '%',
-                number_format($row['sat']),
-                number_format($row['a']),
-                number_format($row['b']),
-                number_format($row['c']),
-                number_format($row['d']),
-                number_format($row['e']),
-                number_format($row['pass']),
-                number_format($row['pass_pct'], 2) . '%',
-                number_format($row['average_marks'], 2)
-            ];
-        }
-        $this->renderTable($pdf, $t11Headers, $t11Widths, $t11Aligns, $t11Rows);
+        $this->renderTable11($pdf, $t11Widths, $t11Aligns, $data['table11']);
 
         // ------------------ SECTION 10 (Table 12 & Section 9 text - Shule za Serikali) ------------------
         $pdf->addLandscapePage(
@@ -1087,9 +1065,166 @@ class PsleZonalTasidoTaarifaPdfService
         $pdf->Ln(4);
     }
 
+    private function renderTable11(
+        \FPDF $pdf,
+        array $widths,
+        array $aligns,
+        array $rows
+    ): void {
+        // Dynamically scale columns to span exactly the usable page width
+        $usableWidth = $pdf->usablePageWidth();
+        $originalSum = array_sum($widths);
+        if ($originalSum > 0) {
+            $scale = $usableWidth / $originalSum;
+            $sum = 0;
+            $count = count($widths);
+            for ($i = 0; $i < $count - 1; $i++) {
+                $widths[$i] = round($widths[$i] * $scale, 4);
+                $sum += $widths[$i];
+            }
+            $widths[$count - 1] = round($usableWidth - $sum, 4);
+        }
+
+        $pdf->SetFillColor(241, 245, 249);
+        $pdf->SetTextColor(15, 23, 42);
+        $pdf->SetDrawColor(203, 213, 225);
+        $pdf->SetLineWidth(0.2);
+
+        $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+        $headerHeight = 10.5; // Double header height is h1 (5.5) + h2 (5.0) = 10.5
+        $rowHeight = 6.0;
+
+        if ($pdf->GetY() + $headerHeight + $rowHeight > $limit) {
+            $pdf->addLandscapePage();
+            $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+        }
+
+        // Render the custom double header
+        $this->renderCustomDoubleHeader($pdf, $widths, 'subject_distribution');
+
+        $pdf->SetFont($pdf->primaryFont, '', 7.5);
+        $pdf->SetTextColor(30, 41, 59);
+
+        // Group rows by 3 (each subject has ME, KE, JUMLA)
+        $groups = array_chunk($rows, 3);
+
+        foreach ($groups as $group) {
+            $groupHeight = 3 * $rowHeight;
+            $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+
+            if ($pdf->GetY() + $groupHeight > $limit) {
+                $pdf->addLandscapePage();
+                $this->renderCustomDoubleHeader($pdf, $widths, 'subject_distribution');
+                $pdf->SetFont($pdf->primaryFont, '', 7.5);
+                $pdf->SetTextColor(30, 41, 59);
+            }
+
+            // Row 0: ME (with merged SOMO and SHULE cells)
+            $rowME = $group[0];
+            $pdf->SetFillColor(255, 255, 255); // White background for the merged cells
+
+            // 1. SOMO cell (rowspan 3)
+            $subjectName = $this->translateSubjectName($rowME['subject']);
+            $pdf->Cell($widths[0], $groupHeight, $pdf->pdfText($subjectName), 1, 0, 'L', true);
+
+            // 2. SHULE cell (rowspan 3)
+            $schoolsCount = number_format((float) ($rowME['schools_count'] ?? 0));
+            $pdf->Cell($widths[1], $groupHeight, $pdf->pdfText($schoolsCount), 1, 0, 'C', true);
+
+            // 3. JINSI cell
+            $pdf->Cell($widths[2], $rowHeight, $pdf->pdfText($rowME['gender']), 1, 0, 'C', true);
+
+            // 4. Remaining cells
+            $cellsME = [
+                number_format((float) ($rowME['registered'] ?? 0)),
+                number_format((float) ($rowME['absent'] ?? 0)),
+                number_format((float) ($rowME['absent_pct'] ?? 0), 2) . '%',
+                number_format((float) ($rowME['sat'] ?? 0)),
+                number_format((float) ($rowME['a'] ?? 0)),
+                number_format((float) ($rowME['b'] ?? 0)),
+                number_format((float) ($rowME['c'] ?? 0)),
+                number_format((float) ($rowME['d'] ?? 0)),
+                number_format((float) ($rowME['e'] ?? 0)),
+                number_format((float) ($rowME['pass'] ?? 0)),
+                number_format((float) ($rowME['pass_pct'] ?? 0), 2) . '%',
+                number_format((float) ($rowME['average_marks'] ?? 0), 2)
+            ];
+
+            foreach ($cellsME as $idx => $val) {
+                $colIdx = $idx + 3;
+                $pdf->Cell($widths[$colIdx], $rowHeight, $pdf->pdfText($val), 1, 0, 'C', true);
+            }
+            $pdf->Ln($rowHeight);
+
+            // Row 1: KE
+            if (isset($group[1])) {
+                $rowKE = $group[1];
+                $pdf->SetX($pdf->GetX() + $widths[0] + $widths[1]);
+                $pdf->Cell($widths[2], $rowHeight, $pdf->pdfText($rowKE['gender']), 1, 0, 'C', true);
+
+                $cellsKE = [
+                    number_format((float) ($rowKE['registered'] ?? 0)),
+                    number_format((float) ($rowKE['absent'] ?? 0)),
+                    number_format((float) ($rowKE['absent_pct'] ?? 0), 2) . '%',
+                    number_format((float) ($rowKE['sat'] ?? 0)),
+                    number_format((float) ($rowKE['a'] ?? 0)),
+                    number_format((float) ($rowKE['b'] ?? 0)),
+                    number_format((float) ($rowKE['c'] ?? 0)),
+                    number_format((float) ($rowKE['d'] ?? 0)),
+                    number_format((float) ($rowKE['e'] ?? 0)),
+                    number_format((float) ($rowKE['pass'] ?? 0)),
+                    number_format((float) ($rowKE['pass_pct'] ?? 0), 2) . '%',
+                    number_format((float) ($rowKE['average_marks'] ?? 0), 2)
+                ];
+
+                foreach ($cellsKE as $idx => $val) {
+                    $colIdx = $idx + 3;
+                    $pdf->Cell($widths[$colIdx], $rowHeight, $pdf->pdfText($val), 1, 0, 'C', true);
+                }
+                $pdf->Ln($rowHeight);
+            }
+
+            // Row 2: JUMLA (with background color #e9eef5 and bold text)
+            if (isset($group[2])) {
+                $rowJUMLA = $group[2];
+                $pdf->SetX($pdf->GetX() + $widths[0] + $widths[1]);
+                
+                $pdf->SetFont($pdf->primaryFont, 'B', 7.5);
+                $pdf->SetFillColor(233, 238, 245); // #e9eef5
+
+                $pdf->Cell($widths[2], $rowHeight, $pdf->pdfText($rowJUMLA['gender']), 1, 0, 'C', true);
+
+                $cellsJUMLA = [
+                    number_format((float) ($rowJUMLA['registered'] ?? 0)),
+                    number_format((float) ($rowJUMLA['absent'] ?? 0)),
+                    number_format((float) ($rowJUMLA['absent_pct'] ?? 0), 2) . '%',
+                    number_format((float) ($rowJUMLA['sat'] ?? 0)),
+                    number_format((float) ($rowJUMLA['a'] ?? 0)),
+                    number_format((float) ($rowJUMLA['b'] ?? 0)),
+                    number_format((float) ($rowJUMLA['c'] ?? 0)),
+                    number_format((float) ($rowJUMLA['d'] ?? 0)),
+                    number_format((float) ($rowJUMLA['e'] ?? 0)),
+                    number_format((float) ($rowJUMLA['pass'] ?? 0)),
+                    number_format((float) ($rowJUMLA['pass_pct'] ?? 0), 2) . '%',
+                    number_format((float) ($rowJUMLA['average_marks'] ?? 0), 2)
+                ];
+
+                foreach ($cellsJUMLA as $idx => $val) {
+                    $colIdx = $idx + 3;
+                    $pdf->Cell($widths[$colIdx], $rowHeight, $pdf->pdfText($val), 1, 0, 'C', true);
+                }
+                $pdf->Ln($rowHeight);
+
+                // Reset font to regular
+                $pdf->SetFont($pdf->primaryFont, '', 7.5);
+            }
+        }
+        $pdf->Ln(4);
+    }
+
     private function renderCustomDoubleHeader(\FPDF $pdf, array $widths, string $type): void
     {
-        if ($type === 'regional_summary' || $type === 'council_summary' || $type === 'regional_overall_summary') {
+        if ($type === 'regional_summary' || $type === 'council_summary' || $type === 'regional_overall_summary' || $type === 'subject_distribution') {
             $pdf->SetFont($pdf->primaryFont, 'B', 7.0);
         } else {
             $pdf->SetFont($pdf->primaryFont, 'B', 7.5);
@@ -1101,8 +1236,8 @@ class PsleZonalTasidoTaarifaPdfService
         $x = $pdf->GetX();
         $y = $pdf->GetY();
 
-        $h1 = ($type === 'regional_summary' || $type === 'council_summary' || $type === 'regional_overall_summary') ? 5.5 : 7;
-        $h2 = ($type === 'regional_summary' || $type === 'council_summary' || $type === 'regional_overall_summary') ? 5.0 : 6;
+        $h1 = ($type === 'regional_summary' || $type === 'council_summary' || $type === 'regional_overall_summary' || $type === 'subject_distribution') ? 5.5 : 7;
+        $h2 = ($type === 'regional_summary' || $type === 'council_summary' || $type === 'regional_overall_summary' || $type === 'subject_distribution') ? 5.0 : 6;
         $fullHeight = $h1 + $h2;
 
         if ($type === 'attendance') {
@@ -1323,6 +1458,59 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[11], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
             $pdf->Cell($widths[12], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
             $pdf->Cell($widths[13], $h2, $pdf->pdfText('KUNDI LA UMAHIRI'), 1, 1, 'C', true);
+
+            $pdf->SetXY($x, $y + $fullHeight);
+        } elseif ($type === 'subject_distribution') {
+            $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('SOMO'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('SHULE'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('JINSI'), 1, 0, 'C', true);
+
+            // Save coordinates at start of WALIOSAJILIWA cell
+            $curX = $pdf->GetX();
+            $curY = $pdf->GetY();
+
+            // Draw background and borders for WALIOSAJILIWA and WALIOFANYA rowspan=2 cells
+            $pdf->Cell($widths[3], $fullHeight, '', 1, 0, 'C', true);
+
+            // Print wrapped text for WALIOSAJILIWA
+            $pdf->SetXY($curX, $curY + ($h1 + $h2)/2 - 4);
+            $pdf->Cell($widths[3], 4, $pdf->pdfText('WALIO'), 0, 0, 'C');
+            $pdf->SetXY($curX, $curY + ($h1 + $h2)/2);
+            $pdf->Cell($widths[3], 4, $pdf->pdfText('SAJILIWA'), 0, 0, 'C');
+
+            // Return to Row 1 coordinate to draw WASIOFANYA
+            $pdf->SetXY($curX + $widths[3], $curY);
+            $pdf->Cell($widths[4] + $widths[5], $h1, $pdf->pdfText('WASIOFANYA'), 1, 0, 'C', true);
+
+            // Save coordinates at start of WALIOFANYA cell
+            $curX2 = $pdf->GetX();
+            $pdf->Cell($widths[6], $fullHeight, '', 1, 0, 'C', true);
+            // Print wrapped text for WALIOFANYA
+            $pdf->SetXY($curX2, $curY + ($h1 + $h2)/2 - 4);
+            $pdf->Cell($widths[6], 4, $pdf->pdfText('WALIO'), 0, 0, 'C');
+            $pdf->SetXY($curX2, $curY + ($h1 + $h2)/2);
+            $pdf->Cell($widths[6], 4, $pdf->pdfText('FANYA'), 0, 0, 'C');
+
+            // Return to Row 1 coordinate to draw MADARAJA, UFAULU (A-C), MATOKEO
+            $pdf->SetXY($curX2 + $widths[6], $curY);
+            $pdf->Cell($widths[7] + $widths[8] + $widths[9] + $widths[10] + $widths[11], $h1, $pdf->pdfText('MADARAJA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[12] + $widths[13], $h1, $pdf->pdfText('UFAULU (A-C)'), 1, 0, 'C', true);
+            $pdf->Cell($widths[14], $h1, $pdf->pdfText('MATOKEO'), 1, 1, 'C', true);
+
+            // Draw Row 2 headers
+            $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2] + $widths[3], $curY + $h1);
+            $pdf->Cell($widths[4], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[5], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+
+            $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2] + $widths[3] + $widths[4] + $widths[5] + $widths[6], $curY + $h1);
+            $pdf->Cell($widths[7], $h2, $pdf->pdfText('A'), 1, 0, 'C', true);
+            $pdf->Cell($widths[8], $h2, $pdf->pdfText('B'), 1, 0, 'C', true);
+            $pdf->Cell($widths[9], $h2, $pdf->pdfText('C'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10], $h2, $pdf->pdfText('D'), 1, 0, 'C', true);
+            $pdf->Cell($widths[11], $h2, $pdf->pdfText('E'), 1, 0, 'C', true);
+            $pdf->Cell($widths[12], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[13], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+            $pdf->Cell($widths[14], $h2, $pdf->pdfText('WASTANI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x, $y + $fullHeight);
         }

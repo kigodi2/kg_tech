@@ -458,6 +458,43 @@
             color: #000;
         }
 
+        .subject-distribution-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 7.8px;
+        }
+
+        .subject-distribution-table th {
+            text-align: center;
+            vertical-align: middle;
+            text-transform: uppercase;
+            padding: 3px 2px;
+            line-height: 1.05;
+        }
+
+        .subject-distribution-table td {
+            padding: 3px 2px;
+            vertical-align: middle;
+            line-height: 1.05;
+        }
+
+        .subject-distribution-table .subject-cell {
+            text-align: left;
+            white-space: nowrap;
+            overflow: visible;
+        }
+
+        .subject-distribution-table .number-cell {
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .subject-distribution-table .summary-row td {
+            background: #e9eef5;
+            font-weight: bold;
+        }
+
         /* Sign-offs */
         .signoff-container {
             display: grid;
@@ -1414,45 +1451,73 @@
 
                 <div class="doc-subsection-title" style="margin-top: 20px;">Jedwali na. 11: Msambao wa Ufaulu wa Masomo kwa Madaraja Kikanda</div>
                 <div class="table-responsive">
-                    <table class="doc-table">
+                    <table class="doc-table subject-distribution-table">
                         <thead>
                             <tr>
-                                <th>Somo</th>
-                                <th>Idadi Shule</th>
-                                <th>Jinsi</th>
-                                <th>Reg</th>
-                                <th>Abs</th>
-                                <th>Abs %</th>
-                                <th>Fanya</th>
+                                <th rowspan="2">SOMO</th>
+                                <th rowspan="2">SHULE</th>
+                                <th rowspan="2">JINSI</th>
+                                <th rowspan="2">WALIO<br>SAJILIWA</th>
+                                <th colspan="2">WASIOFANYA</th>
+                                <th rowspan="2">WALIO<br>FANYA</th>
+                                <th colspan="5">MADARAJA</th>
+                                <th colspan="2">UFAULU (A-C)</th>
+                                <th rowspan="2">WASTANI</th>
+                            </tr>
+                            <tr>
+                                <th>JML</th>
+                                <th>%</th>
                                 <th>A</th>
                                 <th>B</th>
                                 <th>C</th>
                                 <th>D</th>
                                 <th>E</th>
-                                <th>Faulu A-C</th>
-                                <th>Faulu %</th>
-                                <th>Wastani /50</th>
+                                <th>JML</th>
+                                <th>%</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($data['table11'] as $row)
-                                <tr style="{{ $row['gender'] === 'JUMLA' ? 'background:#e2e8f0; font-weight:700;' : '' }}">
-                                    <td style="{{ $row['gender'] === 'JUMLA' ? 'font-weight:800;' : '' }}">{{ $row['subject'] }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ $row['gender'] }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['registered']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['absent']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['absent_pct'], 2) }}%</td>
-                                    <td style="text-align: center;">{{ number_format($row['sat']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['d']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['e']) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass']) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_pct'], 2) }}%</td>
-                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
-                                </tr>
+                            @php
+                                $groupedSubjectRows = collect($data['table11'])->groupBy('subject');
+                            @endphp
+                            @foreach ($groupedSubjectRows as $subjectName => $rows)
+                                @php
+                                    $translatedSubjectName = match (strtoupper(trim($subjectName))) {
+                                        'CIVIC AND MORAL EDUCATION' => 'URAIA NA MAADILI',
+                                        'KISWAHILI' => 'KISWAHILI',
+                                        'SOCIAL STUDIES AND VOCATIONAL SKILLS' => 'MAARIFA YA JAMII NA STADI ZA KAZI',
+                                        'SCIENCE AND TECHNOLOGY' => 'SAYANSI NA TEKNOLOJIA',
+                                        'ENGLISH LANGUAGE' => 'ENGLISH LANGUAGE',
+                                        'MATHEMATICS' => 'HISABATI',
+                                        default => $subjectName,
+                                    };
+                                @endphp
+                                @foreach ($rows as $index => $row)
+                                    <tr class="{{ strtoupper($row['gender'] ?? '') === 'JUMLA' ? 'summary-row' : '' }}">
+                                        @if ($index === 0)
+                                            <td rowspan="{{ count($rows) }}" class="subject-cell" style="font-weight: 700;">
+                                                {{ $translatedSubjectName }}
+                                            </td>
+                                            <td rowspan="{{ count($rows) }}" class="number-cell" style="text-align: center;">
+                                                {{ number_format($row['schools_count'] ?? 0) }}
+                                            </td>
+                                        @endif
+
+                                        <td class="number-cell" style="text-align: center; font-weight: 700;">{{ $row['gender'] }}</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['registered'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['absent'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['absent_pct'] ?? 0, 2) }}%</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['sat'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['a'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['b'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['c'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['d'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center;">{{ number_format($row['e'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center; font-weight: 700;">{{ number_format($row['pass'] ?? 0) }}</td>
+                                        <td class="number-cell" style="text-align: center; font-weight: 700;">{{ number_format($row['pass_pct'] ?? 0, 2) }}%</td>
+                                        <td class="number-cell" style="text-align: center; font-weight: 700;">{{ number_format($row['average_marks'] ?? 0, 2) }}</td>
+                                    </tr>
+                                @endforeach
                             @endforeach
                         </tbody>
                     </table>
