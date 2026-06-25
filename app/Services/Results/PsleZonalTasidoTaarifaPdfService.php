@@ -351,7 +351,7 @@ class PsleZonalTasidoTaarifaPdfService
         $pdf->Cell(0, 5, $pdf->pdfText("Jedwali Na. 1: Watahiniwa waliosajiliwa na waliofanya Mtihani"), 0, 1, 'L');
         $pdf->Ln(1);
         
-        $t1Headers = ['S/N', 'Mkoa', 'Idadi ya Shule', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Sat ME', 'Sat KE', 'Sat JUMLA', 'Mahudhurio %'];
+        $t1Headers = ['S/N', 'Mkoa', 'Idadi ya Shule', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Sat ME', 'Sat KE', 'Sat JUMLA', '%'];
         $t1Widths = [10, 30, 24, 16, 16, 22, 16, 16, 22, 18];
         $t1Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t1Rows = [];
@@ -388,7 +388,7 @@ class PsleZonalTasidoTaarifaPdfService
         $pdf->Cell(0, 5, $pdf->pdfText("Jedwali na. 2: Watahiniwa wasiofanya mtihani"), 0, 1, 'L');
         $pdf->Ln(1);
         
-        $t2Headers = ['S/N', 'Mkoa', 'Idadi ya Shule', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Abs ME', 'Abs KE', 'Abs JUMLA', 'Asilimia (%)'];
+        $t2Headers = ['S/N', 'Mkoa', 'Idadi ya Shule', 'Reg ME', 'Reg KE', 'Reg JUMLA', 'Abs ME', 'Abs KE', 'Abs JUMLA', '%'];
         $t2Widths = [10, 30, 24, 16, 16, 22, 16, 16, 22, 18];
         $t2Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t2Rows = [];
@@ -986,30 +986,65 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->SetFont($pdf->primaryFont, 'B', 8);
             $pdf->SetFillColor(226, 232, 240);
             $pdf->SetTextColor(15, 23, 42);
-            foreach ($widths as $colIdx => $w) {
-                $val = $totalRow[$colIdx] ?? '';
-                $align = $aligns[$colIdx] ?? 'C';
+            $isAttendanceOrAbsenteeism = ($doubleHeaderType === 'attendance' || $doubleHeaderType === 'absenteeism');
+            if ($isAttendanceOrAbsenteeism) {
+                // Merge first two columns (S/N and Mkoa)
+                $mergedWidth = $widths[0] + $widths[1];
+                $pdf->Cell($mergedWidth, 6.5, $pdf->pdfText("JUMLA KUU"), 1, 0, 'C', true);
 
-                $headerUpper = mb_strtoupper($headers[$colIdx] ?? '', 'UTF-8');
-                if (($headerUpper === 'JINA LA SHULE' || $headerUpper === 'SHULE') && !is_numeric($val)) {
-                    $valStr = (string)$val;
-                    $availWidth = $w - 2.0;
-                    if ($pdf->GetStringWidth($valStr) > $availWidth) {
-                        $ellipsis = '...';
-                        $ellipsisWidth = $pdf->GetStringWidth($ellipsis);
-                        $len = mb_strlen($valStr, 'UTF-8');
-                        while ($len > 0) {
-                            $valStr = mb_substr($valStr, 0, $len - 1, 'UTF-8');
-                            if ($pdf->GetStringWidth($valStr) + $ellipsisWidth <= $availWidth) {
-                                $val = $valStr . $ellipsis;
-                                break;
+                $colCount = count($widths);
+                for ($colIdx = 2; $colIdx < $colCount; $colIdx++) {
+                    $w = $widths[$colIdx];
+                    $val = $totalRow[$colIdx] ?? '';
+                    $align = $aligns[$colIdx] ?? 'C';
+
+                    $headerUpper = mb_strtoupper($headers[$colIdx] ?? '', 'UTF-8');
+                    if (($headerUpper === 'JINA LA SHULE' || $headerUpper === 'SHULE') && !is_numeric($val)) {
+                        $valStr = (string)$val;
+                        $availWidth = $w - 2.0;
+                        if ($pdf->GetStringWidth($valStr) > $availWidth) {
+                            $ellipsis = '...';
+                            $ellipsisWidth = $pdf->GetStringWidth($ellipsis);
+                            $len = mb_strlen($valStr, 'UTF-8');
+                            while ($len > 0) {
+                                $valStr = mb_substr($valStr, 0, $len - 1, 'UTF-8');
+                                if ($pdf->GetStringWidth($valStr) + $ellipsisWidth <= $availWidth) {
+                                    $val = $valStr . $ellipsis;
+                                    break;
+                                }
+                                $len--;
                             }
-                            $len--;
                         }
                     }
-                }
 
-                $pdf->Cell($w, 6.5, $pdf->pdfText((string)$val), 1, 0, $align, true);
+                    $pdf->Cell($w, 6.5, $pdf->pdfText((string)$val), 1, 0, $align, true);
+                }
+            } else {
+                foreach ($widths as $colIdx => $w) {
+                    $val = $totalRow[$colIdx] ?? '';
+                    $align = $aligns[$colIdx] ?? 'C';
+
+                    $headerUpper = mb_strtoupper($headers[$colIdx] ?? '', 'UTF-8');
+                    if (($headerUpper === 'JINA LA SHULE' || $headerUpper === 'SHULE') && !is_numeric($val)) {
+                        $valStr = (string)$val;
+                        $availWidth = $w - 2.0;
+                        if ($pdf->GetStringWidth($valStr) > $availWidth) {
+                            $ellipsis = '...';
+                            $ellipsisWidth = $pdf->GetStringWidth($ellipsis);
+                            $len = mb_strlen($valStr, 'UTF-8');
+                            while ($len > 0) {
+                                $valStr = mb_substr($valStr, 0, $len - 1, 'UTF-8');
+                                if ($pdf->GetStringWidth($valStr) + $ellipsisWidth <= $availWidth) {
+                                    $val = $valStr . $ellipsis;
+                                    break;
+                                }
+                                $len--;
+                            }
+                        }
+                    }
+
+                    $pdf->Cell($w, 6.5, $pdf->pdfText((string)$val), 1, 0, $align, true);
+                }
             }
             $pdf->Ln(6.5);
         }
@@ -1040,7 +1075,7 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('SHULE'), 1, 0, 'C', true);
             $pdf->Cell($widths[3] + $widths[4] + $widths[5], $h1, $pdf->pdfText('WALIOSAJILIWA'), 1, 0, 'C', true);
             $pdf->Cell($widths[6] + $widths[7] + $widths[8], $h1, $pdf->pdfText('WALIOFANYA'), 1, 0, 'C', true);
-            $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('MAHUDHURIO %'), 1, 1, 'C', true);
+            $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('%'), 1, 1, 'C', true);
 
             $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
             $pdf->Cell($widths[3], $h2, $pdf->pdfText('WAV'), 1, 0, 'C', true);
@@ -1057,7 +1092,7 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('SHULE'), 1, 0, 'C', true);
             $pdf->Cell($widths[3] + $widths[4] + $widths[5], $h1, $pdf->pdfText('WALIOSAJILIWA'), 1, 0, 'C', true);
             $pdf->Cell($widths[6] + $widths[7] + $widths[8], $h1, $pdf->pdfText('WASIOFANYA'), 1, 0, 'C', true);
-            $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('ASILIMIA %'), 1, 1, 'C', true);
+            $pdf->Cell($widths[9], $fullHeight, $pdf->pdfText('%'), 1, 1, 'C', true);
 
             $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
             $pdf->Cell($widths[3], $h2, $pdf->pdfText('WAV'), 1, 0, 'C', true);
