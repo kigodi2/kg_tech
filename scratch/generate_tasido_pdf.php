@@ -255,6 +255,107 @@ try {
             'competence' => 'NZURI'
         ]
     ];
+    $reportData['table12_gov'] = [
+        [
+            'sn' => 1,
+            'subject' => 'KISWAHILI',
+            'schools_count' => 280,
+            'a' => 800,
+            'b' => 1000,
+            'c' => 500,
+            'd' => 200,
+            'e' => 50,
+            'pass_ac' => 2300,
+            'pass_pct' => 90.20,
+            'fail_de' => 250,
+            'fail_pct' => 9.80,
+            'average_marks' => 38.45,
+            'competence' => 'BORA'
+        ],
+        [
+            'sn' => 2,
+            'subject' => 'CIVIC AND MORAL EDUCATION',
+            'schools_count' => 280,
+            'a' => 200,
+            'b' => 600,
+            'c' => 800,
+            'd' => 700,
+            'e' => 250,
+            'pass_ac' => 1600,
+            'pass_pct' => 62.75,
+            'fail_de' => 950,
+            'fail_pct' => 37.25,
+            'average_marks' => 29.10,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 3,
+            'subject' => 'SOCIAL STUDIES AND VOCATIONAL SKILLS',
+            'schools_count' => 280,
+            'a' => 150,
+            'b' => 500,
+            'c' => 900,
+            'd' => 700,
+            'e' => 300,
+            'pass_ac' => 1550,
+            'pass_pct' => 60.78,
+            'fail_de' => 1000,
+            'fail_pct' => 39.22,
+            'average_marks' => 26.50,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 4,
+            'subject' => 'SCIENCE AND TECHNOLOGY',
+            'schools_count' => 280,
+            'a' => 100,
+            'b' => 400,
+            'c' => 800,
+            'd' => 800,
+            'e' => 450,
+            'pass_ac' => 1300,
+            'pass_pct' => 50.98,
+            'fail_de' => 1250,
+            'fail_pct' => 49.02,
+            'average_marks' => 21.80,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 5,
+            'subject' => 'ENGLISH LANGUAGE',
+            'schools_count' => 280,
+            'a' => 50,
+            'b' => 300,
+            'c' => 700,
+            'd' => 900,
+            'e' => 600,
+            'pass_ac' => 1050,
+            'pass_pct' => 41.18,
+            'fail_de' => 1500,
+            'fail_pct' => 58.82,
+            'average_marks' => 16.40,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 6,
+            'subject' => 'MATHEMATICS',
+            'schools_count' => 280,
+            'a' => 40,
+            'b' => 200,
+            'c' => 600,
+            'd' => 1000,
+            'e' => 710,
+            'pass_ac' => 840,
+            'pass_pct' => 32.94,
+            'fail_de' => 1710,
+            'fail_pct' => 67.06,
+            'average_marks' => 13.95,
+            'competence' => 'NZURI'
+        ]
+    ];
+    $reportData['narratives']['ufaulu_masomo_serikali'] = "Hali ya ufaulu kwa shule za Serikali inaonesha mwenendo wa ufaulu kwa kila somo katika Mtihani wa Utamilifu wa Darasa la Saba mwaka 2026. Katika matokeo haya, watahiniwa wa shule za Serikali wamefanya vizuri zaidi katika somo la KISWAHILI ambapo asilimia ya waliofeli ni 9.80%. Aidha, changamoto kubwa zaidi imeonekana katika somo la HISABATI ambapo asilimia ya waliofeli ni 67.06%, kama inavyooneshwa kwenye Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za serikali).";
+    $reportData['narratives']['ufaulu_masomo_binafsi'] = "Hali ya ufaulu kwa shule zisizo za Serikali pia hairidhishi kama ilivyo kwa shule za Serikali hususan kwa somo la ENGLISH WEIRDLY LONG SUBJECT NAME FOR TESTING DYNAMIC TRUNCATION IN SOMO COLUMN. Katika Mtihani wa Utamilifu uliofanyika, watahiniwa katika shule zisizo za Serikali wamefeli somo hilo kwa 37.50% na somo la MAARIFA YA JAMII NA STADI ZA KAZI kwa asilimia 37.50% kama inavyoonesha kwenye jedwali. Jedwali Na. 13: Ufaulu Kikanda kwa Masomo (shule za binafsi)";
+
     // Inject mock data for Table 4 to verify our Portrait two-row grouped headers
     $reportData['table4'] = [
         [

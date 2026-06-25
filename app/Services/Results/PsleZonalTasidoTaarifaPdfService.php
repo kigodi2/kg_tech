@@ -754,17 +754,53 @@ class PsleZonalTasidoTaarifaPdfService
         }
         $this->renderTable($pdf, $t11Headers, $t11Widths, $t11Aligns, $t11Rows);
 
-        // ------------------ SECTION 10 (Table 12 & Section 9 text) ------------------
+        // ------------------ SECTION 10 (Table 12 & Section 9 text - Shule za Serikali) ------------------
         $pdf->addLandscapePage(
             $data['meta']['margin_top'],
             $data['meta']['margin_bottom'],
             $data['meta']['margin_left'],
             $data['meta']['margin_right']
         );
-        $chapterHeader("9", "HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)");
+        $chapterHeader("9", "HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI)");
+        $renderParagraph($data['narratives']['ufaulu_masomo_serikali']);
+
+        $sectionHeader("Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za serikali)");
+        
+        $t12GovHeaders = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'JML', '%', 'JML', '%', 'Wastani', 'Kundi la Umahiri'];
+        $t12GovWidths = [5, 55, 9, 8, 8, 8, 8, 8, 11, 11, 11, 11, 11, 36];
+        $t12GovAligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
+        $t12GovRows = [];
+        foreach ($data['table12_gov'] as $row) {
+            $t12GovRows[] = [
+                $row['sn'],
+                $this->translateSubjectName($row['subject']),
+                number_format($row['schools_count']),
+                number_format($row['a']),
+                number_format($row['b']),
+                number_format($row['c']),
+                number_format($row['d']),
+                number_format($row['e']),
+                number_format($row['pass_ac']),
+                number_format($row['pass_pct'], 2) . '%',
+                number_format($row['fail_de']),
+                number_format($row['fail_pct'], 2) . '%',
+                number_format($row['average_marks'], 2),
+                $this->getSubjectCompetenceFromAverage($row['average_marks'])
+            ];
+        }
+        $this->renderTable($pdf, $t12GovHeaders, $t12GovWidths, $t12GovAligns, $t12GovRows, null, true, 'subject_private_summary');
+
+        // ------------------ SECTION 11 (Table 13 & Section 10 text - Shule za Binafsi) ------------------
+        $pdf->addLandscapePage(
+            $data['meta']['margin_top'],
+            $data['meta']['margin_bottom'],
+            $data['meta']['margin_left'],
+            $data['meta']['margin_right']
+        );
+        $chapterHeader("10", "HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA BINAFSI)");
         $renderParagraph($data['narratives']['ufaulu_masomo_binafsi']);
 
-        $sectionHeader("Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za binafsi)");
+        $sectionHeader("Jedwali Na. 13: Ufaulu Kikanda kwa Masomo (shule za binafsi)");
         
         $t12Headers = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'JML', '%', 'JML', '%', 'Wastani', 'Kundi la Umahiri'];
         $t12Widths = [5, 55, 9, 8, 8, 8, 8, 8, 11, 11, 11, 11, 11, 36];
@@ -798,15 +834,15 @@ class PsleZonalTasidoTaarifaPdfService
             $data['meta']['margin_right']
         );
         
-        $chapterHeader("10", "MAFANIKIO");
+        $chapterHeader("11", "MAFANIKIO");
         $renderBullets($data['narratives']['mafanikio']);
         $pdf->Ln(5);
 
-        $chapterHeader("11", "CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI WA UTAMILIFU KANDA YA TASIDO");
+        $chapterHeader("12", "CHANGAMOTO ZILIZOJITOKEZA KATIKA UENDESHAJI WA MTIHANI WA UTAMILIFU KANDA YA TASIDO");
         $renderBullets($data['narratives']['changamoto']);
         $pdf->Ln(5);
 
-        $sectionHeader("11.1 Utatuzi wa changamoto");
+        $sectionHeader("12.1 Utatuzi wa changamoto");
         $renderBullets($data['narratives']['utatuzi']);
 
         $pdf->addPortraitPage(
@@ -815,16 +851,16 @@ class PsleZonalTasidoTaarifaPdfService
             $data['meta']['margin_left'],
             $data['meta']['margin_right']
         );
-        $chapterHeader("12", "MAONI NA MAPENDEKEZO");
+        $chapterHeader("13", "MAONI NA MAPENDEKEZO");
         $renderBullets($data['narratives']['maoni_mapendekezo']);
         $pdf->Ln(5);
 
-        $chapterHeader("13", "HITIMISHO");
+        $chapterHeader("14", "HITIMISHO");
         $renderParagraph($data['narratives']['hitimisho']);
         $pdf->Ln(10);
 
         // ------------------ APPROVAL SHEET ------------------
-        $chapterHeader("14", "KARATASI YA UIDHINISHAJI (APPROVAL PAGE)");
+        $chapterHeader("15", "KARATASI YA UIDHINISHAJI (APPROVAL PAGE)");
         $pdf->Ln(5);
 
         $renderParagraph("Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka 2026 katika Kanda ya Academic Zone ya TASIDO imejadiliwa, kuhakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.");
