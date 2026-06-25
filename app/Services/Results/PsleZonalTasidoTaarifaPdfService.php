@@ -734,12 +734,15 @@ class PsleZonalTasidoTaarifaPdfService
         $this->renderTable11($pdf, $t11Widths, $t11Aligns, $data['table11']);
 
         // ------------------ SECTION 10 (Table 12 & Section 9 text - Shule za Serikali) ------------------
-        $pdf->addLandscapePage(
-            $data['meta']['margin_top'],
-            $data['meta']['margin_bottom'],
-            $data['meta']['margin_left'],
-            $data['meta']['margin_right']
-        );
+        $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+        if ($pdf->GetY() + 65.0 > $limit) {
+            $pdf->addLandscapePage(
+                $data['meta']['margin_top'],
+                $data['meta']['margin_bottom'],
+                $data['meta']['margin_left'],
+                $data['meta']['margin_right']
+            );
+        }
         $chapterHeader("9", "HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI)");
         $renderParagraph($data['narratives']['ufaulu_masomo_serikali']);
 

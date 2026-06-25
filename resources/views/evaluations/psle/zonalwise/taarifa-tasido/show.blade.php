@@ -495,6 +495,29 @@
             font-weight: bold;
         }
 
+        .subject-performance-government-section {
+            page-break-before: auto !important;
+            break-before: auto !important;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            margin-top: 0;
+        }
+
+        .subject-performance-government-section h2 {
+            margin-top: 0;
+            margin-bottom: 6px;
+        }
+
+        .subject-performance-government-section p {
+            margin-top: 8px;
+            margin-bottom: 14px;
+        }
+
+        .subject-performance-government-section .table-title {
+            margin-top: 10px;
+            margin-bottom: 8px;
+        }
+
         /* Sign-offs */
         .signoff-container {
             display: grid;
@@ -1522,62 +1545,61 @@
                         </tbody>
                     </table>
                 </div>
-            </div>
+                <!-- Section 9.0 -->
+                <div class="subject-performance-government-section">
+                    <h2 style="font-size: 1.05rem; font-weight: 800; color: #000; text-transform: uppercase; border-bottom: 1.5px solid #000; padding-bottom: 4px;">9.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI)</h2>
+                    <p class="doc-paragraph">
+                        {!! nl2br(e($data['narratives']['ufaulu_masomo_serikali'])) !!}
+                    </p>
 
-            <!-- Page 11: Shule za Serikali na Masomo (Jedwali 12) -->
-            <div class="document-page landscape" style="font-family: 'Times New Roman', Times, serif;">
-                <div style="font-size: 1.05rem; font-weight: 800; color: #000; margin-bottom: 12px; text-transform: uppercase;">9.0 HALI YA UFAULU KIKANDA KWA MASOMO (SHULE ZA SERIKALI)</div>
-                <div class="doc-paragraph">
-                    {!! nl2br(e($data['narratives']['ufaulu_masomo_serikali'])) !!}
-                </div>
-
-                <div class="doc-subsection-title" style="margin-top: 15px;">Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za serikali)</div>
-                <div class="table-responsive">
-                    <table class="doc-table">
-                        <thead>
-                            <tr>
-                                <th rowspan="2">S/N</th>
-                                <th rowspan="2">Somo</th>
-                                <th rowspan="2">Shule</th>
-                                <th colspan="5">MADARAJA</th>
-                                <th colspan="2">UFAULU (A-C)</th>
-                                <th colspan="2">UFAULU (D-E)</th>
-                                <th rowspan="2">Wastani</th>
-                                <th rowspan="2">Umahiri</th>
-                            </tr>
-                            <tr>
-                                <th>A</th>
-                                <th>B</th>
-                                <th>C</th>
-                                <th>D</th>
-                                <th>E</th>
-                                <th>JML</th>
-                                <th>%</th>
-                                <th>JML</th>
-                                <th>%</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($data['table12_gov'] as $row)
+                    <div class="doc-subsection-title table-title" style="margin-top: 15px;">Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za serikali)</div>
+                    <div class="table-responsive">
+                        <table class="doc-table">
+                            <thead>
                                 <tr>
-                                    <td style="text-align: center;">{{ $row['sn'] }}</td>
-                                    <td style="font-weight: 700;">{{ $row['subject'] }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['a']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['b']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['c']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['d']) }}</td>
-                                    <td style="text-align: center;">{{ number_format($row['e']) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_ac']) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ number_format((float) ($row['pass_pct'] ?? 0), 2) }}%</td>
-                                    <td style="text-align: center;">{{ number_format($row['fail_de']) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ number_format((float) ($row['fail_pct'] ?? 0), 2) }}%</td>
-                                    <td style="text-align: center; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
-                                    <td style="text-align: center; font-weight:700;">{{ $row['competence'] }}</td>
+                                    <th rowspan="2">S/N</th>
+                                    <th rowspan="2">Somo</th>
+                                    <th rowspan="2">Shule</th>
+                                    <th colspan="5">MADARAJA</th>
+                                    <th colspan="2">UFAULU (A-C)</th>
+                                    <th colspan="2">UFAULU (D-E)</th>
+                                    <th rowspan="2">Wastani</th>
+                                    <th rowspan="2">Umahiri</th>
                                 </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                <tr>
+                                    <th>A</th>
+                                    <th>B</th>
+                                    <th>C</th>
+                                    <th>D</th>
+                                    <th>E</th>
+                                    <th>JML</th>
+                                    <th>%</th>
+                                    <th>JML</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($data['table12_gov'] as $row)
+                                    <tr>
+                                        <td style="text-align: center;">{{ $row['sn'] }}</td>
+                                        <td style="font-weight: 700;">{{ $row['subject'] }}</td>
+                                        <td style="text-align: center;">{{ number_format($row['schools_count']) }}</td>
+                                        <td style="text-align: center;">{{ number_format($row['a']) }}</td>
+                                        <td style="text-align: center;">{{ number_format($row['b']) }}</td>
+                                        <td style="text-align: center;">{{ number_format($row['c']) }}</td>
+                                        <td style="text-align: center;">{{ number_format($row['d']) }}</td>
+                                        <td style="text-align: center;">{{ number_format($row['e']) }}</td>
+                                        <td style="text-align: center; font-weight:700;">{{ number_format($row['pass_ac']) }}</td>
+                                        <td style="text-align: center; font-weight:700;">{{ number_format((float) ($row['pass_pct'] ?? 0), 2) }}%</td>
+                                        <td style="text-align: center;">{{ number_format($row['fail_de']) }}</td>
+                                        <td style="text-align: center; font-weight:700;">{{ number_format((float) ($row['fail_pct'] ?? 0), 2) }}%</td>
+                                        <td style="text-align: center; font-weight:700;">{{ number_format($row['average_marks'], 2) }}</td>
+                                        <td style="text-align: center; font-weight:700;">{{ $row['competence'] }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
