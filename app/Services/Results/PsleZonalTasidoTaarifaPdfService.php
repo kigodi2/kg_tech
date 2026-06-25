@@ -845,11 +845,19 @@ class PsleZonalTasidoTaarifaPdfService
         $pdf->Ln(10);
 
         // ------------------ APPROVAL SHEET ------------------
-        $chapterHeader("15", "KARATASI YA UIDHINISHAJI (APPROVAL PAGE)");
-        $pdf->Ln(5);
+        // Check if there is enough space to keep the entire approval sheet together (approx 65mm)
+        $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+        if ($pdf->GetY() + 65.0 > $limit) {
+            $pdf->addPortraitPage(
+                $data['meta']['margin_top'],
+                $data['meta']['margin_bottom'],
+                $data['meta']['margin_left'],
+                $data['meta']['margin_right']
+            );
+        }
 
-        $renderParagraph("Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka 2026 katika Kanda ya Academic Zone ya TASIDO imejadiliwa, kuhakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.");
-        $pdf->Ln(10);
+        $renderParagraph("Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka 2026 katika Kanda ya Kitaaluma ya TASIDO imeandaliwa, imehakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.");
+        $pdf->Ln(5);
 
         $halfWidth = $pdf->usablePageWidth() / 2;
 
@@ -857,12 +865,21 @@ class PsleZonalTasidoTaarifaPdfService
         $pdf->Cell($halfWidth, 6, $pdf->pdfText("Imeandaliwa na (Prepared By):"), 0, 0, 'L');
         $pdf->Cell($halfWidth, 6, $pdf->pdfText("Imehakikiwa na Kuidhinishwa na (Approved By):"), 0, 1, 'L');
 
-        $pdf->Ln(15);
+        // Space for signature
+        $pdf->Ln(18);
+
+        $currentY = $pdf->GetY();
+        $lineLength = 65; // bounded line length
+        
+        $pdf->SetDrawColor(0, 0, 0);
+        $pdf->SetLineWidth(0.25);
+        // Draw separate signature lines for each signatory
+        $pdf->Line($pdf->getLMargin(), $currentY, $pdf->getLMargin() + $lineLength, $currentY);
+        $pdf->Line($pdf->getLMargin() + $halfWidth, $currentY, $pdf->getLMargin() + $halfWidth + $lineLength, $currentY);
+
+        $pdf->SetY($currentY + 2);
 
         $pdf->SetFont($pdf->primaryFont, 'B', 9.5);
-        $pdf->Cell($halfWidth, 5, $pdf->pdfText("_______________________________________"), 0, 0, 'L');
-        $pdf->Cell($halfWidth, 5, $pdf->pdfText("_______________________________________"), 0, 1, 'L');
-
         $pdf->Cell($halfWidth, 5, $pdf->pdfText($data['operational']['rto_name']), 0, 0, 'L');
         $pdf->Cell($halfWidth, 5, $pdf->pdfText($data['operational']['reo_name']), 0, 1, 'L');
 

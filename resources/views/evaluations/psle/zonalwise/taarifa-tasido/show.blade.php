@@ -578,6 +578,53 @@
             margin-bottom: 6px;
         }
 
+        .approval-page {
+            margin-top: 20px;
+            page-break-before: auto !important;
+            break-before: auto !important;
+        }
+
+        .approval-page .approval-statement {
+            margin-bottom: 38px;
+            line-height: 1.45;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        .approval-signatures {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            margin-top: 15px;
+        }
+
+        .approval-signatures td {
+            width: 50%;
+            vertical-align: top;
+            padding-right: 28px;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #334155;
+        }
+
+        .approval-signatures td + td {
+            padding-left: 28px;
+            padding-right: 0;
+        }
+
+        .approval-signatures .signature-line {
+            width: 82%;
+            border-top: 1px dashed #000;
+            margin-bottom: 8px;
+            margin-top: 40px;
+        }
+
+        .approval-signatures .date-line {
+            display: inline-block;
+            width: 120px;
+            border-bottom: 1px dashed #000;
+        }
+
         /* Data Quality Alerts */
         .dq-alert {
             background: #fef2f2;
@@ -1733,26 +1780,32 @@
                     {!! nl2br(e($data['narratives']['hitimisho'])) !!}
                 </div>
 
-                <div class="doc-section-title" style="margin-top: 40px;">15. KARATASI YA UIDHINISHAJI (APPROVAL PAGE)</div>
-                <div class="signoff-container">
-                    <div class="signoff-block">
-                        <h5>Imeandaliwa na (Prepared By):</h5>
-                        <div class="line"></div>
-                        <p style="font-weight: 700;" class="preview-rto_name">{{ $inputs['rto_name'] ?? '' }}</p>
-                        <p class="preview-prepared_by_title">{{ $inputs['prepared_by_title'] ?? 'AFISA TAALUMA MKOA (RTO)' }}</p>
-                        <p>Kanda ya Taaluma: <strong>TASIDO</strong></p>
-                        <p>Tarehe: ___________________</p>
-                    </div>
-                    
-                    <div class="signoff-block">
-                        <h5>Imehakikiwa na Kuidhinishwa na (Approved By):</h5>
-                        <div class="line"></div>
-                        <p style="font-weight: 700;" class="preview-reo_name">{{ $inputs['reo_name'] ?? '' }}</p>
-                        <p class="preview-approved_by_title">{{ $inputs['approved_by_title'] ?? 'AFISA ELIMU MKOA (REO)' }}</p>
-                        <p>Kanda ya Taaluma: <strong>TASIDO</strong></p>
-                        <p>Tarehe: ___________________</p>
-                    </div>
-                </div>
+                <section class="approval-page">
+                    <p class="approval-statement">
+                        Taarifa hii ya Tathmini ya Mtihani wa Mock Darasa la VII kwa mwaka 2026 katika Kanda ya Academic Zone ya TASIDO imejadiliwa, kuhakikiwa na kupitishwa rasmi na Kamati ya Mitihani ya Kanda.
+                    </p>
+
+                    <table class="approval-signatures">
+                        <tr>
+                            <td>
+                                <h5 style="font-weight: 700; margin-bottom: 2px; color: #000;">Imeandaliwa na (Prepared By):</h5>
+                                <div class="signature-line"></div>
+                                <strong class="preview-rto_name">{{ $inputs['rto_name'] ?? 'Ndg. Catherine J. Minde' }}</strong><br>
+                                <span class="preview-prepared_by_title">{{ $inputs['prepared_by_title'] ?? 'Katibu wa Kamati ya Taaluma ya Kanda' }}</span><br>
+                                Kanda ya Taaluma: <strong>TASIDO</strong><br>
+                                Tarehe: <span class="date-line"></span>
+                            </td>
+                            <td>
+                                <h5 style="font-weight: 700; margin-bottom: 2px; color: #000;">Imehakikiwa na Kuidhinishwa na (Approved By):</h5>
+                                <div class="signature-line"></div>
+                                <strong class="preview-reo_name">{{ $inputs['reo_name'] ?? 'Ndg. Raymond Mapunda' }}</strong><br>
+                                <span class="preview-approved_by_title">{{ $inputs['approved_by_title'] ?? 'Mwenyekiti wa Kamati ya Mitihani ya Kanda' }}</span><br>
+                                Kanda ya Taaluma: <strong>TASIDO</strong><br>
+                                Tarehe: <span class="date-line"></span>
+                            </td>
+                        </tr>
+                    </table>
+                </section>
             </div>         </div>
             </div>
 
