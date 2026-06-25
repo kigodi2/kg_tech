@@ -766,14 +766,14 @@ class PsleZonalTasidoTaarifaPdfService
 
         $sectionHeader("Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za binafsi)");
         
-        $t12Headers = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'Pass', 'Pass %', 'Fail', 'Fail %', 'Wastani', 'Kundi la Umahiri'];
+        $t12Headers = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'JML', '%', 'JML', '%', 'Wastani', 'Kundi la Umahiri'];
         $t12Widths = [8, 32, 12, 11, 11, 11, 11, 11, 15, 15, 15, 15, 16, 26];
         $t12Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t12Rows = [];
         foreach ($data['table12'] as $row) {
             $t12Rows[] = [
                 $row['sn'],
-                $row['subject'],
+                $this->translateSubjectName($row['subject']),
                 number_format($row['schools_count']),
                 number_format($row['a']),
                 number_format($row['b']),
@@ -785,10 +785,10 @@ class PsleZonalTasidoTaarifaPdfService
                 number_format($row['fail_de']),
                 number_format($row['fail_pct'], 2) . '%',
                 number_format($row['average_marks'], 2),
-                $this->proficiencyLabel($row['competence'])
+                $this->getSubjectCompetenceFromAverage($row['average_marks'])
             ];
         }
-        $this->renderTable($pdf, $t12Headers, $t12Widths, $t12Aligns, $t12Rows);
+        $this->renderTable($pdf, $t12Headers, $t12Widths, $t12Aligns, $t12Rows, null, true, 'subject_private_summary');
 
         // ------------------ BULLETS & CONCLUSION ------------------
         $pdf->addPortraitPage(
@@ -1265,6 +1265,30 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[10], $h2, $pdf->pdfText('NAFASI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x, $y + $fullHeight);
+        } elseif ($type === 'subject_private_summary') {
+            $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('S/N'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('SOMO'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('SHULE'), 1, 0, 'C', true);
+
+            $pdf->Cell($widths[3] + $widths[4] + $widths[5] + $widths[6] + $widths[7], $h1, $pdf->pdfText('MADARAJA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[8] + $widths[9], $h1, $pdf->pdfText('UFAULU (A-C)'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10] + $widths[11], $h1, $pdf->pdfText('UFAULU (D-E)'), 1, 0, 'C', true);
+            $pdf->Cell($widths[12] + $widths[13], $h1, $pdf->pdfText('MATOKEO'), 1, 1, 'C', true);
+
+            $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
+            $pdf->Cell($widths[3], $h2, $pdf->pdfText('A'), 1, 0, 'C', true);
+            $pdf->Cell($widths[4], $h2, $pdf->pdfText('B'), 1, 0, 'C', true);
+            $pdf->Cell($widths[5], $h2, $pdf->pdfText('C'), 1, 0, 'C', true);
+            $pdf->Cell($widths[6], $h2, $pdf->pdfText('D'), 1, 0, 'C', true);
+            $pdf->Cell($widths[7], $h2, $pdf->pdfText('E'), 1, 0, 'C', true);
+            $pdf->Cell($widths[8], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[9], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[11], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+            $pdf->Cell($widths[12], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[13], $h2, $pdf->pdfText('KUNDI LA UMAHIRI'), 1, 1, 'C', true);
+
+            $pdf->SetXY($x, $y + $fullHeight);
         }
     }
 
@@ -1309,5 +1333,41 @@ class PsleZonalTasidoTaarifaPdfService
             $value >= 0   && $value < 61  => 'Daraja E (Hafifu)',
             default => '',
         };
+    }
+
+    private function translateSubjectName(?string $subject): string
+    {
+        $value = trim((string) $subject);
+        $key = strtoupper($value);
+
+        return match ($key) {
+            'CIVIC AND MORAL EDUCATION' => 'URAIA NA MAADILI',
+            'KISWAHILI' => 'KISWAHILI',
+            'SOCIAL STUDIES AND VOCATIONAL SKILLS' => 'MAARIFA YA JAMII NA STADI ZA KAZI',
+            'SCIENCE AND TECHNOLOGY' => 'SAYANSI NA TEKNOLOJIA',
+            'ENGLISH LANGUAGE' => 'ENGLISH LANGUAGE',
+            'MATHEMATICS' => 'HISABATI',
+            default => $value,
+        };
+    }
+
+    private function getSubjectCompetenceFromAverage(mixed $average): string
+    {
+        if ($average === null || $average === '') {
+            return '';
+        }
+
+        $val = floatval($average);
+        if ($val >= 40.17) {
+            return 'Daraja A (Bora)';
+        } elseif ($val >= 30.17) {
+            return 'Daraja B (Nzuri Sana)';
+        } elseif ($val >= 20.17) {
+            return 'Daraja C (Nzuri)';
+        } elseif ($val >= 10.17) {
+            return 'Daraja D (Inaridhisha)';
+        } else {
+            return 'Daraja E (Hafifu)';
+        }
     }
 }

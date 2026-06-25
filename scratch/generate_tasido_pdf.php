@@ -141,7 +141,6 @@ try {
         ]
     ];
     
-    // Inject mock data for Table 12 to verify subject competence mapping and width fixes
     $reportData['table12'] = [
         [
             'sn' => 1,
@@ -161,6 +160,86 @@ try {
         ],
         [
             'sn' => 2,
+            'subject' => 'CIVIC AND MORAL EDUCATION',
+            'schools_count' => 120,
+            'a' => 10,
+            'b' => 25,
+            'c' => 40,
+            'd' => 35,
+            'e' => 10,
+            'pass_ac' => 75,
+            'pass_pct' => 62.50,
+            'fail_de' => 45,
+            'fail_pct' => 37.50,
+            'average_marks' => 36.70,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 3,
+            'subject' => 'SOCIAL STUDIES AND VOCATIONAL SKILLS',
+            'schools_count' => 120,
+            'a' => 10,
+            'b' => 25,
+            'c' => 40,
+            'd' => 35,
+            'e' => 10,
+            'pass_ac' => 75,
+            'pass_pct' => 62.50,
+            'fail_de' => 45,
+            'fail_pct' => 37.50,
+            'average_marks' => 32.88,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 4,
+            'subject' => 'SCIENCE AND TECHNOLOGY',
+            'schools_count' => 120,
+            'a' => 10,
+            'b' => 25,
+            'c' => 40,
+            'd' => 35,
+            'e' => 10,
+            'pass_ac' => 75,
+            'pass_pct' => 62.50,
+            'fail_de' => 45,
+            'fail_pct' => 37.50,
+            'average_marks' => 27.40,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 5,
+            'subject' => 'ENGLISH LANGUAGE',
+            'schools_count' => 120,
+            'a' => 10,
+            'b' => 25,
+            'c' => 40,
+            'd' => 35,
+            'e' => 10,
+            'pass_ac' => 75,
+            'pass_pct' => 62.50,
+            'fail_de' => 45,
+            'fail_pct' => 37.50,
+            'average_marks' => 23.97,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 6,
+            'subject' => 'MATHEMATICS',
+            'schools_count' => 120,
+            'a' => 10,
+            'b' => 25,
+            'c' => 40,
+            'd' => 35,
+            'e' => 10,
+            'pass_ac' => 75,
+            'pass_pct' => 62.50,
+            'fail_de' => 45,
+            'fail_pct' => 37.50,
+            'average_marks' => 21.86,
+            'competence' => 'NZURI'
+        ],
+        [
+            'sn' => 7,
             'subject' => 'ENGLISH WEIRDLY LONG SUBJECT NAME FOR TESTING DYNAMIC TRUNCATION IN SOMO COLUMN',
             'schools_count' => 120,
             'a' => 10,
@@ -172,7 +251,7 @@ try {
             'pass_pct' => 62.50,
             'fail_de' => 45,
             'fail_pct' => 37.50,
-            'average_marks' => 22.80,
+            'average_marks' => 8.50,
             'competence' => 'NZURI'
         ]
     ];
