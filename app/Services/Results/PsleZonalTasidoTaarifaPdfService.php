@@ -767,7 +767,7 @@ class PsleZonalTasidoTaarifaPdfService
         $sectionHeader("Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za binafsi)");
         
         $t12Headers = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'JML', '%', 'JML', '%', 'Wastani', 'Kundi la Umahiri'];
-        $t12Widths = [8, 32, 12, 11, 11, 11, 11, 11, 15, 15, 15, 15, 16, 26];
+        $t12Widths = [5, 55, 9, 8, 8, 8, 8, 8, 11, 11, 11, 11, 11, 36];
         $t12Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t12Rows = [];
         foreach ($data['table12'] as $row) {
