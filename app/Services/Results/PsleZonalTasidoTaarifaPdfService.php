@@ -575,8 +575,8 @@ class PsleZonalTasidoTaarifaPdfService
 
         $sectionHeader("Jedwali Na. 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja");
         
-        $t7Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'WALIOSAJILIWA', 'WALIOFANYA', 'A', 'B', 'C', 'JML', '%', 'Wastani', 'Umahiri', 'Nafasi'];
-        $t7Widths = [4, 10, 12, 27, 6, 6, 4, 4, 4, 5, 6, 6, 8, 4];
+        $t7Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'WALIOSAJILIWA', 'WALIOFANYA', 'A', 'B', 'C', 'JML', '%', 'Wastani', 'Kundi la Umahiri', 'Nafasi'];
+        $t7Widths = [4, 8, 10, 24, 5, 5, 4, 4, 4, 5, 5, 6, 12, 4];
         $t7Aligns = ['C', 'L', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t7Rows = [];
         foreach ($data['table7'] as $row) {
@@ -593,7 +593,7 @@ class PsleZonalTasidoTaarifaPdfService
                 number_format($row['pass_ac']),
                 number_format($row['pass_pct'], 2) . '%',
                 number_format($row['average_marks'], 2),
-                $row['competence'],
+                $this->proficiencyLabel($row['competence']),
                 $row['sn']
             ];
         }
@@ -625,7 +625,7 @@ class PsleZonalTasidoTaarifaPdfService
                 number_format($row['pass_ac']),
                 number_format($row['pass_pct'], 2) . '%',
                 number_format($row['average_marks'], 2),
-                $row['competence'],
+                $this->proficiencyLabel($row['competence']),
                 $row['sn']
             ];
         }
@@ -771,8 +771,8 @@ class PsleZonalTasidoTaarifaPdfService
 
         $sectionHeader("Jedwali Na. 12: Ufaulu Kikanda kwa Masomo (shule za binafsi)");
         
-        $t12Headers = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'Pass', 'Pass %', 'Fail', 'Fail %', 'Wastani', 'Umahiri'];
-        $t12Widths = [10, 40, 15, 13, 13, 13, 13, 13, 17, 17, 17, 17, 19, 16];
+        $t12Headers = ['S/N', 'Somo', 'Shule', 'A', 'B', 'C', 'D', 'E', 'Pass', 'Pass %', 'Fail', 'Fail %', 'Wastani', 'Kundi la Umahiri'];
+        $t12Widths = [8, 32, 12, 11, 11, 11, 11, 11, 15, 15, 15, 15, 16, 26];
         $t12Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t12Rows = [];
         foreach ($data['table12'] as $row) {
@@ -790,7 +790,7 @@ class PsleZonalTasidoTaarifaPdfService
                 number_format($row['fail_de']),
                 number_format($row['fail_pct'], 2) . '%',
                 number_format($row['average_marks'], 2),
-                $row['competence']
+                $this->proficiencyLabel($row['competence'])
             ];
         }
         $this->renderTable($pdf, $t12Headers, $t12Widths, $t12Aligns, $t12Rows);
@@ -1160,10 +1160,49 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[9], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
             $pdf->Cell($widths[10], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
             $pdf->Cell($widths[11], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
-            $pdf->Cell($widths[12], $h2, $pdf->pdfText('UMAHIRI'), 1, 0, 'C', true);
+            // Save coordinates at start of index 12 cell
+            $x12 = $pdf->GetX();
+            $y12 = $pdf->GetY();
+            
+            // Draw background and borders for index 12 cell
+            $pdf->Cell($widths[12], $h2, '', 1, 0, 'C', true);
+            
+            // Print wrapped text for KUNDI LA UMAHIRI
+            $pdf->SetXY($x12, $y12 + 0.5);
+            $pdf->Cell($widths[12], 3, $pdf->pdfText('KUNDI LA'), 0, 0, 'C');
+            $pdf->SetXY($x12, $y12 + 3.5);
+            $pdf->Cell($widths[12], 3, $pdf->pdfText('UMAHIRI'), 0, 0, 'C');
+            
+            // Reset position to draw the next cell (NAFASI)
+            $pdf->SetXY($x12 + $widths[12], $y12);
             $pdf->Cell($widths[13], $h2, $pdf->pdfText('NAFASI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x, $y + $fullHeight);
         }
+    }
+
+    private function proficiencyLabel(?string $gradeOrValue): string
+    {
+        $value = trim((string) $gradeOrValue);
+        $upper = strtoupper($value);
+
+        return match (true) {
+            str_contains($upper, 'DARAJA A') || $upper === 'A' || $upper === 'BORA'
+                => 'Daraja A (Bora)',
+
+            str_contains($upper, 'DARAJA B') || $upper === 'B' || $upper === 'NZURI SANA' || $upper === 'VIZURI SANA' || $upper === 'VIZURI'
+                => 'Daraja B (Nzuri Sana)',
+
+            str_contains($upper, 'DARAJA C') || $upper === 'C' || $upper === 'NZURI'
+                => 'Daraja C (Nzuri)',
+
+            str_contains($upper, 'DARAJA D') || $upper === 'D'
+                => 'Daraja D',
+
+            str_contains($upper, 'DARAJA E') || $upper === 'E'
+                => 'Daraja E',
+
+            default => $value,
+        };
     }
 }
