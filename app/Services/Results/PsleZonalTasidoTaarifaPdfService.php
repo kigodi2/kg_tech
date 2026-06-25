@@ -482,8 +482,8 @@ class PsleZonalTasidoTaarifaPdfService
         );
         $sectionHeader("Jedwali Na. 4: Ufaulu Kikanda kwa Madaraja - Shule za Serikali");
         
-        $t4Headers = ['S/N', 'Mkoa', 'Idadi Shule', 'A', 'B', 'C', 'A-C JML', 'A-C %', 'D', 'E', 'D-E JML', 'D-E %', 'Wastani', 'Umahiri'];
-        $t4Widths = [10, 24, 18, 10, 10, 10, 14, 14, 10, 10, 14, 14, 16, 16];
+        $t4Headers = ['S/N', 'Mkoa', 'Idadi Shule', 'A', 'B', 'C', 'D', 'E', 'JML', '%', 'JML', '%', 'Wastani', 'Kundi la Umahiri'];
+        $t4Widths = [4, 13, 10, 4, 4, 4, 4, 4, 6, 6, 6, 6, 9, 20];
         $t4Aligns = ['C', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t4Rows = [];
         foreach ($data['table4'] as $row) {
@@ -494,17 +494,17 @@ class PsleZonalTasidoTaarifaPdfService
                 number_format($row['a']),
                 number_format($row['b']),
                 number_format($row['c']),
-                number_format($row['pass_ac']),
-                number_format($row['pass_pct'], 2) . '%',
                 number_format($row['d']),
                 number_format($row['e']),
+                number_format($row['pass_ac']),
+                number_format($row['pass_pct'], 2) . '%',
                 number_format($row['fail_de']),
                 number_format($row['fail_pct'], 2) . '%',
                 number_format($row['average_marks'], 2),
-                $row['competence']
+                $this->nectaSchoolProficiencyFromAverage($row['average_marks'])
             ];
         }
-        $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t4Rows);
+        $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t4Rows, null, true, 'regional_summary');
         $pdf->Ln(5);
 
         $sectionHeader("Jedwali Na. 5: Ufaulu Kikanda kwa Madaraja - Shule Zisizo za Serikali");
@@ -517,17 +517,17 @@ class PsleZonalTasidoTaarifaPdfService
                 number_format($row['a']),
                 number_format($row['b']),
                 number_format($row['c']),
-                number_format($row['pass_ac']),
-                number_format($row['pass_pct'], 2) . '%',
                 number_format($row['d']),
                 number_format($row['e']),
+                number_format($row['pass_ac']),
+                number_format($row['pass_pct'], 2) . '%',
                 number_format($row['fail_de']),
                 number_format($row['fail_pct'], 2) . '%',
                 number_format($row['average_marks'], 2),
-                $row['competence']
+                $this->nectaSchoolProficiencyFromAverage($row['average_marks'])
             ];
         }
-        $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t5Rows);
+        $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t5Rows, null, true, 'regional_summary');
 
         // ------------------ SECTION 4 (Table 6 & Section 3 text) ------------------
         $pdf->addPortraitPage(
@@ -1162,6 +1162,30 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[11], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
             $pdf->Cell($widths[12], $h2, $pdf->pdfText('KUNDI LA UMAHIRI'), 1, 0, 'C', true);
             $pdf->Cell($widths[13], $h2, $pdf->pdfText('NAFASI'), 1, 1, 'C', true);
+
+            $pdf->SetXY($x, $y + $fullHeight);
+        } elseif ($type === 'regional_summary') {
+            $pdf->Cell($widths[0], $fullHeight, $pdf->pdfText('S/N'), 1, 0, 'C', true);
+            $pdf->Cell($widths[1], $fullHeight, $pdf->pdfText('MKOA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('IDADI SHULE'), 1, 0, 'C', true);
+            
+            $pdf->Cell($widths[3] + $widths[4] + $widths[5] + $widths[6] + $widths[7], $h1, $pdf->pdfText('MADARAJA'), 1, 0, 'C', true);
+            $pdf->Cell($widths[8] + $widths[9], $h1, $pdf->pdfText('UFAULU (A-C)'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10] + $widths[11], $h1, $pdf->pdfText('UFAULU (D-E)'), 1, 0, 'C', true);
+            $pdf->Cell($widths[12] + $widths[13], $h1, $pdf->pdfText('MATOKEO'), 1, 1, 'C', true);
+
+            $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2], $y + $h1);
+            $pdf->Cell($widths[3], $h2, $pdf->pdfText('A'), 1, 0, 'C', true);
+            $pdf->Cell($widths[4], $h2, $pdf->pdfText('B'), 1, 0, 'C', true);
+            $pdf->Cell($widths[5], $h2, $pdf->pdfText('C'), 1, 0, 'C', true);
+            $pdf->Cell($widths[6], $h2, $pdf->pdfText('D'), 1, 0, 'C', true);
+            $pdf->Cell($widths[7], $h2, $pdf->pdfText('E'), 1, 0, 'C', true);
+            $pdf->Cell($widths[8], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[9], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[11], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
+            $pdf->Cell($widths[12], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
+            $pdf->Cell($widths[13], $h2, $pdf->pdfText('KUNDI LA UMAHIRI'), 1, 1, 'C', true);
 
             $pdf->SetXY($x, $y + $fullHeight);
         }
