@@ -282,17 +282,18 @@ class PsleZonalTasidoTaarifaPdfService
         $chapterHeader = function(string $num, string $title) use ($pdf) {
             $pdf->SetFont($pdf->primaryFont, 'B', 11);
             $pdf->SetTextColor(15, 23, 42);
-            $pdf->Cell(0, 8, $pdf->pdfText($num . ".0 " . strtoupper($title)), 0, 1, 'L');
+            $pdf->MultiCell(0, 6, $pdf->pdfText($num . ".0 " . strtoupper($title)), 0, 'L');
+            $y = $pdf->GetY() + 1.5;
             $pdf->SetDrawColor(15, 23, 42);
             $pdf->SetLineWidth(0.4);
-            $pdf->Line($pdf->getLMargin(), $pdf->GetY(), $pdf->getPageWidth() - $pdf->getRMargin(), $pdf->GetY());
-            $pdf->Ln(3);
+            $pdf->Line($pdf->getLMargin(), $y, $pdf->getPageWidth() - $pdf->getRMargin(), $y);
+            $pdf->SetY($y + 2.0);
         };
 
         $sectionHeader = function(string $title) use ($pdf) {
             $pdf->SetFont($pdf->primaryFont, 'B', 10);
             $pdf->SetTextColor(15, 23, 42);
-            $pdf->Cell(0, 7, $pdf->pdfText($title), 0, 1, 'L');
+            $pdf->MultiCell(0, 5.5, $pdf->pdfText($title), 0, 'L');
             $pdf->Ln(2);
         };
 
