@@ -575,8 +575,8 @@ class PsleZonalTasidoTaarifaPdfService
 
         $sectionHeader("Jedwali Na. 7: Msambao wa Ufaulu wa shule Kumi Bora za Serikali kwa Madaraja");
         
-        $t7Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'Reg', 'Fanya', 'A', 'B', 'C', 'A-C', 'A-C %', 'Wastani', 'Umahiri', 'Nafasi'];
-        $t7Widths = [8, 20, 24, 56, 10, 10, 8, 8, 8, 10, 10, 10, 10, 8];
+        $t7Headers = ['NA', 'Mkoa', 'Halmashauri', 'Jina la Shule', 'WALIOSAJILIWA', 'WALIOFANYA', 'A', 'B', 'C', 'JML', '%', 'Wastani', 'Umahiri', 'Nafasi'];
+        $t7Widths = [4, 10, 12, 27, 6, 6, 4, 4, 4, 5, 6, 6, 8, 4];
         $t7Aligns = ['C', 'L', 'L', 'L', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C', 'C'];
         $t7Rows = [];
         foreach ($data['table7'] as $row) {
@@ -1125,20 +1125,40 @@ class PsleZonalTasidoTaarifaPdfService
             $pdf->Cell($widths[2], $fullHeight, $pdf->pdfText('HALMASHAURI'), 1, 0, 'C', true);
             $pdf->Cell($widths[3], $fullHeight, $pdf->pdfText('JINA LA SHULE'), 1, 0, 'C', true);
             
-            $pdf->Cell($widths[4], $h1, $pdf->pdfText('USAJILI'), 1, 0, 'C', true);
-            $pdf->Cell($widths[5], $h1, $pdf->pdfText('WALIOFANYA'), 1, 0, 'C', true);
+            // Save coordinates at start of WALIOSAJILIWA cell
+            $curX = $pdf->GetX();
+            $curY = $pdf->GetY();
+            
+            // Draw background and borders for WALIOSAJILIWA and WALIOFANYA rowspan=2 cells
+            $pdf->Cell($widths[4], $fullHeight, '', 1, 0, 'C', true);
+            $pdf->Cell($widths[5], $fullHeight, '', 1, 0, 'C', true);
+            
+            // Print wrapped text for WALIOSAJILIWA
+            $pdf->SetXY($curX, $curY + 2.5);
+            $pdf->Cell($widths[4], 4, $pdf->pdfText('WALIO'), 0, 0, 'C');
+            $pdf->SetXY($curX, $curY + 6.5);
+            $pdf->Cell($widths[4], 4, $pdf->pdfText('SAJILIWA'), 0, 0, 'C');
+            
+            // Print wrapped text for WALIOFANYA
+            $pdf->SetXY($curX + $widths[4], $curY + 2.5);
+            $pdf->Cell($widths[5], 4, $pdf->pdfText('WALIO'), 0, 0, 'C');
+            $pdf->SetXY($curX + $widths[4], $curY + 6.5);
+            $pdf->Cell($widths[5], 4, $pdf->pdfText('FANYA'), 0, 0, 'C');
+            
+            // Return to Row 1 coordinate to draw the remaining Row 1 headers
+            $pdf->SetXY($curX + $widths[4] + $widths[5], $curY);
+            
             $pdf->Cell($widths[6] + $widths[7] + $widths[8], $h1, $pdf->pdfText('MADARAJA'), 1, 0, 'C', true);
-            $pdf->Cell($widths[9] + $widths[10], $h1, $pdf->pdfText('UFAULU'), 1, 0, 'C', true);
+            $pdf->Cell($widths[9] + $widths[10], $h1, $pdf->pdfText('UFAULU (A-C)'), 1, 0, 'C', true);
             $pdf->Cell($widths[11] + $widths[12] + $widths[13], $h1, $pdf->pdfText('MATOKEO'), 1, 1, 'C', true);
 
-            $pdf->SetXY($x + $widths[0] + $widths[1] + $widths[2] + $widths[3], $y + $h1);
-            $pdf->Cell($widths[4], $h2, $pdf->pdfText('REG'), 1, 0, 'C', true);
-            $pdf->Cell($widths[5], $h2, $pdf->pdfText('FANYA'), 1, 0, 'C', true);
+            // Draw Row 2 headers
+            $pdf->SetXY($curX + $widths[4] + $widths[5], $curY + $h1);
             $pdf->Cell($widths[6], $h2, $pdf->pdfText('A'), 1, 0, 'C', true);
             $pdf->Cell($widths[7], $h2, $pdf->pdfText('B'), 1, 0, 'C', true);
             $pdf->Cell($widths[8], $h2, $pdf->pdfText('C'), 1, 0, 'C', true);
-            $pdf->Cell($widths[9], $h2, $pdf->pdfText('A-C'), 1, 0, 'C', true);
-            $pdf->Cell($widths[10], $h2, $pdf->pdfText('A-C %'), 1, 0, 'C', true);
+            $pdf->Cell($widths[9], $h2, $pdf->pdfText('JML'), 1, 0, 'C', true);
+            $pdf->Cell($widths[10], $h2, $pdf->pdfText('%'), 1, 0, 'C', true);
             $pdf->Cell($widths[11], $h2, $pdf->pdfText('WASTANI'), 1, 0, 'C', true);
             $pdf->Cell($widths[12], $h2, $pdf->pdfText('UMAHIRI'), 1, 0, 'C', true);
             $pdf->Cell($widths[13], $h2, $pdf->pdfText('NAFASI'), 1, 1, 'C', true);
