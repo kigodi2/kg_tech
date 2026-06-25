@@ -422,8 +422,8 @@ class PsleZonalTasidoTaarifaPdfService
 
         // ------------------ SECTION 3 (Tables 3a, 3b, 4, 5) ------------------
         $pdf->addPortraitPage(
-            $data['meta']['margin_top'],
-            $data['meta']['margin_bottom'],
+            15.0,
+            15.0,
             $data['meta']['margin_left'],
             $data['meta']['margin_right']
         );
@@ -452,8 +452,8 @@ class PsleZonalTasidoTaarifaPdfService
                 $row['position']
             ];
         }
-        $this->renderTable($pdf, $t3aHeaders, $t3aWidths, $t3aAligns, $t3aRows);
-        $pdf->Ln(5);
+        $this->renderTable($pdf, $t3aHeaders, $t3aWidths, $t3aAligns, $t3aRows, null, false, '', 4.8, 7.2);
+        $pdf->Ln(2);
 
         $sectionHeader("Jedwali Na. 3b: Hali ya Ufaulu Kikanda kwa Madaraja - Shule za Serikali na Binafsi kwa Asilimia ya Ufaulu");
         $t3bRows = [];
@@ -472,14 +472,9 @@ class PsleZonalTasidoTaarifaPdfService
                 $row['position']
             ];
         }
-        $this->renderTable($pdf, $t3aHeaders, $t3aWidths, $t3aAligns, $t3bRows);
+        $this->renderTable($pdf, $t3aHeaders, $t3aWidths, $t3aAligns, $t3bRows, null, false, '', 4.8, 7.2);
+        $pdf->Ln(2);
 
-        $pdf->addPortraitPage(
-            $data['meta']['margin_top'],
-            $data['meta']['margin_bottom'],
-            $data['meta']['margin_left'],
-            $data['meta']['margin_right']
-        );
         $sectionHeader("Jedwali Na. 4: Ufaulu Kikanda kwa Madaraja - Shule za Serikali");
         
         $t4Headers = ['S/N', 'Mkoa', 'Shule', 'A', 'B', 'C', 'D', 'E', 'JML', '%', 'JML', '%', 'Wastani', 'Kundi la Umahiri'];
@@ -504,8 +499,8 @@ class PsleZonalTasidoTaarifaPdfService
                 $this->nectaSchoolProficiencyFromAverage($row['average_marks'])
             ];
         }
-        $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t4Rows, null, true, 'regional_summary');
-        $pdf->Ln(5);
+        $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t4Rows, null, true, 'regional_summary', 4.5, 7.0);
+        $pdf->Ln(2);
 
         $sectionHeader("Jedwali Na. 5: Ufaulu Kikanda kwa Madaraja - Shule Zisizo za Serikali");
         $t5Rows = [];
@@ -527,7 +522,7 @@ class PsleZonalTasidoTaarifaPdfService
                 $this->nectaSchoolProficiencyFromAverage($row['average_marks'])
             ];
         }
-        $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t5Rows, null, true, 'regional_summary');
+        $this->renderTable($pdf, $t4Headers, $t4Widths, $t4Aligns, $t5Rows, null, true, 'regional_summary', 4.5, 7.0);
 
         // ------------------ SECTION 4 (Table 6 & Section 3 text) ------------------
         $pdf->addPortraitPage(
@@ -1023,7 +1018,11 @@ class PsleZonalTasidoTaarifaPdfService
 
     private function renderCustomDoubleHeader(\FPDF $pdf, array $widths, string $type): void
     {
-        $pdf->SetFont($pdf->primaryFont, 'B', 7.5);
+        if ($type === 'regional_summary') {
+            $pdf->SetFont($pdf->primaryFont, 'B', 7.0);
+        } else {
+            $pdf->SetFont($pdf->primaryFont, 'B', 7.5);
+        }
         $pdf->SetTextColor(15, 23, 42);
         $pdf->SetFillColor(241, 245, 249);
         $pdf->SetDrawColor(203, 213, 225);
@@ -1031,8 +1030,8 @@ class PsleZonalTasidoTaarifaPdfService
         $x = $pdf->GetX();
         $y = $pdf->GetY();
 
-        $h1 = 7;
-        $h2 = 6;
+        $h1 = ($type === 'regional_summary') ? 5.5 : 7;
+        $h2 = ($type === 'regional_summary') ? 5.0 : 6;
         $fullHeight = $h1 + $h2;
 
         if ($type === 'attendance') {
