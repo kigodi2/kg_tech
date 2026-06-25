@@ -518,6 +518,38 @@
             margin-bottom: 8px;
         }
 
+        .recommendations-section {
+            page-break-before: auto !important;
+            break-before: auto !important;
+            margin-top: 0;
+            padding-top: 0;
+        }
+
+        .recommendations-section h2 {
+            margin-top: 0;
+            margin-bottom: 6px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #000;
+            text-transform: uppercase;
+        }
+
+        .recommendations-section .section-underline {
+            margin-bottom: 8px;
+            border-bottom: 1.5px solid #000;
+        }
+
+        .recommendations-section ol {
+            margin-top: 6px;
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+
+        .recommendations-section li {
+            margin-bottom: 8px;
+            line-height: 1.25;
+        }
+
         /* Sign-offs */
         .signoff-container {
             display: grid;
@@ -1683,12 +1715,15 @@
                     @endforeach
                 </ul>
 
-                <div class="doc-section-title" style="margin-top: 25px;">13. MAONI NA MAPENDEKEZO</div>
-                <ul class="doc-list">
-                    @foreach($data['narratives']['maoni_mapendekezo'] as $item)
-                        <li>{{ $item }}</li>
-                    @endforeach
-                </ul>
+                <div class="recommendations-section">
+                    <h2>13. MAONI NA MAPENDEKEZO</h2>
+                    <div class="section-underline"></div>
+                    <ol>
+                        @foreach($data['narratives']['maoni_mapendekezo'] as $item)
+                            <li>{{ $item }}</li>
+                        @endforeach
+                    </ol>
+                </div>
             </div>
 
             <!-- Page 14: Hitimisho & Uidhinishaji -->

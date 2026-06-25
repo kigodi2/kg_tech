@@ -827,12 +827,15 @@ class PsleZonalTasidoTaarifaPdfService
         $sectionHeader("12.1 Utatuzi wa changamoto");
         $renderBullets($data['narratives']['utatuzi']);
 
-        $pdf->addPortraitPage(
-            $data['meta']['margin_top'],
-            $data['meta']['margin_bottom'],
-            $data['meta']['margin_left'],
-            $data['meta']['margin_right']
-        );
+        $limit = $pdf->getPageHeight() - $pdf->getBMargin();
+        if ($pdf->GetY() + 40.0 > $limit) {
+            $pdf->addPortraitPage(
+                $data['meta']['margin_top'],
+                $data['meta']['margin_bottom'],
+                $data['meta']['margin_left'],
+                $data['meta']['margin_right']
+            );
+        }
         $chapterHeader("13", "MAONI NA MAPENDEKEZO");
         $renderBullets($data['narratives']['maoni_mapendekezo']);
         $pdf->Ln(5);
