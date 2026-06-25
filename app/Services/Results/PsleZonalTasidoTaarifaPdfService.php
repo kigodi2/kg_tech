@@ -593,7 +593,7 @@ class PsleZonalTasidoTaarifaPdfService
                 number_format($row['pass_ac']),
                 number_format($row['pass_pct'], 2) . '%',
                 number_format($row['average_marks'], 2),
-                $this->proficiencyLabel($row['competence']),
+                $this->nectaSchoolProficiencyFromAverage($row['average_marks']),
                 $row['sn']
             ];
         }
@@ -625,7 +625,7 @@ class PsleZonalTasidoTaarifaPdfService
                 number_format($row['pass_ac']),
                 number_format($row['pass_pct'], 2) . '%',
                 number_format($row['average_marks'], 2),
-                $this->proficiencyLabel($row['competence']),
+                $this->nectaSchoolProficiencyFromAverage($row['average_marks']),
                 $row['sn']
             ];
         }
@@ -1203,6 +1203,24 @@ class PsleZonalTasidoTaarifaPdfService
                 => 'Daraja E',
 
             default => $value,
+        };
+    }
+
+    private function nectaSchoolProficiencyFromAverage(mixed $average): string
+    {
+        if ($average === null || $average === '') {
+            return '';
+        }
+
+        $value = (float) str_replace(',', '', (string) $average);
+
+        return match (true) {
+            $value >= 241 && $value <= 300 => 'Daraja A (Bora)',
+            $value >= 181 && $value < 241 => 'Daraja B (Nzuri Sana)',
+            $value >= 121 && $value < 181 => 'Daraja C (Nzuri)',
+            $value >= 61  && $value < 121 => 'Daraja D (Inaridhisha)',
+            $value >= 0   && $value < 61  => 'Daraja E (Hafifu)',
+            default => '',
         };
     }
 }
