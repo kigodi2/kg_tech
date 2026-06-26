@@ -3648,6 +3648,15 @@ class PsleEvaluationsController extends Controller
 
             $average = (float) $candidate->avg_marks;
 
+            $satSubjects = $subjectRows->filter(fn (array $item) => !($item['is_absent'] ?? false));
+            $subjectCount = $satSubjects->count();
+            $aggt = $subjectCount > 0
+                ? (int) $satSubjects->sum(fn (array $item) => $this->gradePointFromGrade((string) ($item['grade'] ?? 'E')))
+                : null;
+            $gpa = $subjectCount > 0 && !is_null($aggt)
+                ? round($aggt / $subjectCount, 4)
+                : null;
+
             return [
                 'position' => $index + 1,
                 'candidate_pk' => (int) $candidate->candidate_pk,
@@ -3676,6 +3685,8 @@ class PsleEvaluationsController extends Controller
                 'total_marks' => round((float) $candidate->total_marks, 0),
                 'avg_marks' => $average,
                 'overall_grade' => $this->gradeFromScaledScore($average),
+                'aggt' => $aggt,
+                'gpa' => $gpa,
             ];
         });
 
