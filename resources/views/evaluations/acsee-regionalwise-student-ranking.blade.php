@@ -7,7 +7,7 @@
     $heroTitle = 'Review the ranked student list, school placement, GPA, and division from one polished workspace.';
     $heroCopy = 'This view presents the selected student ranking evaluation in a cleaner dashboard format while preserving the detailed table and PDF export.';
     $topLabel = 'Top Student';
-    $topCopy = $topStudent['school'] ?? 'No school available';
+    $topCopy = $topStudent ? ($topStudent['school'] ?? 'No school available') : 'No school available';
     $sectionCopy = 'Ranked students are listed in the same detailed report structure used in centre reports.';
 
     switch ($evaluationKey ?? '') {
@@ -81,7 +81,7 @@
                 </div>
                 <div class="grid gap-4">
                     <div class="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm"><p class="text-xs font-semibold uppercase tracking-[0.25em] text-blue-100">Students Listed</p><h3 class="mt-2 text-3xl font-black">{{ $studentCount }}</h3><p class="mt-2 text-sm text-slate-200">Total ranked students included in the current evaluation.</p></div>
-                    <div class="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm"><p class="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-100">{{ $topLabel }}</p><h3 class="mt-2 text-2xl font-black">{{ $topStudent['candidate'] ?? 'N/A' }}</h3><p class="mt-2 text-sm text-slate-200">{{ $topCopy }}</p></div>
+                    <div class="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm"><p class="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-100">{{ $topLabel }}</p><h3 class="mt-2 text-2xl font-black">{{ $topStudent ? ($topStudent['candidate'] ?? 'N/A') : 'N/A' }}</h3><p class="mt-2 text-sm text-slate-200">{{ $topCopy }}</p></div>
                 </div>
             </div>
         </section>

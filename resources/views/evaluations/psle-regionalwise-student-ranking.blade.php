@@ -176,8 +176,8 @@
                         <span style="background: {{ $averageGpaBadge['color'] }}; color: #000080; padding: 0 0.25rem;">Grade {{ $averageGpaBadge['grade'] }} ({{ $averageGpaBadge['competence'] }})</span>
                     @endif
                 </p>
-                <p style="margin: 0 0 0.2rem 0;">BEST CANDIDATE: {{ $bestRow['index_number'] ?? '-' }} @if($bestRow) (TOTAL: {{ is_null($bestRow['total_marks'] ?? null) ? '-' : number_format((float) $bestRow['total_marks'], 0) }}, GRD: {{ $bestRow['overall_grade'] ?? '-' }}, POS: {{ $bestRow['position'] ?? '-' }}) @endif</p>
-                <p style="margin: 0;">LEAST CANDIDATE: {{ $leastRow['index_number'] ?? '-' }} @if($leastRow) (TOTAL: {{ is_null($leastRow['total_marks'] ?? null) ? '-' : number_format((float) $leastRow['total_marks'], 0) }}, GRD: {{ $leastRow['overall_grade'] ?? '-' }}, POS: {{ $leastRow['position'] ?? '-' }}) @endif</p>
+                <p style="margin: 0 0 0.2rem 0;">BEST CANDIDATE: {{ $bestRow ? ($bestRow['index_number'] ?? '-') : '-' }} @if($bestRow) (TOTAL: {{ is_null($bestRow['total_marks'] ?? null) ? '-' : number_format((float) $bestRow['total_marks'], 0) }}, GRD: {{ $bestRow['overall_grade'] ?? '-' }}, POS: {{ $bestRow['position'] ?? '-' }}) @endif</p>
+                <p style="margin: 0;">LEAST CANDIDATE: {{ $leastRow ? ($leastRow['index_number'] ?? '-') : '-' }} @if($leastRow) (TOTAL: {{ is_null($leastRow['total_marks'] ?? null) ? '-' : number_format((float) $leastRow['total_marks'], 0) }}, GRD: {{ $leastRow['overall_grade'] ?? '-' }}, POS: {{ $leastRow['position'] ?? '-' }}) @endif</p>
             </div>
         </div>
 

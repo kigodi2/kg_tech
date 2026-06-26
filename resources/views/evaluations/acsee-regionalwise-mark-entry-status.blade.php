@@ -57,8 +57,8 @@
                     </div>
                     <div class="rounded-3xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
                         <p class="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-100">Best Completion</p>
-                        <h3 class="mt-2 text-2xl font-black">{{ $topSubject['subject'] ?? 'N/A' }}</h3>
-                        <p class="mt-2 text-sm text-slate-200">{{ isset($topSubject['completion']) ? number_format($topSubject['completion'], 1) . '%' : '-' }} completion in the current report.</p>
+                        <h3 class="mt-2 text-2xl font-black">{{ $topSubject ? ($topSubject['subject'] ?? 'N/A') : 'N/A' }}</h3>
+                        <p class="mt-2 text-sm text-slate-200">{{ ($topSubject && isset($topSubject['completion'])) ? number_format($topSubject['completion'], 1) . '%' : '-' }} completion in the current report.</p>
                     </div>
                 </div>
             </div>
