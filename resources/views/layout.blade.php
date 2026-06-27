@@ -785,8 +785,12 @@
                         <i class="fas fa-chevron-down"></i>
                     </button>
                     <div class="dropdown-menu">
-                        <a href="/results/psle" class="dropdown-item"><i class="fas fa-square-poll-vertical"></i> PSLE</a>
-                        <hr style="margin: 0.4rem 0; border-top: 1px solid #404040;">
+                        @auth
+                            @if(auth()->user()->isAdmin())
+                                <a href="/results/psle" class="dropdown-item"><i class="fas fa-square-poll-vertical"></i> PSLE</a>
+                                <hr style="margin: 0.4rem 0; border-top: 1px solid #404040;">
+                            @endif
+                        @endauth
                         <a href="/results/2026/psle" class="dropdown-item">
                             <i class="fas fa-globe"></i> PUBLIC RESULTS (2026 PSLE)
                         </a>

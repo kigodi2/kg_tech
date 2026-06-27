@@ -108,7 +108,7 @@ class AdminPsleResultsController extends Controller
                     $viewData = $this->getOverviewData($yearLabel, $tasidoRegionIds);
                     break;
                 case 'processing':
-                    $viewData = $this->getProcessingData($yearLabel, $tasidoRegionIds);
+                    $viewData = $this->getProcessingData($yearLabel, $tasidoRegionIds, $metrics);
                     break;
                 case 'candidate-results':
                 case 'candidates':
@@ -177,22 +177,31 @@ class AdminPsleResultsController extends Controller
             return ['regions' => 0, 'schools' => 0, 'registered' => 0, 'complete' => 0, 'missing' => 0, 'processed' => 0, 'published' => 'Yes'];
         }
 
+        $examYear = ExamYear::where('year_label', $year)->first();
+        $examYearId = $examYear ? $examYear->id : 0;
+
         $schoolsQuery = School::whereIn('region_id', $regionIds)->where('education_level', 'PRIMARY');
         $schoolsCount = $schoolsQuery->count();
         $schoolIds = $schoolsQuery->pluck('id')->toArray();
 
-        $registeredCount = Candidate::whereIn('school_id', $schoolIds)->where('exam_type', self::EXAM_TYPE_CODE)->count();
+        $registeredCount = Candidate::whereIn('school_id', $schoolIds)
+            ->where('exam_year_id', $examYearId)
+            ->where('exam_type', self::EXAM_TYPE_CODE)
+            ->count();
 
         // Candidates with all 6 subject marks entered
-        $completeCount = DB::table('subject_marks as sm')
+        $completeSub = DB::table('subject_marks as sm')
             ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
             ->whereIn('c.school_id', $schoolIds)
             ->where('sm.year', $year)
+            ->where('c.exam_year_id', $examYearId)
             ->where('c.exam_type', self::EXAM_TYPE_CODE)
             ->groupBy('c.id')
             ->having(DB::raw('count(distinct sm.subject_id)'), '>=', 6)
-            ->select('c.id')
-            ->get()
+            ->select('c.id');
+
+        $completeCount = DB::table(DB::raw("({$completeSub->toSql()}) as sub"))
+            ->mergeBindings($completeSub)
             ->count();
 
         $missingCount = max(0, $registeredCount - $completeCount);
@@ -211,14 +220,19 @@ class AdminPsleResultsController extends Controller
 
     private function getOverviewData(int $year, array $regionIds): array
     {
+        $examYear = ExamYear::where('year_label', $year)->first();
+        $examYearId = $examYear ? $examYear->id : 0;
+
         // 1. Regional Table Summary
         $regionalSummary = DB::table('regions as r')
             ->whereIn('r.id', $regionIds)
             ->leftJoin('schools as s', function ($join) {
                 $join->on('s.region_id', '=', 'r.id')->where('s.education_level', 'PRIMARY');
             })
-            ->leftJoin('candidates as c', function ($join) {
-                $join->on('c.school_id', '=', 's.id')->where('c.exam_type', self::EXAM_TYPE_CODE);
+            ->leftJoin('candidates as c', function ($join) use ($examYearId) {
+                $join->on('c.school_id', '=', 's.id')
+                    ->where('c.exam_year_id', $examYearId)
+                    ->where('c.exam_type', self::EXAM_TYPE_CODE);
             })
             ->selectRaw('r.id, r.name, count(distinct s.id) as schools_count, count(distinct c.id) as candidates_count')
             ->groupBy('r.id', 'r.name')
@@ -232,24 +246,23 @@ class AdminPsleResultsController extends Controller
             ->join('schools as s', 's.id', '=', 'c.school_id')
             ->whereIn('s.region_id', $regionIds)
             ->where('sm.year', $year)
+            ->where('c.exam_year_id', $examYearId)
             ->where('c.exam_type', self::EXAM_TYPE_CODE)
             ->selectRaw('sub.code, sub.name, count(distinct sm.candidate_id) as marks_count')
-            ->groupBy('sub.code', 'sub.name')
+            ->groupBy('sub.code, sub.name')
             ->orderBy('sub.name')
             ->get();
 
         return compact('regionalSummary', 'subjectCompleteness');
     }
 
-    private function getProcessingData(int $year, array $regionIds): array
+    private function getProcessingData(int $year, array $regionIds, array $metrics = []): array
     {
         // Mock processing audit lists & status
-        $readiness = DB::table('candidates as c')
-            ->join('schools as s', 's.id', '=', 'c.school_id')
-            ->whereIn('s.region_id', $regionIds)
-            ->where('c.exam_type', self::EXAM_TYPE_CODE)
-            ->selectRaw('count(distinct c.id) as total, sum(case when (select count(*) from subject_marks where candidate_id = c.id and year = ?) >= 6 then 1 else 0 end) as complete', [$year])
-            ->first();
+        $readiness = (object)[
+            'total' => $metrics['registered'] ?? 0,
+            'complete' => $metrics['complete'] ?? 0,
+        ];
 
         $validationErrors = DB::table('raw_marks as rm')
             ->join('mark_import_batches as mib', 'rm.mark_import_batch_id', '=', 'mib.id')
@@ -285,11 +298,15 @@ class AdminPsleResultsController extends Controller
 
     private function getCandidateResultsData(Request $request, int $year, array $regionIds, $regionId, $districtId, $schoolId): array
     {
+        $examYear = ExamYear::where('year_label', $year)->first();
+        $examYearId = $examYear ? $examYear->id : 0;
+
         $query = DB::table('candidates as c')
             ->join('schools as s', 's.id', '=', 'c.school_id')
             ->join('districts as d', 'd.id', '=', 's.district_id')
             ->join('regions as r', 'r.id', '=', 's.region_id')
             ->whereIn('s.region_id', $regionIds)
+            ->where('c.exam_year_id', $examYearId)
             ->where('c.exam_type', self::EXAM_TYPE_CODE);
 
         // Apply filters
@@ -347,6 +364,9 @@ class AdminPsleResultsController extends Controller
 
     private function getSchoolResultsData(Request $request, int $year, array $regionIds, $regionId, $districtId): array
     {
+        $examYear = ExamYear::where('year_label', $year)->first();
+        $examYearId = $examYear ? $examYear->id : 0;
+
         $query = DB::table('schools as s')
             ->join('districts as d', 'd.id', '=', 's.district_id')
             ->join('regions as r', 'r.id', '=', 's.region_id')
@@ -365,29 +385,54 @@ class AdminPsleResultsController extends Controller
             ->orderBy('s.name')
             ->paginate(15);
 
-        // Gather metrics for school items
-        foreach ($schools->items() as $school) {
-            $school->registered = Candidate::where('school_id', $school->id)->where('exam_type', self::EXAM_TYPE_CODE)->count();
-            
-            // Average calculation
-            $scores = DB::table('subject_marks as sm')
-                ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
-                ->where('c.school_id', $school->id)
-                ->where('sm.year', $year)
-                ->where('c.exam_type', self::EXAM_TYPE_CODE)
-                ->pluck('sm.marks_obtained')
+        $schoolIds = collect($schools->items())->pluck('id')->toArray();
+
+        $registeredCounts = [];
+        $completeCounts = [];
+        $averages = [];
+
+        if (!empty($schoolIds)) {
+            $registeredCounts = Candidate::whereIn('school_id', $schoolIds)
+                ->where('exam_year_id', $examYearId)
+                ->where('exam_type', self::EXAM_TYPE_CODE)
+                ->groupBy('school_id')
+                ->select('school_id', DB::raw('count(*) as count'))
+                ->pluck('count', 'school_id')
                 ->toArray();
 
-            $school->complete = DB::table('subject_marks as sm')
+            $averages = DB::table('subject_marks as sm')
                 ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
-                ->where('c.school_id', $school->id)
+                ->whereIn('c.school_id', $schoolIds)
                 ->where('sm.year', $year)
+                ->where('c.exam_year_id', $examYearId)
+                ->where('c.exam_type', self::EXAM_TYPE_CODE)
+                ->groupBy('c.school_id')
+                ->select('c.school_id', DB::raw('avg(sm.marks_obtained) * 6 as avg_score'))
+                ->pluck('avg_score', 'school_id')
+                ->toArray();
+
+            $completeSub = DB::table('subject_marks as sm')
+                ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
+                ->whereIn('c.school_id', $schoolIds)
+                ->where('sm.year', $year)
+                ->where('c.exam_year_id', $examYearId)
                 ->groupBy('c.id')
                 ->having(DB::raw('count(*)'), '>=', 6)
-                ->get()
-                ->count();
+                ->select('c.school_id', 'c.id');
 
-            $school->average = count($scores) > 0 ? round(array_sum($scores) / (count($scores) / 6), 2) : 0;
+            $completeCounts = DB::table(DB::raw("({$completeSub->toSql()}) as sub"))
+                ->mergeBindings($completeSub)
+                ->groupBy('school_id')
+                ->select('school_id', DB::raw('count(*) as count'))
+                ->pluck('count', 'school_id')
+                ->toArray();
+        }
+
+        // Gather metrics for school items
+        foreach ($schools->items() as $school) {
+            $school->registered = $registeredCounts[$school->id] ?? 0;
+            $school->complete = $completeCounts[$school->id] ?? 0;
+            $school->average = isset($averages[$school->id]) ? round($averages[$school->id], 2) : 0;
             $school->status = $school->complete >= $school->registered && $school->registered > 0 ? 'Complete' : 'Incomplete';
         }
 
@@ -396,6 +441,9 @@ class AdminPsleResultsController extends Controller
 
     private function getDistrictResultsData(int $year, array $regionIds, $regionId): array
     {
+        $examYear = ExamYear::where('year_label', $year)->first();
+        $examYearId = $examYear ? $examYear->id : 0;
+
         $query = DB::table('districts as d')
             ->join('regions as r', 'r.id', '=', 'd.region_id')
             ->whereIn('d.region_id', $regionIds);
@@ -403,20 +451,46 @@ class AdminPsleResultsController extends Controller
         if ($regionId) $query->where('d.region_id', $regionId);
 
         $districts = $query->select(['d.id', 'd.name', 'r.name as region_name'])->orderBy('d.name')->get();
+        $districtIds = $districts->pluck('id')->toArray();
+
+        $schoolsCount = [];
+        $registeredCounts = [];
+        $averages = [];
+
+        if (!empty($districtIds)) {
+            $schoolsCount = School::whereIn('district_id', $districtIds)
+                ->where('education_level', 'PRIMARY')
+                ->groupBy('district_id')
+                ->select('district_id', DB::raw('count(*) as count'))
+                ->pluck('count', 'district_id')
+                ->toArray();
+
+            $registeredCounts = Candidate::join('schools as s', 's.id', '=', 'candidates.school_id')
+                ->whereIn('s.district_id', $districtIds)
+                ->where('candidates.exam_year_id', $examYearId)
+                ->where('candidates.exam_type', self::EXAM_TYPE_CODE)
+                ->groupBy('s.district_id')
+                ->select('s.district_id', DB::raw('count(*) as count'))
+                ->pluck('count', 's.district_id')
+                ->toArray();
+
+            $averages = DB::table('subject_marks as sm')
+                ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
+                ->join('schools as s', 's.id', '=', 'c.school_id')
+                ->whereIn('s.district_id', $districtIds)
+                ->where('sm.year', $year)
+                ->where('c.exam_year_id', $examYearId)
+                ->where('c.exam_type', self::EXAM_TYPE_CODE)
+                ->groupBy('s.district_id')
+                ->select('s.district_id', DB::raw('avg(sm.marks_obtained) * 6 as avg_score'))
+                ->pluck('avg_score', 's.district_id')
+                ->toArray();
+        }
 
         foreach ($districts as $d) {
-            $schoolIds = School::where('district_id', $d->id)->where('education_level', 'PRIMARY')->pluck('id')->toArray();
-            $d->schools_count = count($schoolIds);
-            $d->registered = Candidate::whereIn('school_id', $schoolIds)->where('exam_type', self::EXAM_TYPE_CODE)->count();
-            
-            $scores = DB::table('subject_marks as sm')
-                ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
-                ->whereIn('c.school_id', $schoolIds)
-                ->where('sm.year', $year)
-                ->pluck('sm.marks_obtained')
-                ->toArray();
-                
-            $d->average = count($scores) > 0 ? round(array_sum($scores) / (count($scores) / 6), 2) : 0;
+            $d->schools_count = $schoolsCount[$d->id] ?? 0;
+            $d->registered = $registeredCounts[$d->id] ?? 0;
+            $d->average = isset($averages[$d->id]) ? round($averages[$d->id], 2) : 0;
         }
 
         $districts = collect($districts)->sortByDesc('average')->values();
@@ -429,22 +503,58 @@ class AdminPsleResultsController extends Controller
 
     private function getRegionalResultsData(int $year, array $regionIds): array
     {
+        $examYear = ExamYear::where('year_label', $year)->first();
+        $examYearId = $examYear ? $examYear->id : 0;
+
         $regions = Region::whereIn('id', $regionIds)->orderBy('name')->get();
+        $rIds = $regions->pluck('id')->toArray();
+
+        $districtsCount = [];
+        $schoolsCount = [];
+        $registeredCounts = [];
+        $averages = [];
+
+        if (!empty($rIds)) {
+            $districtsCount = District::whereIn('region_id', $rIds)
+                ->groupBy('region_id')
+                ->select('region_id', DB::raw('count(*) as count'))
+                ->pluck('count', 'region_id')
+                ->toArray();
+
+            $schoolsCount = School::whereIn('region_id', $rIds)
+                ->where('education_level', 'PRIMARY')
+                ->groupBy('region_id')
+                ->select('region_id', DB::raw('count(*) as count'))
+                ->pluck('count', 'region_id')
+                ->toArray();
+
+            $registeredCounts = Candidate::join('schools as s', 's.id', '=', 'candidates.school_id')
+                ->whereIn('s.region_id', $rIds)
+                ->where('candidates.exam_year_id', $examYearId)
+                ->where('candidates.exam_type', self::EXAM_TYPE_CODE)
+                ->groupBy('s.region_id')
+                ->select('s.region_id', DB::raw('count(*) as count'))
+                ->pluck('count', 's.region_id')
+                ->toArray();
+
+            $averages = DB::table('subject_marks as sm')
+                ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
+                ->join('schools as s', 's.id', '=', 'c.school_id')
+                ->whereIn('s.region_id', $rIds)
+                ->where('sm.year', $year)
+                ->where('c.exam_year_id', $examYearId)
+                ->where('c.exam_type', self::EXAM_TYPE_CODE)
+                ->groupBy('s.region_id')
+                ->select('s.region_id', DB::raw('avg(sm.marks_obtained) * 6 as avg_score'))
+                ->pluck('avg_score', 's.region_id')
+                ->toArray();
+        }
 
         foreach ($regions as $r) {
-            $schoolIds = School::where('region_id', $r->id)->where('education_level', 'PRIMARY')->pluck('id')->toArray();
-            $r->districts_count = District::where('region_id', $r->id)->count();
-            $r->schools_count = count($schoolIds);
-            $r->registered = Candidate::whereIn('school_id', $schoolIds)->where('exam_type', self::EXAM_TYPE_CODE)->count();
-            
-            $scores = DB::table('subject_marks as sm')
-                ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
-                ->whereIn('c.school_id', $schoolIds)
-                ->where('sm.year', $year)
-                ->pluck('sm.marks_obtained')
-                ->toArray();
-                
-            $r->average = count($scores) > 0 ? round(array_sum($scores) / (count($scores) / 6), 2) : 0;
+            $r->districts_count = $districtsCount[$r->id] ?? 0;
+            $r->schools_count = $schoolsCount[$r->id] ?? 0;
+            $r->registered = $registeredCounts[$r->id] ?? 0;
+            $r->average = isset($averages[$r->id]) ? round($averages[$r->id], 2) : 0;
         }
 
         $regions = collect($regions)->sortByDesc('average')->values();
@@ -457,6 +567,9 @@ class AdminPsleResultsController extends Controller
 
     private function getSubjectPerformanceData(int $year, array $regionIds, $regionId, $districtId): array
     {
+        $examYear = ExamYear::where('year_label', $year)->first();
+        $examYearId = $examYear ? $examYear->id : 0;
+
         $subjects = DB::table('subjects as s')
             ->join('exam_types as et', 'et.id', '=', 's.exam_type_id')
             ->where('et.code', self::EXAM_TYPE_CODE)
@@ -470,33 +583,64 @@ class AdminPsleResultsController extends Controller
         $schoolIds = $schoolQuery->pluck('id')->toArray();
 
         $performance = [];
-        foreach ($subjects as $sub) {
-            $marks = DB::table('subject_marks as sm')
+        
+        if (!empty($schoolIds)) {
+            $subjectIds = $subjects->pluck('id')->toArray();
+            
+            $stats = DB::table('subject_marks as sm')
                 ->join('candidates as c', 'c.id', '=', 'sm.candidate_id')
                 ->whereIn('c.school_id', $schoolIds)
-                ->where('sm.subject_id', $sub->id)
+                ->whereIn('sm.subject_id', $subjectIds)
                 ->where('sm.year', $year)
-                ->pluck('sm.marks_obtained')
-                ->toArray();
+                ->where('c.exam_year_id', $examYearId)
+                ->groupBy('sm.subject_id')
+                ->select([
+                    'sm.subject_id',
+                    DB::raw('count(*) as total'),
+                    DB::raw('min(sm.marks_obtained) as lowest'),
+                    DB::raw('max(sm.marks_obtained) as highest'),
+                    DB::raw('avg(sm.marks_obtained) as average'),
+                    DB::raw('sum(case when sm.marks_obtained >= 241.0/6.0 then 1 else 0 end) as count_a'),
+                    DB::raw('sum(case when sm.marks_obtained >= 181.0/6.0 and sm.marks_obtained < 241.0/6.0 then 1 else 0 end) as count_b'),
+                    DB::raw('sum(case when sm.marks_obtained >= 121.0/6.0 and sm.marks_obtained < 181.0/6.0 then 1 else 0 end) as count_c'),
+                    DB::raw('sum(case when sm.marks_obtained >= 61.0/6.0 and sm.marks_obtained < 121.0/6.0 then 1 else 0 end) as count_d'),
+                    DB::raw('sum(case when sm.marks_obtained < 61.0/6.0 then 1 else 0 end) as count_e')
+                ])
+                ->get()
+                ->keyBy('subject_id');
 
-            $total = count($marks);
-            $grades = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0, 'E' => 0];
-            foreach ($marks as $m) {
-                $grades[$this->gradeFromRaw50($m)]++;
+            foreach ($subjects as $sub) {
+                $s = $stats->get($sub->id);
+                $total = $s ? (int) $s->total : 0;
+
+                $performance[] = (object) [
+                    'name' => $sub->name,
+                    'candidates' => $total,
+                    'highest' => $total > 0 ? (float) $s->highest : 0,
+                    'lowest' => $total > 0 ? (float) $s->lowest : 0,
+                    'average' => $total > 0 ? round((float) $s->average, 2) : 0,
+                    'a' => $s ? (int) $s->count_a : 0,
+                    'b' => $s ? (int) $s->count_b : 0,
+                    'c' => $s ? (int) $s->count_c : 0,
+                    'd' => $s ? (int) $s->count_d : 0,
+                    'e' => $s ? (int) $s->count_e : 0
+                ];
             }
-
-            $performance[] = (object) [
-                'name' => $sub->name,
-                'candidates' => $total,
-                'highest' => $total > 0 ? max($marks) : 0,
-                'lowest' => $total > 0 ? min($marks) : 0,
-                'average' => $total > 0 ? round(array_sum($marks) / $total, 2) : 0,
-                'a' => $grades['A'],
-                'b' => $grades['B'],
-                'c' => $grades['C'],
-                'd' => $grades['D'],
-                'e' => $grades['E']
-            ];
+        } else {
+            foreach ($subjects as $sub) {
+                $performance[] = (object) [
+                    'name' => $sub->name,
+                    'candidates' => 0,
+                    'highest' => 0,
+                    'lowest' => 0,
+                    'average' => 0,
+                    'a' => 0,
+                    'b' => 0,
+                    'c' => 0,
+                    'd' => 0,
+                    'e' => 0
+                ];
+            }
         }
 
         return compact('performance');
