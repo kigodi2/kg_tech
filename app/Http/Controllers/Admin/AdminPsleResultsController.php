@@ -44,7 +44,7 @@ class AdminPsleResultsController extends Controller
         $allowedViews = [
             'overview', 'processing', 'summary', 'candidate-results', 'candidates',
             'school-results', 'schools', 'school', 'district-results', 'districts',
-            'regional-results', 'subject-performance', 'reports', 'audit'
+            'regional-results', 'subject-performance', 'reports', 'audit', 'incomplete-candidates'
         ];
         
         if (!in_array($view, $allowedViews, true)) {
@@ -134,6 +134,9 @@ class AdminPsleResultsController extends Controller
                     break;
                 case 'audit':
                     $viewData = $this->getAuditLogsData($request, $examYear->id ?? 0);
+                    break;
+                case 'incomplete-candidates':
+                    $viewData = $this->getIncompleteCandidatesData($request, $yearLabel, $tasidoRegionIds);
                     break;
             }
         } catch (\Throwable $e) {
@@ -1543,6 +1546,129 @@ class AdminPsleResultsController extends Controller
             'errors' => $sampleErrors,
             'errors_count' => $errorsCount,
             'critical_count' => $criticalCount,
+        ];
+    }
+
+    private function getIncompleteCandidatesData(Request $request, int $year, array $regionIds): array
+    {
+        $examYear = ExamYear::where('year_label', $year)->first();
+        $examYearId = $examYear ? $examYear->id : 0;
+
+        $requiredSubjects = DB::table('subjects as s')
+            ->join('exam_types as et', 'et.id', '=', 's.exam_type_id')
+            ->where('et.code', self::EXAM_TYPE_CODE)
+            ->select('s.id', 's.name')
+            ->orderBy('s.name')
+            ->get();
+
+        $requiredSubjectCount = $requiredSubjects->count();
+
+        $markCountsSub = DB::table('subject_marks as sm')
+            ->where('sm.year', $year)
+            ->selectRaw('sm.candidate_id, COUNT(DISTINCT sm.subject_id) as entered_subjects')
+            ->groupBy('sm.candidate_id');
+
+        $query = DB::table('candidates as c')
+            ->join('schools as s', 's.id', '=', 'c.school_id')
+            ->join('districts as d', 'd.id', '=', 's.district_id')
+            ->leftJoinSub($markCountsSub, 'mc', function ($join) {
+                $join->on('mc.candidate_id', '=', 'c.id');
+            })
+            ->where('c.exam_year_id', $examYearId)
+            ->where('c.exam_type', self::EXAM_TYPE_CODE)
+            ->when(!empty($regionIds), function ($query) use ($regionIds) {
+                $query->whereIn('d.region_id', $regionIds);
+            })
+            ->whereRaw('COALESCE(mc.entered_subjects, 0) < ?', [$requiredSubjectCount])
+            ->selectRaw('
+                c.id,
+                c.candidate_id as cno,
+                c.full_name,
+                c.school_id,
+                c.exam_year_id,
+                s.name as school_name,
+                s.district_id,
+                d.name as district_name,
+                COALESCE(mc.entered_subjects, 0) as entered_subjects
+            ')
+            ->orderBy('d.name')
+            ->orderBy('s.name')
+            ->orderBy('c.candidate_id');
+
+        $candidates = $query->paginate(25)->withQueryString();
+
+        $candidateIds = $candidates->getCollection()->pluck('id')->all();
+
+        $marksByCandidate = collect();
+
+        if (!empty($candidateIds)) {
+            $marksByCandidate = DB::table('subject_marks as sm')
+                ->join('subjects as sub', 'sub.id', '=', 'sm.subject_id')
+                ->leftJoin('raw_marks as rm', function ($join) {
+                    $join->on('rm.candidate_id', '=', 'sm.candidate_id')
+                         ->on('rm.subject_id', '=', 'sm.subject_id');
+                })
+                ->leftJoin('users as u', 'u.id', '=', 'rm.updated_by')
+                ->leftJoin('users as ue', 'ue.id', '=', 'rm.entered_by')
+                ->where('sm.year', $year)
+                ->whereIn('sm.candidate_id', $candidateIds)
+                ->select([
+                    'sm.candidate_id',
+                    'sm.subject_id',
+                    'sub.name as subject_name',
+                    'sm.marks_obtained',
+                    'sm.updated_at',
+                    DB::raw('COALESCE(u.name, ue.name) as updated_by_name'),
+                ])
+                ->orderBy('sub.name')
+                ->get()
+                ->groupBy('candidate_id');
+        }
+
+        $requiredSubjectMap = $requiredSubjects->keyBy('id');
+
+        $candidates->getCollection()->transform(function ($candidate) use ($marksByCandidate, $requiredSubjectMap, $requiredSubjectCount) {
+            $enteredMarks = $marksByCandidate->get($candidate->id, collect());
+
+            $enteredSubjectIds = $enteredMarks
+                ->pluck('subject_id')
+                ->unique()
+                ->values();
+
+            $missingSubjects = $requiredSubjectMap
+                ->reject(fn ($subject, $subjectId) => $enteredSubjectIds->contains((int) $subjectId))
+                ->values();
+
+            $firstMissingSubject = $missingSubjects->first();
+
+            $latestMark = $enteredMarks
+                ->sortByDesc('updated_at')
+                ->first();
+
+            $candidate->entered_marks = $enteredMarks;
+            $candidate->missing_subjects = $missingSubjects;
+            $candidate->completion_label = $candidate->entered_subjects . ' of ' . $requiredSubjectCount;
+            $candidate->last_updated_by = $latestMark->updated_by_name ?? 'Not updated';
+            $candidate->last_updated_at = $latestMark->updated_at ?? null;
+
+            $candidate->entry_url = $firstMissingSubject
+                ? url('/mark-entry/psle?' . http_build_query([
+                    'view' => 'entry-sheet',
+                    'exam_year_id' => $candidate->exam_year_id,
+                    'district_id' => $candidate->district_id,
+                    'school_id' => $candidate->school_id,
+                    'subject_id' => $firstMissingSubject->id,
+                ]))
+                : null;
+
+            return $candidate;
+        });
+
+        return [
+            'candidates' => $candidates,
+            'requiredSubjects' => $requiredSubjects,
+            'requiredSubjectCount' => $requiredSubjectCount,
+            'totalIncomplete' => $candidates->total(),
         ];
     }
 

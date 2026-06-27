@@ -346,15 +346,25 @@
 
 @if($publishedSnapshot && !$isRawMarksLocked)
 <div class="adm-card" style="margin-bottom: 24px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 10px;">
-    <div class="adm-card-body" style="padding: 16px; display: flex; align-items: center; gap: 16px;">
-        <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 1.25rem;">
-            <i class="fa-solid fa-triangle-exclamation"></i>
+    <div class="adm-card-body" style="padding: 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <div style="width: 40px; height: 40px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 1.25rem;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <h5 style="margin: 0 0 4px 0; color: #ef4444; font-weight: 700; font-size: 0.92rem;">Warning: Results Published but Raw Marks Not Fully Locked</h5>
+                <p style="margin: 0; font-size: 0.78rem; color: rgba(255, 255, 255, 0.85); line-height: 1.4;">
+                    The results for this year are currently published, but raw marks are not fully locked. Please submit and lock the raw marks immediately to secure data integrity.
+                </p>
+            </div>
         </div>
         <div>
-            <h5 style="margin: 0 0 4px 0; color: #ef4444; font-weight: 700; font-size: 0.92rem;">Warning: Results Published but Raw Marks Not Fully Locked</h5>
-            <p style="margin: 0; font-size: 0.78rem; color: rgba(255, 255, 255, 0.85); line-height: 1.4;">
-                The results for this year are currently published, but raw marks are not fully locked. Please submit and lock the raw marks immediately to secure data integrity.
-            </p>
+            <a href="{{ url('/results/manage/' . $year . '/psle?view=incomplete-candidates') }}"
+               class="inline-flex items-center gap-2 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 hover:bg-red-500/20 hover:text-white transition"
+               style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(239,68,68,0.4); bg: rgba(239,68,68,0.1); color: #fee2e2; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">
+                <i class="fas fa-list-check text-red-300"></i>
+                View Incomplete Candidates
+            </a>
         </div>
     </div>
 </div>
