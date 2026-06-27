@@ -391,9 +391,9 @@
                         <input type="hidden" name="search" value="{{ request('search') }}">
                     @endif
                     <select name="exam_year_id" onchange="this.form.submit()" class="adm-select" style="width: auto; min-width: 100px; height: 36px; padding: 0 10px 0 8px;">
-                        @foreach($examYears as $year)
-                            <option value="{{ $year->id }}" {{ $examYear->id == $year->id ? 'selected' : '' }}>
-                                {{ $year->year_label }}
+                        @foreach($examYears as $y)
+                            <option value="{{ $y->id }}" {{ $examYear->id == $y->id ? 'selected' : '' }}>
+                                {{ $y->year_label }}
                             </option>
                         @endforeach
                     </select>

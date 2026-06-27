@@ -660,9 +660,9 @@
                 <form action="{{ route('results.psle.dashboard') }}" method="GET" style="display: flex; gap: 8px; align-items: center;">
                     <input type="hidden" name="view" value="{{ $view }}">
                     <select name="exam_year_id" onchange="this.form.submit()" class="adm-select year-selector">
-                        @foreach($examYears as $year)
-                            <option value="{{ $year->id }}" {{ $examYear->id == $year->id ? 'selected' : '' }}>
-                                {{ $year->year_label }}
+                        @foreach($examYears as $y)
+                            <option value="{{ $y->id }}" {{ $examYear->id == $y->id ? 'selected' : '' }}>
+                                {{ $y->year_label }}
                             </option>
                         @endforeach
                     </select>
@@ -699,6 +699,7 @@
                     @elseif($view === 'subject-performance') Core Subjects Grading Distributions
                     @elseif($view === 'reports') Official PDF Reports & ZIP Exporter
                     @elseif($view === 'audit') Audit Logs and Lifecycle Tracking
+                    @elseif($view === 'incomplete-candidates') Incomplete Candidates Audit
                     @endif
                 </h1>
                 <p class="adm-page-desc">
@@ -749,6 +750,7 @@
                     'subject-performance' => 'results.psle.partials.subject-performance',
                     'reports' => 'results.psle.partials.reports',
                     'audit' => 'results.psle.partials.audit',
+                    'incomplete-candidates' => 'results.psle.partials.incomplete-candidates',
                 ];
 
                 $partial = $partials[$view] ?? 'results.psle.partials.processing';

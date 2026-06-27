@@ -359,7 +359,7 @@
             </div>
         </div>
         <div>
-            <a href="{{ url('/results/manage/' . $year . '/psle?view=incomplete-candidates') }}"
+            <a href="{{ route('results.psle.dashboard', ['year' => $examYear->year_label, 'view' => 'incomplete-candidates']) }}"
                class="inline-flex items-center gap-2 rounded-xl border border-red-400/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-100 hover:bg-red-500/20 hover:text-white transition"
                style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 8px 16px; border-radius: 8px; border: 1px solid rgba(239,68,68,0.4); bg: rgba(239,68,68,0.1); color: #fee2e2; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;">
                 <i class="fas fa-list-check text-red-300"></i>
